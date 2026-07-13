@@ -278,12 +278,13 @@
     border-radius:50%;background:var(--amber);color:var(--ink);font-size:9px;font-weight:800;flex-shrink:0;
   }
   .h2h-player-score{font-weight:700;color:var(--pitch);font-size:13.5px;flex-shrink:0;min-width:22px;text-align:center;}
-  .h2h-total-row{
+  .h2h-side-total{
     display:flex;justify-content:space-between;align-items:center;
-    margin-top:16px;padding-top:14px;border-top:2px solid var(--ink);
-    font-family:'Barlow Condensed',sans-serif;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;
+    margin-top:12px;padding-top:12px;border-top:2px solid var(--ink);
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;
   }
-  .h2h-total-row .val{font-family:'Barlow',sans-serif;font-weight:800;font-size:20px;color:var(--pitch);}
+  .h2h-side.away .h2h-side-total{flex-direction:row-reverse;}
+  .h2h-side-total .val{font-family:'Barlow',sans-serif;font-weight:800;font-size:19px;color:var(--pitch);}
   .h2h-draft-note{
     text-align:center;font-size:11.5px;color:#a8a296;margin-top:16px;font-style:italic;
   }
@@ -425,17 +426,19 @@ async function load(){
 
     parseStandings(rows);
     parseFixtures(rows);
+    parseH2H(rows);
     render();
 
     const fmtRow = (row) => (row||[]).map((c,i)=> `[${i}]="${(c||"").toString().trim()}"`).join("  ");
 
     document.getElementById('debugOut').textContent =
       "Standings rows found: " + standings.length + "\n" +
-      "Rounds found: " + Object.keys(fixturesByRound).length + "\n\n" +
+      "Rounds found: " + Object.keys(fixturesByRound).length + "\n" +
+      "H2H matchups found: " + h2hMatchups.length + "\n\n" +
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
       "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
-      JSON.stringify({standings: standings.slice(0,4), sampleFixtures: fixturesByRound[Object.keys(fixturesByRound)[0]]}, null, 2);
+      JSON.stringify({standings: standings.slice(0,4), sampleFixtures: fixturesByRound[Object.keys(fixturesByRound)[0]], h2hMatchups}, null, 2);
 
     setStatus("Live — updated " + new Date().toLocaleString());
   }catch(err){
@@ -450,6 +453,100 @@ async function load(){
 }
 
 function cell(row, i){ return (row[i] || "").toString().trim(); }
+
+let h2hMatchups = []; // parsed from live sheet: [{home, away, homeTotal, awayTotal, homeStarters, homeBench, awayStarters, awayBench}]
+
+// The H2H block (per the sheet: H26:W42) repeats once per fixture (7 per round).
+// Home team name sits in column H, away team name in column Q (both 0-indexed via
+// standard letter mapping, which has proven reliable everywhere except columns ~19-23).
+// We find each block by scanning for a row where col H and col Q both hold a known team name.
+const H2H_COL = { HOME_TEAM:7, HOME_NAME:9, HOME_VC:13, HOME_SCORE:14, AWAY_SCORE:15, AWAY_TEAM:16, AWAY_VC:16, AWAY_NAME:17 };
+const STARTER_COUNT = 11;
+const BENCH_COUNT = 4;
+
+function findAwayPositionColumn(rows, blockStart){
+  // Away position column (sheet col W) sits further right and is prone to the same
+  // hidden-column drift we saw with the form columns, so detect it by content:
+  // find a column where the 11 rows below the block start are all GK/DEF/MID/ATT.
+  for(let c = H2H_COL.AWAY_NAME + 1; c < H2H_COL.AWAY_NAME + 20; c++){
+    let allValid = true;
+    for(let i = 1; i <= STARTER_COUNT; i++){
+      const v = cell(rows[blockStart+i]||[], c).toUpperCase();
+      if(!["GK","DEF","MID","ATT"].includes(v)){ allValid = false; break; }
+    }
+    if(allValid) return c;
+  }
+  return null;
+}
+
+function findTotalsRow(rows, blockStart){
+  // Totals row sits between starters and bench: blank player name, numeric scores.
+  for(let r = blockStart + STARTER_COUNT + 1; r <= blockStart + STARTER_COUNT + 5; r++){
+    const nameBlank = cell(rows[r]||[], H2H_COL.HOME_NAME) === "";
+    const homeScoreNum = /^\d+$/.test(cell(rows[r]||[], H2H_COL.HOME_SCORE));
+    const awayScoreNum = /^\d+$/.test(cell(rows[r]||[], H2H_COL.AWAY_SCORE));
+    if(nameBlank && homeScoreNum && awayScoreNum) return r;
+  }
+  return null;
+}
+
+function parseH2H(rows){
+  h2hMatchups = [];
+  if(knownTeams.size === 0) return;
+
+  for(let r = 0; r < rows.length; r++){
+    const homeTeam = cell(rows[r], H2H_COL.HOME_TEAM);
+    const awayTeam = cell(rows[r], H2H_COL.AWAY_TEAM);
+    if(!knownTeams.has(homeTeam.toUpperCase()) || !knownTeams.has(awayTeam.toUpperCase())) continue;
+    if(homeTeam.toUpperCase() === awayTeam.toUpperCase()) continue;
+
+    const awayPosCol = findAwayPositionColumn(rows, r);
+    const totalsRow = findTotalsRow(rows, r);
+    if(awayPosCol === null || totalsRow === null) continue;
+
+    const readPlayers = (startOffset, count) => {
+      const players = [];
+      for(let i = 0; i < count; i++){
+        const row = rows[r + startOffset + i] || [];
+        const homeName = cell(row, H2H_COL.HOME_NAME);
+        const awayName = cell(row, H2H_COL.AWAY_NAME);
+        if(!homeName && !awayName) continue;
+        players.push({
+          home: {
+            pos: cell(row, H2H_COL.HOME_TEAM),
+            name: homeName,
+            score: parseInt(cell(row, H2H_COL.HOME_SCORE),10) || 0,
+            captain: cell(row, H2H_COL.HOME_VC) || null
+          },
+          away: {
+            pos: cell(row, awayPosCol),
+            name: awayName,
+            score: parseInt(cell(row, H2H_COL.AWAY_SCORE),10) || 0,
+            captain: cell(row, H2H_COL.AWAY_VC) || null
+          }
+        });
+      }
+      return players;
+    };
+
+    const starters = readPlayers(1, STARTER_COUNT);
+    const benchStartOffset = totalsRow - r + 1;
+    const bench = readPlayers(benchStartOffset, BENCH_COUNT);
+
+    h2hMatchups.push({
+      home: homeTeam,
+      away: awayTeam,
+      homeTotal: parseInt(cell(rows[totalsRow], H2H_COL.HOME_SCORE),10) || 0,
+      awayTotal: parseInt(cell(rows[totalsRow], H2H_COL.AWAY_SCORE),10) || 0,
+      homeStarters: starters.map(p=>p.home),
+      awayStarters: starters.map(p=>p.away),
+      homeBench: bench.map(p=>p.home),
+      awayBench: bench.map(p=>p.away)
+    });
+
+    if(h2hMatchups.length >= 7) break;
+  }
+}
 
 // Confirmed exact coordinates from the sheet, adjusted for a 2-row offset:
 // Google's CSV export silently strips leading blank rows, so sheet row 6 (header)
@@ -683,105 +780,65 @@ function renderFixtures(round){
 
 document.getElementById('refreshBtn').addEventListener('click', load);
 
-const POSITIONS = ["GK","DEF","DEF","DEF","MID","MID","MID","MID","ATT","ATT","ATT"];
-const BENCH_POSITIONS = ["GK","DEF","MID","ATT"];
-const SAMPLE_FIRST_NAMES = ["Marcus","Jordan","Ryan","Callum","Ethan","Liam","Owen","Josh","Reece","Dylan","Kai","Toby","Nate","Zac","Miles"];
-const SAMPLE_LAST_NAMES = ["Younis","Patel","Novak","Reyes","Okafor","Bianchi","Larsen","Muller","Costa","Nakamura","Silva","Haddad"];
-
-function samplePlayer(seed){
-  let s = seed;
-  const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-  const name = SAMPLE_FIRST_NAMES[Math.floor(rand()*SAMPLE_FIRST_NAMES.length)] + " " + SAMPLE_LAST_NAMES[Math.floor(rand()*SAMPLE_LAST_NAMES.length)];
-  return { name, score: Math.floor(rand()*14) };
-}
-
-function buildSampleLineup(teamName, seedBase){
-  const starters = POSITIONS.map((pos,i)=>{
-    const p = samplePlayer(seedBase + i*7 + 1);
-    return { pos, name: p.name, score: p.score, captain: i===8 ? "C" : (i===4 ? "VC" : null) };
-  });
-  const bench = BENCH_POSITIONS.map((pos,i)=>{
-    const p = samplePlayer(seedBase + 100 + i*11);
-    return { pos, name: p.name, score: p.score, captain: null };
-  });
-  const total = starters.reduce((sum,p)=> sum + p.score * (p.captain==="C" ? 2 : 1), 0);
-  return { team: teamName, starters, bench, total };
-}
-
-function playerRowHtml(p){
-  return `<div class="h2h-player-row">
-    <span class="h2h-pos-tag">${p.pos}</span>
-    <span class="h2h-player-name">${p.name}</span>
-    ${p.captain ? `<span class="h2h-captain" title="${p.captain==='C'?'Captain':'Vice-Captain'}">${p.captain}</span>` : ""}
-    <span class="h2h-player-score">${p.score}</span>
-  </div>`;
-}
-
-function h2hCardHtml(fixture){
-  const seedHome = fixture.home.length * 13 + (fixture.homeScore||5);
-  const seedAway = fixture.away.length * 17 + (fixture.awayScore||9);
-  const home = buildSampleLineup(fixture.home, seedHome);
-  const away = buildSampleLineup(fixture.away, seedAway);
+function h2hCardHtml(m){
+  const playerRows = (starters, bench) => {
+    const capBadge = c => {
+      if(!c) return "";
+      const up = c.toUpperCase();
+      if(up==="C") return `<span class="h2h-captain" title="Captain">C</span>`;
+      if(up==="VC") return `<span class="h2h-captain" title="Vice-Captain">VC</span>`;
+      return "";
+    };
+    const row = p => `<div class="h2h-player-row">
+      <span class="h2h-pos-tag">${p.pos||""}</span>
+      <span class="h2h-player-name">${p.name}</span>
+      ${capBadge(p.captain)}
+      <span class="h2h-player-score">${p.score}</span>
+    </div>`;
+    return `<h4>Starting XI</h4>${starters.map(row).join("")}<h4>Bench</h4>${bench.map(row).join("")}`;
+  };
   return `<div class="h2h-card">
     <div class="h2h-header">
-      <div class="h2h-team-name home">${home.team}</div>
-      <div class="h2h-score-big">${home.total} – ${away.total}</div>
-      <div class="h2h-team-name away">${away.team}</div>
+      <div class="h2h-team-name home">${m.home}</div>
+      <div class="h2h-score-big">${m.homeTotal} – ${m.awayTotal}</div>
+      <div class="h2h-team-name away">${m.away}</div>
     </div>
     <div class="h2h-round-label">Head-to-head lineup</div>
     <div class="h2h-lineups">
       <div class="h2h-side home">
-        <h4>Starting XI</h4>
-        ${home.starters.map(playerRowHtml).join("")}
-        <h4>Bench</h4>
-        ${home.bench.map(playerRowHtml).join("")}
+        ${playerRows(m.homeStarters, m.homeBench)}
+        <div class="h2h-side-total"><span>Total</span><span class="val">${m.homeTotal}</span></div>
       </div>
       <div class="h2h-side away">
-        <h4>Starting XI</h4>
-        ${away.starters.map(playerRowHtml).join("")}
-        <h4>Bench</h4>
-        ${away.bench.map(playerRowHtml).join("")}
+        ${playerRows(m.awayStarters, m.awayBench)}
+        <div class="h2h-side-total"><span>Total</span><span class="val">${m.awayTotal}</span></div>
       </div>
-    </div>
-    <div class="h2h-total-row">
-      <span>${home.team} total</span>
-      <span class="val">${home.total}</span>
-    </div>
-    <div class="h2h-total-row">
-      <span>${away.team} total</span>
-      <span class="val">${away.total}</span>
     </div>
   </div>`;
 }
 
 function renderH2H(){
-  // NOTE: currently showing SAMPLE/PLACEHOLDER lineup data for design review.
-  // Once approved, this will read the real per-fixture H26:W42-style blocks
-  // (7 per round) from the sheet for whichever round is "current".
-  const rounds = Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b);
-  if(rounds.length === 0) return;
-  // "Current round" placeholder: most recent round with at least one scored fixture,
-  // falling back to the first round otherwise.
-  let currentRound = rounds[0];
-  for(let i=rounds.length-1;i>=0;i--){
-    if(fixturesByRound[rounds[i]].some(f=>f.homeScore!==null)){ currentRound = rounds[i]; break; }
-  }
-  const fixtures = fixturesByRound[currentRound].slice(0,7);
-  document.getElementById('h2hRoundLabel').textContent = `Round ${currentRound} · sample data`;
-
   const tabsEl = document.getElementById('h2hTabs');
-  tabsEl.innerHTML = fixtures.map((f,i)=>`<button class="round-tab" data-idx="${i}">${f.home} v ${f.away}</button>`).join("");
+  const containerEl = document.getElementById('h2hContainer');
+
+  if(h2hMatchups.length === 0){
+    tabsEl.innerHTML = "";
+    containerEl.innerHTML = `<div class="state-msg">No head-to-head lineups found for the current round. Check the Debug panel below.</div>`;
+    document.getElementById('h2hRoundLabel').textContent = "";
+    return;
+  }
+
+  document.getElementById('h2hRoundLabel').textContent = "Current round";
+  tabsEl.innerHTML = h2hMatchups.map((m,i)=>`<button class="round-tab" data-idx="${i}">${m.home} v ${m.away}</button>`).join("");
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById('h2hContainer').innerHTML = h2hCardHtml(fixtures[btn.dataset.idx]);
+      containerEl.innerHTML = h2hCardHtml(h2hMatchups[btn.dataset.idx]);
     });
   });
-  if(tabsEl.firstChild){
-    tabsEl.firstChild.classList.add('active');
-    document.getElementById('h2hContainer').innerHTML = h2hCardHtml(fixtures[0]);
-  }
+  tabsEl.firstChild.classList.add('active');
+  containerEl.innerHTML = h2hCardHtml(h2hMatchups[0]);
 }
 
 load();
