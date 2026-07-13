@@ -436,7 +436,8 @@ async function load(){
       "Rounds found: " + Object.keys(fixturesByRound).length + "\n" +
       "H2H matchups found: " + h2hMatchups.length + "\n" +
       "H2H candidate rows (>=2 position columns found): " + h2hDebug.candidateRows + "\n" +
-      "H2H first candidate: " + JSON.stringify(h2hDebug.firstCandidate) + "\n\n" +
+      "H2H first candidate: " + JSON.stringify(h2hDebug.firstCandidate) + "\n" +
+      (h2hDebug.firstCandidate ? "H2H candidate row raw dump (row " + h2hDebug.firstCandidate.row + "):\n" + fmtRow(rows[h2hDebug.firstCandidate.row]) + "\n\n" : "") +
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
       "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
