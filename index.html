@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eliza Cup — Division 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --pitch:#28427c;
+    --pitch-2:#3a5a9e;
+    --chalk:#F6F2E8;
+    --turf:#4FAE7E;
+    --amber:#ffdd00;
+    --red:#B95C50;
+    --ink:#0E1F19;
+    --line:#3a5a9e;
+    --line-light:#DAD3C0;
+    --muted:#a9b8d8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--chalk);
+    color:var(--ink);
+    font-family:'Barlow',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'Barlow',sans-serif; font-variant-numeric: tabular-nums;}
+  h1,h2,h3,.display{
+    font-family:'Barlow Condensed',sans-serif;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+  a{color:inherit;}
+
+  /* ---------- Header ---------- */
+  header.top{
+    background:radial-gradient(120% 160% at 15% 0%, var(--pitch-2) 0%, var(--pitch) 55%, #0c2019 100%);
+    color:var(--chalk);
+    padding:28px 24px 0;
+    position:relative;
+    overflow:hidden;
+  }
+  header.top::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 90px);
+    pointer-events:none;
+  }
+  .top-inner{max-width:1080px;margin:0 auto;position:relative;}
+  .wordmark-row{
+    display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  }
+  .wordmark{
+    font-size:clamp(42px,7vw,72px);
+    line-height:0.9;
+    display:flex; align-items:baseline; gap:14px;
+  }
+  .wordmark span.pill{
+    font-family:'Barlow',sans-serif;
+    font-size:14px;
+    letter-spacing:0.08em;
+    background:var(--amber);
+    color:var(--ink);
+    padding:5px 10px;
+    border-radius:3px;
+    text-transform:uppercase;
+    transform:translateY(-6px);
+  }
+  .status-line{
+    font-family:'Barlow',sans-serif;
+    font-size:12.5px;
+    color:var(--muted);
+    display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+    padding:10px 0 22px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--turf);display:inline-block;box-shadow:0 0 0 3px rgba(79,174,126,0.25);}
+  .refresh-btn{
+    background:none;border:1px solid var(--line);color:var(--chalk);
+    font-family:'Barlow',sans-serif;font-size:12px;letter-spacing:0.04em;
+    padding:5px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
+  }
+  .refresh-btn:hover{border-color:var(--turf);color:var(--turf);}
+
+  /* ---------- Ticker (signature element) ---------- */
+  .ticker-wrap{
+    background:var(--ink);
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    white-space:nowrap;
+    position:relative;
+  }
+  .ticker-label{
+    position:absolute; left:0; top:0; bottom:0;
+    background:var(--amber); color:var(--ink);
+    font-family:'Barlow',sans-serif; font-weight:600; font-size:11px;
+    display:flex; align-items:center; padding:0 12px; letter-spacing:0.06em;
+    z-index:2;
+  }
+  .ticker-track{
+    display:inline-flex;
+    animation:scroll-left 38s linear infinite;
+    padding-left:150px;
+  }
+  .ticker-wrap:hover .ticker-track{animation-play-state:paused;}
+  @keyframes scroll-left{
+    from{transform:translateX(0);}
+    to{transform:translateX(-50%);}
+  }
+  .tick{
+    font-family:'Barlow',sans-serif;
+    color:var(--chalk); font-size:13px;
+    padding:9px 26px;
+    border-right:1px solid var(--line);
+    display:inline-flex; gap:8px; align-items:center;
+  }
+  .tick b{color:var(--turf);}
+  .tick .vs{color:var(--muted);}
+
+  /* ---------- Main layout ---------- */
+  main{max-width:1080px;margin:0 auto;padding:36px 24px 80px;}
+  .section-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:14px;border-bottom:2px solid var(--ink);padding-bottom:8px;
+  }
+  .section-head h2{font-size:30px;margin:0;}
+  .section-head .sub{font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;}
+
+  /* Table */
+  .table-wrap{overflow-x:auto;border:1px solid var(--line-light);border-radius:4px;}
+  table.standings{width:100%;border-collapse:collapse;min-width:640px;}
+  table.standings thead th{
+    background:var(--pitch);
+    color:var(--chalk);
+    font-family:'Barlow',sans-serif;
+    font-weight:500;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    text-align:center;
+    padding:10px 8px;
+    position:sticky; top:0;
+  }
+  table.standings thead th:nth-child(2){text-align:left;}
+  table.standings tbody td{
+    padding:10px 8px;
+    text-align:center;
+    font-family:'Barlow',sans-serif;
+    font-size:14px;
+    border-bottom:1px solid var(--line-light);
+  }
+  table.standings tbody td:nth-child(2){
+    text-align:left;font-family:'Barlow',sans-serif;font-weight:600;font-size:14.5px;
+  }
+  table.standings tbody tr:nth-child(even){background:#FBF9F3;}
+  table.standings tbody tr:hover{background:#F0EAD8 !important;}
+  table.standings tbody tr td:first-child{
+    font-weight:700;color:var(--pitch);
+  }
+
+  /* Position tiers, matching the sheet's colour coding */
+  table.standings tbody tr.tier-champion{background:#DCF2E3;}
+  table.standings tbody tr.tier-champion:nth-child(even){background:#D0EBD9;}
+  table.standings tbody tr.tier-champion td:first-child{color:#1F8A4C;}
+
+  table.standings tbody tr.tier-ecl{background:#FFF6CC;}
+  table.standings tbody tr.tier-ecl:nth-child(even){background:#FFF0AD;}
+  table.standings tbody tr.tier-ecl td:first-child{color:#B8930A;}
+
+  table.standings tbody tr.tier-mid{background:#E1E9F7;}
+  table.standings tbody tr.tier-mid:nth-child(even){background:#D3DFF3;}
+  table.standings tbody tr.tier-mid td:first-child{color:var(--pitch);}
+
+  table.standings tbody tr.tier-relegation{background:#F9E0DC;}
+  table.standings tbody tr.tier-relegation:nth-child(even){background:#F5D1CB;}
+  table.standings tbody tr.tier-relegation td:first-child{color:#A8443A;}
+  td.pts{font-weight:700;color:var(--pitch-2);}
+  td.diff-pos{color:var(--turf);font-weight:600;}
+  td.diff-neg{color:var(--red);font-weight:600;}
+
+  table.standings.compact thead th{padding:7px 6px;font-size:10px;}
+  table.standings.compact tbody td{padding:6px 6px;font-size:12.5px;}
+  table.standings.compact tbody td:nth-child(3){font-size:12.5px;}
+  table.standings.compact .badge{width:20px;height:20px;font-size:8px;}
+  table.standings.compact .form-pill{width:15px;height:15px;font-size:9px;}
+  td.next-opp{font-size:11.5px;color:#5a6a63;white-space:nowrap;}
+
+  .badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:50%;
+    color:#fff;font-family:'Barlow',sans-serif;font-size:10px;font-weight:600;
+    letter-spacing:0.02em;
+  }
+  .form-row{display:inline-flex;gap:3px;}
+  .form-pill{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:18px;height:18px;border-radius:3px;font-size:10px;font-weight:700;
+    font-family:'Barlow',sans-serif;color:#fff;background:#B8B0A0;
+  }
+  .form-pill.form-w{background:var(--turf);}
+  .form-pill.form-l{background:var(--red);}
+  .form-pill.form-d{background:#9AA79E;}
+  .form-pill.form-blank{background:#E4DFD0;color:#B0A890;}
+
+  /* Fixtures */
+  .round-tabs{
+    display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:18px;
+    scrollbar-width:thin;
+  }
+  .round-tab{
+    flex:0 0 auto;
+    font-family:'Barlow',sans-serif;font-size:12.5px;
+    padding:7px 13px;border-radius:20px;border:1px solid var(--line-light);
+    background:#fff;cursor:pointer;white-space:nowrap;color:var(--ink);
+  }
+  .round-tab.active{background:var(--pitch);color:var(--chalk);border-color:var(--pitch);}
+  .round-tab:hover:not(.active){border-color:var(--pitch);}
+
+  .fixture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+  .fixture-card{
+    border:1px solid var(--line-light);border-radius:6px;padding:14px 16px;
+    background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  .fixture-team{font-size:14px;font-weight:600;flex:1;}
+  .fixture-team.right{text-align:right;}
+  .fixture-score{
+    font-family:'Barlow',sans-serif;font-weight:700;font-size:19px;
+    background:var(--chalk);border:1px solid var(--line-light);border-radius:4px;
+    padding:4px 10px; color:var(--pitch);white-space:nowrap;
+  }
+  .fixture-score .win{color:var(--pitch-2);}
+  .fixture-score .lose{color:#8a8a80;}
+
+  .state-msg{
+    font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;
+    padding:24px;text-align:center;border:1px dashed var(--line-light);border-radius:6px;
+  }
+  .state-msg.error{color:var(--red);border-color:var(--red);}
+
+  .legend{
+    display:flex;flex-wrap:wrap;gap:14px 22px;margin-top:12px;
+    font-size:12px;color:#5a6a63;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:12px;height:12px;border-radius:3px;border:1.5px solid;display:inline-block;}
+
+  footer{
+    text-align:center;padding:26px;font-family:'Barlow',sans-serif;
+    font-size:11px;color:#8a9a92;background:var(--pitch);
+  }
+  footer a{color:var(--amber);text-decoration:none;}
+
+  details.debug{max-width:1080px;margin:0 auto 40px;padding:0 24px;}
+  details.debug summary{font-family:'Barlow',sans-serif;font-size:11px;color:#8a9a92;cursor:pointer;}
+  details.debug pre{background:#0E1F19;color:#C8D8CE;padding:12px;border-radius:6px;overflow:auto;font-size:11px;max-height:300px;}
+
+  @media (max-width:600px){
+    .wordmark{font-size:38px;}
+    table.standings thead th:nth-child(n+7),
+    table.standings tbody td:nth-child(n+7){display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="wordmark-row">
+      <h1 class="wordmark">Eliza Cup <span class="pill">Div. 1</span></h1>
+    </div>
+    <div class="status-line" id="statusLine">
+      <span><span class="dot"></span> Connecting to live sheet…</span>
+      <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+    </div>
+  </div>
+</header>
+
+<div class="ticker-wrap">
+  <div class="ticker-label">Latest round</div>
+  <div class="ticker-track" id="tickerTrack">
+    <span class="tick">Loading results…</span>
+  </div>
+</div>
+
+<main>
+  <section id="tableSection">
+    <div class="section-head">
+      <h2>League Table</h2>
+      <span class="sub" id="tableUpdated"></span>
+    </div>
+    <div id="tableContainer" class="state-msg">Loading standings…</div>
+    <div class="legend">
+      <span><i style="background:#DCF2E3;border-color:#1F8A4C;"></i> 1st place</span>
+      <span><i style="background:#FFF6CC;border-color:#B8930A;"></i> ECL qualification (2–5)</span>
+      <span><i style="background:#E1E9F7;border-color:var(--pitch);"></i> Mid-table (6–10)</span>
+      <span><i style="background:#F9E0DC;border-color:#A8443A;"></i> Relegation (11–14)</span>
+    </div>
+  </section>
+
+  <section id="fixturesSection" style="margin-top:48px;">
+    <div class="section-head">
+      <h2>Fixtures</h2>
+      <span class="sub">All rounds</span>
+    </div>
+    <div id="roundTabs" class="round-tabs"></div>
+    <div id="fixtureContainer" class="state-msg">Loading fixtures…</div>
+  </section>
+</main>
+
+<footer>
+  Data pulled live from the Eliza Cup Google Sheet · built for the league, not affiliated with any official competition
+</footer>
+
+<details class="debug">
+  <summary>Debug: raw parsed data (for troubleshooting)</summary>
+  <pre id="debugOut">—</pre>
+</details>
+
+<script>
+const SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
+const GID = "1124941542"; // Eliza Cup (D1) tab
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&cachebust=` + Date.now();
+
+const TEAM_NAME_RE = /^[A-Z0-9][A-Z0-9 .'’()\-\/]{2,}$/; // ALL CAPS-ish team names as used in the sheet
+const ROLE_TOKENS = new Set(["GK","DEF","MID","ATT","VC","C"]);
+
+let standings = [];
+let fixturesByRound = {}; // { "1": [ {home,away,homeScore,awayScore} ] }
+let knownTeams = new Set();
+let formRoundLabels = [];
+
+function setStatus(msg, ok){
+  document.getElementById('statusLine').innerHTML =
+    `<span><span class="dot" style="background:${ok===false ? '#B95C50' : '#4FAE7E'}"></span> ${msg}</span>` +
+    `<button class="refresh-btn" id="refreshBtn">↻ Refresh</button>`;
+  document.getElementById('refreshBtn').addEventListener('click', load);
+}
+
+async function load(){
+  setStatus("Connecting to live sheet…");
+  document.getElementById('tableContainer').innerHTML = "Loading standings…";
+  document.getElementById('tableContainer').className = "state-msg";
+  document.getElementById('fixtureContainer').innerHTML = "Loading fixtures…";
+  document.getElementById('fixtureContainer').className = "state-msg";
+
+  try{
+    const res = await fetch(CSV_URL);
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const csvText = await res.text();
+    const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+    const rows = parsed.data;
+
+    parseStandings(rows);
+    parseFixtures(rows);
+    render();
+
+    const fmtRow = (row) => (row||[]).map((c,i)=> `[${i}]="${(c||"").toString().trim()}"`).join("  ");
+
+    document.getElementById('debugOut').textContent =
+      "Standings rows found: " + standings.length + "\n" +
+      "Rounds found: " + Object.keys(fixturesByRound).length + "\n\n" +
+      "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
+      "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
+      "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
+      JSON.stringify({standings: standings.slice(0,4), sampleFixtures: fixturesByRound[Object.keys(fixturesByRound)[0]]}, null, 2);
+
+    setStatus("Live — updated " + new Date().toLocaleString());
+  }catch(err){
+    console.error(err);
+    setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+    document.getElementById('tableContainer').className = "state-msg error";
+    document.getElementById('tableContainer').innerHTML =
+      "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    document.getElementById('fixtureContainer').className = "state-msg error";
+    document.getElementById('fixtureContainer').innerHTML = "—";
+  }
+}
+
+function cell(row, i){ return (row[i] || "").toString().trim(); }
+
+// Confirmed exact coordinates from the sheet, adjusted for a 2-row offset:
+// Google's CSV export silently strips leading blank rows, so sheet row 6 (header)
+// actually lands at CSV index 3, not 5. Columns were already confirmed correct.
+const TABLE_HEADER_ROW = 3;   // sheet row 6, offset -2
+const TABLE_DATA_START = 4;   // sheet row 7, offset -2
+const TABLE_DATA_END = 17;    // sheet row 20, offset -2
+const COL = {
+  POS:1, TEAM:3, PTS:8, W:9, D:10, L:11, FOR:12, AGA:13, DIFF:14
+};
+
+// Form columns (T:X) shift position due to hidden columns elsewhere on the sheet.
+// Detect them directly from the data: 5 consecutive cells that are each exactly W/D/L.
+function findFormColumns(dataRow){
+  for(let i = 0; i < dataRow.length - 4; i++){
+    const vals = dataRow.slice(i, i+5).map(v => (v||"").toString().trim().toUpperCase());
+    if(vals.every(v => v === "W" || v === "D" || v === "L")){
+      return [i, i+1, i+2, i+3, i+4];
+    }
+  }
+  return null;
+}
+
+function initials(name){
+  return name.split(/\s+/).map(w=>w[0]).join("").slice(0,3).toUpperCase();
+}
+function badgeColor(name){
+  const colors = ["#4FAE7E","#E3A73B","#B95C50","#5C8FB9","#8A6FB0","#C97B4A","#5DA3A0"];
+  let hash = 0;
+  for(let i=0;i<name.length;i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[hash % colors.length];
+}
+function findColumnByHeader(headerRow, label){
+  const idx = headerRow.findIndex(c => (c||"").toString().trim().toUpperCase() === label.toUpperCase());
+  return idx === -1 ? null : idx;
+}
+
+function parseStandings(rows){
+  standings = [];
+  knownTeams = new Set();
+  const headerRow = rows[TABLE_HEADER_ROW] || [];
+  const formCols = findFormColumns(rows[TABLE_DATA_START] || []);
+  formRoundLabels = formCols ? formCols.map(i => cell(headerRow, i)) : [];
+  const nextOppCol = findColumnByHeader(headerRow, "NEXT OPPONENT");
+
+  for(let r = TABLE_DATA_START; r <= TABLE_DATA_END && r < rows.length; r++){
+    const row = rows[r];
+    const team = cell(row, COL.TEAM);
+    const pts = cell(row, COL.PTS);
+    if(!team) continue;
+    knownTeams.add(team.toUpperCase());
+    standings.push({
+      pos: standings.length + 1,
+      team,
+      pts: parseInt(pts,10) || 0,
+      w: parseInt(cell(row,COL.W),10) || 0,
+      d: parseInt(cell(row,COL.D),10) || 0,
+      l: parseInt(cell(row,COL.L),10) || 0,
+      for: parseInt(cell(row,COL.FOR),10) || 0,
+      aga: parseInt(cell(row,COL.AGA),10) || 0,
+      diff: parseInt((cell(row,COL.DIFF)||"0").replace(/[^\-\d]/g,""),10) || 0,
+      form: formCols ? formCols.map(i => cell(row,i)) : ["","","","",""],
+      nextOpponent: nextOppCol !== null ? cell(row, nextOppCol) : ""
+    });
+  }
+  standings.sort((a,b)=> b.pts - a.pts);
+  standings.forEach((s,i)=> s.pos = i+1);
+}
+
+// Column AH = index 33, Column AR = index 43 (0-indexed, A=0)
+const FIXTURE_COL_START = 33;
+const FIXTURE_COL_END = 43;
+
+function parseFixtures(rows){
+  fixturesByRound = {};
+  let currentRound = null;
+
+  for(let r=0;r<rows.length;r++){
+    const row = rows[r];
+    const window = row.slice(FIXTURE_COL_START, FIXTURE_COL_END + 1);
+    const nonEmpty = window.map(c => (c||"").toString().trim()).filter(c => c !== "");
+    if(nonEmpty.length === 0) continue;
+
+    const roundCell = nonEmpty.find(c => /^ROUND\s*\d+$/i.test(c));
+    if(roundCell){
+      currentRound = roundCell.match(/\d+/)[0];
+      if(!fixturesByRound[currentRound]) fixturesByRound[currentRound] = [];
+      continue;
+    }
+    if(currentRound === null) continue;
+
+    // Skip any stray player-lineup rows (contain role tokens like GK/DEF/MID/ATT)
+    if(nonEmpty.some(c => ROLE_TOKENS.has(c.toUpperCase()))) continue;
+
+    // Find team names present, in left-to-right order, ignoring blanks
+    const teamHits = [];
+    nonEmpty.forEach((c,i) => { if(knownTeams.has(c.toUpperCase())) teamHits.push({name:c, idx:i}); });
+    if(teamHits.length < 2) continue;
+
+    const [homeHit, awayHit] = teamHits;
+    const between = nonEmpty.slice(homeHit.idx+1, awayHit.idx).filter(c => /^\d{1,4}$/.test(c));
+    if(between.length < 2) continue;
+
+    fixturesByRound[currentRound].push({
+      home: homeHit.name,
+      away: awayHit.name,
+      homeScore: parseInt(between[0],10),
+      awayScore: parseInt(between[between.length-1],10)
+    });
+  }
+
+  // de-duplicate identical fixture entries that can appear from merged/repeated cells
+  Object.keys(fixturesByRound).forEach(rnd => {
+    const seen = new Set();
+    fixturesByRound[rnd] = fixturesByRound[rnd].filter(f=>{
+      const key = f.home+f.away+f.homeScore+f.awayScore;
+      if(seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+  });
+}
+
+function render(){
+  renderTable();
+  renderTicker();
+  renderRoundTabs();
+}
+
+function renderTable(){
+  const el = document.getElementById('tableContainer');
+  if(standings.length === 0){
+    el.className = "state-msg error";
+    el.innerHTML = "Couldn't find a standings table on this tab. Check the Debug panel below.";
+    return;
+  }
+  el.className = "";
+  let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
+    <th>Pos</th><th></th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th>
+    <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
+    <th>Next</th>
+  </tr></thead><tbody>`;
+  standings.forEach(s=>{
+    const formHtml = s.form.map(f=>{
+      const up = (f||"").toUpperCase();
+      const cls = up==="W" ? "form-w" : up==="L" ? "form-l" : up==="D" ? "form-d" : "form-blank";
+      return `<span class="form-pill ${cls}">${up || "–"}</span>`;
+    }).join("");
+    const tierClass = s.pos === 1 ? "tier-champion"
+      : s.pos <= 5 ? "tier-ecl"
+      : s.pos <= 10 ? "tier-mid"
+      : "tier-relegation";
+    html += `<tr class="${tierClass}">
+      <td>${s.pos}</td>
+      <td><span class="badge" style="background:${badgeColor(s.team)}">${initials(s.team)}</span></td>
+      <td>${s.team}</td>
+      <td class="pts">${s.pts}</td>
+      <td>${s.w}</td>
+      <td>${s.d}</td>
+      <td>${s.l}</td>
+      <td>${s.for}</td>
+      <td><span class="form-row">${formHtml}</span></td>
+      <td class="next-opp">${s.nextOpponent || "—"}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+  document.getElementById('tableUpdated').textContent = standings.length + " teams";
+}
+
+function renderTicker(){
+  const rounds = Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b);
+  const lastRound = rounds[rounds.length-1];
+  const track = document.getElementById('tickerTrack');
+  if(!lastRound){ track.innerHTML = "<span class='tick'>No results yet</span>"; return; }
+  const fixtures = fixturesByRound[lastRound];
+  const ticks = fixtures.map(f=>{
+    const homeWin = f.homeScore > f.awayScore;
+    const awayWin = f.awayScore > f.homeScore;
+    return `<span class="tick">${f.home} <b>${homeWin? f.homeScore : f.homeScore}</b> <span class="vs">–</span> <b>${f.awayScore}</b> ${f.away}</span>`;
+  }).join("");
+  track.innerHTML = ticks + ticks; // duplicate for seamless scroll
+}
+
+function renderRoundTabs(){
+  const rounds = Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b);
+  const tabsEl = document.getElementById('roundTabs');
+  if(rounds.length === 0){
+    tabsEl.innerHTML = "";
+    document.getElementById('fixtureContainer').className = "state-msg error";
+    document.getElementById('fixtureContainer').innerHTML = "Couldn't find round-by-round fixtures on this tab. Check the Debug panel below.";
+    return;
+  }
+  tabsEl.innerHTML = rounds.map(r => `<button class="round-tab" data-round="${r}">Round ${r}</button>`).join("");
+  tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderFixtures(btn.dataset.round);
+    });
+  });
+  tabsEl.firstChild.classList.add('active');
+  renderFixtures(rounds[0]);
+}
+
+function renderFixtures(round){
+  const el = document.getElementById('fixtureContainer');
+  const fixtures = fixturesByRound[round] || [];
+  if(fixtures.length === 0){
+    el.className = "state-msg";
+    el.innerHTML = "No fixtures found for this round.";
+    return;
+  }
+  el.className = "fixture-grid";
+  el.innerHTML = fixtures.map(f=>{
+    const homeWin = f.homeScore > f.awayScore;
+    const awayWin = f.awayScore > f.homeScore;
+    return `<div class="fixture-card">
+      <div class="fixture-team">${f.home}</div>
+      <div class="fixture-score">
+        <span class="${homeWin?'win':(awayWin?'lose':'')}">${f.homeScore}</span> – <span class="${awayWin?'win':(homeWin?'lose':'')}">${f.awayScore}</span>
+      </div>
+      <div class="fixture-team right">${f.away}</div>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>
