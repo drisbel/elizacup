@@ -467,9 +467,7 @@ function renderDivNav(){
       location.hash = div.id;
       document.getElementById('divPill').textContent = div.pill;
       renderDivNav();
-document.getElementById('divPill').textContent = currentDivision.pill;
-renderDivNav();
-load();
+      load();
     });
   });
 }
@@ -938,6 +936,8 @@ function renderH2H(){
   containerEl.innerHTML = h2hCardHtml(h2hMatchups[0]);
 }
 
+document.getElementById('divPill').textContent = currentDivision.pill;
+renderDivNav();
 load();
 </script>
 </body>
