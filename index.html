@@ -148,6 +148,9 @@
     position:sticky; top:0;
   }
   table.standings thead th:nth-child(2){text-align:left;}
+  table.standings thead th:first-child, table.standings tbody td:first-child{
+    width:28px; padding-left:10px; padding-right:2px;
+  }
   table.standings tbody td{
     padding:10px 8px;
     text-align:center;
@@ -156,7 +159,7 @@
     border-bottom:1px solid var(--line-light);
   }
   table.standings tbody td:nth-child(2){
-    text-align:left;font-family:'Barlow',sans-serif;font-weight:600;font-size:14.5px;
+    text-align:left;font-family:'Barlow',sans-serif;font-weight:600;font-size:14.5px;padding-left:6px;
   }
   table.standings tbody tr:nth-child(even){background:#FBF9F3;}
   table.standings tbody tr:hover{background:#F0EAD8 !important;}
@@ -436,8 +439,7 @@ async function load(){
       "Rounds found: " + Object.keys(fixturesByRound).length + "\n" +
       "H2H matchups found: " + h2hMatchups.length + "\n" +
       "H2H candidate rows (>=2 position columns found): " + h2hDebug.candidateRows + "\n" +
-      "H2H first candidate: " + JSON.stringify(h2hDebug.firstCandidate) + "\n" +
-      (h2hDebug.firstCandidate ? "H2H candidate row raw dump (row " + h2hDebug.firstCandidate.row + "):\n" + fmtRow(rows[h2hDebug.firstCandidate.row]) + "\n\n" : "") +
+      "H2H first candidate trace: " + JSON.stringify(h2hDebug.firstCandidate, null, 2) + "\n\n" +
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
       "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
@@ -537,6 +539,8 @@ function parseH2H(rows){
   h2hDebug = { candidateRows: 0, firstCandidate: null };
   if(knownTeams.size === 0) return;
 
+  let debugCaptured = false;
+
   for(let r = 0; r < rows.length; r++){
     const posCols = findPositionColumns(rows, r);
     if(posCols.length < 2) continue;
@@ -546,12 +550,13 @@ function parseH2H(rows){
     const posColAway = posCols.find(c => c > posColHome + 3);
     if(posColAway === undefined) continue;
 
+    const trace = { row: r, posColHome, posColAway };
+    const captureDebug = () => { if(!debugCaptured){ h2hDebug.firstCandidate = trace; debugCaptured = true; } };
+
     // Home team name reuses the position column, but at the header row itself.
     const homeTeam = cell(rows[r], posColHome);
-    if(!h2hDebug.firstCandidate){
-      h2hDebug.firstCandidate = { row: r, posCols, homeTeamCellValue: homeTeam };
-    }
-    if(!knownTeams.has(homeTeam.toUpperCase())) continue;
+    trace.homeTeam = homeTeam;
+    if(!knownTeams.has(homeTeam.toUpperCase())){ captureDebug(); continue; }
 
     // Away team name sits somewhere between the two position columns.
     let awayTeam = null, awayTeamCol = null;
@@ -561,21 +566,29 @@ function parseH2H(rows){
         awayTeam = v; awayTeamCol = c; break;
       }
     }
-    if(!awayTeam) continue;
+    trace.awayTeam = awayTeam; trace.awayTeamCol = awayTeamCol;
+    if(!awayTeam){ captureDebug(); continue; }
 
     const homeNameCol = findNameColumn(rows, r, posColHome+1, awayTeamCol-1);
     const awayNameCol = findNameColumn(rows, r, awayTeamCol+1, posColAway-1);
-    if(homeNameCol === null || awayNameCol === null) continue;
+    trace.homeNameCol = homeNameCol; trace.awayNameCol = awayNameCol;
+    trace.homeNameSample = homeNameCol!==null ? cell(rows[r+1]||[], homeNameCol) : null;
+    trace.awayNameSample = awayNameCol!==null ? cell(rows[r+1]||[], awayNameCol) : null;
+    if(homeNameCol === null || awayNameCol === null){ captureDebug(); continue; }
 
     const homeScoreCol = findScoreColumn(rows, r, homeNameCol+1, awayTeamCol, [homeNameCol]);
     const awayScoreCol = findScoreColumn(rows, r, awayTeamCol+1, posColAway, [awayNameCol]);
-    if(homeScoreCol === null || awayScoreCol === null) continue;
+    trace.homeScoreCol = homeScoreCol; trace.awayScoreCol = awayScoreCol;
+    if(homeScoreCol === null || awayScoreCol === null){ captureDebug(); continue; }
 
     const homeVCCol = findVCColumn(rows, r, homeNameCol+1, awayTeamCol, [homeNameCol, homeScoreCol]);
     const awayVCCol = findVCColumn(rows, r, awayTeamCol+1, posColAway, [awayNameCol, awayScoreCol]);
+    trace.homeVCCol = homeVCCol; trace.awayVCCol = awayVCCol;
 
     const totalsRow = findTotalsRow(rows, r, homeNameCol, homeScoreCol, awayScoreCol);
-    if(totalsRow === null) continue;
+    trace.totalsRow = totalsRow;
+    if(totalsRow === null){ captureDebug(); continue; }
+    captureDebug();
 
     const readPlayers = (startOffset, count) => {
       const list = [];
@@ -757,7 +770,7 @@ function renderTable(){
   }
   el.className = "";
   let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
-    <th>Pos</th><th></th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th>
+    <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
     <th>Next</th>
   </tr></thead><tbody>`;
@@ -771,15 +784,17 @@ function renderTable(){
       : s.pos <= 5 ? "tier-ecl"
       : s.pos <= 10 ? "tier-mid"
       : "tier-relegation";
+    const diffClass = s.diff > 0 ? "diff-pos" : s.diff < 0 ? "diff-neg" : "";
     html += `<tr class="${tierClass}">
       <td>${s.pos}</td>
-      <td><span class="badge" style="background:${badgeColor(s.team)}">${initials(s.team)}</span></td>
       <td>${s.team}</td>
       <td class="pts">${s.pts}</td>
       <td>${s.w}</td>
       <td>${s.d}</td>
       <td>${s.l}</td>
       <td>${s.for}</td>
+      <td>${s.aga}</td>
+      <td class="${diffClass}">${s.diff > 0 ? "+" : ""}${s.diff}</td>
       <td><span class="form-row">${formHtml}</span></td>
       <td class="next-opp">${s.nextOpponent || "—"}</td>
     </tr>`;
