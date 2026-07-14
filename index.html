@@ -388,12 +388,7 @@
       <span class="sub" id="tableUpdated"></span>
     </div>
     <div id="tableContainer" class="state-msg">Loading standings…</div>
-    <div class="legend">
-      <span><i style="background:#DCF2E3;border-color:#1F8A4C;"></i> 1st place</span>
-      <span><i style="background:#FFF6CC;border-color:#B8930A;"></i> ECL qualification (2–5)</span>
-      <span><i style="background:#E1E9F7;border-color:var(--pitch);"></i> Mid-table (6–10)</span>
-      <span><i style="background:#F9E0DC;border-color:#A8443A;"></i> Relegation (11–14)</span>
-    </div>
+    <div class="legend" id="tableLegend"></div>
   </section>
 
   <section id="fixturesSection" style="margin-top:48px;">
@@ -428,12 +423,27 @@
 const SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
 
 const DIVISIONS = [
-  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", teams: 14 },
-  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  teams: 12 },
-  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", teams: 12 },
-  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  teams: 12 },
-  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", teams: 12 }
+  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", teams: 14, color: "#28427c" },
+  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  teams: 12, color: "#bc3532" },
+  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", teams: 12, color: "#990000" },
+  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  teams: 12, color: "#6aa84f" },
+  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", teams: 12, color: "#274e13" }
 ];
+
+function lightenColor(hex, percent){
+  const num = parseInt(hex.replace("#",""), 16);
+  const r = Math.min(255, Math.round(((num >> 16) & 0xff) + (255 - ((num >> 16) & 0xff)) * percent));
+  const g = Math.min(255, Math.round(((num >> 8) & 0xff) + (255 - ((num >> 8) & 0xff)) * percent));
+  const b = Math.min(255, Math.round((num & 0xff) + (255 - (num & 0xff)) * percent));
+  return "#" + [r,g,b].map(v => v.toString(16).padStart(2,"0")).join("");
+}
+
+function applyDivisionTheme(division){
+  const root = document.documentElement.style;
+  root.setProperty('--pitch', division.color);
+  root.setProperty('--pitch-2', lightenColor(division.color, 0.25));
+  root.setProperty('--line', lightenColor(division.color, 0.25));
+}
 
 function getDivisionFromHash(){
   const id = (location.hash || "").replace("#","");
@@ -466,6 +476,7 @@ function renderDivNav(){
       currentDivision = div;
       location.hash = div.id;
       document.getElementById('divPill').textContent = div.pill;
+      applyDivisionTheme(div);
       renderDivNav();
       load();
     });
@@ -477,6 +488,7 @@ window.addEventListener('hashchange', ()=>{
   if(div.id === currentDivision.id) return;
   currentDivision = div;
   document.getElementById('divPill').textContent = div.pill;
+  applyDivisionTheme(div);
   renderDivNav();
   load();
 });
@@ -635,6 +647,48 @@ function parseH2H(rows){
 // Confirmed exact coordinates from the sheet, adjusted for a 2-row offset:
 // Google's CSV export silently strips leading blank rows, so sheet row 6 (header)
 // actually lands at CSV index 3, not 5. Columns were already confirmed correct.
+// Position-based colour tiers, per division group.
+// Each tier: { class, label, upTo } — upTo is the last position (inclusive) in that tier.
+const TIER_CONFIGS = {
+  d1: [
+    { class: "tier-champion",   label: "1st place",                 upTo: 1 },
+    { class: "tier-ecl",        label: "ECL qualification (2–5)",   upTo: 5 },
+    { class: "tier-mid",        label: "Mid-table (6–10)",          upTo: 10 },
+    { class: "tier-relegation", label: "Relegation (11–14)",        upTo: 14 }
+  ],
+  d2: [
+    { class: "tier-champion",   label: "Automatic promotion (1st)",     upTo: 1 },
+    { class: "tier-ecl",        label: "Playoff qualification (2–5)",   upTo: 5 },
+    { class: "tier-mid",        label: "Mid-table (6–9)",               upTo: 9 },
+    { class: "tier-relegation", label: "Relegation (10–12)",            upTo: 12 }
+  ],
+  d3: [
+    { class: "tier-champion",   label: "Automatic promotion (1st–2nd)", upTo: 2 },
+    { class: "tier-ecl",        label: "Playoff qualification (3–6)",   upTo: 6 },
+    { class: "tier-mid",        label: "Non-playoff spots (7–12)",      upTo: 12 }
+  ]
+};
+
+function tierGroupFor(divisionId){
+  if(divisionId === "d1") return "d1";
+  if(divisionId === "d2a" || divisionId === "d2b") return "d2";
+  return "d3";
+}
+
+function getTier(pos){
+  const tiers = TIER_CONFIGS[tierGroupFor(currentDivision.id)];
+  return tiers.find(t => pos <= t.upTo) || tiers[tiers.length - 1];
+}
+
+function renderLegend(){
+  const tiers = TIER_CONFIGS[tierGroupFor(currentDivision.id)];
+  const swatch = { "tier-champion":["#DCF2E3","#1F8A4C"], "tier-ecl":["#FFF6CC","#B8930A"], "tier-mid":["#E1E9F7","var(--pitch)"], "tier-relegation":["#F9E0DC","#A8443A"] };
+  document.getElementById('tableLegend').innerHTML = tiers.map(t=>{
+    const [bg,border] = swatch[t.class];
+    return `<span><i style="background:${bg};border-color:${border};"></i> ${t.label}</span>`;
+  }).join("");
+}
+
 const TABLE_HEADER_ROW = 3;   // sheet row 6, offset -2
 const TABLE_DATA_START = 4;   // sheet row 7, offset -2
 function tableDataEnd(){ return TABLE_DATA_START + currentDivision.teams - 1; }
@@ -767,6 +821,7 @@ function renderTable(){
     return;
   }
   el.className = "";
+  renderLegend();
   let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
     <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
@@ -778,10 +833,7 @@ function renderTable(){
       const cls = up==="W" ? "form-w" : up==="L" ? "form-l" : up==="D" ? "form-d" : "form-blank";
       return `<span class="form-pill ${cls}">${up || "–"}</span>`;
     }).join("");
-    const tierClass = s.pos === 1 ? "tier-champion"
-      : s.pos <= 5 ? "tier-ecl"
-      : s.pos <= 10 ? "tier-mid"
-      : "tier-relegation";
+    const tierClass = getTier(s.pos).class;
     const diffClass = s.diff > 0 ? "diff-pos" : s.diff < 0 ? "diff-neg" : "";
     html += `<tr class="${tierClass}">
       <td>${s.pos}</td>
@@ -937,6 +989,7 @@ function renderH2H(){
 }
 
 document.getElementById('divPill').textContent = currentDivision.pill;
+applyDivisionTheme(currentDivision);
 renderDivNav();
 load();
 </script>
