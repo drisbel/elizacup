@@ -277,7 +277,7 @@
     font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:700;color:#fff;
     background:var(--pitch-2);border-radius:3px;padding:2px 5px;min-width:26px;text-align:center;flex-shrink:0;
   }
-  .h2h-player-name{flex:1;font-weight:500;}
+  .h2h-player-name{flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
   .h2h-captain{
     display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
     border-radius:50%;background:var(--amber);color:var(--ink);font-size:9px;font-weight:800;flex-shrink:0;
@@ -303,7 +303,7 @@
     .h2h-side h4{font-size:10px;margin:8px 0 3px;}
     .h2h-player-row{gap:4px;padding:4px 2px;font-size:11px;}
     .h2h-pos-tag{font-size:8px;padding:1px 3px;min-width:19px;}
-    .h2h-player-name{word-break:break-word;}
+    .h2h-player-name{font-size:11px;}
     .h2h-captain{width:13px;height:13px;font-size:7.5px;}
     .h2h-player-score{font-size:11px;min-width:16px;}
     .h2h-side-total{font-size:11px;margin-top:8px;padding-top:8px;}
@@ -459,6 +459,7 @@ async function load(){
       "H2H matchups found: " + h2hMatchups.length + "\n" +
       "H2H candidate rows found: " + h2hDebug.candidateRows + "\n" +
       "H2H first candidate: " + JSON.stringify(h2hDebug.firstCandidate) + "\n" +
+      "H2H club column check (I / V): " + JSON.stringify(h2hDebug.clubColCheck) + "\n" +
       "H2H sample matchup: " + JSON.stringify(h2hMatchups[0], null, 2) + "\n\n" +
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
@@ -518,7 +519,15 @@ function parseH2H(rows){
     if(homeTeam.toUpperCase() === awayTeam.toUpperCase()) continue;
 
     h2hDebug.candidateRows++;
-    if(!h2hDebug.firstCandidate) h2hDebug.firstCandidate = { row: r, homeTeam, awayTeam };
+    if(!h2hDebug.firstCandidate){
+      h2hDebug.firstCandidate = { row: r, homeTeam, awayTeam };
+      // Diagnostic: check columns I(8) and V(21), which the user says hold club logos,
+      // to see whether any text/URL data survives the CSV export (images usually don't).
+      h2hDebug.clubColCheck = {
+        homeClubCol_I: [cell(rows[r+1]||[],8), cell(rows[r+2]||[],8), cell(rows[r+3]||[],8)],
+        awayClubCol_V: [cell(rows[r+1]||[],21), cell(rows[r+2]||[],21), cell(rows[r+3]||[],21)]
+      };
+    }
 
     const totalsRow = findTotalsRow(rows, r);
 
@@ -802,44 +811,46 @@ function renderFixtures(round){
 document.getElementById('refreshBtn').addEventListener('click', load);
 
 function h2hCardHtml(m){
-  const homeNames = new Set([...m.homeStarters, ...m.homeBench].map(p=>p.name.trim().toUpperCase()).filter(Boolean));
-  const awayNames = new Set([...m.awayStarters, ...m.awayBench].map(p=>p.name.trim().toUpperCase()).filter(Boolean));
-  const isShared = name => name && homeNames.has(name.trim().toUpperCase()) && awayNames.has(name.trim().toUpperCase());
+  const homeStarterNames = new Set(m.homeStarters.map(p=>p.name.trim().toUpperCase()).filter(Boolean));
+  const awayStarterNames = new Set(m.awayStarters.map(p=>p.name.trim().toUpperCase()).filter(Boolean));
+  const isSharedStarter = name => name && homeStarterNames.has(name.trim().toUpperCase()) && awayStarterNames.has(name.trim().toUpperCase());
 
-  const playerRows = (starters, bench) => {
-    const capBadge = c => {
-      if(!c) return "";
-      const up = c.toUpperCase();
-      if(up==="C") return `<span class="h2h-captain" title="Captain">C</span>`;
-      if(up==="VC") return `<span class="h2h-captain" title="Vice-Captain">VC</span>`;
-      return "";
-    };
-    const row = p => {
-      const shared = isShared(p.name);
-      return `<div class="h2h-player-row${shared ? ' h2h-shared' : ''}" ${shared ? 'title="Also appears on the other team"' : ''}>
-        <span class="h2h-pos-tag">${p.pos||""}</span>
-        <span class="h2h-player-name">${p.name}</span>
-        ${capBadge(p.captain)}
-        <span class="h2h-player-score">${p.score}</span>
-      </div>`;
-    };
-    return `<h4>Starting XI</h4>${starters.map(row).join("")}<h4>Bench</h4>${bench.map(row).join("")}`;
+  const capBadge = c => {
+    if(!c) return "";
+    const up = c.toUpperCase();
+    if(up==="C") return `<span class="h2h-captain" title="Captain">C</span>`;
+    if(up==="VC") return `<span class="h2h-captain" title="Vice-Captain">VC</span>`;
+    return "";
   };
+  const playerRow = (p, checkShared) => {
+    const shared = checkShared && isSharedStarter(p.name);
+    return `<div class="h2h-player-row${shared ? ' h2h-shared' : ''}" ${shared ? `title="Also appears on the other team's starting XI"` : ''}>
+      <span class="h2h-pos-tag">${p.pos||""}</span>
+      <span class="h2h-player-name" title="${p.name}">${p.name}</span>
+      ${capBadge(p.captain)}
+      <span class="h2h-player-score">${p.score}</span>
+    </div>`;
+  };
+  const sideHtml = (starters, bench, total) => `
+    <h4>Starting XI</h4>${starters.map(p=>playerRow(p,true)).join("")}
+    <div class="h2h-side-total"><span>Total</span><span class="val">${total}</span></div>
+    <h4>Bench</h4>${bench.map(p=>playerRow(p,false)).join("")}
+  `;
+
+  const hasSharedStarter = [...homeStarterNames].some(n=>awayStarterNames.has(n));
   return `<div class="h2h-card">
     <div class="h2h-header">
       <div class="h2h-team-name home">${m.home}</div>
       <div class="h2h-score-big">${m.homeTotal} – ${m.awayTotal}</div>
       <div class="h2h-team-name away">${m.away}</div>
     </div>
-    <div class="h2h-round-label">Head-to-head lineup${[...homeNames].some(n=>awayNames.has(n)) ? ' · <span style="color:#a8443a;">greyed players (⚠) appear on both rosters</span>' : ''}</div>
+    <div class="h2h-round-label">Head-to-head lineup${hasSharedStarter ? ' · <span style="color:#a8443a;">greyed players (⚠) start for both teams</span>' : ''}</div>
     <div class="h2h-lineups">
       <div class="h2h-side home">
-        ${playerRows(m.homeStarters, m.homeBench)}
-        <div class="h2h-side-total"><span>Total</span><span class="val">${m.homeTotal}</span></div>
+        ${sideHtml(m.homeStarters, m.homeBench, m.homeTotal)}
       </div>
       <div class="h2h-side away">
-        ${playerRows(m.awayStarters, m.awayBench)}
-        <div class="h2h-side-total"><span>Total</span><span class="val">${m.awayTotal}</span></div>
+        ${sideHtml(m.awayStarters, m.awayBench, m.awayTotal)}
       </div>
     </div>
   </div>`;
