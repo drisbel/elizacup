@@ -271,6 +271,8 @@
   }
   .h2h-player-row:nth-child(odd){background:rgba(0,0,0,0.02);}
   .h2h-side.away .h2h-player-row{flex-direction:row-reverse;text-align:right;}
+  .h2h-player-row.h2h-shared{opacity:0.4;position:relative;}
+  .h2h-player-row.h2h-shared .h2h-player-name::after{content:" ⚠";font-size:10px;opacity:0.8;}
   .h2h-pos-tag{
     font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:700;color:#fff;
     background:var(--pitch-2);border-radius:3px;padding:2px 5px;min-width:26px;text-align:center;flex-shrink:0;
@@ -293,10 +295,23 @@
   }
 
   @media (max-width:640px){
-    .h2h-lineups{grid-template-columns:1fr;}
-    .h2h-side.away .h2h-player-row{flex-direction:row;text-align:left;}
-    .h2h-team-name.home, .h2h-team-name.away{text-align:center;}
-    .h2h-header{flex-direction:column;gap:8px;}
+    .h2h-card{padding:14px 10px;}
+    .h2h-team-name{font-size:15px;letter-spacing:0.01em;}
+    .h2h-score-big{font-size:20px;padding:4px 10px;}
+    .h2h-header{gap:8px;}
+    .h2h-lineups{gap:8px;}
+    .h2h-side h4{font-size:10px;margin:8px 0 3px;}
+    .h2h-player-row{gap:4px;padding:4px 2px;font-size:11px;}
+    .h2h-pos-tag{font-size:8px;padding:1px 3px;min-width:19px;}
+    .h2h-player-name{word-break:break-word;}
+    .h2h-captain{width:13px;height:13px;font-size:7.5px;}
+    .h2h-player-score{font-size:11px;min-width:16px;}
+    .h2h-side-total{font-size:11px;margin-top:8px;padding-top:8px;}
+    .h2h-side-total .val{font-size:14px;}
+  }
+  @media (max-width:400px){
+    .h2h-player-row{font-size:9.5px;}
+    .h2h-team-name{font-size:12.5px;}
   }
 
   .state-msg{
@@ -787,6 +802,10 @@ function renderFixtures(round){
 document.getElementById('refreshBtn').addEventListener('click', load);
 
 function h2hCardHtml(m){
+  const homeNames = new Set([...m.homeStarters, ...m.homeBench].map(p=>p.name.trim().toUpperCase()).filter(Boolean));
+  const awayNames = new Set([...m.awayStarters, ...m.awayBench].map(p=>p.name.trim().toUpperCase()).filter(Boolean));
+  const isShared = name => name && homeNames.has(name.trim().toUpperCase()) && awayNames.has(name.trim().toUpperCase());
+
   const playerRows = (starters, bench) => {
     const capBadge = c => {
       if(!c) return "";
@@ -795,12 +814,15 @@ function h2hCardHtml(m){
       if(up==="VC") return `<span class="h2h-captain" title="Vice-Captain">VC</span>`;
       return "";
     };
-    const row = p => `<div class="h2h-player-row">
-      <span class="h2h-pos-tag">${p.pos||""}</span>
-      <span class="h2h-player-name">${p.name}</span>
-      ${capBadge(p.captain)}
-      <span class="h2h-player-score">${p.score}</span>
-    </div>`;
+    const row = p => {
+      const shared = isShared(p.name);
+      return `<div class="h2h-player-row${shared ? ' h2h-shared' : ''}" ${shared ? 'title="Also appears on the other team"' : ''}>
+        <span class="h2h-pos-tag">${p.pos||""}</span>
+        <span class="h2h-player-name">${p.name}</span>
+        ${capBadge(p.captain)}
+        <span class="h2h-player-score">${p.score}</span>
+      </div>`;
+    };
     return `<h4>Starting XI</h4>${starters.map(row).join("")}<h4>Bench</h4>${bench.map(row).join("")}`;
   };
   return `<div class="h2h-card">
@@ -809,7 +831,7 @@ function h2hCardHtml(m){
       <div class="h2h-score-big">${m.homeTotal} – ${m.awayTotal}</div>
       <div class="h2h-team-name away">${m.away}</div>
     </div>
-    <div class="h2h-round-label">Head-to-head lineup</div>
+    <div class="h2h-round-label">Head-to-head lineup${[...homeNames].some(n=>awayNames.has(n)) ? ' · <span style="color:#a8443a;">greyed players (⚠) appear on both rosters</span>' : ''}</div>
     <div class="h2h-lineups">
       <div class="h2h-side home">
         ${playerRows(m.homeStarters, m.homeBench)}
