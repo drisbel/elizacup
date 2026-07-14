@@ -442,8 +442,9 @@ async function load(){
       "Standings rows found: " + standings.length + "\n" +
       "Rounds found: " + Object.keys(fixturesByRound).length + "\n" +
       "H2H matchups found: " + h2hMatchups.length + "\n" +
-      "H2H candidate rows (>=2 position columns found): " + h2hDebug.candidateRows + "\n" +
-      "H2H first candidate trace: " + JSON.stringify(h2hDebug.firstCandidate, null, 2) + "\n\n" +
+      "H2H candidate rows found: " + h2hDebug.candidateRows + "\n" +
+      "H2H first candidate: " + JSON.stringify(h2hDebug.firstCandidate) + "\n" +
+      "H2H sample matchup: " + JSON.stringify(h2hMatchups[0], null, 2) + "\n\n" +
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
       "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
@@ -468,74 +469,26 @@ let h2hDebug = { candidateRows: 0, firstCandidate: null };
 
 const STARTER_COUNT = 11;
 const BENCH_COUNT = 4;
-const POS_VALUES = ["GK","DEF","MID","ATT"];
 
-// Find every column where the STARTER_COUNT rows below r are all GK/DEF/MID/ATT.
-function findPositionColumns(rows, r){
-  const width = Math.max((rows[r]||[]).length, (rows[r+1]||[]).length, 60);
-  const cols = [];
-  for(let c=0;c<width;c++){
-    let ok = true;
-    for(let i=1;i<=STARTER_COUNT;i++){
-      const v = cell(rows[r+i]||[], c).toUpperCase();
-      if(!POS_VALUES.includes(v)){ ok=false; break; }
-    }
-    if(ok) cols.push(c);
-  }
-  return cols;
-}
+// Confirmed exact columns (standard letter mapping, no hidden-column drift here):
+// Home position = H(7), reused as home team name at the header row itself.
+// Home player name = J(9), Home VC/C = N(13), Home score = O(14).
+// Away score = P(15), Away VC/C = Q(16), reused as away team name at the header row.
+// Away player name = R(17), Away position = W(22).
+const H2H_COL = {
+  HOME_POS: 7, HOME_NAME: 9, HOME_VC: 13, HOME_SCORE: 14,
+  AWAY_SCORE: 15, AWAY_VC: 16, AWAY_NAME: 17, AWAY_POS: 22
+};
 
-// Name columns hold "Title Case" text (has a lowercase letter) across the starter rows,
-// unlike team names / codes which are ALL CAPS.
-function findNameColumn(rows, r, fromCol, toCol, exclude){
-  for(let c=fromCol; c<=toCol; c++){
-    if(exclude && exclude.includes(c)) continue;
-    let ok = true;
-    for(let i=1;i<=STARTER_COUNT;i++){
-      const v = cell(rows[r+i]||[], c);
-      if(!v || v === v.toUpperCase()){ ok=false; break; }
-    }
-    if(ok) return c;
-  }
-  return null;
-}
-
-// Score columns are numeric across (most of) the starter rows.
-function findScoreColumn(rows, r, fromCol, toCol, exclude){
-  for(let c=fromCol;c<=toCol;c++){
-    if(exclude && exclude.includes(c)) continue;
-    let count=0;
-    for(let i=1;i<=STARTER_COUNT;i++){
-      if(/^\d{1,3}$/.test(cell(rows[r+i]||[], c))) count++;
-    }
-    if(count >= STARTER_COUNT-2) return c;
-  }
-  return null;
-}
-
-// VC/Captain columns are blank or "VC"/"C" across the starter rows.
-function findVCColumn(rows, r, fromCol, toCol, exclude){
-  for(let c=fromCol;c<=toCol;c++){
-    if(exclude && exclude.includes(c)) continue;
-    let ok = true, hasAny=false;
-    for(let i=1;i<=STARTER_COUNT;i++){
-      const v = cell(rows[r+i]||[], c).toUpperCase();
-      if(v!=="" && v!=="VC" && v!=="C"){ ok=false; break; }
-      if(v!=="") hasAny = true;
-    }
-    if(ok) return c;
-  }
-  return null;
-}
-
-function findTotalsRow(rows, r, nameCol, scoreCol1, scoreCol2){
+function findTotalsRow(rows, r){
+  // Totals row sits between starters and bench: blank player name, numeric scores.
   for(let row = r + STARTER_COUNT + 1; row <= r + STARTER_COUNT + 5; row++){
-    const nameBlank = cell(rows[row]||[], nameCol) === "";
-    const s1 = /^\d+$/.test(cell(rows[row]||[], scoreCol1));
-    const s2 = /^\d+$/.test(cell(rows[row]||[], scoreCol2));
+    const nameBlank = cell(rows[row]||[], H2H_COL.HOME_NAME) === "";
+    const s1 = /^\d+$/.test(cell(rows[row]||[], H2H_COL.HOME_SCORE));
+    const s2 = /^\d+$/.test(cell(rows[row]||[], H2H_COL.AWAY_SCORE));
     if(nameBlank && s1 && s2) return row;
   }
-  return null;
+  return r + STARTER_COUNT + 1; // fallback to the expected default offset
 }
 
 function parseH2H(rows){
@@ -543,76 +496,36 @@ function parseH2H(rows){
   h2hDebug = { candidateRows: 0, firstCandidate: null };
   if(knownTeams.size === 0) return;
 
-  let debugCaptured = false;
-
   for(let r = 0; r < rows.length; r++){
-    const posCols = findPositionColumns(rows, r);
-    if(posCols.length < 2) continue;
+    const homeTeam = cell(rows[r], H2H_COL.HOME_POS);
+    const awayTeam = cell(rows[r], H2H_COL.AWAY_VC); // this column holds the away team name only at the header row
+    if(!knownTeams.has(homeTeam.toUpperCase()) || !knownTeams.has(awayTeam.toUpperCase())) continue;
+    if(homeTeam.toUpperCase() === awayTeam.toUpperCase()) continue;
+
     h2hDebug.candidateRows++;
+    if(!h2hDebug.firstCandidate) h2hDebug.firstCandidate = { row: r, homeTeam, awayTeam };
 
-    const posColHome = posCols[0];
-    const posColAway = posCols.find(c => c > posColHome + 3);
-    if(posColAway === undefined) continue;
-
-    const trace = { row: r, posColHome, posColAway };
-    const captureDebug = () => { if(!debugCaptured){ h2hDebug.firstCandidate = trace; debugCaptured = true; } };
-
-    // Home team name reuses the position column, but at the header row itself.
-    const homeTeam = cell(rows[r], posColHome);
-    trace.homeTeam = homeTeam;
-    if(!knownTeams.has(homeTeam.toUpperCase())){ captureDebug(); continue; }
-
-    // Away team name sits somewhere between the two position columns.
-    let awayTeam = null, awayTeamCol = null;
-    for(let c = posColHome+1; c < posColAway; c++){
-      const v = cell(rows[r], c);
-      if(v && v.toUpperCase() !== homeTeam.toUpperCase() && knownTeams.has(v.toUpperCase())){
-        awayTeam = v; awayTeamCol = c; break;
-      }
-    }
-    trace.awayTeam = awayTeam; trace.awayTeamCol = awayTeamCol;
-    if(!awayTeam){ captureDebug(); continue; }
-
-    const homeNameCol = findNameColumn(rows, r, posColHome+1, awayTeamCol-1);
-    const awayNameCol = findNameColumn(rows, r, awayTeamCol+1, posColAway-1);
-    trace.homeNameCol = homeNameCol; trace.awayNameCol = awayNameCol;
-    trace.homeNameSample = homeNameCol!==null ? cell(rows[r+1]||[], homeNameCol) : null;
-    trace.awayNameSample = awayNameCol!==null ? cell(rows[r+1]||[], awayNameCol) : null;
-    if(homeNameCol === null || awayNameCol === null){ captureDebug(); continue; }
-
-    const homeScoreCol = findScoreColumn(rows, r, homeNameCol+1, awayTeamCol, [homeNameCol]);
-    const awayScoreCol = findScoreColumn(rows, r, awayTeamCol+1, posColAway, [awayNameCol]);
-    trace.homeScoreCol = homeScoreCol; trace.awayScoreCol = awayScoreCol;
-    if(homeScoreCol === null || awayScoreCol === null){ captureDebug(); continue; }
-
-    const homeVCCol = findVCColumn(rows, r, homeNameCol+1, awayTeamCol, [homeNameCol, homeScoreCol]);
-    const awayVCCol = findVCColumn(rows, r, awayTeamCol+1, posColAway, [awayNameCol, awayScoreCol]);
-    trace.homeVCCol = homeVCCol; trace.awayVCCol = awayVCCol;
-
-    const totalsRow = findTotalsRow(rows, r, homeNameCol, homeScoreCol, awayScoreCol);
-    trace.totalsRow = totalsRow;
-    if(totalsRow === null){ captureDebug(); continue; }
-    captureDebug();
+    const totalsRow = findTotalsRow(rows, r);
 
     const readPlayers = (startOffset, count) => {
       const list = [];
       for(let i=0;i<count;i++){
         const row = rows[r + startOffset + i] || [];
-        const homeName = cell(row, homeNameCol);
-        const awayName = cell(row, awayNameCol);
+        const homeName = cell(row, H2H_COL.HOME_NAME);
+        const awayName = cell(row, H2H_COL.AWAY_NAME);
         if(!homeName && !awayName) continue;
         list.push({
           home: {
-            pos: cell(row, posColHome),
+            pos: cell(row, H2H_COL.HOME_POS),
             name: homeName,
-            score: parseInt(cell(row, homeScoreCol),10) || 0,
-            captain: homeVCCol !== null ? cell(row, homeVCCol) : null
+            score: parseInt(cell(row, H2H_COL.HOME_SCORE),10) || 0,
+            captain: cell(row, H2H_COL.HOME_VC) || null
           },
           away: {
-            pos: cell(row, posColAway),
+            pos: cell(row, H2H_COL.AWAY_POS),
             name: awayName,
-            score: parseInt(cell(row, awayScoreCol),10) || 0,
-            captain: awayVCCol !== null ? cell(row, awayVCCol) : null
+            score: parseInt(cell(row, H2H_COL.AWAY_SCORE),10) || 0,
+            captain: cell(row, H2H_COL.AWAY_VC) || null
           }
         });
       }
@@ -626,8 +539,8 @@ function parseH2H(rows){
     h2hMatchups.push({
       home: homeTeam,
       away: awayTeam,
-      homeTotal: parseInt(cell(rows[totalsRow], homeScoreCol),10) || 0,
-      awayTotal: parseInt(cell(rows[totalsRow], awayScoreCol),10) || 0,
+      homeTotal: parseInt(cell(rows[totalsRow], H2H_COL.HOME_SCORE),10) || 0,
+      awayTotal: parseInt(cell(rows[totalsRow], H2H_COL.AWAY_SCORE),10) || 0,
       homeStarters: starters.map(p=>p.home),
       awayStarters: starters.map(p=>p.away),
       homeBench: bench.map(p=>p.home),
@@ -637,6 +550,7 @@ function parseH2H(rows){
     if(h2hMatchups.length >= 7) break;
   }
 }
+
 
 // Confirmed exact coordinates from the sheet, adjusted for a 2-row offset:
 // Google's CSV export silently strips leading blank rows, so sheet row 6 (header)
