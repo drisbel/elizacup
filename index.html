@@ -203,6 +203,24 @@
   table.standings.compact tbody td:nth-child(3){font-size:12.5px;}
   table.standings.compact .badge{width:20px;height:20px;font-size:8px;}
   table.standings.compact .form-pill{width:15px;height:15px;font-size:9px;}
+
+  /* Roddy leaderboard: keep the first 6 columns (Pos/Team/Division/Round/Chip/Total)
+     compact enough to fit on mobile without scrolling; Chip1-4/Overall scroll into view. */
+  table.roddy-table{min-width:0;width:100%;}
+  table.roddy-table th, table.roddy-table td{white-space:nowrap;}
+  table.roddy-table td.roddy-team{
+    max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    text-align:left; font-weight:600;
+  }
+  table.roddy-table th:nth-child(2){text-align:left;}
+  .roddy-div-tag{
+    display:inline-block; color:#fff; font-size:10px; font-weight:600;
+    padding:3px 7px; border-radius:10px; white-space:nowrap;
+  }
+  @media (max-width:600px){
+    table.roddy-table td.roddy-team{max-width:80px;}
+    table.roddy-table .roddy-div-tag{font-size:9px; padding:2px 5px;}
+  }
   td.next-opp{font-size:11.5px;color:#5a6a63;white-space:nowrap;}
 
   .badge{
@@ -353,6 +371,8 @@
     table.standings{min-width:0;}
     table.standings thead th:nth-child(n+7),
     table.standings tbody td:nth-child(n+7){display:none;}
+    table.roddy-table thead th:nth-child(n+7),
+    table.roddy-table tbody td:nth-child(n+7){display:table-cell;}
     table.standings.compact thead th{padding:6px 4px;font-size:9.5px;}
     table.standings.compact tbody td{padding:6px 4px;font-size:12px;}
     table.standings tbody td:nth-child(2){font-size:12.5px;padding-left:4px;}
@@ -1046,8 +1066,8 @@ function parseRoddy(rows){
   roddyDebug = {};
 
   // Confirmed exact columns: POS=F(5), TEAM=H(7), DIVISION=Q(16), ROUND=T(19), CHIP=V(21),
-  // chip-play indicators=AA:AD(26-29), OVERALL=AE(30).
-  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, CHIPS:[26,27,28,29], OVERALL:30 };
+  // TOTAL=W(22), chip-play indicators=AA:AD(26-29), OVERALL=AE(30).
+  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27,28,29], OVERALL:30 };
 
   // Find the header row by locating "POS" at column F, restricted to the top of the
   // sheet (first 30 rows) so we don't accidentally match the broken #REF! table further down.
@@ -1082,15 +1102,27 @@ function parseRoddy(rows){
     const division = cell(rows[r]||[], ROD_COL.DIVISION);
     const round = cell(rows[r]||[], ROD_COL.ROUND);
     const chip = cell(rows[r]||[], ROD_COL.CHIP);
+    const total = parseInt(cell(rows[r]||[], ROD_COL.TOTAL), 10) || 0;
     const chips = ROD_COL.CHIPS.map(c => cell(rows[r]||[], c));
     const overall = parseInt(cell(rows[r]||[], ROD_COL.OVERALL), 10) || 0;
 
     if(!team) continue;
-    roddyEntries.push({ pos: parseInt(posVal,10), team, division, round, chip, chips, overall });
+    roddyEntries.push({ pos: parseInt(posVal,10), team, division, round, chip, total, chips, overall });
   }
 
-  roddyEntries.sort((a,b) => b.overall - a.overall);
+  // Total is the main sorting criteria.
+  roddyEntries.sort((a,b) => b.total - a.total);
   roddyEntries.forEach((e,i) => e.pos = i+1);
+}
+
+function getDivisionColorByLabel(text){
+  const t = (text||"").toUpperCase();
+  if(t.includes("ELIZA")) return "#28427c";
+  if(t.includes("2A")) return "#bc3532";
+  if(t.includes("2B")) return "#990000";
+  if(t.includes("3A")) return "#6aa84f";
+  if(t.includes("3B")) return "#274e13";
+  return "#8a9990";
 }
 
 function renderRoddy(){
@@ -1101,19 +1133,21 @@ function renderRoddy(){
     return;
   }
   el.className = "";
-  let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
-    <th>Pos</th><th>Team</th><th>Division</th><th>Round</th><th>Chip</th>
+  let html = `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
+    <th>Pos</th><th>Team</th><th>Division</th><th>Round</th><th>Chip</th><th>Total</th>
     <th>Chip 1</th><th>Chip 2</th><th>Chip 3</th><th>Chip 4</th><th>Overall</th>
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
-    html += `<tr>
+    const divColor = getDivisionColorByLabel(e.division);
+    html += `<tr style="border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
-      <td>${e.team || "—"}</td>
-      <td>${e.division || "—"}</td>
+      <td class="roddy-team">${e.team || "—"}</td>
+      <td><span class="roddy-div-tag" style="background:${divColor};">${e.division || "—"}</span></td>
       <td>${e.round || "—"}</td>
       <td>${e.chip || "—"}</td>
+      <td class="pts">${e.total}</td>
       ${e.chips.map(c => `<td>${c || "—"}</td>`).join("")}
-      <td class="pts">${e.overall}</td>
+      <td>${e.overall}</td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
