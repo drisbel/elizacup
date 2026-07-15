@@ -209,8 +209,7 @@
   table.roddy-table{border-collapse:collapse; width:auto; min-width:0;}
   table.roddy-table th, table.roddy-table td{white-space:nowrap;}
   table.roddy-table td.roddy-team{
-    max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    text-align:left; font-weight:600;
+    white-space:normal; word-break:break-word; text-align:left; font-weight:600; min-width:100px;
   }
   table.roddy-table th:nth-child(2){text-align:left;}
   .roddy-div-tag{
@@ -218,7 +217,7 @@
     padding:3px 7px; border-radius:10px; white-space:nowrap;
   }
   @media (max-width:600px){
-    table.roddy-table td.roddy-team{max-width:64px; font-size:11.5px;}
+    table.roddy-table td.roddy-team{min-width:90px; font-size:11.5px;}
     table.roddy-table .roddy-div-tag{font-size:9px; padding:2px 5px;}
     table.roddy-table th, table.roddy-table td{padding:5px 5px; font-size:11px;}
     table.roddy-table th:nth-child(1), table.roddy-table td:nth-child(1){padding-left:8px; padding-right:3px;}
@@ -445,6 +444,15 @@
     </div>
     <div id="charityContainer" class="state-msg">Loading charity promotion standings…</div>
   </section>
+
+  <section id="facupSection" style="display:none;">
+    <div class="section-head">
+      <h2>Eliza FA Cup</h2>
+      <span class="sub" id="facupUpdated"></span>
+    </div>
+    <div id="facupRoundTabs" class="round-tabs"></div>
+    <div id="facupContainer" class="state-msg">Loading bracket…</div>
+  </section>
 </main>
 
 <footer>
@@ -465,7 +473,8 @@ const DIVISIONS = [
   { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", teams: 12, color: "#990000", type: "division" },
   { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division" },
   { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482",  teams: 62, color: "#28427c", type: "roddy" }
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482",  teams: 62, color: "#28427c", type: "roddy" },
+  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",    teams: 64, color: "#7a1f1f", type: "facup" }
 ];
 
 function lightenColor(hex, percent){
@@ -541,12 +550,16 @@ function setStatus(msg, ok){
 }
 
 function togglePageSections(){
-  const isRoddy = currentDivision.type === "roddy";
-  document.getElementById('tableSection').style.display = isRoddy ? "none" : "";
-  document.getElementById('fixturesSection').style.display = isRoddy ? "none" : "";
-  document.getElementById('h2hSection').style.display = isRoddy ? "none" : "";
+  const type = currentDivision.type;
+  const isDivision = type === "division";
+  const isRoddy = type === "roddy";
+  const isFACup = type === "facup";
+  document.getElementById('tableSection').style.display = isDivision ? "" : "none";
+  document.getElementById('fixturesSection').style.display = isDivision ? "" : "none";
+  document.getElementById('h2hSection').style.display = isDivision ? "" : "none";
   document.getElementById('roddySection').style.display = isRoddy ? "" : "none";
-  document.querySelector('.ticker-wrap').style.display = isRoddy ? "none" : "";
+  document.getElementById('facupSection').style.display = isFACup ? "" : "none";
+  document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 }
 
 async function load(){
@@ -583,6 +596,35 @@ async function load(){
       setStatus("Couldn't reach the sheet (" + err.message + ")", false);
       document.getElementById('roddyContainer').className = "state-msg error";
       document.getElementById('roddyContainer').innerHTML =
+        "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(currentDivision.type === "facup"){
+    document.getElementById('facupContainer').innerHTML = "Loading bracket…";
+    document.getElementById('facupContainer').className = "state-msg";
+    try{
+      const res = await fetch(csvUrlFor(currentDivision));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+      const rows = parsed.data;
+
+      parseFACup(rows);
+      renderFACup();
+
+      document.getElementById('debugOut').textContent =
+        "FA Cup rounds found: " + facupRounds.length + "\n" +
+        "FA Cup debug: " + JSON.stringify(facupDebug, null, 2) + "\n\n" +
+        JSON.stringify({rounds: facupRounds.map(r=>({name:r.name, fixtureCount:r.fixtures.length, sample:r.fixtures.slice(0,3)}))}, null, 2);
+
+      setStatus("Live — updated " + new Date().toLocaleString());
+    }catch(err){
+      console.error(err);
+      setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+      document.getElementById('facupContainer').className = "state-msg error";
+      document.getElementById('facupContainer').innerHTML =
         "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
@@ -1131,7 +1173,7 @@ function parseRoddy(rows){
 
 function getDivisionColorByLabel(text){
   const t = (text||"").toUpperCase();
-  if(t.includes("ELIZA")) return "#28427c";
+  if(t.includes("ELIZA") || t === "D1") return "#28427c";
   if(t.includes("2A")) return "#bc3532";
   if(t.includes("2B")) return "#990000";
   if(t.includes("3A")) return "#6aa84f";
@@ -1162,7 +1204,7 @@ function renderRoddy(){
   el.className = "";
   let html = `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
     <th>Pos</th><th>Team</th><th>Division</th><th>Round</th><th>Chip</th><th>Total</th>
-    <th>Chip 1</th><th>Chip 2</th><th>Chip 3</th><th>Chip 4</th><th>Overall</th>
+    <th>BB Chip</th><th>UC Chip</th><th>FH Chip</th><th>WC Chip</th><th>Overall</th>
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
     const divColor = getDivisionColorByLabel(e.division);
@@ -1271,6 +1313,111 @@ function renderCharityPromotion(){
     ${charityTableHtml("Division 3 Charity Promotion", charityD3)}
   </div>`;
   document.getElementById('charityUpdated').textContent = (charityD2.length + charityD3.length) + " entries";
+}
+
+// ---------- Eliza FA Cup (knockout bracket) ----------
+let facupRounds = [];
+let facupDebug = {};
+
+// Confirmed columns: home team = C(2), home score = I(8), away score = J(9), away team = K(10).
+const FACUP_COL = { HOME_TEAM:2, HOME_SCORE:8, AWAY_SCORE:9, AWAY_TEAM:10 };
+
+function parseTeamDiv(raw){
+  const m = (raw||"").trim().match(/^(.*)\s\(([^)]+)\)\s*$/);
+  if(m) return { name: m[1].trim(), division: m[2].trim() };
+  return { name: (raw||"").trim(), division: "" };
+}
+
+function parseFACup(rows){
+  facupRounds = [];
+  facupDebug = { roundMarkersFound: [] };
+
+  // Round titles sit in column A (e.g. "ROUND OF 64", "ROUND OF 32", "SEMI FINAL", "FINAL").
+  const roundMarkers = [];
+  for(let r=0; r<rows.length; r++){
+    const v = cell(rows[r]||[], 0);
+    if(v && /ROUND OF|QUARTER|SEMI|FINAL/i.test(v)){
+      roundMarkers.push({ row: r, name: v });
+    }
+  }
+  facupDebug.roundMarkersFound = roundMarkers;
+  if(roundMarkers.length === 0) return;
+
+  roundMarkers.forEach((marker, i) => {
+    const startRow = marker.row;
+    const endRow = i+1 < roundMarkers.length ? roundMarkers[i+1].row : rows.length;
+    const fixtures = [];
+
+    for(let r=startRow; r<endRow; r++){
+      const homeRaw = cell(rows[r]||[], FACUP_COL.HOME_TEAM);
+      const awayRaw = cell(rows[r]||[], FACUP_COL.AWAY_TEAM);
+      // A valid fixture row has a team name with a "(DIVISION)" tag on at least one side.
+      if(!/\(.+\)/.test(homeRaw) && !/\(.+\)/.test(awayRaw)) continue;
+
+      const home = parseTeamDiv(homeRaw);
+      const away = parseTeamDiv(awayRaw);
+      const homeScoreRaw = cell(rows[r]||[], FACUP_COL.HOME_SCORE);
+      const awayScoreRaw = cell(rows[r]||[], FACUP_COL.AWAY_SCORE);
+      const isBye = homeScoreRaw.toUpperCase() === "BYE" || awayScoreRaw.toUpperCase() === "BYE";
+      const homeScore = /^\d+$/.test(homeScoreRaw) ? parseInt(homeScoreRaw,10) : null;
+      const awayScore = /^\d+$/.test(awayScoreRaw) ? parseInt(awayScoreRaw,10) : null;
+
+      fixtures.push({ home, away, homeScore, awayScore, isBye });
+    }
+
+    facupRounds.push({ name: marker.name, fixtures });
+  });
+}
+
+function facupFixtureCardHtml(f){
+  const hasScore = f.homeScore !== null && f.awayScore !== null;
+  const homeWin = hasScore && f.homeScore > f.awayScore;
+  const awayWin = hasScore && f.awayScore > f.homeScore;
+  const scoreHtml = f.isBye
+    ? `<span class="upcoming">BYE</span>`
+    : hasScore
+      ? `<span class="${homeWin?'win':(awayWin?'lose':'')}">${f.homeScore}</span> – <span class="${awayWin?'win':(homeWin?'lose':'')}">${f.awayScore}</span>`
+      : `<span class="upcoming">vs</span>`;
+  const divTag = d => d ? `<span class="roddy-div-tag" style="background:${getDivisionColorByLabel(d)};font-size:9px;margin-left:5px;">${d}</span>` : "";
+  return `<div class="fixture-card">
+    <div class="fixture-team ${homeWin?'':''}">${f.home.name || "TBD"} ${divTag(f.home.division)}</div>
+    <div class="fixture-score">${scoreHtml}</div>
+    <div class="fixture-team right">${divTag(f.away.division)} ${f.away.name || "TBD"}</div>
+  </div>`;
+}
+
+function renderFACupRound(idx){
+  const container = document.getElementById('facupContainer');
+  const round = facupRounds[idx];
+  if(!round || round.fixtures.length === 0){
+    container.className = "state-msg";
+    container.innerHTML = "No fixtures found for this round.";
+    return;
+  }
+  container.className = "fixture-grid";
+  container.innerHTML = round.fixtures.map(facupFixtureCardHtml).join("");
+}
+
+function renderFACup(){
+  const tabsEl = document.getElementById('facupRoundTabs');
+  if(facupRounds.length === 0){
+    tabsEl.innerHTML = "";
+    document.getElementById('facupContainer').className = "state-msg error";
+    document.getElementById('facupContainer').innerHTML = "Couldn't find the FA Cup bracket. Check the Debug panel below.";
+    document.getElementById('facupUpdated').textContent = "";
+    return;
+  }
+  document.getElementById('facupUpdated').textContent = facupRounds.length + " rounds";
+  tabsEl.innerHTML = facupRounds.map((r,i)=>`<button class="round-tab" data-idx="${i}">${r.name}</button>`).join("");
+  tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderFACupRound(btn.dataset.idx);
+    });
+  });
+  tabsEl.firstChild.classList.add('active');
+  renderFACupRound(0);
 }
 
 document.getElementById('divPill').textContent = currentDivision.pill;
