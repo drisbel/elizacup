@@ -540,6 +540,7 @@ async function load(){
       document.getElementById('debugOut').textContent =
         "Roddy entries found: " + roddyEntries.length + "\n" +
         "Roddy debug: " + JSON.stringify(roddyDebug, null, 2) + "\n\n" +
+        "Roddy first 12 rows raw dump:\n" + rows.slice(0,12).map((row,i)=> "Row " + i + ": " + (row||[]).map((c,ci)=>`[${ci}]="${(c||"").toString().trim()}"`).join("  ")).join("\n") + "\n\n" +
         JSON.stringify({sample: roddyEntries.slice(0,5)}, null, 2);
 
       setStatus("Live — updated " + new Date().toLocaleString());
@@ -1055,7 +1056,13 @@ function parseRoddy(rows){
     if(cell(rows[r]||[], ROD_COL.TEAM).toUpperCase() === "TEAM"){ headerRow = r; break; }
   }
   roddyDebug.headerRow = headerRow;
-  if(headerRow === -1) return;
+  if(headerRow === -1){
+    // Dump the first several rows raw so we can see where things actually sit.
+    const fmtRow = (row) => (row||[]).map((c,i)=> `[${i}]="${(c||"").toString().trim()}"`).join("  ");
+    roddyDebug.rawDump = {};
+    for(let r=0; r<12; r++) roddyDebug.rawDump["row"+r] = fmtRow(rows[r]);
+    return;
+  }
 
   const dataStart = headerRow + 1;
 
