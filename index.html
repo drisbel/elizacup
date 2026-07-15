@@ -206,10 +206,10 @@
 
   /* Roddy leaderboard: keep the first 6 columns (Pos/Team/Division/Round/Chip/Total)
      compact enough to fit on mobile without scrolling; Chip1-4/Overall scroll into view. */
-  table.roddy-table{min-width:0;width:100%;}
+  table.roddy-table{border-collapse:collapse; width:auto; min-width:0;}
   table.roddy-table th, table.roddy-table td{white-space:nowrap;}
   table.roddy-table td.roddy-team{
-    max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     text-align:left; font-weight:600;
   }
   table.roddy-table th:nth-child(2){text-align:left;}
@@ -218,8 +218,11 @@
     padding:3px 7px; border-radius:10px; white-space:nowrap;
   }
   @media (max-width:600px){
-    table.roddy-table td.roddy-team{max-width:80px;}
+    table.roddy-table td.roddy-team{max-width:64px; font-size:11.5px;}
     table.roddy-table .roddy-div-tag{font-size:9px; padding:2px 5px;}
+    table.roddy-table th, table.roddy-table td{padding:5px 5px; font-size:11px;}
+    table.roddy-table th:nth-child(1), table.roddy-table td:nth-child(1){padding-left:8px; padding-right:3px;}
+    .charity-grid{grid-template-columns:1fr !important;}
   }
   td.next-opp{font-size:11.5px;color:#5a6a63;white-space:nowrap;}
 
@@ -435,6 +438,12 @@
       <span class="sub" id="roddyUpdated"></span>
     </div>
     <div id="roddyContainer" class="state-msg">Loading leaderboard…</div>
+
+    <div class="section-head" style="margin-top:40px;">
+      <h2>Charity Promotion Standings</h2>
+      <span class="sub" id="charityUpdated"></span>
+    </div>
+    <div id="charityContainer" class="state-msg">Loading charity promotion standings…</div>
   </section>
 </main>
 
@@ -556,12 +565,17 @@ async function load(){
 
       parseRoddy(rows);
       renderRoddy();
+      parseCharityPromotion(rows);
+      renderCharityPromotion();
 
       document.getElementById('debugOut').textContent =
         "Roddy entries found: " + roddyEntries.length + "\n" +
         "Roddy debug: " + JSON.stringify(roddyDebug, null, 2) + "\n\n" +
-        "Roddy first 12 rows raw dump:\n" + rows.slice(0,12).map((row,i)=> "Row " + i + ": " + (row||[]).map((c,ci)=>`[${ci}]="${(c||"").toString().trim()}"`).join("  ")).join("\n") + "\n\n" +
-        JSON.stringify({sample: roddyEntries.slice(0,5)}, null, 2);
+        "Charity D2 entries found: " + charityD2.length + "\n" +
+        "Charity D3 entries found: " + charityD3.length + "\n" +
+        "Charity debug: " + JSON.stringify(charityDebug, null, 2) + "\n\n" +
+        "Rows 68-75 raw dump:\n" + rows.slice(68,76).map((row,i)=> "Row " + (i+68) + ": " + (row||[]).map((c,ci)=>`[${ci}]="${(c||"").toString().trim()}"`).join("  ")).join("\n") + "\n\n" +
+        JSON.stringify({roddySample: roddyEntries.slice(0,5), charityD2Sample: charityD2.slice(0,5), charityD3Sample: charityD3.slice(0,5)}, null, 2);
 
       setStatus("Live — updated " + new Date().toLocaleString());
     }catch(err){
@@ -1124,6 +1138,19 @@ function getDivisionColorByLabel(text){
   if(t.includes("3B")) return "#274e13";
   return "#8a9990";
 }
+function getDivisionShortLabel(text){
+  const t = (text||"").toUpperCase();
+  if(t.includes("ELIZA")) return "D1";
+  if(t.includes("2A")) return "2A";
+  if(t.includes("2B")) return "2B";
+  if(t.includes("3A")) return "3A";
+  if(t.includes("3B")) return "3B";
+  return text || "—";
+}
+function hexToRgba(hex, alpha){
+  const num = parseInt(hex.replace("#",""), 16);
+  return `rgba(${(num>>16)&0xff},${(num>>8)&0xff},${num&0xff},${alpha})`;
+}
 
 function renderRoddy(){
   const el = document.getElementById('roddyContainer');
@@ -1139,10 +1166,10 @@ function renderRoddy(){
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
     const divColor = getDivisionColorByLabel(e.division);
-    html += `<tr style="border-left:4px solid ${divColor};">
+    html += `<tr style="background:${hexToRgba(divColor,0.13)};border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
       <td class="roddy-team">${e.team || "—"}</td>
-      <td><span class="roddy-div-tag" style="background:${divColor};">${e.division || "—"}</span></td>
+      <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
       <td>${e.round || "—"}</td>
       <td>${e.chip || "—"}</td>
       <td class="pts">${e.total}</td>
@@ -1153,6 +1180,97 @@ function renderRoddy(){
   html += `</tbody></table></div>`;
   el.innerHTML = html;
   document.getElementById('roddyUpdated').textContent = roddyEntries.length + " entries";
+}
+
+// ---------- Charity Promotion Standings (2 tables: D2 and D3, on the Roddy tab) ----------
+let charityD2 = [];
+let charityD3 = [];
+let charityDebug = {};
+
+function parseOneCharityTable(rows, halfStart, halfEnd, teamCol){
+  // Find the header row by locating "DIVISION" within this table's column range.
+  let headerRow = -1, divCol = null, posCol = null, roddyCol = null, promoCol = null;
+  for(let r=0; r<Math.min(rows.length, 85); r++){
+    for(let c=halfStart; c<=halfEnd; c++){
+      const v = cell(rows[r]||[], c).toUpperCase();
+      if(v === "DIVISION"){ headerRow = r; divCol = c; break; }
+    }
+    if(headerRow !== -1) break;
+  }
+  if(headerRow === -1) return { entries: [], debug: { headerRow, divCol, posCol, roddyCol, promoCol } };
+
+  const header = rows[headerRow] || [];
+  for(let c=halfStart; c<=halfEnd; c++){
+    const v = (header[c]||"").toString().trim().toUpperCase();
+    if(v === "POS" && posCol === null) posCol = c;
+    if(v === "RODDY" && roddyCol === null) roddyCol = c;
+    if(v.startsWith("PRO")) promoCol = c;
+  }
+
+  const dataStart = headerRow + 1;
+  const entries = [];
+  for(let r=dataStart; r<Math.min(rows.length, dataStart+30); r++){
+    const division = divCol!==null ? cell(rows[r]||[], divCol) : "";
+    const team = cell(rows[r]||[], teamCol);
+    const pos = posCol!==null ? cell(rows[r]||[], posCol) : "";
+    const roddy = roddyCol!==null ? cell(rows[r]||[], roddyCol) : "";
+    const promo = promoCol!==null ? cell(rows[r]||[], promoCol) : "";
+    if(!team && !division) continue; // stop-ish once rows go blank, but keep scanning within the 24-row block
+    if(!team) continue;
+    entries.push({ pos, team, division, roddy, promo });
+  }
+
+  return { entries, debug: { headerRow, divCol, posCol, roddyCol, promoCol, teamCol } };
+}
+
+function parseCharityPromotion(rows){
+  // Left table (Div 2): roughly columns D:R (3-17), team at F(5).
+  const left = parseOneCharityTable(rows, 3, 18, 5);
+  // Right table (Div 3): roughly columns T:AH (19-33), team at V(21).
+  const right = parseOneCharityTable(rows, 19, 34, 21);
+
+  charityD2 = left.entries;
+  charityD3 = right.entries;
+  charityDebug = { left: left.debug, right: right.debug };
+}
+
+function charityTableHtml(title, entries, divColor){
+  if(entries.length === 0){
+    return `<div><h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;margin:0 0 8px;">${title}</h3><div class="state-msg">No data found.</div></div>`;
+  }
+  let html = `<div><h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;margin:0 0 8px;">${title}</h3>
+    <div class="table-wrap"><table class="standings compact"><thead><tr>
+      <th>Pos</th><th>Team</th><th>Division</th><th>Roddy</th><th>Promotion</th>
+    </tr></thead><tbody>`;
+  entries.forEach(e=>{
+    const color = getDivisionColorByLabel(e.division);
+    const promoStyle = e.promo && e.promo.toUpperCase()==="AUTO" ? `style="color:#1F8A4C;font-weight:700;"` : "";
+    html += `<tr style="background:${hexToRgba(color,0.13)};border-left:4px solid ${color};">
+      <td>${e.pos || "—"}</td>
+      <td style="text-align:left;font-weight:600;">${e.team || "—"}</td>
+      <td><span class="roddy-div-tag" style="background:${color};">${getDivisionShortLabel(e.division)}</span></td>
+      <td>${e.roddy || "—"}</td>
+      <td ${promoStyle}>${e.promo || "—"}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  return html;
+}
+
+function renderCharityPromotion(){
+  const el = document.getElementById('charityContainer');
+  if(charityD2.length === 0 && charityD3.length === 0){
+    el.className = "state-msg error";
+    el.innerHTML = "Couldn't find the Charity Promotion tables. Check the Debug panel below.";
+    document.getElementById('charityUpdated').textContent = "";
+    return;
+  }
+  el.className = "";
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="charity-grid">
+    ${charityTableHtml("Division 2 Charity Promotion", charityD2)}
+    ${charityTableHtml("Division 3 Charity Promotion", charityD3)}
+  </div>`;
+  document.getElementById('charityUpdated').textContent = (charityD2.length + charityD3.length) + " entries";
 }
 
 document.getElementById('divPill').textContent = currentDivision.pill;
