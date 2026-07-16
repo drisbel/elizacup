@@ -194,6 +194,19 @@
   table.standings tbody tr.tier-relegation{background:#F9E0DC;}
   table.standings tbody tr.tier-relegation:nth-child(even){background:#F5D1CB;}
   table.standings tbody tr.tier-relegation td:first-child{color:#A8443A;}
+
+  /* ECL group tables: row colour keyed off the Status column */
+  table.standings tbody tr.ecl-sf{background:#8FCFA6;}
+  table.standings tbody tr.ecl-sf:nth-child(even){background:#7FC397;}
+  table.standings tbody tr.ecl-sf td:first-child{color:#0F4227;}
+
+  table.standings tbody tr.ecl-qf{background:#DCF2E3;}
+  table.standings tbody tr.ecl-qf:nth-child(even){background:#D0EBD9;}
+  table.standings tbody tr.ecl-qf td:first-child{color:#1F8A4C;}
+
+  table.standings tbody tr.ecl-elim{background:#F9E0DC;}
+  table.standings tbody tr.ecl-elim:nth-child(even){background:#F5D1CB;}
+  table.standings tbody tr.ecl-elim td:first-child{color:#A8443A;}
   td.pts{font-weight:700;color:var(--pitch-2);}
   td.diff-pos{color:var(--turf);font-weight:600;}
   td.diff-neg{color:var(--red);font-weight:600;}
@@ -1607,14 +1620,36 @@ function parseECLQualifiers(rows){
   eclQualifiersDebug = {};
 
   let titleRow = -1;
+  let titleMatchStrength = null;
   for(let r=0; r<rows.length; r++){
-    for(let c=0; c<=6; c++){
-      if(/RANKING OF QUALIFIED TEAMS/i.test(cell(rows[r]||[], c))){ titleRow = r; break; }
+    for(let c=0; c<=12; c++){
+      if(/RANKING\s+OF\s+QUALIFIED\s+TEAMS/i.test(cell(rows[r]||[], c))){ titleRow = r; titleMatchStrength = "exact"; break; }
     }
     if(titleRow !== -1) break;
   }
+  if(titleRow === -1){
+    // Looser fallback in case the exact wording/spacing differs from what we expect.
+    for(let r=0; r<rows.length; r++){
+      for(let c=0; c<=12; c++){
+        if(/QUALIFIED TEAMS/i.test(cell(rows[r]||[], c))){ titleRow = r; titleMatchStrength = "loose"; break; }
+      }
+      if(titleRow !== -1) break;
+    }
+  }
   eclQualifiersDebug.titleRow = titleRow;
-  if(titleRow === -1) return;
+  eclQualifiersDebug.titleMatchStrength = titleMatchStrength;
+
+  if(titleRow === -1){
+    // Dump a wide window right after the last group block so the real cell content is
+    // visible for a follow-up fix, instead of guessing blind again.
+    const lastGroupHeaderRow = (eclDebug.groupHeadersFound && eclDebug.groupHeadersFound.length)
+      ? eclDebug.groupHeadersFound[eclDebug.groupHeadersFound.length - 1].row
+      : 0;
+    eclQualifiersDebug.rawRowDumpNearLastGroup = rows.slice(lastGroupHeaderRow, lastGroupHeaderRow + 25).map((row, i) =>
+      "row" + (lastGroupHeaderRow + i) + ": " + (row || []).map((c, ci) => `[${ci}]="${(c || "").toString().trim()}"`).join(" ")
+    );
+    return;
+  }
 
   let headerRow = -1;
   for(let r=titleRow; r<=titleRow+3 && r<rows.length; r++){
@@ -1709,7 +1744,12 @@ function eclGroupTableHtml(g){
   g.teams.forEach(t=>{
     const diffNum = parseInt(t.diff, 10);
     const diffClass = diffNum > 0 ? "diff-pos" : diffNum < 0 ? "diff-neg" : "";
-    html += `<tr>
+    const statusUpper = (t.status||"").toUpperCase();
+    const rowClass = /ADVANCE\s*-\s*SF/.test(statusUpper) ? "ecl-sf"
+      : /ADVANCE\s*-\s*QF/.test(statusUpper) ? "ecl-qf"
+      : /ELIMINATED/.test(statusUpper) ? "ecl-elim"
+      : "";
+    html += `<tr class="${rowClass}">
       <td>${t.pos}</td>
       <td>${t.team}</td>
       <td class="pts">${t.pts}</td>
