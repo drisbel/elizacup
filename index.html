@@ -1615,33 +1615,41 @@ function parseECL(rows){
 let eclQualifiers = [];
 let eclQualifiersDebug = {};
 
+// Confirmed columns: POS=B(1), TEAM=D:G(3-6, merged), GROUP POS=H(7), PTS=I(8),
+// PTS+=J:K(9-10, merged), RODDY=L:M(11-12, merged), STATUS=N:R(13-17, merged).
+const ECL_QUAL_COL = {
+  POS: 1, TEAM_START: 3, TEAM_END: 6, GROUP_POS: 7, PTS: 8,
+  PTS_PLUS_START: 9, PTS_PLUS_END: 10,
+  RODDY_START: 11, RODDY_END: 12,
+  STATUS_START: 13, STATUS_END: 17
+};
+
 function parseECLQualifiers(rows){
   eclQualifiers = [];
   eclQualifiersDebug = {};
 
-  let titleRow = -1;
-  let titleMatchStrength = null;
-  for(let r=0; r<rows.length; r++){
-    for(let c=0; c<=12; c++){
-      if(/RANKING\s+OF\s+QUALIFIED\s+TEAMS/i.test(cell(rows[r]||[], c))){ titleRow = r; titleMatchStrength = "exact"; break; }
-    }
-    if(titleRow !== -1) break;
-  }
-  if(titleRow === -1){
-    // Looser fallback in case the exact wording/spacing differs from what we expect.
-    for(let r=0; r<rows.length; r++){
-      for(let c=0; c<=12; c++){
-        if(/QUALIFIED TEAMS/i.test(cell(rows[r]||[], c))){ titleRow = r; titleMatchStrength = "loose"; break; }
-      }
-      if(titleRow !== -1) break;
-    }
-  }
-  eclQualifiersDebug.titleRow = titleRow;
-  eclQualifiersDebug.titleMatchStrength = titleMatchStrength;
+  // The qualifiers table always has exactly 6 rows (top 2 from each of 3 groups) with
+  // POS running 1→6 — unlike the group tables, which always have 4. That run is a
+  // reliable fingerprint, so we look for it directly rather than relying on nearby
+  // title/header text that isn't consistently present in the CSV export.
+  let dataStartRow = -1;
+  for(let r=0; r<rows.length - 5; r++){
+    const posRaw = cell(rows[r]||[], ECL_QUAL_COL.POS);
+    const teamName = mergedCell(rows[r]||[], ECL_QUAL_COL.TEAM_START, ECL_QUAL_COL.TEAM_END);
+    if(posRaw !== "1" || !teamName) continue;
 
-  if(titleRow === -1){
-    // Dump a wide window right after the last group block so the real cell content is
-    // visible for a follow-up fix, instead of guessing blind again.
+    let ok = true;
+    for(let i=1; i<=5; i++){
+      const p = cell(rows[r+i]||[], ECL_QUAL_COL.POS);
+      const t = mergedCell(rows[r+i]||[], ECL_QUAL_COL.TEAM_START, ECL_QUAL_COL.TEAM_END);
+      if(p !== String(i+1) || !t){ ok = false; break; }
+    }
+    if(ok){ dataStartRow = r; break; }
+  }
+  eclQualifiersDebug.dataStartRow = dataStartRow;
+
+  if(dataStartRow === -1){
+    // Diagnostic fallback: dump a window right after the last group block.
     const lastGroupHeaderRow = (eclDebug.groupHeadersFound && eclDebug.groupHeadersFound.length)
       ? eclDebug.groupHeadersFound[eclDebug.groupHeadersFound.length - 1].row
       : 0;
@@ -1651,59 +1659,18 @@ function parseECLQualifiers(rows){
     return;
   }
 
-  let headerRow = -1;
-  for(let r=titleRow; r<=titleRow+3 && r<rows.length; r++){
-    const rowArr = rows[r]||[];
-    const hasPos = rowArr.some(c => (c||"").toString().trim().toUpperCase() === "POS");
-    const hasTeam = rowArr.some(c => (c||"").toString().trim().toUpperCase() === "TEAM");
-    if(hasPos && hasTeam){ headerRow = r; break; }
-  }
-  eclQualifiersDebug.headerRow = headerRow;
-  if(headerRow === -1){
-    eclQualifiersDebug.rawRowDump = rows.slice(titleRow, titleRow + 4).map((row, i) =>
-      "row" + (titleRow + i) + ": " + (row || []).map((c, ci) => `[${ci}]="${(c || "").toString().trim()}"`).join(" ")
-    );
-    return;
-  }
-
-  const headerArr = rows[headerRow]||[];
-  const colsWithLabel = (label) => {
-    const out = [];
-    headerArr.forEach((raw,i)=>{ if((raw||"").toString().trim().toUpperCase() === label) out.push(i); });
-    return out;
-  };
-  const posCols = colsWithLabel("POS");
-  const teamCols = colsWithLabel("TEAM");
-  const ptsCols = colsWithLabel("PTS");
-  const ptsPlusCols = [...colsWithLabel("PTS +"), ...colsWithLabel("PTS+")];
-  const roddyCols = colsWithLabel("RODDY");
-  const statusCols = colsWithLabel("STATUS");
-
-  const overallPosCol = posCols[0];
-  const groupPosCol = posCols.length > 1 ? posCols[1] : null;
-  const teamStart = teamCols[0];
-  const teamEnd = groupPosCol !== null ? groupPosCol - 1 : (ptsCols.length ? ptsCols[0] - 1 : teamStart + 3);
-  const ptsCol = ptsCols.length ? ptsCols[ptsCols.length-1] : null;
-  const ptsPlusCol = ptsPlusCols.length ? ptsPlusCols[0] : null;
-  const roddyCol = roddyCols.length ? roddyCols[0] : null;
-  const statusCol = statusCols.length ? statusCols[0] : null;
-
-  eclQualifiersDebug.cols = { overallPosCol, groupPosCol, teamStart, teamEnd, ptsCol, ptsPlusCol, roddyCol, statusCol };
-
-  if(overallPosCol === undefined || teamStart === undefined) return;
-
-  for(let r=headerRow+1; r<headerRow+9 && r<rows.length; r++){
-    const posRaw = cell(rows[r]||[], overallPosCol);
-    const teamName = mergedCell(rows[r]||[], teamStart, teamEnd);
+  for(let r=dataStartRow; r<dataStartRow+6 && r<rows.length; r++){
+    const posRaw = cell(rows[r]||[], ECL_QUAL_COL.POS);
+    const teamName = mergedCell(rows[r]||[], ECL_QUAL_COL.TEAM_START, ECL_QUAL_COL.TEAM_END);
     if(!/^\d+$/.test(posRaw) || !teamName) break;
     eclQualifiers.push({
       pos: parseInt(posRaw,10),
       team: teamName,
-      groupPos: groupPosCol !== null ? cell(rows[r]||[], groupPosCol) : "",
-      pts: ptsCol !== null ? cell(rows[r]||[], ptsCol) : "",
-      ptsFor: ptsPlusCol !== null ? cell(rows[r]||[], ptsPlusCol) : "",
-      roddy: roddyCol !== null ? cell(rows[r]||[], roddyCol) : "",
-      status: statusCol !== null ? cell(rows[r]||[], statusCol) : ""
+      groupPos: cell(rows[r]||[], ECL_QUAL_COL.GROUP_POS),
+      pts: cell(rows[r]||[], ECL_QUAL_COL.PTS),
+      ptsFor: mergedCell(rows[r]||[], ECL_QUAL_COL.PTS_PLUS_START, ECL_QUAL_COL.PTS_PLUS_END),
+      roddy: mergedCell(rows[r]||[], ECL_QUAL_COL.RODDY_START, ECL_QUAL_COL.RODDY_END),
+      status: mergedCell(rows[r]||[], ECL_QUAL_COL.STATUS_START, ECL_QUAL_COL.STATUS_END)
     });
   }
 }
