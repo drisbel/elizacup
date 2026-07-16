@@ -413,10 +413,15 @@
     table.standings tbody td:nth-child(n+7){display:none;}
     table.roddy-table thead th:nth-child(n+7),
     table.roddy-table tbody td:nth-child(n+7){display:table-cell;}
+    table.ecl-qual-table thead th:nth-child(n+7),
+    table.ecl-qual-table tbody td:nth-child(n+7){display:table-cell;}
     table.standings.compact thead th{padding:6px 4px;font-size:9.5px;}
     table.standings.compact tbody td{padding:6px 4px;font-size:12px;}
     table.standings tbody td:nth-child(2){font-size:12.5px;padding-left:4px;}
+    table.ecl-qual-table .status-full{display:none;}
+    table.ecl-qual-table .status-short{display:inline;}
   }
+  table.ecl-qual-table .status-short{display:none;}
 </style>
 </head>
 <body>
@@ -1696,13 +1701,21 @@ function parseECLQualifiers(rows){
   }
 }
 
+function eclStatusShort(status){
+  const s = (status||"").toUpperCase();
+  if(/BYE/.test(s) && /SEMI/.test(s)) return "SF BYE";
+  if(/QUARTER/.test(s)) return "QF";
+  if(/SEMI/.test(s)) return "SF";
+  return status || "—";
+}
+
 function eclQualifiersTableHtml(){
   if(eclQualifiers.length === 0) return "";
   let html = `<div class="section-head" style="margin-top:32px;">
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0;letter-spacing:0.02em;">Ranking of Qualified Teams</h3>
       <span class="sub">Top 2 earn byes to the Semi-Finals</span>
     </div>
-    <div class="table-wrap"><table class="standings compact"><thead><tr>
+    <div class="table-wrap"><table class="standings compact ecl-qual-table"><thead><tr>
       <th>Pos</th><th>Team</th><th>Grp Pos</th><th>Pts</th><th>Pts+</th><th>Roddy</th><th>Status</th>
     </tr></thead><tbody>`;
   eclQualifiers.forEach(q=>{
@@ -1717,7 +1730,7 @@ function eclQualifiersTableHtml(){
       <td class="pts">${q.pts || "—"}</td>
       <td>${q.ptsFor || "—"}</td>
       <td>${q.roddy || "—"}</td>
-      <td>${q.status || "—"}</td>
+      <td><span class="status-full">${q.status || "—"}</span><span class="status-short">${eclStatusShort(q.status)}</span></td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
