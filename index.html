@@ -1617,12 +1617,27 @@ let eclQualifiersDebug = {};
 
 // Confirmed columns: POS=B(1), TEAM=D:G(3-6, merged), GROUP POS=H(7), PTS=I(8),
 // PTS+=J:K(9-10, merged), RODDY=L:M(11-12, merged), STATUS=N:R(13-17, merged).
+// Confirmed columns: POS=B(1), TEAM=D:G(3-6, merged), GROUP POS=H(7), PTS=I(8),
+// PTS+=J:K(9-10, merged), RODDY=L:M(11-12, merged), STATUS=N:R (nominally 13-17, merged) —
+// but this cell isn't landing where expected, so status is found by scanning for
+// recognizable keywords across a wider window instead of trusting the fixed range.
 const ECL_QUAL_COL = {
   POS: 1, TEAM_START: 3, TEAM_END: 6, GROUP_POS: 7, PTS: 8,
   PTS_PLUS_START: 9, PTS_PLUS_END: 10,
   RODDY_START: 11, RODDY_END: 12,
   STATUS_START: 13, STATUS_END: 17
 };
+
+function findStatusText(row){
+  // Scan a generous window for recognizable status wording, stopping short of the
+  // unrelated "Tiebreakers" notes column that sits further right on these rows.
+  for(let c=ECL_QUAL_COL.STATUS_START; c<=25; c++){
+    const v = cell(row, c);
+    if(v && /BYE|SEMI|QUARTER|FINAL|ADVANCE|ELIMINAT/i.test(v)) return v;
+  }
+  // Fall back to the nominal merged range even if it didn't match a keyword.
+  return mergedCell(row, ECL_QUAL_COL.STATUS_START, ECL_QUAL_COL.STATUS_END);
+}
 
 function parseECLQualifiers(rows){
   eclQualifiers = [];
@@ -1659,6 +1674,12 @@ function parseECLQualifiers(rows){
     return;
   }
 
+  // Always include a raw dump of the data rows so status-column drift can be diagnosed
+  // in one round-trip if the keyword scan below still comes up empty.
+  eclQualifiersDebug.rawRowDump = rows.slice(dataStartRow, dataStartRow + 6).map((row, i) =>
+    "row" + (dataStartRow + i) + ": " + (row || []).map((c, ci) => `[${ci}]="${(c || "").toString().trim()}"`).join(" ")
+  );
+
   for(let r=dataStartRow; r<dataStartRow+6 && r<rows.length; r++){
     const posRaw = cell(rows[r]||[], ECL_QUAL_COL.POS);
     const teamName = mergedCell(rows[r]||[], ECL_QUAL_COL.TEAM_START, ECL_QUAL_COL.TEAM_END);
@@ -1670,7 +1691,7 @@ function parseECLQualifiers(rows){
       pts: cell(rows[r]||[], ECL_QUAL_COL.PTS),
       ptsFor: mergedCell(rows[r]||[], ECL_QUAL_COL.PTS_PLUS_START, ECL_QUAL_COL.PTS_PLUS_END),
       roddy: mergedCell(rows[r]||[], ECL_QUAL_COL.RODDY_START, ECL_QUAL_COL.RODDY_END),
-      status: mergedCell(rows[r]||[], ECL_QUAL_COL.STATUS_START, ECL_QUAL_COL.STATUS_END)
+      status: findStatusText(rows[r]||[])
     });
   }
 }
@@ -1685,8 +1706,11 @@ function eclQualifiersTableHtml(){
       <th>Pos</th><th>Team</th><th>Grp Pos</th><th>Pts</th><th>Pts+</th><th>Roddy</th><th>Status</th>
     </tr></thead><tbody>`;
   eclQualifiers.forEach(q=>{
-    const isBye = /BYE/i.test(q.status);
-    html += `<tr${isBye ? ' style="background:rgba(255,221,0,0.14);border-left:4px solid #ffdd00;"' : ''}>
+    const statusUpper = (q.status||"").toUpperCase();
+    const rowClass = /BYE/.test(statusUpper) && /SEMI/.test(statusUpper) ? "ecl-sf"
+      : /QUARTER/.test(statusUpper) ? "ecl-qf"
+      : "";
+    html += `<tr class="${rowClass}">
       <td>${q.pos}</td>
       <td>${q.team}</td>
       <td>${q.groupPos || "—"}</td>
