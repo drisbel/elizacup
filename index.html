@@ -504,6 +504,14 @@
     </div>
     <div id="eclContainer" class="state-msg">Loading group tables…</div>
   </section>
+
+  <section id="honourSection" style="display:none;">
+    <div class="section-head">
+      <h2>Hall of Fame</h2>
+      <span class="sub" id="honourUpdated"></span>
+    </div>
+    <div id="honourContainer" class="state-msg">Loading honour roll…</div>
+  </section>
 </main>
 
 <footer>
@@ -526,7 +534,8 @@ const DIVISIONS = [
   { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", teams: 12, color: "#274e13", type: "division" },
   { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482",  teams: 62, color: "#28427c", type: "roddy" },
   { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",    teams: 64, color: "#0a2f85", type: "facup" },
-  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", teams: 12, color: "#111111", type: "ecl" }
+  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", teams: 12, color: "#111111", type: "ecl" },
+  { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" }
 ];
 
 function lightenColor(hex, percent){
@@ -607,12 +616,14 @@ function togglePageSections(){
   const isRoddy = type === "roddy";
   const isFACup = type === "facup";
   const isECL = type === "ecl";
+  const isHonour = type === "honour";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
   document.getElementById('fixturesSection').style.display = isDivision ? "" : "none";
   document.getElementById('h2hSection').style.display = isDivision ? "" : "none";
   document.getElementById('roddySection').style.display = isRoddy ? "" : "none";
   document.getElementById('facupSection').style.display = isFACup ? "" : "none";
   document.getElementById('eclSection').style.display = isECL ? "" : "none";
+  document.getElementById('honourSection').style.display = isHonour ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 }
 
@@ -719,6 +730,35 @@ async function load(){
       setStatus("Couldn't reach the sheet (" + err.message + ")", false);
       document.getElementById('eclContainer').className = "state-msg error";
       document.getElementById('eclContainer').innerHTML =
+        "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(currentDivision.type === "honour"){
+    document.getElementById('honourContainer').innerHTML = "Loading honour roll…";
+    document.getElementById('honourContainer').className = "state-msg";
+    try{
+      const res = await fetch(csvUrlFor(currentDivision));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+      const rows = parsed.data;
+
+      parseHonourRoll(rows);
+      renderHonourRoll();
+
+      document.getElementById('debugOut').textContent =
+        "Honour roll seasons found: " + honourSeasons.length + "\n" +
+        "Honour roll debug: " + JSON.stringify(honourDebug, null, 2) + "\n\n" +
+        JSON.stringify(honourSeasons, null, 2);
+
+      setStatus("Live — updated " + new Date().toLocaleString());
+    }catch(err){
+      console.error(err);
+      setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+      document.getElementById('honourContainer').className = "state-msg error";
+      document.getElementById('honourContainer').innerHTML =
         "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
@@ -1871,18 +1911,27 @@ function eclFixturesHtml(){
 }
 
 // ---------- ECL: Knockout stage (Quarter/Semi/Final) ----------
-// Sits directly underneath the group stage fixtures, roughly AE42:AR51. Structured like
-// the group stage blocks but without a Group column — detected via round-name markers
-// ("QUARTER FINALS"/"SEMI FINALS"/"FINAL") the same way the FA Cup bracket rounds are.
+// Sits directly underneath the group stage fixtures, roughly AE42:AR51. Uses the same
+// column layout as the group stage fixtures (just no Group column populated) —
+// detected via round-name markers ("QUARTER FINALS"/"SEMI FINALS"/"FINAL") the same
+// way the FA Cup bracket rounds are.
 const ECL_KO_COL = {
-  HOME_TEAM_START: 30, HOME_TEAM_END: 34, // AE:AI
-  HOME_SCORE: 35,  // AJ
-  AWAY_SCORE: 36,  // AK
-  AWAY_TEAM_START: 37, AWAY_TEAM_END: 41 // AL:AP
+  HOME_TEAM_START: 31, HOME_TEAM_END: 35, // AF:AJ
+  HOME_SCORE: 36,  // AK
+  AWAY_SCORE: 37,  // AL
+  AWAY_TEAM_START: 38, AWAY_TEAM_END: 42  // AM:AQ
 };
 
 let eclKnockoutRounds = [];
 let eclKnockoutDebug = {};
+
+function cleanECLRoundName(raw){
+  const s = raw.replace(/ELIZA CHAMPIONS LEAGUE\s*-\s*/i, "").trim().toUpperCase();
+  if(/QUARTER/.test(s)) return "Quarter Final";
+  if(/SEMI/.test(s)) return "Semi Final";
+  if(/FINAL/.test(s)) return "Final";
+  return raw;
+}
 
 function parseECLKnockout(rows){
   eclKnockoutRounds = [];
@@ -1893,7 +1942,7 @@ function parseECLKnockout(rows){
     for(let c=28; c<=44; c++){
       const v = cell(rows[r]||[], c);
       if(v && /QUARTER|SEMI|\bFINAL\b/i.test(v) && !/MD\d/i.test(v)){
-        roundMarkers.push({ row: r, name: v.trim() });
+        roundMarkers.push({ row: r, name: cleanECLRoundName(v.trim()) });
         break;
       }
     }
@@ -1967,6 +2016,163 @@ function renderECL(){
   container.className = "";
   container.innerHTML = eclGroups.map(eclGroupTableHtml).join("") + eclQualifiersTableHtml() + eclFixturesHtml() + eclKnockoutHtml();
   document.getElementById('eclUpdated').textContent = eclGroups.length + " groups";
+}
+
+// ---------- Hall of Fame / Honour Roll ----------
+// Two title-anchored tables share the same 14 seasons, so they're merged into one
+// unified per-season timeline rather than shown as two separate tables. Columns are
+// located relative to a reliably-worded header cell in each table ("ELIZA CUP" /
+// "RODDY") rather than fixed indices, since exact positions drift like everywhere
+// else in this sheet — the relative spacing between columns is what's consistent.
+let honourSeasons = [];
+let honourDebug = {};
+
+function findColExact(headerRow, label){
+  for(let c=0; c<headerRow.length; c++){
+    if((headerRow[c]||"").toString().trim().toUpperCase() === label.toUpperCase()) return c;
+  }
+  return -1;
+}
+
+function parseHonourRoll(rows){
+  honourSeasons = [];
+  honourDebug = { table1TitleRow: -1, table2TitleRow: -1, table1HeaderRow: -1, table2HeaderRow: -1, table1ElizaCupCol: -1, table2RoddyCol: -1 };
+
+  const seasonMap = {}; // year -> season object
+
+  // ---- Table 1: Head to Head Title Winners (Eliza Cup, Shield, Div 2/3 + shields) ----
+  let t1Title = -1;
+  for(let r=0; r<rows.length; r++){
+    if(/HEAD TO HEAD TITLE WINNERS/i.test(cell(rows[r]||[], 0))){ t1Title = r; break; }
+  }
+  honourDebug.table1TitleRow = t1Title;
+
+  if(t1Title !== -1){
+    let headerRow = -1, elizaCupCol = -1;
+    for(let r=t1Title; r<t1Title+6 && r<rows.length; r++){
+      const c = findColExact(rows[r]||[], "ELIZA CUP");
+      if(c !== -1){ headerRow = r; elizaCupCol = c; break; }
+    }
+    honourDebug.table1HeaderRow = headerRow;
+    honourDebug.table1ElizaCupCol = elizaCupCol;
+
+    if(headerRow !== -1){
+      // Relative offsets from the "ELIZA CUP" column, per the sheet's fixed layout:
+      // YEAR, ELIZA CUP, SHIELD, [blank], DIV2, [blank], DIV2 SHIELD, [blank], DIV3, [blank], DIV3 SHIELD, [blank], NOTES
+      const col = {
+        year: elizaCupCol - 1,
+        elizaCup: elizaCupCol,
+        shield: elizaCupCol + 1,
+        division2: elizaCupCol + 3,
+        div2Shield: elizaCupCol + 5,
+        division3: elizaCupCol + 7,
+        div3Shield: elizaCupCol + 9,
+        notes: elizaCupCol + 11
+      };
+      for(let r=headerRow+1; r<headerRow+20 && r<rows.length; r++){
+        const year = cell(rows[r]||[], col.year);
+        if(!/^\d{4}-\d{2,4}$/.test(year)) break;
+        seasonMap[year] = seasonMap[year] || { year, notes: [] };
+        const s = seasonMap[year];
+        s.elizaCup = cell(rows[r]||[], col.elizaCup);
+        s.shield = cell(rows[r]||[], col.shield);
+        s.division2 = cell(rows[r]||[], col.division2);
+        s.div2Shield = cell(rows[r]||[], col.div2Shield);
+        s.division3 = cell(rows[r]||[], col.division3);
+        s.div3Shield = cell(rows[r]||[], col.div3Shield);
+        const n1 = cell(rows[r]||[], col.notes);
+        if(n1) s.notes.push(n1);
+      }
+    }
+  }
+
+  // ---- Table 2: Roddy, FA Cup & ECL Title Winners ----
+  let t2Title = -1;
+  for(let r=0; r<rows.length; r++){
+    if(/RODDY.*FA CUP.*ELIZA CHAMPIONS LEAGUE TITLE WINNERS/i.test(cell(rows[r]||[], 1)) ||
+       /RODDY.*FA CUP.*ELIZA CHAMPIONS LEAGUE TITLE WINNERS/i.test(cell(rows[r]||[], 0))){ t2Title = r; break; }
+  }
+  honourDebug.table2TitleRow = t2Title;
+
+  if(t2Title !== -1){
+    let headerRow = -1, roddyCol = -1;
+    for(let r=t2Title; r<t2Title+6 && r<rows.length; r++){
+      const c = findColExact(rows[r]||[], "RODDY");
+      if(c !== -1){ headerRow = r; roddyCol = c; break; }
+    }
+    honourDebug.table2HeaderRow = headerRow;
+    honourDebug.table2RoddyCol = roddyCol;
+
+    if(headerRow !== -1){
+      // YEAR, RODDY, FA CUP, [blank], ECL, [blank], NOTES
+      const col = {
+        year: roddyCol - 1,
+        roddy: roddyCol,
+        faCup: roddyCol + 1,
+        ecl: roddyCol + 3,
+        notes: roddyCol + 5
+      };
+      for(let r=headerRow+1; r<headerRow+20 && r<rows.length; r++){
+        const year = cell(rows[r]||[], col.year);
+        if(!/^\d{4}-\d{2,4}$/.test(year)) break;
+        seasonMap[year] = seasonMap[year] || { year, notes: [] };
+        const s = seasonMap[year];
+        s.roddy = cell(rows[r]||[], col.roddy);
+        s.faCup = cell(rows[r]||[], col.faCup);
+        s.ecl = cell(rows[r]||[], col.ecl);
+        const n2 = cell(rows[r]||[], col.notes);
+        if(n2) s.notes.push(n2);
+      }
+    }
+  }
+
+  honourSeasons = Object.values(seasonMap).sort((a,b) => b.year.localeCompare(a.year));
+}
+
+function honourBadge(label, value, bg, fg){
+  if(!value) return "";
+  return `<div style="display:flex;align-items:center;gap:8px;background:${bg};color:${fg};border-radius:5px;padding:7px 11px;">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;opacity:0.75;min-width:64px;">${label}</span>
+    <span style="font-size:13px;font-weight:600;">${value}</span>
+  </div>`;
+}
+
+function honourSeasonCardHtml(s){
+  const badges = [
+    honourBadge("Eliza Cup", s.elizaCup, "#28427c", "#fff"),
+    honourBadge("Shield", s.shield, "#3a5a9c", "#fff"),
+    honourBadge("Division 2", s.division2, "#bc3532", "#fff"),
+    honourBadge("Div 2 Shield", s.div2Shield, "#d4615e", "#fff"),
+    honourBadge("Division 3", s.division3, "#6aa84f", "#fff"),
+    honourBadge("Div 3 Shield", s.div3Shield, "#8fc46b", "#12321a"),
+    honourBadge("Roddy", s.roddy, "#ffdd00", "#3a2e00"),
+    honourBadge("FA Cup", s.faCup, "#0a2f85", "#fff"),
+    honourBadge("ECL", s.ecl, "#111111", "#fff")
+  ].filter(Boolean).join("");
+
+  const notesHtml = s.notes && s.notes.length
+    ? `<div style="margin-top:10px;font-size:12px;color:#6b7c73;font-style:italic;">${s.notes.join(" · ")}</div>`
+    : "";
+
+  return `<div style="border-left:3px solid #8B6914;padding:4px 0 4px 18px;margin-bottom:22px;position:relative;">
+    <div style="position:absolute;left:-7px;top:9px;width:11px;height:11px;border-radius:50%;background:#8B6914;"></div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">${s.year}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">${badges}</div>
+    ${notesHtml}
+  </div>`;
+}
+
+function renderHonourRoll(){
+  const container = document.getElementById('honourContainer');
+  if(honourSeasons.length === 0){
+    container.className = "state-msg error";
+    container.innerHTML = "Couldn't find the honour roll tables. Check the Debug panel below.";
+    document.getElementById('honourUpdated').textContent = "";
+    return;
+  }
+  container.className = "";
+  container.innerHTML = `<div style="max-width:640px;">` + honourSeasons.map(honourSeasonCardHtml).join("") + `</div>`;
+  document.getElementById('honourUpdated').textContent = honourSeasons.length + " seasons";
 }
 
 function renderFACup(){
