@@ -1774,58 +1774,60 @@ function eclGroupTableHtml(g){
 }
 
 // ---------- ECL: Group stage fixtures (round-robin match results) ----------
-// Located roughly in cells AD18:AR51 — the far-right columns of each group's own row
-// block, which lines up row-for-row with that group's standings table. Detected via
-// content (MD1/MD2/MD3 labels + team-name/score patterns) rather than fixed row
-// numbers, since row offsets shift per block just like everywhere else in this sheet.
+// Located in cells roughly AD18:AR51, structured as three independent blocks (one per
+// matchday), each with an "MD1"/"MD2"/"MD3" title row followed by 6 fixture rows
+// (2 per group). Confirmed columns: GROUP=AD(29), HOME TEAM=AF:AJ(31-35, merged),
+// HOME SCORE=AK(36), AWAY SCORE=AL(37), AWAY TEAM=AM:AQ(38-42, merged).
+const ECL_FIX_COL = {
+  GROUP: 29,
+  HOME_TEAM_START: 31, HOME_TEAM_END: 35,
+  HOME_SCORE: 36,
+  AWAY_SCORE: 37,
+  AWAY_TEAM_START: 38, AWAY_TEAM_END: 42
+};
+
 let eclFixtures = [];
 let eclFixturesDebug = {};
 
 function parseECLFixtures(rows){
   eclFixtures = [];
-  eclFixturesDebug = { rowsScanned: [] };
+  eclFixturesDebug = { titleRowsFound: [], rowsScanned: [] };
 
-  const FIX_COL_START = 26, FIX_COL_END = 44;
+  // Each matchday block starts with a title row containing "MD1"/"MD2"/"MD3" somewhere
+  // across the block's column span — scan a generous window since the exact column can drift.
+  const titleRows = [];
+  for(let r=0; r<rows.length; r++){
+    for(let c=28; c<=44; c++){
+      const m = cell(rows[r]||[], c).toUpperCase().match(/^MD(\d)$/);
+      if(m){ titleRows.push({ row: r, matchday: "MD" + m[1] }); break; }
+    }
+  }
+  eclFixturesDebug.titleRowsFound = titleRows;
 
-  (eclDebug.groupHeadersFound || []).forEach(gh => {
-    const label = gh.label;
-    let currentMD = null;
-
-    for(let r=gh.row; r<gh.row+7 && r<rows.length; r++){
+  titleRows.forEach(tr => {
+    for(let r=tr.row+1; r<=tr.row+6 && r<rows.length; r++){
       const rowArr = rows[r]||[];
-
-      // Track which matchday we're in — the MD1/MD2/MD3 label only appears on the
-      // first row of that matchday's pair of fixtures, so carry it forward.
-      for(let c=FIX_COL_START; c<=FIX_COL_END; c++){
-        const m = cell(rowArr, c).toUpperCase().match(/^MD(\d)$/);
-        if(m){ currentMD = "MD" + m[1]; break; }
-      }
-
-      const cellsInRange = [];
-      for(let c=FIX_COL_START; c<=FIX_COL_END; c++){
-        const v = cell(rowArr, c);
-        if(v) cellsInRange.push({ c, v });
-      }
-      const nonLabelCells = cellsInRange.filter(x => !/^MD\d$/i.test(x.v));
-      const teamCells = nonLabelCells.filter(x => !/^\d+$/.test(x.v));
-      const numberCells = nonLabelCells.filter(x => /^\d+$/.test(x.v));
-
-      // A fixture row has a team name, two scores, and another team name.
-      if(teamCells.length >= 2 && numberCells.length >= 2){
-        eclFixtures.push({
-          group: label,
-          matchday: currentMD || "MD?",
-          home: teamCells[0].v,
-          homeScore: parseInt(numberCells[0].v, 10),
-          away: teamCells[teamCells.length-1].v,
-          awayScore: parseInt(numberCells[1].v, 10)
-        });
-      }
+      const group = cell(rowArr, ECL_FIX_COL.GROUP);
+      const home = mergedCell(rowArr, ECL_FIX_COL.HOME_TEAM_START, ECL_FIX_COL.HOME_TEAM_END);
+      const away = mergedCell(rowArr, ECL_FIX_COL.AWAY_TEAM_START, ECL_FIX_COL.AWAY_TEAM_END);
+      const homeScoreRaw = cell(rowArr, ECL_FIX_COL.HOME_SCORE);
+      const awayScoreRaw = cell(rowArr, ECL_FIX_COL.AWAY_SCORE);
 
       eclFixturesDebug.rowsScanned.push(
-        "row" + r + " (" + label + "): " +
-        rowArr.map((c, ci) => (ci >= FIX_COL_START && ci <= FIX_COL_END && c) ? `[${ci}]="${c}"` : "").filter(Boolean).join(" ")
+        "row" + r + " (" + tr.matchday + "): " +
+        rowArr.map((c, ci) => (ci >= 28 && ci <= 44 && c) ? `[${ci}]="${c}"` : "").filter(Boolean).join(" ")
       );
+
+      if(!home && !away) continue; // blank spacer row between blocks
+
+      eclFixtures.push({
+        group: group || "?",
+        matchday: tr.matchday,
+        home: home || "TBD",
+        homeScore: /^\d+$/.test(homeScoreRaw) ? parseInt(homeScoreRaw,10) : null,
+        away: away || "TBD",
+        awayScore: /^\d+$/.test(awayScoreRaw) ? parseInt(awayScoreRaw,10) : null
+      });
     }
   });
 }
@@ -1834,7 +1836,7 @@ function eclFixturesHtml(){
   if(eclFixtures.length === 0) return "";
   const matchdays = [...new Set(eclFixtures.map(f=>f.matchday))].sort();
   let html = `<div class="section-head" style="margin-top:32px;">
-      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0;letter-spacing:0.02em;">Group Stage Fixtures</h3>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0;letter-spacing:0.02em;color:#F5F5F0;">Group Stage Fixtures</h3>
     </div>`;
   matchdays.forEach(md=>{
     const mdFixtures = eclFixtures.filter(f=>f.matchday===md);
@@ -1842,10 +1844,11 @@ function eclFixturesHtml(){
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#ffdd00;margin-bottom:8px;letter-spacing:0.05em;">${md}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">`;
     mdFixtures.forEach(f=>{
+      const scoreText = (f.homeScore !== null && f.awayScore !== null) ? `${f.homeScore} - ${f.awayScore}` : "vs";
       html += `<div style="background:#1c1c1c;border:1px solid #333;border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
-        <span style="text-align:right;font-size:13px;overflow-wrap:break-word;">${f.home}</span>
-        <span style="font-weight:700;color:#ffdd00;white-space:nowrap;">${f.homeScore} - ${f.awayScore}</span>
-        <span style="text-align:left;font-size:13px;overflow-wrap:break-word;">${f.away}</span>
+        <span style="text-align:right;font-size:13px;overflow-wrap:break-word;color:#F5F5F0;">${f.home}</span>
+        <span style="font-weight:700;color:#ffdd00;white-space:nowrap;">${scoreText}</span>
+        <span style="text-align:left;font-size:13px;overflow-wrap:break-word;color:#F5F5F0;">${f.away}</span>
       </div>`;
     });
     html += `</div></div>`;
