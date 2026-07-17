@@ -713,6 +713,7 @@ async function load(){
   if(currentDivision.type === "home"){
     renderHome();
     document.getElementById('statusLine').innerHTML = "";
+    const homeDivisionRef = currentDivision;
     try{
       const d1 = DIVISIONS.find(d => d.id === "d1");
       const res = await fetch(csvUrlFor(d1));
@@ -720,11 +721,16 @@ async function load(){
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
       const rows = parsed.data;
+      // parseStandings/parseFixtures read currentDivision.teams to know the row range,
+      // so swap in D1 just for this parse, then restore Home so nav/routing stays correct.
+      currentDivision = d1;
       parseStandings(rows);
       parseFixtures(rows);
+      currentDivision = homeDivisionRef;
       renderHomeSnapshot();
     }catch(err){
       console.error(err);
+      currentDivision = homeDivisionRef;
       const el = document.getElementById('homeSnapshotContainer');
       if(el){
         el.className = "state-msg error";
