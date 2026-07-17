@@ -455,6 +455,12 @@
     table.roddy-table tbody td:nth-child(n+7){display:table-cell;}
     table.ecl-qual-table thead th:nth-child(n+7),
     table.ecl-qual-table tbody td:nth-child(n+7){display:table-cell;}
+    table.calendar-table thead th:nth-child(n+7),
+    table.calendar-table tbody td:nth-child(n+7){display:table-cell;}
+    table.calendar-table{min-width:0;}
+    table.calendar-table thead th{padding:5px 4px;font-size:8px;}
+    table.calendar-table tbody td{padding:5px 4px;font-size:10.5px;}
+    table.calendar-table thead th:first-child, table.calendar-table tbody td:first-child{width:auto;padding-left:6px;}
     table.trophy-table{min-width:0;}
     table.trophy-table thead th{padding:5px 6px;font-size:8.5px;}
     table.trophy-table tbody td{padding:5px 6px;font-size:11.5px;}
@@ -707,6 +713,24 @@ async function load(){
   if(currentDivision.type === "home"){
     renderHome();
     document.getElementById('statusLine').innerHTML = "";
+    try{
+      const d1 = DIVISIONS.find(d => d.id === "d1");
+      const res = await fetch(csvUrlFor(d1));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+      const rows = parsed.data;
+      parseStandings(rows);
+      parseFixtures(rows);
+      renderHomeSnapshot();
+    }catch(err){
+      console.error(err);
+      const el = document.getElementById('homeSnapshotContainer');
+      if(el){
+        el.className = "state-msg error";
+        el.innerHTML = "Couldn't load the Division 1 snapshot right now.";
+      }
+    }
     return;
   }
 
@@ -2450,16 +2474,11 @@ function parseCalendar(rows){
     return;
   }
 
-  let footnote = "";
   for(let r=headerRow+1; r<headerRow+35 && r<rows.length; r++){
     const roundRaw = cell(rows[r]||[], CAL_COL.ROUND);
     if(!/^\d+$/.test(roundRaw)){
-      // First non-numeric row after the data block is the footnote.
-      if(!footnote){
-        const rowArr = rows[r]||[];
-        footnote = rowArr.map(c=>(c||"").toString().trim()).find(v=>v.length > 20) || "";
-      }
-      if(roundRaw) continue; else break;
+      if(!roundRaw) break; // blank spacer row = end of the data block
+      continue;
     }
     calendarRounds.push({
       round: parseInt(roundRaw, 10),
@@ -2470,6 +2489,19 @@ function parseCalendar(rows){
       faCup: cell(rows[r]||[], CAL_COL.FA_CUP),
       ecl: cell(rows[r]||[], CAL_COL.ECL)
     });
+  }
+
+  // Footnote detection is a separate full-file scan (not tied to the round loop's
+  // row bounds), since CSV row offsets have drifted unpredictably elsewhere in this
+  // sheet — safer to search broadly than assume it's a fixed number of rows below
+  // the last round.
+  let footnote = "";
+  for(let r=0; r<rows.length; r++){
+    for(let c=0; c<=5; c++){
+      const v = cell(rows[r]||[], c);
+      if(/BYE ROUND/i.test(v) && /DOUBLE ROUND/i.test(v)){ footnote = v; break; }
+    }
+    if(footnote) break;
   }
   calendarDebug.footnote = footnote;
   calendarRounds.footnote = footnote;
@@ -2567,8 +2599,14 @@ function renderHome(){
       ${homeCardHtml({id:"roddy", title:"Roddy Rodriguez Cup", subtitle:"Combined leaderboard, every division", color:"#28427c"})}
       ${homeCardHtml({id:"facup", title:"Eliza FA Cup", subtitle:"Knockout bracket &amp; byes", color:"#0a2f85"})}
       ${homeCardHtml({id:"ecl", title:"Eliza Champions League", subtitle:"Groups, qualifiers &amp; knockout", color:"#111111"})}
+      ${homeCardHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#28427c"})}
       ${homeCardHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914"})}
     </div>
+
+    <div class="section-head" style="margin-top:40px;">
+      <h2 style="font-size:22px;">Latest from Division 1</h2>
+    </div>
+    <div id="homeSnapshotContainer" class="state-msg">Loading…</div>
 
     <div class="section-head" style="margin-top:40px;">
       <h2 style="font-size:22px;">Reigning Champions</h2>
@@ -2578,6 +2616,8 @@ function renderHome(){
       ${homeReigningChampionHtml("Roddy")}
       ${homeReigningChampionHtml("FA Cup")}
       ${homeReigningChampionHtml("ECL")}
+      ${homeReigningChampionHtml("Division 2")}
+      ${homeReigningChampionHtml("Division 3")}
     </div>
   `;
   container.querySelectorAll('.home-card, .home-mini-pill').forEach(el=>{
@@ -2594,6 +2634,50 @@ function renderHome(){
       load();
     });
   });
+}
+
+function homeSnapshotHtml(){
+  const top3 = standings.slice(0, 3);
+  const top3Html = top3.length ? `
+    <div class="table-wrap"><table class="standings compact"><thead><tr>
+      <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th>
+    </tr></thead><tbody>
+      ${top3.map(s=>`<tr><td>${s.pos}</td><td>${s.team}</td><td class="pts">${s.pts}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td></tr>`).join("")}
+    </tbody></table></div>` : `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No standings yet.</p>`;
+
+  const rounds = Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b);
+  let lastScoredRound = null;
+  for(let i=rounds.length-1; i>=0; i--){
+    if(fixturesByRound[rounds[i]].some(f => f.homeScore !== null && f.awayScore !== null)){ lastScoredRound = rounds[i]; break; }
+  }
+  const resultsHtml = lastScoredRound ? `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;margin:14px 0 6px;">Round ${lastScoredRound} results</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      ${fixturesByRound[lastScoredRound].filter(f=>f.homeScore!==null && f.awayScore!==null).map(f=>
+        `<div style="font-family:'Barlow',sans-serif;font-size:13px;">${f.home} <b>${f.homeScore}</b> – <b>${f.awayScore}</b> ${f.away}</div>`
+      ).join("")}
+    </div>` : `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;margin-top:14px;">No results yet — season hasn't started.</p>`;
+
+  const nextRound = rounds.find(r => fixturesByRound[r].every(f => f.homeScore === null && f.awayScore === null));
+  const nextHtml = nextRound ? `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;margin:14px 0 6px;">Round ${nextRound} fixtures</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      ${fixturesByRound[nextRound].map(f=>
+        `<div style="font-family:'Barlow',sans-serif;font-size:13px;">${f.home} <span style="color:#6b7c73;">vs</span> ${f.away}</div>`
+      ).join("")}
+    </div>` : "";
+
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;">
+    <div>${top3Html}</div>
+    <div>${resultsHtml}${nextHtml}</div>
+  </div>`;
+}
+
+function renderHomeSnapshot(){
+  const el = document.getElementById('homeSnapshotContainer');
+  if(!el) return;
+  el.className = "";
+  el.innerHTML = homeSnapshotHtml();
 }
 
 function renderFACup(){
