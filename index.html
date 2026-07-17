@@ -564,7 +564,7 @@
     <div class="section-head" style="margin-top:36px;">
       <h2 style="font-size:22px;">Trophy Leaders</h2>
     </div>
-    <div id="trophyLeadersContainer"></div>
+    <div id="trophyLeadersContainer" class="state-msg">Loading trophy leaders…</div>
   </section>
 </main>
 
@@ -800,8 +800,32 @@ async function load(){
   }
 
   if(currentDivision.type === "honour"){
-    renderHonourRoll();
-    setStatus("Static data — last updated by hand, not pulled from the sheet");
+    renderHonourRoll(); // static — Eliza Cup / Roddy / etc. season lists don't live-fetch
+    document.getElementById('trophyLeadersContainer').innerHTML = "Loading trophy leaders…";
+    document.getElementById('trophyLeadersContainer').className = "state-msg";
+    try{
+      const res = await fetch(csvUrlFor(currentDivision));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+      const rows = parsed.data;
+
+      parseTrophyLeaders(rows);
+      renderTrophyLeaders();
+
+      document.getElementById('debugOut').textContent =
+        "Trophy leaders found: " + trophyLeaders.length + "\n" +
+        "Trophy leaders debug: " + JSON.stringify(trophyDebug, null, 2) + "\n\n" +
+        JSON.stringify(trophyLeaders, null, 2);
+
+      setStatus("Trophy Leaders live — updated " + new Date().toLocaleString() + " · Honour Roll tabs above are static");
+    }catch(err){
+      console.error(err);
+      setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+      document.getElementById('trophyLeadersContainer').className = "state-msg error";
+      document.getElementById('trophyLeadersContainer').innerHTML =
+        "Couldn't load live trophy data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
     return;
   }
 
@@ -2185,50 +2209,73 @@ const HONOUR_ROLL = {
 // Hall of Fame data for the same reason: it only changes once a year.
 // Columns: Team, Total, Eliza Cup, Eliza Shield, Roddy, FA Cup, Decl, Division 2,
 // Div 2 Shield, Division 3, Div 3 Shield.
-const TROPHY_LEADERS = [
-  ["Jarvis Zebras", 13, 3, 3, 4, 1, 0, 2, 0, 0, 0],
-  ["Spooners FC", 6, 1, 1, 3, 1, 0, 0, 0, 0, 0],
-  ["Stairway to Evans", 5, 2, 2, 0, 1, 0, 0, 0, 0, 0],
-  ["Dinkin CRFC", 4, 1, 1, 1, 0, 1, 0, 0, 0, 0],
-  ["Futbol de Nang", 3, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-  ["Kallo FC", 3, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-  ["Zen Garden C.F", 3, 1, 1, 0, 1, 0, 0, 0, 0, 0],
-  ["BC United Zebras", 2, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-  ["Bozza's Coke FC", 2, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-  ["Davies Elite FC", 2, 1, 0, 1, 0, 0, 0, 0, 0, 0],
-  ["Frogbert Football", 2, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-  ["Harbour City Heros", 2, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-  ["Sauce FC", 2, 0, 0, 0, 0, 1, 0, 1, 0, 0],
-  ["AFC Big Red Port", 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-  ["Casual Approach", 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-  ["DW About It FC", 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-  ["Garrywallah United", 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-  ["Give Us Wang", 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-  ["Harvey Frekes", 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-  ["Heilan Coos", 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-  ["Inter Milanovic", 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-  ["Lindon-Chevella FC", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  ["Nanistate", 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-  ["Silverman's XI", 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  ["The D Genreau", 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-  ["The Maltese Knights", 1, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-  ["Toby's Troops", 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  ["Victoryrules", 1, 0, 0, 0, 0, 0, 0, 1, 0, 0]
-];
+// ---------- Trophy Leaders (live) ----------
+// Cells U49:AE77. Columns confirmed from an earlier raw dump: TEAM=U(20), TOTAL=V(21),
+// ELIZA CUP=W(22), ELIZA SHIELD=X(23), RODDY=Y(24), FA CUP=Z(25), DECL=AA(26),
+// DIVISION 2=AB(27), DIV 2 SHIELD=AC(28), DIVISION 3=AD(29), DIV 3 SHIELD=AE(30),
+// NOTES=AF(31). Detected via the "ELIZA CUP TROPHY WINNERS TOTAL" title text rather
+// than a fixed row, since row offsets drift like everywhere else in this sheet.
+const TCOL = {
+  TEAM: 20, TOTAL: 21, ELIZA_CUP: 22, ELIZA_SHIELD: 23, RODDY: 24, FA_CUP: 25,
+  DECL: 26, DIV2: 27, DIV2_SHIELD: 28, DIV3: 29, DIV3_SHIELD: 30, NOTES: 31
+};
 
-// Header background colors per competition, matching the brand colors used
-// elsewhere on the site (division pages, ECL, FA Cup, Roddy).
+let trophyLeaders = [];
+let trophyDebug = {};
+
+function parseTrophyLeaders(rows){
+  trophyLeaders = [];
+  trophyDebug = {};
+
+  let titleRow = -1;
+  for(let r=0; r<rows.length; r++){
+    for(let c=15; c<=32; c++){
+      if(/ELIZA CUP TROPHY WINNERS TOTAL/i.test(cell(rows[r]||[], c))){ titleRow = r; break; }
+    }
+    if(titleRow !== -1) break;
+  }
+  trophyDebug.titleRow = titleRow;
+
+  if(titleRow === -1){
+    trophyDebug.rawRowDump = rows.slice(0, 10).map((row, r) =>
+      "row" + r + ": " + (row || []).map((c, ci) => c ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
+    );
+    return;
+  }
+
+  for(let r=titleRow+1; r<titleRow+40 && r<rows.length; r++){
+    const team = cell(rows[r]||[], TCOL.TEAM);
+    if(!team) break;
+    trophyLeaders.push({
+      team,
+      total: cell(rows[r]||[], TCOL.TOTAL),
+      elizaCup: cell(rows[r]||[], TCOL.ELIZA_CUP),
+      elizaShield: cell(rows[r]||[], TCOL.ELIZA_SHIELD),
+      roddy: cell(rows[r]||[], TCOL.RODDY),
+      faCup: cell(rows[r]||[], TCOL.FA_CUP),
+      decl: cell(rows[r]||[], TCOL.DECL),
+      div2: cell(rows[r]||[], TCOL.DIV2),
+      div2Shield: cell(rows[r]||[], TCOL.DIV2_SHIELD),
+      div3: cell(rows[r]||[], TCOL.DIV3),
+      div3Shield: cell(rows[r]||[], TCOL.DIV3_SHIELD),
+      notes: cell(rows[r]||[], TCOL.NOTES)
+    });
+  }
+  trophyDebug.rowsFound = trophyLeaders.length;
+}
+
+// Column order + brand colors, per the requested layout.
 const TROPHY_COL_COLORS = [
-  { label: "Total",         bg: "#8B6914", fg: "#fff" },
-  { label: "Eliza Cup",     bg: "#28427c", fg: "#fff" },
-  { label: "Eliza Shield",  bg: "#3a5a9c", fg: "#fff" },
-  { label: "Roddy",         bg: "#ffdd00", fg: "#3a2e00" },
-  { label: "FA Cup",        bg: "#0a2f85", fg: "#fff" },
-  { label: "Decl",          bg: "#6b7c73", fg: "#fff" },
-  { label: "Division 2",    bg: "#bc3532", fg: "#fff" },
-  { label: "Div 2 Shield",  bg: "#d4615e", fg: "#fff" },
-  { label: "Division 3",    bg: "#6aa84f", fg: "#fff" },
-  { label: "Div 3 Shield",  bg: "#8fc46b", fg: "#12321a" }
+  { key: "total",      label: "Total",         bg: "#8B6914", fg: "#fff" },
+  { key: "elizaCup",   label: "Eliza Cup",     bg: "#28427c", fg: "#fff" },
+  { key: "roddy",      label: "Roddy",         bg: "#ffdd00", fg: "#3a2e00" },
+  { key: "faCup",      label: "FA Cup",        bg: "#0a2f85", fg: "#fff" },
+  { key: "decl",       label: "Decl",          bg: "#6b7c73", fg: "#fff" },
+  { key: "elizaShield",label: "Eliza Shield",  bg: "#3a5a9c", fg: "#fff" },
+  { key: "div2",       label: "Division 2",    bg: "#bc3532", fg: "#fff" },
+  { key: "div2Shield", label: "Div 2 Shield",  bg: "#d4615e", fg: "#fff" },
+  { key: "div3",       label: "Division 3",    bg: "#6aa84f", fg: "#fff" },
+  { key: "div3Shield", label: "Div 3 Shield",  bg: "#8fc46b", fg: "#12321a" }
 ];
 
 function trophyLeadersHtml(){
@@ -2236,16 +2283,44 @@ function trophyLeadersHtml(){
     <th>Team</th>
     ${TROPHY_COL_COLORS.map(c=>`<th style="background:${c.bg};color:${c.fg};">${c.label}</th>`).join("")}
   </tr></thead><tbody>`;
-  TROPHY_LEADERS.forEach(row=>{
-    const [team, ...counts] = row;
-    html += `<tr><td>${team}</td>${counts.map((c,i)=>`<td${i===0?' class="pts"':''}>${c || "—"}</td>`).join("")}</tr>`;
+  trophyLeaders.forEach(t=>{
+    html += `<tr><td>${t.team}</td>` +
+      TROPHY_COL_COLORS.map((c,i)=>`<td${i===0?' class="pts"':''}>${t[c.key] || "—"}</td>`).join("") +
+      `</tr>`;
   });
   html += `</tbody></table></div>`;
+
+  // Footnote for any asterisked trophy (e.g. "1*"), pulled from that team's own Notes cell.
+  const asterisked = trophyLeaders.find(t => (t.total||"").includes("*") || (t.elizaCup||"").includes("*"));
+  if(asterisked && asterisked.notes){
+    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:8px;">* ${asterisked.notes}</div>`;
+  }
+
+  // Acknowledgements: any team with a Notes entry, excluding the asterisk explanation above.
+  const acknowledgements = trophyLeaders.filter(t => t.notes && t !== asterisked);
+  if(acknowledgements.length){
+    html += `<div class="section-head" style="margin-top:28px;">
+        <h2 style="font-size:18px;">Acknowledgements</h2>
+      </div>
+      <div>` + acknowledgements.map(t => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--line-light);">
+          <span style="font-weight:600;">${t.team}</span>
+          <span style="color:#6b7c73;"> — ${t.notes}</span>
+        </div>`).join("") + `</div>`;
+  }
+
   return html;
 }
 
 function renderTrophyLeaders(){
-  document.getElementById('trophyLeadersContainer').innerHTML = trophyLeadersHtml();
+  const container = document.getElementById('trophyLeadersContainer');
+  if(trophyLeaders.length === 0){
+    container.className = "state-msg error";
+    container.innerHTML = "Couldn't find the trophy leaders table. Check the Debug panel below.";
+    return;
+  }
+  container.className = "";
+  container.innerHTML = trophyLeadersHtml();
 }
 
 function honourCompetitionHtml(name, comp){
@@ -2282,7 +2357,6 @@ function renderHonourRoll(){
   tabsEl.firstChild.classList.add('active');
   renderHonourCompetition(names[0]);
   document.getElementById('honourUpdated').textContent = "";
-  renderTrophyLeaders();
 }
 
 // ---------- Home page ----------
