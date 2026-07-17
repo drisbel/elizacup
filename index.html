@@ -415,8 +415,10 @@
     table.roddy-table tbody td:nth-child(n+7){display:table-cell;}
     table.ecl-qual-table thead th:nth-child(n+7),
     table.ecl-qual-table tbody td:nth-child(n+7){display:table-cell;}
-    table.trophy-table thead th:nth-child(n+3),
-    table.trophy-table tbody td:nth-child(n+3){display:none;}
+    table.trophy-table{min-width:0;}
+    table.trophy-table thead th{padding:5px 6px;font-size:8.5px;}
+    table.trophy-table tbody td{padding:5px 6px;font-size:11.5px;}
+    table.trophy-table thead th:first-child, table.trophy-table tbody td:first-child{width:auto;padding-left:6px;}
     table.standings.compact thead th{padding:6px 4px;font-size:9.5px;}
     table.standings.compact tbody td{padding:6px 4px;font-size:12px;}
     table.standings tbody td:nth-child(2){font-size:12.5px;padding-left:4px;}
@@ -424,6 +426,12 @@
     table.ecl-qual-table .status-short{display:inline;}
   }
   table.ecl-qual-table .status-short{display:none;}
+
+  table.trophy-table thead th:first-child, table.trophy-table tbody td:first-child{
+    width:auto; white-space:nowrap; text-align:left; padding-left:12px; font-weight:600; color:var(--ink);
+  }
+  table.trophy-table tbody td:nth-child(n+2){text-align:center;font-weight:400;padding-left:8px;}
+  table.trophy-table{min-width:auto;}
 </style>
 </head>
 <body>
@@ -514,6 +522,11 @@
     </div>
     <div id="honourTabs" class="round-tabs"></div>
     <div id="honourContainer" class="state-msg">Loading honour roll…</div>
+
+    <div class="section-head" style="margin-top:36px;">
+      <h2 style="font-size:22px;">Trophy Leaders</h2>
+    </div>
+    <div id="trophyLeadersContainer"></div>
   </section>
 </main>
 
@@ -2155,11 +2168,25 @@ const TROPHY_LEADERS = [
   ["Victoryrules", 1, 0, 0, 0, 0, 0, 0, 1, 0, 0]
 ];
 
+// Header background colors per competition, matching the brand colors used
+// elsewhere on the site (division pages, ECL, FA Cup, Roddy).
+const TROPHY_COL_COLORS = [
+  { label: "Total",         bg: "#8B6914", fg: "#fff" },
+  { label: "Eliza Cup",     bg: "#28427c", fg: "#fff" },
+  { label: "Eliza Shield",  bg: "#3a5a9c", fg: "#fff" },
+  { label: "Roddy",         bg: "#ffdd00", fg: "#3a2e00" },
+  { label: "FA Cup",        bg: "#0a2f85", fg: "#fff" },
+  { label: "Decl",          bg: "#6b7c73", fg: "#fff" },
+  { label: "Division 2",    bg: "#bc3532", fg: "#fff" },
+  { label: "Div 2 Shield",  bg: "#d4615e", fg: "#fff" },
+  { label: "Division 3",    bg: "#6aa84f", fg: "#fff" },
+  { label: "Div 3 Shield",  bg: "#8fc46b", fg: "#12321a" }
+];
+
 function trophyLeadersHtml(){
-  const headers = ["Team","Total","Eliza Cup","Eliza Shield","Roddy","FA Cup","Decl","Division 2","Div 2 Shield","Division 3","Div 3 Shield"];
-  let html = `<div style="display:inline-block;background:#8B6914;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;padding:6px 14px;border-radius:4px;margin-bottom:10px;">Trophy Leaders</div>
-  <div class="table-wrap"><table class="standings compact trophy-table"><thead><tr>
-    ${headers.map(h=>`<th>${h}</th>`).join("")}
+  let html = `<div class="table-wrap"><table class="standings compact trophy-table"><thead><tr>
+    <th>Team</th>
+    ${TROPHY_COL_COLORS.map(c=>`<th style="background:${c.bg};color:${c.fg};">${c.label}</th>`).join("")}
   </tr></thead><tbody>`;
   TROPHY_LEADERS.forEach(row=>{
     const [team, ...counts] = row;
@@ -2167,6 +2194,10 @@ function trophyLeadersHtml(){
   });
   html += `</tbody></table></div>`;
   return html;
+}
+
+function renderTrophyLeaders(){
+  document.getElementById('trophyLeadersContainer').innerHTML = trophyLeadersHtml();
 }
 
 function honourCompetitionHtml(name, comp){
@@ -2186,16 +2217,12 @@ function honourCompetitionHtml(name, comp){
 function renderHonourCompetition(name){
   const container = document.getElementById('honourContainer');
   container.className = "";
-  if(name === "Trophy Leaders"){
-    container.innerHTML = trophyLeadersHtml();
-    return;
-  }
   container.innerHTML = honourCompetitionHtml(name, HONOUR_ROLL[name]);
 }
 
 function renderHonourRoll(){
   const tabsEl = document.getElementById('honourTabs');
-  const names = ["Trophy Leaders", ...Object.keys(HONOUR_ROLL)];
+  const names = Object.keys(HONOUR_ROLL);
   tabsEl.innerHTML = names.map(name => `<button class="round-tab" data-name="${name}">${name}</button>`).join("");
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -2207,6 +2234,7 @@ function renderHonourRoll(){
   tabsEl.firstChild.classList.add('active');
   renderHonourCompetition(names[0]);
   document.getElementById('honourUpdated').textContent = "";
+  renderTrophyLeaders();
 }
 
 function renderFACup(){
