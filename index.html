@@ -285,6 +285,8 @@
     letter-spacing:0.02em;
   }
   .form-row{display:inline-flex;gap:3px;}
+  .team-link{color:inherit;text-decoration:none;}
+  .team-link:hover{text-decoration:underline;color:var(--pitch);}
   .form-pill{
     display:inline-flex;align-items:center;justify-content:center;
     width:18px;height:18px;border-radius:3px;font-size:10px;font-weight:700;
@@ -601,6 +603,21 @@
     </div>
     <div id="trophyLeadersContainer" class="state-msg">Loading trophy leaders…</div>
   </section>
+
+  <section id="teamsSection" style="display:none;">
+    <div class="section-head">
+      <h2>Teams</h2>
+      <span class="sub" id="teamsUpdated"></span>
+    </div>
+    <input type="text" id="teamSearchInput" placeholder="Search for a team…"
+      style="width:100%;max-width:360px;padding:10px 14px;border:1px solid var(--line-light);border-radius:5px;
+      font-family:'Barlow',sans-serif;font-size:14px;margin-bottom:18px;box-sizing:border-box;">
+    <div id="teamsContainer" class="state-msg">Loading teams…</div>
+  </section>
+
+  <section id="teamProfileSection" style="display:none;">
+    <div id="teamProfileContainer" class="state-msg">Loading team profile…</div>
+  </section>
 </main>
 
 <footer>
@@ -626,8 +643,21 @@ const DIVISIONS = [
   { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482",  teams: 62, color: "#28427c", type: "roddy" },
   { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",    teams: 64, color: "#0a2f85", type: "facup" },
   { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", teams: 12, color: "#111111", type: "ecl" },
-  { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" }
+  { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" }
 ];
+
+// Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
+// Roddy division tag to that division's own sheet when building a team profile.
+function getDivisionIdByLabel(text){
+  const t = (text||"").toUpperCase();
+  if(t.includes("ELIZA") || t === "D1") return "d1";
+  if(t.includes("2A")) return "d2a";
+  if(t.includes("2B")) return "d2b";
+  if(t.includes("3A")) return "d3a";
+  if(t.includes("3B")) return "d3b";
+  return null;
+}
 
 function lightenColor(hex, percent){
   const num = parseInt(hex.replace("#",""), 16);
@@ -645,8 +675,23 @@ function applyDivisionTheme(division){
 }
 
 function getDivisionFromHash(){
-  const id = (location.hash || "").replace("#","");
-  return DIVISIONS.find(d => d.id === id) || DIVISIONS[0];
+  const raw = (location.hash || "").replace("#","");
+  if(raw.startsWith("team=")){
+    const teamName = decodeURIComponent(raw.slice(5));
+    return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#28427c", gid: null };
+  }
+  return DIVISIONS.find(d => d.id === raw) || DIVISIONS[0];
+}
+
+function goToTeam(teamName){
+  location.hash = "team=" + encodeURIComponent(teamName);
+}
+
+// Clickable team name used across standings, fixtures, Roddy, etc. Uses a plain
+// anchor so the existing hashchange listener handles routing without extra JS wiring.
+function teamLink(name){
+  if(!name) return "—";
+  return `<a href="#team=${encodeURIComponent(name)}" class="team-link">${name}</a>`;
 }
 
 let currentDivision = getDivisionFromHash();
@@ -668,7 +713,7 @@ let roddyDebug = {};
 function renderDivNav(){
   const nav = document.getElementById('divNav');
   nav.innerHTML = DIVISIONS.map(d =>
-    `<button class="div-tab${d.id===currentDivision.id?' active':''}" data-id="${d.id}">${d.label}</button>`
+    `<button class="div-tab${(d.id===currentDivision.id || (d.id==="teams" && currentDivision.type==="teamprofile"))?' active':''}" data-id="${d.id}">${d.label}</button>`
   ).join("");
   nav.querySelectorAll('.div-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -710,6 +755,8 @@ function togglePageSections(){
   const isHonour = type === "honour";
   const isHome = type === "home";
   const isCalendar = type === "calendar";
+  const isTeams = type === "teams";
+  const isTeamProfile = type === "teamprofile";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -719,6 +766,8 @@ function togglePageSections(){
   document.getElementById('facupSection').style.display = isFACup ? "" : "none";
   document.getElementById('eclSection').style.display = isECL ? "" : "none";
   document.getElementById('honourSection').style.display = isHonour ? "" : "none";
+  document.getElementById('teamsSection').style.display = isTeams ? "" : "none";
+  document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 }
 
@@ -916,6 +965,44 @@ async function load(){
       document.getElementById('trophyLeadersContainer').className = "state-msg error";
       document.getElementById('trophyLeadersContainer').innerHTML =
         "Couldn't load live trophy data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(currentDivision.type === "teams"){
+    document.getElementById('teamsContainer').innerHTML = "Loading teams…";
+    document.getElementById('teamsContainer').className = "state-msg";
+    try{
+      const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
+      const res = await fetch(csvUrlFor(roddyDiv));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+      parseRoddy(parsed.data);
+      renderTeamsBrowse();
+      setStatus("Live — updated " + new Date().toLocaleString());
+    }catch(err){
+      console.error(err);
+      setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+      document.getElementById('teamsContainer').className = "state-msg error";
+      document.getElementById('teamsContainer').innerHTML =
+        "Couldn't load the team list. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(currentDivision.type === "teamprofile"){
+    document.getElementById('teamProfileContainer').innerHTML = "Loading team profile…";
+    document.getElementById('teamProfileContainer').className = "state-msg";
+    try{
+      await loadTeamProfile(currentDivision.teamName);
+      setStatus("Live — updated " + new Date().toLocaleString());
+    }catch(err){
+      console.error(err);
+      setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+      document.getElementById('teamProfileContainer').className = "state-msg error";
+      document.getElementById('teamProfileContainer').innerHTML =
+        "Couldn't load this team's profile. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
@@ -1255,7 +1342,7 @@ function renderTable(){
     const diffClass = s.diff > 0 ? "diff-pos" : s.diff < 0 ? "diff-neg" : "";
     html += `<tr class="${tierClass}">
       <td>${s.pos}</td>
-      <td>${s.team}</td>
+      <td>${teamLink(s.team)}</td>
       <td class="pts">${s.pts}</td>
       <td>${s.w}</td>
       <td>${s.d}</td>
@@ -1264,7 +1351,7 @@ function renderTable(){
       <td>${s.aga}</td>
       <td class="${diffClass}">${s.diff > 0 ? "+" : ""}${s.diff}</td>
       <td><span class="form-row">${formHtml}</span></td>
-      <td class="next-opp">${s.nextOpponent || "—"}</td>
+      <td class="next-opp">${s.nextOpponent ? teamLink(s.nextOpponent) : "—"}</td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
@@ -1327,9 +1414,9 @@ function renderFixtures(round){
       ? `<span class="${homeWin?'win':(awayWin?'lose':'')}">${f.homeScore}</span> – <span class="${awayWin?'win':(homeWin?'lose':'')}">${f.awayScore}</span>`
       : `<span class="upcoming">vs</span>`;
     return `<div class="fixture-card">
-      <div class="fixture-team">${f.home}</div>
+      <div class="fixture-team">${teamLink(f.home)}</div>
       <div class="fixture-score">${scoreHtml}</div>
-      <div class="fixture-team right">${f.away}</div>
+      <div class="fixture-team right">${teamLink(f.away)}</div>
     </div>`;
   }).join("");
 }
@@ -1500,14 +1587,21 @@ function renderRoddy(){
     const divColor = getDivisionColorByLabel(e.division);
     html += `<tr style="background:${hexToRgba(divColor,0.13)};border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
-      <td class="roddy-team">${e.team || "—"}</td>
+      <td class="roddy-team">${teamLink(e.team)}</td>
       <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
       <td>${e.round || "—"}</td>
       <td>${e.chip || "—"}</td>
       <td class="pts">${e.total}</td>
       ${e.chips.map((c,i) => {
+        const chipName = ["BB","UC","FH","WC"][i];
         const chipType = ["bb","uc","fh","wc"][i];
-        return c ? `<td><span class="chip-pill chip-${chipType}">${c}</span></td>` : `<td><span class="chip-pill chip-blank">—</span></td>`;
+        if(!c) return `<td>—</td>`;
+        // Unused chips display their own name (e.g. "BB") — show as a colored pill.
+        // Used chips display the round they were played — show as plain text.
+        if(c.trim().toUpperCase() === chipName){
+          return `<td><span class="chip-pill chip-${chipType}">${c}</span></td>`;
+        }
+        return `<td>${c}</td>`;
       }).join("")}
       <td>${e.overall}</td>
     </tr>`;
@@ -2577,6 +2671,219 @@ function renderCalendar(){
   document.getElementById('calendarUpdated').textContent = calendarRounds.length + " rounds";
 }
 
+// ---------- Teams browse page ----------
+function renderTeamsBrowse(){
+  const container = document.getElementById('teamsContainer');
+  if(roddyEntries.length === 0){
+    container.className = "state-msg error";
+    container.innerHTML = "Couldn't load the team list. Check the Debug panel below.";
+    return;
+  }
+  container.className = "";
+
+  const sorted = [...roddyEntries].sort((a,b) => a.team.localeCompare(b.team));
+
+  const renderList = (filter) => {
+    const f = (filter||"").trim().toUpperCase();
+    const filtered = f ? sorted.filter(e => e.team.toUpperCase().includes(f)) : sorted;
+    if(filtered.length === 0){
+      return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No teams match "${filter}".</p>`;
+    }
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">` +
+      filtered.map(e => {
+        const color = getDivisionColorByLabel(e.division);
+        return `<a href="#team=${encodeURIComponent(e.team)}" style="display:flex;align-items:center;gap:10px;background:#fff;
+          border:1px solid var(--line-light);border-left:4px solid ${color};border-radius:5px;padding:10px 12px;
+          text-decoration:none;color:var(--ink);">
+          <span style="font-weight:600;font-size:13.5px;flex:1;">${e.team}</span>
+          <span class="roddy-div-tag" style="background:${color};">${getDivisionShortLabel(e.division)}</span>
+        </a>`;
+      }).join("") + `</div>`;
+  };
+
+  container.innerHTML = renderList("");
+  document.getElementById('teamsUpdated').textContent = roddyEntries.length + " teams";
+
+  const input = document.getElementById('teamSearchInput');
+  input.value = "";
+  input.oninput = () => { container.innerHTML = renderList(input.value); };
+}
+
+// ---------- Team profile ----------
+// Aggregates data already fetched elsewhere on the site — no new sheet setup needed.
+// Roddy gives the division tag; the division sheet gives the full season fixture list
+// (already pulled whole for the Fixtures tab, just filtered here); FA Cup and ECL are
+// scanned for any involvement. All three run in parallel once the division is known.
+async function loadTeamProfile(teamName){
+  const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
+  const roddyRes = await fetch(csvUrlFor(roddyDiv));
+  if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
+  const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
+  parseRoddy(roddyRows);
+  const roddyEntry = roddyEntries.find(e => (e.team||"").toUpperCase() === teamName.toUpperCase()) || null;
+
+  let divisionData = null;
+  let facupSummary = [];
+  let eclSummary = null;
+  const fetches = [];
+
+  if(roddyEntry){
+    const divId = getDivisionIdByLabel(roddyEntry.division);
+    if(divId){
+      const div = DIVISIONS.find(d => d.id === divId);
+      fetches.push(
+        fetch(csvUrlFor(div)).then(r => r.text()).then(text => {
+          const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+          // parseStandings reads currentDivision.teams for its row range — swap in the
+          // team's real division just for this parse, then restore whatever was active.
+          const prevDivision = currentDivision;
+          currentDivision = div;
+          parseStandings(rows);
+          parseFixtures(rows);
+          currentDivision = prevDivision;
+
+          const standingsRow = standings.find(s => (s.team||"").toUpperCase() === teamName.toUpperCase()) || null;
+          const fixtures = [];
+          Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).forEach(round=>{
+            fixturesByRound[round].forEach(f=>{
+              const isHome = (f.home||"").toUpperCase() === teamName.toUpperCase();
+              const isAway = (f.away||"").toUpperCase() === teamName.toUpperCase();
+              if(isHome || isAway){
+                fixtures.push({
+                  round, opponent: isHome ? f.away : f.home, isHome,
+                  homeScore: f.homeScore, awayScore: f.awayScore,
+                  played: f.homeScore !== null && f.awayScore !== null
+                });
+              }
+            });
+          });
+          divisionData = { division: div, standingsRow, fixtures };
+        })
+      );
+    }
+  }
+
+  const facupDiv = DIVISIONS.find(d => d.id === "facup");
+  fetches.push(
+    fetch(csvUrlFor(facupDiv)).then(r => r.text()).then(text => {
+      const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+      parseFACup(rows);
+      facupRounds.forEach(round=>{
+        round.fixtures.forEach(f=>{
+          const homeMatch = (f.home.name||"").toUpperCase() === teamName.toUpperCase();
+          const awayMatch = (f.away.name||"").toUpperCase() === teamName.toUpperCase();
+          if(homeMatch || awayMatch){
+            facupSummary.push({ roundName: round.name, fixture: f, isHome: homeMatch });
+          }
+        });
+      });
+    })
+  );
+
+  const eclDiv = DIVISIONS.find(d => d.id === "ecl");
+  fetches.push(
+    fetch(csvUrlFor(eclDiv)).then(r => r.text()).then(text => {
+      const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+      parseECL(rows);
+      for(const group of eclGroups){
+        const teamRow = group.teams.find(t => (t.team||"").toUpperCase() === teamName.toUpperCase());
+        if(teamRow){ eclSummary = { group: group.label, team: teamRow }; break; }
+      }
+    })
+  );
+
+  await Promise.all(fetches);
+  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary });
+}
+
+function teamProfileFixtureRow(f){
+  const scoreText = f.played ? `${f.homeScore} – ${f.awayScore}` : "vs";
+  const result = f.played
+    ? (f.isHome ? (f.homeScore > f.awayScore ? "W" : f.homeScore < f.awayScore ? "L" : "D")
+                : (f.awayScore > f.homeScore ? "W" : f.awayScore < f.homeScore ? "L" : "D"))
+    : "";
+  const cls = result === "W" ? "form-w" : result === "L" ? "form-l" : result === "D" ? "form-d" : "form-blank";
+  return `<div style="display:grid;grid-template-columns:32px 22px 1fr auto;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-light);">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#6b7c73;">R${f.round}</span>
+    ${result ? `<span class="form-pill ${cls}">${result}</span>` : `<span></span>`}
+    <span style="font-size:13.5px;">${f.isHome ? "vs " : "@ "}${teamLink(f.opponent)}</span>
+    <span style="font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;">${scoreText}</span>
+  </div>`;
+}
+
+function renderTeamProfile(data){
+  const container = document.getElementById('teamProfileContainer');
+  container.className = "";
+  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary } = data;
+
+  if(!roddyEntry && !divisionData){
+    container.innerHTML = `<div class="state-msg error">Couldn't find "${teamName}" anywhere in the league. Check the Debug panel below.</div>`;
+    return;
+  }
+
+  const divColor = roddyEntry ? getDivisionColorByLabel(roddyEntry.division) : "#28427c";
+  const divLabel = roddyEntry ? getDivisionShortLabel(roddyEntry.division) : "";
+
+  let html = `<div class="section-head">
+    <h2>${teamName}</h2>
+    ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Division ${divLabel}</span>` : ""}
+  </div>`;
+
+  // Season record + fixtures
+  if(divisionData){
+    const s = divisionData.standingsRow;
+    if(s){
+      html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:10px;max-width:520px;margin-bottom:24px;">
+        ${[["Pos", s.pos], ["Pts", s.pts], ["W", s.w], ["D", s.d], ["L", s.l], ["Diff", (s.diff>0?"+":"")+s.diff]].map(([label,val])=>`
+          <div style="background:#fff;border:1px solid var(--line-light);border-radius:5px;padding:10px 6px;text-align:center;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;">${val}</div>
+            <div style="font-family:'Barlow',sans-serif;font-size:10px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;">${label}</div>
+          </div>`).join("")}
+      </div>`;
+    }
+    if(divisionData.fixtures.length){
+      html += `<div class="section-head" style="margin-top:8px;"><h2 style="font-size:18px;">Season Fixtures &amp; Results</h2></div>
+        <div style="max-width:480px;">${divisionData.fixtures.map(teamProfileFixtureRow).join("")}</div>`;
+    }
+  }
+
+  // Roddy status
+  if(roddyEntry){
+    html += `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Roddy Rodriguez Cup</h2></div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;font-family:'Barlow',sans-serif;font-size:13.5px;">
+        <div><b>Pos:</b> ${roddyEntry.pos}</div>
+        <div><b>Total:</b> ${roddyEntry.total}</div>
+        <div><b>Round reached:</b> ${roddyEntry.round || "—"}</div>
+        <div><b>Overall rank:</b> ${roddyEntry.overall || "—"}</div>
+      </div>`;
+  }
+
+  // FA Cup status
+  if(facupSummary && facupSummary.length){
+    html += `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Eliza FA Cup</h2></div>
+      <div style="max-width:480px;">` + facupSummary.map(f=>{
+        if(f.fixture.isBye){
+          return `<div style="padding:7px 0;border-bottom:1px solid var(--line-light);font-size:13.5px;">${f.roundName}: <b>Bye</b></div>`;
+        }
+        const opponent = f.isHome ? f.fixture.away : f.fixture.home;
+        const played = f.fixture.homeScore !== null && f.fixture.awayScore !== null;
+        const scoreText = played ? `${f.fixture.homeScore} – ${f.fixture.awayScore}` : "vs";
+        return `<div style="padding:7px 0;border-bottom:1px solid var(--line-light);font-size:13.5px;">
+          ${f.roundName}: ${f.isHome ? "vs" : "@"} ${teamLink(opponent.name)} <span style="font-weight:600;">(${scoreText})</span>
+        </div>`;
+      }).join("") + `</div>`;
+  }
+
+  // ECL status
+  if(eclSummary){
+    const t = eclSummary.team;
+    html += `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Eliza Champions League</h2></div>
+      <div style="font-family:'Barlow',sans-serif;font-size:13.5px;">${eclSummary.group} · Pos ${t.pos} · ${t.pts} pts · ${t.status || "—"}</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
 // ---------- Home page ----------
 function homeCardHtml({id, title, subtitle, color, fg}){
   return `<a href="#${id}" class="home-card" data-id="${id}" style="border-left:5px solid ${color};">
@@ -2623,6 +2930,7 @@ function renderHome(){
       ${homeCardHtml({id:"ecl", title:"Eliza Champions League", subtitle:"Groups, qualifiers &amp; knockout", color:"#111111"})}
       ${homeCardHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#28427c"})}
       ${homeCardHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914"})}
+      ${homeCardHtml({id:"teams", title:"Teams", subtitle:"Search any club's profile", color:"#28427c"})}
     </div>
 
     <div class="section-head" style="margin-top:40px;">
