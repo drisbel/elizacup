@@ -2937,6 +2937,12 @@ function findHistoricalRecords(rows, teamName){
     return [];
   }
 
+  // Always dump the 15 rows right after the title, unrestricted, so the real table
+  // structure at its new location is visible regardless of whether a match is found.
+  historicalDebug.rawRowDumpNearTitle = rows.slice(titleRow, titleRow + 15).map((row, i) =>
+    "row" + (titleRow + i) + ": " + (row||[]).map((c,ci)=> (ci>=105&&ci<=140&&c) ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
+  );
+
   for(let r=titleRow; r<rows.length; r++){
     const team = cell(rows[r]||[], HIST_COL.TEAM);
     if(!team) continue;
