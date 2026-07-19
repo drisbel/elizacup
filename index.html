@@ -176,6 +176,20 @@
   .home-champ-team{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;line-height:1.15;}
   .home-champ-season{font-family:'Barlow',sans-serif;font-size:11.5px;opacity:0.75;margin-top:4px;}
 
+  /* ---------- Team profile header ---------- */
+  .team-profile-header{
+    display:flex;align-items:center;gap:20px;margin-bottom:24px;
+  }
+  .team-profile-logo{
+    width:88px;height:88px;object-fit:contain;border-radius:6px;flex-shrink:0;
+  }
+  .team-profile-heading{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+  @media (max-width:600px){
+    .team-profile-header{flex-direction:column;text-align:center;gap:10px;}
+    .team-profile-logo{width:100px;height:100px;}
+    .team-profile-heading{align-items:center;}
+  }
+
 
   /* Table */
   .table-wrap{overflow-x:auto;overflow-y:visible;border:1px solid var(--line-light);border-radius:4px;}
@@ -3177,11 +3191,12 @@ function renderTeamProfile(data){
   const divLabel = roddyEntry ? getDivisionShortLabel(roddyEntry.division) : "";
   const logoSrc = `logo/${teamLogoSlug(teamName)}.png`;
 
-  let html = `<div class="section-head" style="align-items:center;gap:14px;">
-    <img src="${logoSrc}" alt="" style="width:48px;height:48px;object-fit:contain;border-radius:4px;"
-      onerror="this.style.display='none';">
-    <h2 style="margin:0;">${teamName}</h2>
-    ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Division ${divLabel}</span>` : ""}
+  let html = `<div class="team-profile-header">
+    <img src="${logoSrc}" alt="" class="team-profile-logo" onerror="this.style.display='none';">
+    <div class="team-profile-heading">
+      <h2 style="margin:0;">${teamName}</h2>
+      ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Division ${divLabel}</span>` : ""}
+    </div>
   </div>`;
 
   // Overview
