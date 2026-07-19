@@ -2920,9 +2920,24 @@ const HIST_COL = {
 let historicalDebug = {};
 
 function findHistoricalRecords(rows, teamName){
-  historicalDebug = { rowsScanned: 0, matchedRow: -1 };
+  historicalDebug = { rowsScanned: 0, matchedRow: -1, titleRow: -1 };
 
+  // Anchor on the title text so this search can't accidentally grab a team row from
+  // the H2H Record table above it — both tables share the same TEAM column (DI).
+  let titleRow = -1;
   for(let r=0; r<rows.length; r++){
+    if(/HISTORICAL DATA FROM ADMIN SHEET/i.test(cell(rows[r]||[], HIST_COL.TEAM))){ titleRow = r; break; }
+  }
+  historicalDebug.titleRow = titleRow;
+
+  if(titleRow === -1){
+    historicalDebug.rawRowDump = rows.slice(0, 5).map((row, r) =>
+      "row" + r + ": " + (row||[]).map((c,ci)=> (ci>=105&&ci<=145&&c) ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
+    );
+    return [];
+  }
+
+  for(let r=titleRow; r<rows.length; r++){
     const team = cell(rows[r]||[], HIST_COL.TEAM);
     if(!team) continue;
     historicalDebug.rowsScanned++;
@@ -3112,6 +3127,15 @@ function overviewCardHtml(label, value, color){
   </div>`;
 }
 
+// Converts a team name into the matching logo filename convention:
+// lowercase, apostrophes/periods stripped, everything else -> hyphens.
+function teamLogoSlug(name){
+  return (name||"").toLowerCase().trim()
+    .replace(/['\u2019.]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function renderTeamProfile(data){
   const container = document.getElementById('teamProfileContainer');
   container.className = "";
@@ -3124,9 +3148,12 @@ function renderTeamProfile(data){
 
   const divColor = roddyEntry ? getDivisionColorByLabel(roddyEntry.division) : "#28427c";
   const divLabel = roddyEntry ? getDivisionShortLabel(roddyEntry.division) : "";
+  const logoSrc = `logo/${teamLogoSlug(teamName)}.png`;
 
-  let html = `<div class="section-head">
-    <h2>${teamName}</h2>
+  let html = `<div class="section-head" style="align-items:center;gap:14px;">
+    <img src="${logoSrc}" alt="" style="width:48px;height:48px;object-fit:contain;border-radius:4px;"
+      onerror="this.style.display='none';">
+    <h2 style="margin:0;">${teamName}</h2>
     ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Division ${divLabel}</span>` : ""}
   </div>`;
 
