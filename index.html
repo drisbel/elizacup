@@ -54,7 +54,10 @@
   }
   .top-inner{max-width:1080px;margin:0 auto;position:relative;}
   .wordmark-row{
-    display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    display:flex;align-items:center;flex-wrap:wrap;gap:16px;
+  }
+  .site-logo{
+    height:56px;width:auto;object-fit:contain;
   }
   .wordmark{
     font-size:clamp(42px,7vw,72px);
@@ -177,17 +180,22 @@
   .home-champ-season{font-family:'Barlow',sans-serif;font-size:11.5px;opacity:0.75;margin-top:4px;}
 
   /* ---------- Team profile header ---------- */
-  .team-profile-header{
-    display:flex;align-items:center;gap:20px;margin-bottom:24px;
+  .team-profile-top{
+    display:flex;align-items:center;gap:28px;margin-bottom:28px;justify-content:space-between;
   }
+  .team-profile-main{flex:1;min-width:0;}
+  .team-profile-heading{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin-bottom:16px;}
+  .team-profile-name{margin:0;font-size:38px;}
+  .team-profile-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:640px;}
   .team-profile-logo{
-    width:88px;height:88px;object-fit:contain;border-radius:6px;flex-shrink:0;
+    width:150px;height:150px;object-fit:contain;border-radius:8px;flex-shrink:0;
   }
-  .team-profile-heading{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
   @media (max-width:600px){
-    .team-profile-header{flex-direction:column;text-align:center;gap:10px;}
-    .team-profile-logo{width:100px;height:100px;}
+    .team-profile-top{flex-direction:column;text-align:center;gap:14px;}
+    .team-profile-logo{width:130px;height:130px;order:-1;}
     .team-profile-heading{align-items:center;}
+    .team-profile-name{font-size:30px;}
+    .team-profile-cards{max-width:100%;}
   }
 
 
@@ -541,9 +549,8 @@
   table.trophy-table{min-width:auto;}
   table.home-mini-table{min-width:0;}
   table.h2h-record-table{min-width:0;width:100%;}
-  table.h2h-record-table thead th:first-child, table.h2h-record-table tbody td:first-child{
-    width:auto;padding-left:10px;font-weight:600;color:var(--ink);
-  }
+  table.h2h-record-table thead th:first-child{width:auto;padding-left:10px;}
+  table.h2h-record-table tbody td:first-child{width:auto;padding-left:10px;font-weight:600;color:var(--ink);}
   table.h2h-record-table thead th:nth-child(n+2), table.h2h-record-table tbody td:nth-child(n+2){
     width:44px;text-align:center;
   }
@@ -554,6 +561,7 @@
 <header class="top">
   <div class="top-inner">
     <div class="wordmark-row">
+      <img src="logo/eliza-logo.png" alt="" class="site-logo" onerror="this.style.display='none';">
       <h1 class="wordmark">Eliza Cup <span class="pill" id="divPill">Div. 1</span></h1>
     </div>
     <nav class="div-nav" id="divNav"></nav>
@@ -2773,11 +2781,13 @@ function renderTeamsBrowse(){
     return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">` +
       filtered.map(e => {
         const color = getDivisionColorByLabel(e.division);
+        const shortLabel = getDivisionShortLabel(e.division);
+        const label = shortLabel === "D1" ? "Eliza Cup" : shortLabel;
         return `<a href="#team=${encodeURIComponent(e.team)}" style="display:flex;align-items:center;gap:10px;background:#fff;
           border:1px solid var(--line-light);border-left:4px solid ${color};border-radius:5px;padding:10px 12px;
           text-decoration:none;color:var(--ink);">
           <span style="font-weight:600;font-size:13.5px;flex:1;">${e.team}</span>
-          <span class="roddy-div-tag" style="background:${color};">${getDivisionShortLabel(e.division)}</span>
+          <span class="roddy-div-tag" style="background:${color};">${label}</span>
         </a>`;
       }).join("") + `</div>`;
   };
@@ -3157,23 +3167,26 @@ function renderTeamProfile(data){
   const divColor = roddyEntry ? getDivisionColorByLabel(roddyEntry.division) : "#28427c";
   const divLabel = roddyEntry ? getDivisionShortLabel(roddyEntry.division) : "";
   const logoSrc = `logo/${teamLogoSlug(teamName)}.png`;
-
-  let html = `<div class="team-profile-header">
-    <img src="${logoSrc}" alt="" class="team-profile-logo" onerror="this.style.display='none';">
-    <div class="team-profile-heading">
-      <h2 style="margin:0;">${teamName}</h2>
-      ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Division ${divLabel}</span>` : ""}
-    </div>
-  </div>`;
+  const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='logo/eliza-elephant.png';}else{this.style.display='none';}`;
 
   // Overview
   const leagueVal = (divisionData && divisionData.standingsRow) ? `${ordinal(divisionData.standingsRow.pos)} · Div ${divLabel}` : "—";
   const roddyVal = roddyEntry ? `${ordinal(roddyEntry.pos)} · ${roddyEntry.total} pts` : "Not entered";
-  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:640px;margin-bottom:28px;">
-    ${overviewCardHtml("League Position", leagueVal, divColor)}
-    ${overviewCardHtml("Roddy Position", roddyVal, "#ffdd00")}
-    ${overviewCardHtml("FA Cup", facupStatusText(facupSummary), "#0a2f85")}
-    ${overviewCardHtml("ECL", eclStatusText(eclSummary, eclMatches), "#111111")}
+
+  let html = `<div class="team-profile-top">
+    <div class="team-profile-main">
+      <div class="team-profile-heading">
+        <h2 class="team-profile-name">${teamName}</h2>
+        ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Division ${divLabel}</span>` : ""}
+      </div>
+      <div class="team-profile-cards">
+        ${overviewCardHtml("League Position", leagueVal, divColor)}
+        ${overviewCardHtml("Roddy Position", roddyVal, "#ffdd00")}
+        ${overviewCardHtml("FA Cup", facupStatusText(facupSummary), "#0a2f85")}
+        ${overviewCardHtml("ECL", eclStatusText(eclSummary, eclMatches), "#111111")}
+      </div>
+    </div>
+    <img src="${logoSrc}" alt="" class="team-profile-logo" onerror="${logoOnError}">
   </div>`;
 
   // Season record + fixtures
