@@ -457,7 +457,7 @@
     cursor:pointer;transition:border-color 0.15s, box-shadow 0.15s;
   }
   .fixture-card:hover{border-color:var(--pitch);box-shadow:0 2px 10px rgba(40,66,124,0.12);}
-  .fixture-team{font-size:14px;font-weight:600;flex:1;}
+  .fixture-team{font-size:14px;font-weight:600;flex:1;min-width:0;overflow-wrap:break-word;word-break:break-word;}
   .fixture-team.right{text-align:right;}
   .fixture-score{
     font-family:'Barlow',sans-serif;font-weight:700;font-size:19px;
@@ -471,6 +471,15 @@
   .fixture-team.fx-win, .facup-team.fx-win{color:var(--turf);}
   .fixture-team.fx-lose, .facup-team.fx-lose{color:var(--red);}
   .fixture-team.fx-draw, .facup-team.fx-draw{color:#C99A2E;}
+
+  /* Cross-conference promotion playoff (Division 2/3 fixture tabs) */
+  .playoff-banner{
+    font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.04em;color:#fff;background:var(--pitch);border-radius:6px;
+    padding:8px 14px;margin-bottom:12px;display:inline-block;
+  }
+  .playoff-card{border-color:var(--pitch);border-width:2px;}
+  .fixture-team .roddy-div-tag{vertical-align:middle;margin:0 2px;}
 
   /* ---------- Head-to-head section ---------- */
   .h2h-card{
@@ -1149,6 +1158,24 @@ async function load(){
     parseStandings(rows);
     parseFixtures(rows);
     parseH2H(rows);
+
+    // Division 2 / Division 3 also carry a cross-conference promotion playoff (2A v 2B,
+    // or 3A v 3B) on a separate tab — merge those fixtures into the same round tabs.
+    if(PROMOTION_PLAYOFF_BLOCK_START[currentDivision.id] !== undefined){
+      try{
+        const playoffRes = await fetch(csvUrlFor({ gid: PROMOTION_PLAYOFF_GID }));
+        if(playoffRes.ok){
+          const playoffCsv = await playoffRes.text();
+          const playoffRows = Papa.parse(playoffCsv, {skipEmptyLines:false}).data;
+          const playoffFixtures = parsePromotionPlayoff(playoffRows, currentDivision.id);
+          playoffFixtures.forEach(f=>{
+            if(!fixturesByRound[f.round]) fixturesByRound[f.round] = [];
+            fixturesByRound[f.round].push(f);
+          });
+        }
+      }catch(err){ console.error("Promotion playoff fetch failed", err); }
+    }
+
     render();
 
     const fmtRow = (row) => (row||[]).map((c,i)=> `[${i}]="${(c||"").toString().trim()}"`).join("  ");
@@ -1164,6 +1191,7 @@ async function load(){
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
       "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
+      "Promotion playoff debug: " + JSON.stringify(promotionPlayoffDebug, null, 2) + "\n\n" +
       JSON.stringify({standings: standings.slice(0,4), sampleFixtures: fixturesByRound[Object.keys(fixturesByRound)[0]], h2hMatchups}, null, 2);
 
     setStatus("Live — updated " + new Date().toLocaleString());
@@ -1438,6 +1466,80 @@ function parseFixtures(rows){
   });
 }
 
+// ---------- Division 2 / Division 3 cross-conference promotion playoffs ----------
+// Live only on a separate tab (gid 353101965), historical range A78:O90 for Division 2
+// and the identical 15-column layout shifted to S78:AG90 for Division 3. Within each
+// 15-column block (offsets relative to the block's first column): +0 home seed label
+// (e.g. "2nd 2A"), +2:+5 home team name (merged), +6 home score, +7 away score,
+// +8:+12 away team name (merged), +14 away seed label. Played across 3 rounds — QF
+// (Round 24), SF (Round 25), F (Round 26) — with the 2 eventual winners promoted.
+const PROMOTION_PLAYOFF_GID = "353101965";
+const PROMOTION_PLAYOFF_ROW_START = 77; // sheet row 78, 0-indexed
+const PROMOTION_PLAYOFF_ROW_END = 89;   // sheet row 90, 0-indexed inclusive
+const PROMOTION_PLAYOFF_BLOCK_START = { d2a: 0, d2b: 0, d3a: 18, d3b: 18 };
+const PROMOTION_PLAYOFF_ROUND_NAMES = ["QF", "SF", "F"];
+const PROMOTION_PLAYOFF_ROUND_NUMBERS = { QF: 24, SF: 25, F: 26 };
+
+let promotionPlayoffDebug = {};
+
+function conferenceFromStatus(status){
+  const m = (status||"").toUpperCase().match(/([23][AB])/);
+  return m ? m[1] : null;
+}
+
+function parsePromotionPlayoff(rows, divisionId){
+  const base = PROMOTION_PLAYOFF_BLOCK_START[divisionId];
+  const fixtures = [];
+  if(base === undefined) return fixtures;
+
+  for(let r=PROMOTION_PLAYOFF_ROW_START; r<=PROMOTION_PLAYOFF_ROW_END; r++){
+    const row = rows[r] || [];
+    const homeScoreRaw = cell(row, base+6);
+    const awayScoreRaw = cell(row, base+7);
+    // A genuine score row has two whole numbers in the score columns.
+    if(!/^\d+$/.test(homeScoreRaw) || !/^\d+$/.test(awayScoreRaw)) continue;
+
+    // Team names are usually on this same row; some brackets on this sheet put the
+    // name on the row above the score instead, so fall back to checking that too.
+    const readTeam = (start, end) => mergedCell(row, start, end) || (rows[r-1] ? mergedCell(rows[r-1], start, end) : "");
+    const homeTeam = readTeam(base+2, base+5);
+    const awayTeam = readTeam(base+8, base+12);
+    if(!homeTeam || !awayTeam) continue;
+
+    const readStatus = (col) => cell(row, col) || (rows[r-1] ? cell(rows[r-1], col) : "");
+    const homeStatus = readStatus(base+0);
+    const awayStatus = readStatus(base+14);
+
+    fixtures.push({
+      row: r+1, // back to 1-indexed for debug readability
+      home: homeTeam, away: awayTeam,
+      homeScore: parseInt(homeScoreRaw,10), awayScore: parseInt(awayScoreRaw,10),
+      homeStatus, awayStatus,
+      homeConf: conferenceFromStatus(homeStatus), awayConf: conferenceFromStatus(awayStatus)
+    });
+  }
+
+  // Sheet order is chronological (QF, then SF, then F) — split whatever we found into
+  // three equal groups instead of assuming a fixed count per round, since we don't
+  // know up front whether it's 1 or 2 parallel fixtures each round.
+  const perRound = Math.ceil(fixtures.length / 3) || 1;
+  fixtures.forEach((f,i)=>{
+    const roundName = PROMOTION_PLAYOFF_ROUND_NAMES[Math.min(2, Math.floor(i / perRound))];
+    f.isPlayoff = true;
+    f.playoffRoundName = roundName;
+    f.round = PROMOTION_PLAYOFF_ROUND_NUMBERS[roundName];
+  });
+
+  promotionPlayoffDebug = {
+    divisionId, base, fixturesFound: fixtures.length, fixtures,
+    rawRowDump: rows.slice(PROMOTION_PLAYOFF_ROW_START, PROMOTION_PLAYOFF_ROW_END+1).map((row,i)=>
+      "row" + (PROMOTION_PLAYOFF_ROW_START+i+1) + ": " + (row||[]).map((c,ci)=> (ci>=base && ci<base+15 && c) ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
+    )
+  };
+
+  return fixtures;
+}
+
 function render(){
   renderTable();
   renderTicker();
@@ -1512,7 +1614,11 @@ function renderRoundTabs(){
     document.getElementById('fixtureContainer').innerHTML = "Couldn't find round-by-round fixtures on this tab. Check the Debug panel below.";
     return;
   }
-  tabsEl.innerHTML = rounds.map(r => `<button class="round-tab" data-round="${r}">Round ${r}</button>`).join("");
+  tabsEl.innerHTML = rounds.map(r => {
+    const isPlayoffRound = (fixturesByRound[r]||[]).some(f => f.isPlayoff);
+    const label = isPlayoffRound ? `Round ${r} · Playoff` : `Round ${r}`;
+    return `<button class="round-tab" data-round="${r}">${label}</button>`;
+  }).join("");
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
@@ -1532,8 +1638,12 @@ function renderFixtures(round){
     el.innerHTML = "No fixtures found for this round.";
     return;
   }
-  el.className = "fixture-grid";
-  el.innerHTML = fixtures.map(f=>{
+  el.className = "";
+  const isPlayoffRound = fixtures.some(f => f.isPlayoff);
+  const banner = isPlayoffRound
+    ? `<div class="playoff-banner">Cross-Conference Promotion Playoff${fixtures[0].playoffRoundName ? " — " + ({QF:"Quarter Final",SF:"Semi Final",F:"Final"}[fixtures[0].playoffRoundName] || fixtures[0].playoffRoundName) : ""}</div>`
+    : "";
+  const cardsHtml = fixtures.map(f=>{
     const hasScore = f.homeScore !== null && f.awayScore !== null;
     const homeWin = hasScore && f.homeScore > f.awayScore;
     const awayWin = hasScore && f.awayScore > f.homeScore;
@@ -1542,12 +1652,14 @@ function renderFixtures(round){
     const scoreHtml = hasScore
       ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
       : `<span class="upcoming">vs</span>`;
-    return `<div class="fixture-card">
-      <div class="fixture-team ${resultClass(homeWin)}">${teamLink(f.home)}</div>
+    const confPill = (conf) => conf ? `<span class="roddy-div-tag" style="background:${getDivisionColorByLabel(conf)};">${conf}</span>` : "";
+    return `<div class="fixture-card${f.isPlayoff ? " playoff-card" : ""}">
+      <div class="fixture-team ${resultClass(homeWin)}">${f.isPlayoff ? confPill(f.homeConf) + " " : ""}${teamLink(f.home)}</div>
       <div class="fixture-score">${scoreHtml}</div>
-      <div class="fixture-team right ${resultClass(awayWin)}">${teamLink(f.away)}</div>
+      <div class="fixture-team right ${resultClass(awayWin)}">${teamLink(f.away)}${f.isPlayoff ? " " + confPill(f.awayConf) : ""}</div>
     </div>`;
   }).join("");
+  el.innerHTML = banner + `<div class="fixture-grid">${cardsHtml}</div>`;
 }
 
 document.getElementById('refreshBtn').addEventListener('click', load);
@@ -3102,29 +3214,33 @@ function findTeamVsTeamRecords(rows, teamName){
         round: cell(rows[r]||[], base+2),
         result: cell(rows[r]||[], base+3),
         for: cell(rows[r]||[], base+4),
-        against: cell(rows[r]||[], base+5),
-        blockIndex: b, blockBase: base
+        against: cell(rows[r]||[], base+5)
       });
     }
 
-    // Debug aid: if this opponent's raw row contains an asterisk ANYWHERE, dump every
-    // non-empty cell with its column index so we can see exactly where it actually
-    // lands — the FOR/AGA offsets we assume (base+4/base+5) might not be where it is.
-    const rawRow = rows[r]||[];
-    const pVal = cell(rawRow, TVT_COL.P);
-    const flagged = rawRow.some(c => (c||"").toString().includes("*"))
-      || (pVal && parseInt(pVal,10) !== matches.length) // P total disagrees with rows actually parsed
-      || t2.toUpperCase().includes("ZEN GARDEN"); // always capture this known example row too
-    if(flagged){
-      if(!teamVsTeamDebug.flaggedRows) teamVsTeamDebug.flaggedRows = [];
-      teamVsTeamDebug.flaggedRows.push({
-        row: r,
-        opponent: t2,
-        sheetP: pVal,
-        parsedMatchCount: matches.length,
-        parsedMatches: matches,
-        rawNonEmptyCells: rawRow.map((c,ci)=> (c!==undefined && c!==null && c.toString().trim()!=="") ? `[${ci}]="${c.toString().trim()}"` : null).filter(Boolean)
-      });
+    // A literal "*" typed into a sheet cell breaks that cell's gviz CSV export
+    // entirely (confirmed — it exports blank), so "these two teams played each other
+    // twice in the same round" can't be flagged in the sheet itself. Instead, detect
+    // it here: two back-to-back match blocks for the same opponent, same season, with
+    // an identical scoreline, almost certainly means the same real-world fixture got
+    // entered once under each competition (e.g. league + ECL landing on the same week).
+    for(let i=1; i<matches.length; i++){
+      const a = matches[i-1], b2 = matches[i];
+      if(a.year && a.year === b2.year && a.for && a.for === b2.for && a.against && a.against === b2.against){
+        a.doubleUp = true;
+        b2.doubleUp = true;
+      }
+    }
+
+    // Ongoing health-check: if the sheet's own P total disagrees with how many match
+    // blocks actually got parsed for a row (accounting for detected double-ups above,
+    // which legitimately count as one game across two blocks), flag it for the debug
+    // panel rather than silently under/over-counting.
+    const doubleUpCount = matches.filter(m => m.doubleUp).length / 2;
+    const pVal = cell(rows[r]||[], TVT_COL.P);
+    if(pVal && parseInt(pVal,10) !== (matches.length - doubleUpCount)){
+      if(!teamVsTeamDebug.mismatchRows) teamVsTeamDebug.mismatchRows = [];
+      teamVsTeamDebug.mismatchRows.push({ row: r, opponent: t2, sheetP: pVal, parsedMatchCount: matches.length, detectedDoubleUps: doubleUpCount });
     }
 
     // Sheet stores every name here in ALL CAPS — prefer the opponent's proper-case
@@ -3181,13 +3297,14 @@ function tvtMatchRowHtml(m){
   const result = (m.result||"").toUpperCase();
   const cls = result === "WIN" ? "form-w" : result === "LOSS" ? "form-l" : result === "DRAW" ? "form-d" : "form-blank";
   const short = result === "WIN" ? "W" : result === "LOSS" ? "L" : result === "DRAW" ? "D" : "";
+  const marker = m.doubleUp ? `<sup style="color:#bc3532;font-weight:700;">†</sup>` : "";
   return `<tr>
     <td style="text-align:left;">${m.comp || "—"}</td>
     <td>${m.year || "—"}</td>
     <td>${m.round || "—"}</td>
     <td>${short ? `<span class="form-pill ${cls}">${short}</span>` : "—"}</td>
-    <td>${m.for || "—"}</td>
-    <td>${m.against || "—"}</td>
+    <td>${m.for || "—"}${marker}</td>
+    <td>${m.against || "—"}${marker}</td>
   </tr>`;
 }
 
@@ -3200,11 +3317,11 @@ function tvtMatchesTableHtml(matches){
     </tr></thead><tbody>
       ${matches.map(tvtMatchRowHtml).join("")}
     </tbody></table></div>`;
-  // A "*" on the score marks a round where these two teams met twice (e.g. league +
-  // ECL fell in the same round) — kept as-is rather than stripped, with a footnote.
-  const hasAsterisk = matches.some(m => (m.for||"").includes("*") || (m.against||"").includes("*"));
-  if(hasAsterisk){
-    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:8px;">* these two teams played each other twice in the same round (e.g. league &amp; ECL fell in the same week)</div>`;
+  // A dagger marks two back-to-back entries in the same season with an identical
+  // scoreline — almost certainly the same real-world fixture counted once for each
+  // competition it fell under (e.g. league & ECL landing on the same week).
+  if(matches.some(m => m.doubleUp)){
+    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:8px;">† these two rows look like the same fixture, counted once for each competition it fell under in the same round</div>`;
   }
   return html;
 }
