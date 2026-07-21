@@ -1158,24 +1158,6 @@ async function load(){
     parseStandings(rows);
     parseFixtures(rows);
     parseH2H(rows);
-
-    // Division 2 / Division 3 also carry a cross-conference promotion playoff (2A v 2B,
-    // or 3A v 3B) on a separate tab — merge those fixtures into the same round tabs.
-    if(PROMOTION_PLAYOFF_BLOCK_START[currentDivision.id] !== undefined){
-      try{
-        const playoffRes = await fetch(csvUrlFor({ gid: PROMOTION_PLAYOFF_GID }));
-        if(playoffRes.ok){
-          const playoffCsv = await playoffRes.text();
-          const playoffRows = Papa.parse(playoffCsv, {skipEmptyLines:false}).data;
-          const playoffFixtures = parsePromotionPlayoff(playoffRows, currentDivision.id);
-          playoffFixtures.forEach(f=>{
-            if(!fixturesByRound[f.round]) fixturesByRound[f.round] = [];
-            fixturesByRound[f.round].push(f);
-          });
-        }
-      }catch(err){ console.error("Promotion playoff fetch failed", err); }
-    }
-
     render();
 
     const fmtRow = (row) => (row||[]).map((c,i)=> `[${i}]="${(c||"").toString().trim()}"`).join("  ");
@@ -1191,7 +1173,8 @@ async function load(){
       "Header row (index " + TABLE_HEADER_ROW + "):\n" + fmtRow(rows[TABLE_HEADER_ROW]) + "\n\n" +
       "1st data row (index " + TABLE_DATA_START + "):\n" + fmtRow(rows[TABLE_DATA_START]) + "\n\n" +
       "2nd data row (index " + (TABLE_DATA_START+1) + "):\n" + fmtRow(rows[TABLE_DATA_START+1]) + "\n\n" +
-      "Promotion playoff debug: " + JSON.stringify(promotionPlayoffDebug, null, 2) + "\n\n" +
+      "Playoff rounds (24/25/26) rows seen: " + JSON.stringify(fixturesDebug.playoffRowsSeen, null, 2) + "\n\n" +
+      "Playoff fixtures parsed: " + JSON.stringify(["24","25","26"].flatMap(r=>fixturesByRound[r]||[]), null, 2) + "\n\n" +
       JSON.stringify({standings: standings.slice(0,4), sampleFixtures: fixturesByRound[Object.keys(fixturesByRound)[0]], h2hMatchups}, null, 2);
 
     setStatus("Live — updated " + new Date().toLocaleString());
@@ -1418,8 +1401,20 @@ function parseStandings(rows){
 const FIXTURE_COL_START = 33;
 const FIXTURE_COL_END = 43;
 
+// Rounds 24/25/26 are the Division 2 / Division 3 cross-conference promotion playoffs
+// (2A v 2B, or 3A v 3B) — QF, SF, and Final respectively. They live in this same sheet
+// now, in the same fixture-row format as regular rounds, but the opponent comes from
+// the SIBLING conference, so it's never in this division's own knownTeams roster.
+const PLAYOFF_ROUNDS = new Set(["24","25","26"]);
+const PLAYOFF_ROUND_NAME = { "24": "QF", "25": "SF", "26": "F" };
+const PLAYOFF_OWN_CONF = { d2a: "2A", d2b: "2B", d3a: "3A", d3b: "3B" };
+const PLAYOFF_SIBLING_CONF = { d2a: "2B", d2b: "2A", d3a: "3B", d3b: "3A" };
+
+let fixturesDebug = { playoffRowsSeen: [] };
+
 function parseFixtures(rows){
   fixturesByRound = {};
+  fixturesDebug = { playoffRowsSeen: [] };
   let currentRound = null;
 
   for(let r=0;r<rows.length;r++){
@@ -1439,20 +1434,41 @@ function parseFixtures(rows){
     // Skip any stray player-lineup rows (contain role tokens like GK/DEF/MID/ATT)
     if(nonEmpty.some(c => ROLE_TOKENS.has(c.toUpperCase()))) continue;
 
-    // Find team names present, in left-to-right order, ignoring blanks
+    const isPlayoffRound = PLAYOFF_ROUNDS.has(currentRound);
+    if(isPlayoffRound) fixturesDebug.playoffRowsSeen.push({ row: r, round: currentRound, nonEmpty });
+
+    // Find team names present, in left-to-right order, ignoring blanks. For playoff
+    // rounds, also accept any plausible team-name-shaped text (not just this
+    // division's own roster), since the sibling-conference opponent won't be known.
     const teamHits = [];
-    nonEmpty.forEach((c,i) => { if(knownTeams.has(c.toUpperCase())) teamHits.push({name:c, idx:i}); });
+    nonEmpty.forEach((c,i) => {
+      if(knownTeams.has(c.toUpperCase())){ teamHits.push({name:c, idx:i, known:true}); return; }
+      if(isPlayoffRound && TEAM_NAME_RE.test(c) && !/^\d+$/.test(c) && !/^ROUND\s*\d+$/i.test(c) && !ROLE_TOKENS.has(c.toUpperCase())){
+        teamHits.push({name:c, idx:i, known:false});
+      }
+    });
     if(teamHits.length < 2) continue;
 
     const [homeHit, awayHit] = teamHits;
     const between = nonEmpty.slice(homeHit.idx+1, awayHit.idx).filter(c => /^\d{1,4}$/.test(c));
 
-    fixturesByRound[currentRound].push({
+    const fixture = {
       home: homeHit.name,
       away: awayHit.name,
       homeScore: between.length >= 1 ? parseInt(between[0],10) : null,
       awayScore: between.length >= 2 ? parseInt(between[between.length-1],10) : null
-    });
+    };
+
+    if(isPlayoffRound){
+      fixture.isPlayoff = true;
+      fixture.playoffRoundName = PLAYOFF_ROUND_NAME[currentRound];
+      const ownConf = PLAYOFF_OWN_CONF[currentDivision.id];
+      const sibConf = PLAYOFF_SIBLING_CONF[currentDivision.id];
+      fixture.homeConf = homeHit.known ? ownConf : sibConf;
+      fixture.awayConf = awayHit.known ? ownConf : sibConf;
+    }
+
+    fixturesByRound[currentRound].push(fixture);
   }
 
   // de-duplicate identical fixture entries that can appear from merged/repeated cells
@@ -1464,80 +1480,6 @@ function parseFixtures(rows){
       seen.add(key); return true;
     });
   });
-}
-
-// ---------- Division 2 / Division 3 cross-conference promotion playoffs ----------
-// Live only on a separate tab (gid 353101965), historical range A78:O90 for Division 2
-// and the identical 15-column layout shifted to S78:AG90 for Division 3. Within each
-// 15-column block (offsets relative to the block's first column): +0 home seed label
-// (e.g. "2nd 2A"), +2:+5 home team name (merged), +6 home score, +7 away score,
-// +8:+12 away team name (merged), +14 away seed label. Played across 3 rounds — QF
-// (Round 24), SF (Round 25), F (Round 26) — with the 2 eventual winners promoted.
-const PROMOTION_PLAYOFF_GID = "353101965";
-const PROMOTION_PLAYOFF_ROW_START = 77; // sheet row 78, 0-indexed
-const PROMOTION_PLAYOFF_ROW_END = 89;   // sheet row 90, 0-indexed inclusive
-const PROMOTION_PLAYOFF_BLOCK_START = { d2a: 0, d2b: 0, d3a: 18, d3b: 18 };
-const PROMOTION_PLAYOFF_ROUND_NAMES = ["QF", "SF", "F"];
-const PROMOTION_PLAYOFF_ROUND_NUMBERS = { QF: 24, SF: 25, F: 26 };
-
-let promotionPlayoffDebug = {};
-
-function conferenceFromStatus(status){
-  const m = (status||"").toUpperCase().match(/([23][AB])/);
-  return m ? m[1] : null;
-}
-
-function parsePromotionPlayoff(rows, divisionId){
-  const base = PROMOTION_PLAYOFF_BLOCK_START[divisionId];
-  const fixtures = [];
-  if(base === undefined) return fixtures;
-
-  for(let r=PROMOTION_PLAYOFF_ROW_START; r<=PROMOTION_PLAYOFF_ROW_END; r++){
-    const row = rows[r] || [];
-    const homeScoreRaw = cell(row, base+6);
-    const awayScoreRaw = cell(row, base+7);
-    // A genuine score row has two whole numbers in the score columns.
-    if(!/^\d+$/.test(homeScoreRaw) || !/^\d+$/.test(awayScoreRaw)) continue;
-
-    // Team names are usually on this same row; some brackets on this sheet put the
-    // name on the row above the score instead, so fall back to checking that too.
-    const readTeam = (start, end) => mergedCell(row, start, end) || (rows[r-1] ? mergedCell(rows[r-1], start, end) : "");
-    const homeTeam = readTeam(base+2, base+5);
-    const awayTeam = readTeam(base+8, base+12);
-    if(!homeTeam || !awayTeam) continue;
-
-    const readStatus = (col) => cell(row, col) || (rows[r-1] ? cell(rows[r-1], col) : "");
-    const homeStatus = readStatus(base+0);
-    const awayStatus = readStatus(base+14);
-
-    fixtures.push({
-      row: r+1, // back to 1-indexed for debug readability
-      home: homeTeam, away: awayTeam,
-      homeScore: parseInt(homeScoreRaw,10), awayScore: parseInt(awayScoreRaw,10),
-      homeStatus, awayStatus,
-      homeConf: conferenceFromStatus(homeStatus), awayConf: conferenceFromStatus(awayStatus)
-    });
-  }
-
-  // Sheet order is chronological (QF, then SF, then F) — split whatever we found into
-  // three equal groups instead of assuming a fixed count per round, since we don't
-  // know up front whether it's 1 or 2 parallel fixtures each round.
-  const perRound = Math.ceil(fixtures.length / 3) || 1;
-  fixtures.forEach((f,i)=>{
-    const roundName = PROMOTION_PLAYOFF_ROUND_NAMES[Math.min(2, Math.floor(i / perRound))];
-    f.isPlayoff = true;
-    f.playoffRoundName = roundName;
-    f.round = PROMOTION_PLAYOFF_ROUND_NUMBERS[roundName];
-  });
-
-  promotionPlayoffDebug = {
-    divisionId, base, fixturesFound: fixtures.length, fixtures,
-    rawRowDump: rows.slice(PROMOTION_PLAYOFF_ROW_START, PROMOTION_PLAYOFF_ROW_END+1).map((row,i)=>
-      "row" + (PROMOTION_PLAYOFF_ROW_START+i+1) + ": " + (row||[]).map((c,ci)=> (ci>=base && ci<base+15 && c) ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
-    )
-  };
-
-  return fixtures;
 }
 
 function render(){
