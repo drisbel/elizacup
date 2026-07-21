@@ -3102,7 +3102,22 @@ function findTeamVsTeamRecords(rows, teamName){
         round: cell(rows[r]||[], base+2),
         result: cell(rows[r]||[], base+3),
         for: cell(rows[r]||[], base+4),
-        against: cell(rows[r]||[], base+5)
+        against: cell(rows[r]||[], base+5),
+        blockIndex: b, blockBase: base
+      });
+    }
+
+    // Debug aid: if this opponent's raw row contains an asterisk ANYWHERE, dump every
+    // non-empty cell with its column index so we can see exactly where it actually
+    // lands — the FOR/AGA offsets we assume (base+4/base+5) might not be where it is.
+    const rawRow = rows[r]||[];
+    if(rawRow.some(c => (c||"").toString().includes("*"))){
+      if(!teamVsTeamDebug.asteriskRows) teamVsTeamDebug.asteriskRows = [];
+      teamVsTeamDebug.asteriskRows.push({
+        row: r,
+        opponent: t2,
+        parsedMatches: matches,
+        rawNonEmptyCells: rawRow.map((c,ci)=> (c!==undefined && c!==null && c.toString().trim()!=="") ? `[${ci}]="${c.toString().trim()}"` : null).filter(Boolean)
       });
     }
 
