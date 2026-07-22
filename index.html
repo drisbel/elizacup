@@ -3956,12 +3956,12 @@ const HIST_DIV_COLORS = { D1:"#28427c", "2A":"#bc3532", "2B":"#990000", "3A":"#6
 let historyDebug = {};
 
 function parseHistoricalSeason(rows){
-  // ---- Divisions (A:J) — the sheet's title+header text ends up concatenated into a
-  // single cell (e.g. "ELIZA CUP POS" in column A), rather than sitting on separate
-  // rows as a plain visual read would suggest. So: find the header ROW itself by its
-  // distinctive TEAM/PTS/STATUS column combo (reliable regardless of what's in column
-  // A), then read the division name out of column A by stripping a trailing "POS".
-  // Data starts the very next row. ----
+  // ---- Divisions (A:J) — Eliza Cup's title+header text is concatenated into a single
+  // cell ("ELIZA CUP POS" in column A), but the other divisions apparently put the
+  // title on its own row directly above a plain "POS ..." header row instead. Handle
+  // both: find the header row by its TEAM/PTS/STATUS combo, then read the division
+  // name from column A on that row, falling back to the row above if column A there
+  // is blank (i.e. just "POS", title given nowhere on the header row itself). ----
   const divisions = {};
   for(let r=0; r<rows.length; r++){
     const c1 = cell(rows[r]||[],1).toUpperCase();
@@ -3969,8 +3969,11 @@ function parseHistoricalSeason(rows){
     const c9 = cell(rows[r]||[],9).toUpperCase();
     if(c1 !== "TEAM" || c2 !== "PTS" || c9 !== "STATUS") continue;
 
-    const rawLabel = cell(rows[r]||[],0).toUpperCase().replace(/\s*POS\s*$/,"").trim();
-    const match = HIST_DIVISION_LABELS.find(d => rawLabel === d.label || rawLabel.endsWith(d.label) || d.label.endsWith(rawLabel));
+    let rawLabel = cell(rows[r]||[],0).toUpperCase().replace(/\s*POS\s*$/,"").trim();
+    if(!rawLabel && r>0) rawLabel = cell(rows[r-1]||[],0).toUpperCase().trim();
+    if(!rawLabel) continue;
+
+    const match = HIST_DIVISION_LABELS.find(d => rawLabel === d.label || rawLabel.endsWith(d.label));
     if(!match) continue;
 
     const teams = [];
@@ -4055,7 +4058,12 @@ function parseHistoricalSeason(rows){
         if(!home) break;
         const homeUpper = home.toUpperCase();
         if(GROUP_LABELS.some(g=>homeUpper.endsWith(g)) || KO_LABELS.some(k=>homeUpper.endsWith(k))) break;
-        eclKnockoutRawDump.push((rows[dr]||[]).map((c,ci)=> (ci>=22 && ci<=32 && c) ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "));
+        eclKnockoutRawDump.push({
+          row: dr+1,
+          thisRow: (rows[dr]||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "),
+          rowAbove: (rows[dr-1]||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "),
+          rowBelow: (rows[dr+1]||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")
+        });
         fixtures.push({
           home, homeScore: cell(rows[dr]||[],23), awayScore: cell(rows[dr]||[],24),
           away: cell(rows[dr]||[], 25) // confirmed: exact column, not merged
