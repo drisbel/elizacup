@@ -3951,11 +3951,14 @@ let historyDebug = {};
 
 function parseHistoricalSeason(rows){
   // ---- Divisions (A:J) — "ELIZA CUP"/"DIVISION 2A" etc label row, header row, then
-  // data rows until a blank Pos cell ends that division's block ----
+  // data rows until a blank Pos cell ends that division's block. Matched with
+  // startsWith rather than strict equality in case the sheet ever appends anything
+  // to the label (e.g. a season suffix). ----
   const divisions = {};
   for(let r=0; r<rows.length; r++){
     const labelCell = cell(rows[r]||[], 0).toUpperCase();
-    const match = HIST_DIVISION_LABELS.find(d => d.label === labelCell);
+    if(!labelCell) continue;
+    const match = HIST_DIVISION_LABELS.find(d => labelCell === d.label || labelCell.startsWith(d.label));
     if(!match) continue;
     const teams = [];
     for(let dr=r+2; dr<rows.length; dr++){
@@ -3971,10 +3974,13 @@ function parseHistoricalSeason(rows){
     divisions[match.key] = { name: match.name, teams };
   }
 
-  // ---- Roddy (L:O) — find the "POS/TEAM" header, then read until blank ----
+  // ---- Roddy (L:O) — find the "POS/TEAM" header, then read until blank. Accepts
+  // either cell matching in case one is renamed slightly, for resilience. ----
   let roddyHeaderRow = -1;
   for(let r=0; r<rows.length; r++){
-    if(cell(rows[r]||[],11).toUpperCase() === "POS" && cell(rows[r]||[],12).toUpperCase() === "TEAM"){ roddyHeaderRow = r; break; }
+    const l = cell(rows[r]||[],11).toUpperCase();
+    const m = cell(rows[r]||[],12).toUpperCase();
+    if(l === "POS" && m === "TEAM"){ roddyHeaderRow = r; break; }
   }
   const roddy = [];
   if(roddyHeaderRow !== -1){
@@ -3986,20 +3992,24 @@ function parseHistoricalSeason(rows){
   }
 
   // ---- FA Cup (Q:U) — a row with only Q filled is a round label; a row with Q AND T
-  // filled is a fixture; U holds "REPLAY" when the first match was tied ----
+  // filled is a fixture; U holds "REPLAY" when the first match was tied. Team names
+  // read via mergedCell in case a long name spans into the next column. ----
   const facup = [];
   {
     let current = null;
     for(let r=0; r<rows.length; r++){
-      const q = cell(rows[r]||[],16), rc = cell(rows[r]||[],17), s = cell(rows[r]||[],18), t = cell(rows[r]||[],19), u = cell(rows[r]||[],20);
-      if(!q && !rc && !s && !t) continue;
-      if(q && !rc && !s && !t){ current = { name: q, fixtures: [] }; facup.push(current); continue; }
-      if(current && q && t){ current.fixtures.push({ home:q, homeScore:rc, awayScore:s, away:t, replay:/REPLAY/i.test(u) }); }
+      const q = mergedCell(rows[r]||[], 16, 17), rc = cell(rows[r]||[],17), s = cell(rows[r]||[],18),
+            t = mergedCell(rows[r]||[], 19, 20), u = cell(rows[r]||[],20);
+      const qOnly = cell(rows[r]||[],16);
+      if(!qOnly && !rc && !s && !cell(rows[r]||[],19)) continue;
+      if(qOnly && !rc && !s && !cell(rows[r]||[],19)){ current = { name: qOnly, fixtures: [] }; facup.push(current); continue; }
+      if(current && qOnly && cell(rows[r]||[],19)){ current.fixtures.push({ home:qOnly, homeScore:rc, awayScore:s, away:cell(rows[r]||[],19), replay:/REPLAY/i.test(u) }); }
     }
   }
 
   // ---- ECL (W:AF) — "GROUP A/B/C" label + header row + data; "QUARTER FINALS" /
-  // "SEMI FINALS" / "FINAL" label with fixture rows immediately after, no header ----
+  // "SEMI FINALS" / "FINAL" label with fixture rows immediately after, no header.
+  // Team names read via mergedCell in case a long name spans into the next column. ----
   const GROUP_LABELS = ["GROUP A","GROUP B","GROUP C"];
   const KO_LABELS = ["QUARTER FINALS","SEMI FINALS","FINAL"];
   const eclGroups = [];
@@ -4027,7 +4037,10 @@ function parseHistoricalSeason(rows){
         const home = cell(rows[dr]||[],22);
         if(!home) break;
         if(GROUP_LABELS.includes(home.toUpperCase()) || KO_LABELS.includes(home.toUpperCase())) break;
-        fixtures.push({ home, homeScore: cell(rows[dr]||[],23), awayScore: cell(rows[dr]||[],24), away: cell(rows[dr]||[],25) });
+        fixtures.push({
+          home, homeScore: cell(rows[dr]||[],23), awayScore: cell(rows[dr]||[],24),
+          away: mergedCell(rows[dr]||[], 25, 28)
+        });
       }
       eclKnockout.push({ name: w, fixtures });
     }
@@ -4039,7 +4052,8 @@ function parseHistoricalSeason(rows){
     roddyHeaderRow, roddyCount: roddy.length,
     facupRoundsFound: facup.map(rnd=>({name:rnd.name, fixtures:rnd.fixtures.length})),
     eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
-    eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length}))
+    eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
+    rawRowDump: rows.slice(0, 6).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "))
   };
 
   return { divisions, roddy, facup, eclGroups, eclKnockout };
@@ -4117,25 +4131,36 @@ function splitTeamDivTag(text){
 }
 
 function histDivPill(tag){
-  if(!tag) return "";
+  if(!tag) return `<span class="roddy-div-tag" style="background:#8a9990;visibility:hidden;">-</span>`;
   const label = tag === "D1" ? "D1" : tag.slice(1);
-  const color = HIST_DIV_COLORS[label] || "#8a9990";
-  return `<span class="roddy-div-tag" style="background:${color};">${label}</span>`;
+  // Older seasons before the 2A/2B and 3A/3B split just say "D2"/"D3" — colour them
+  // the same as the B conference rather than leaving them uncoloured.
+  const color = HIST_DIV_COLORS[label] || (label === "2" ? HIST_DIV_COLORS["2B"] : label === "3" ? HIST_DIV_COLORS["3B"] : "#8a9990");
+  const displayLabel = (label === "2") ? "2B" : (label === "3") ? "3B" : label;
+  return `<span class="roddy-div-tag" style="background:${color};">${displayLabel}</span>`;
 }
 
-// Plain text fixture line, matching the Home page's "Latest from Division 1" results
-// list style, rather than the bordered fixture-card component used elsewhere.
-function histFixtureLineHtml(f, showDivTags){
-  let homeHtml = teamLink(f.home), awayHtml = teamLink(f.away);
-  if(showDivTags){
-    const h = splitTeamDivTag(f.home), a = splitTeamDivTag(f.away);
-    homeHtml = histDivPill(h.tag) + " " + teamLink(h.name);
-    awayHtml = teamLink(a.name) + " " + histDivPill(a.tag);
-  }
-  const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:11px;text-transform:uppercase;">Replay</span>` : "";
-  return `<div style="font-family:'Barlow',sans-serif;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line-light);">
-    ${homeHtml} <b>${f.homeScore}</b> – <b>${f.awayScore}</b> ${awayHtml}${replayTag}
-  </div>`;
+// Fixture table matching the Team Profile H2H-vs-opponent layout: div pill / team /
+// score / score / team / div pill. Used for both FA Cup (with div tags parsed out of
+// the team name) and ECL knockout (no tags — pill cells render blank but keep the grid
+// aligned).
+function histFixtureTableHtml(fixtures, showDivTags){
+  if(!fixtures || !fixtures.length) return "";
+  return `<div class="table-wrap" style="max-width:560px;"><table class="standings compact h2h-record-table"><tbody>
+    ${fixtures.map(f=>{
+      const h = showDivTags ? splitTeamDivTag(f.home) : { name: f.home, tag: null };
+      const a = showDivTags ? splitTeamDivTag(f.away) : { name: f.away, tag: null };
+      const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:10px;text-transform:uppercase;">Replay</span>` : "";
+      return `<tr>
+        <td style="width:36px;">${histDivPill(h.tag)}</td>
+        <td style="text-align:right;font-weight:600;">${teamLink(h.name)}</td>
+        <td style="width:32px;font-weight:700;">${f.homeScore || "—"}</td>
+        <td style="width:32px;font-weight:700;">${f.awayScore || "—"}</td>
+        <td style="text-align:left;font-weight:600;">${teamLink(a.name)}${replayTag}</td>
+        <td style="width:36px;">${histDivPill(a.tag)}</td>
+      </tr>`;
+    }).join("")}
+  </tbody></table></div>`;
 }
 
 let historySeasonData = null;
@@ -4161,14 +4186,14 @@ function renderHistorySeason(data){
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Eliza FA Cup</h2></div>`;
   data.facup.forEach(round=>{
     html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
-    html += round.fixtures.map(f=>histFixtureLineHtml(f, true)).join("");
+    html += histFixtureTableHtml(round.fixtures, true);
   });
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Eliza Champions League</h2></div>`;
   html += data.eclGroups.map(histEclGroupTableHtml).join("");
   data.eclKnockout.forEach(round=>{
     html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
-    html += round.fixtures.map(f=>histFixtureLineHtml(f, false)).join("");
+    html += histFixtureTableHtml(round.fixtures, false);
   });
 
   el.innerHTML = html;
