@@ -386,6 +386,22 @@
   .tvt-select-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .streak-row:hover{background:#F0EAD8;}
   .streak-row.inactive{opacity:0.6;}
+  .streak-tier-row td{
+    background:var(--chalk);font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.05em;color:#6b7c73;text-align:left !important;
+    padding:5px 10px !important;border-top:1px solid var(--line-light);
+  }
+  .streak-badge{
+    display:inline-block;background:var(--pitch);color:#fff;font-family:'Barlow',sans-serif;
+    font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;
+  }
+  .streak-detail-row td{padding:0 10px 12px !important;background:#FBF9F3;}
+  @media (max-width:600px){
+    table.streaks-table thead th{padding:5px 4px;font-size:9px;}
+    table.streaks-table tbody td{padding:5px 4px;font-size:11px;}
+    .streak-badge{font-size:9.5px;padding:2px 6px;}
+    .roddy-div-tag{font-size:8px;padding:1px 4px;}
+  }
 
   .badge{
     display:inline-flex;align-items:center;justify-content:center;
@@ -3318,30 +3334,45 @@ function renderWinStreaks(streaks){
   }
   el.className = "";
   const divPill = (short, color) => `<span class="roddy-div-tag" style="background:${color};">${short}</span>`;
-  el.innerHTML = `<div class="table-wrap" style="max-width:560px;"><table class="standings compact h2h-record-table"><thead><tr>
-      <th style="text-align:left;">Team</th><th style="text-align:left;">Opponent</th><th>Streak</th>
-    </tr></thead><tbody>
-      ${streaks.map((s,i) => `<tr class="streak-row${s.team1Active?"":" inactive"}" data-idx="${i}" style="cursor:pointer;">
+
+  let rowsHtml = "";
+  let lastStreak = null;
+  streaks.forEach((s,i)=>{
+    if(s.streak !== lastStreak){
+      rowsHtml += `<tr class="streak-tier-row"><td colspan="3">${s.streak} game win streaks</td></tr>`;
+      lastStreak = s.streak;
+    }
+    rowsHtml += `<tr class="streak-row${(!s.team1Active || !s.team2Active) ? " inactive" : ""}" data-idx="${i}" style="cursor:pointer;">
         <td style="text-align:left;">${divPill(s.team1DivShort, s.team1DivColor)} ${teamLink(s.team1)}</td>
         <td style="text-align:left;">${divPill(s.team2DivShort, s.team2DivColor)} ${teamLink(s.team2)}</td>
-        <td><span style="display:inline-block;background:#ffdd00;color:#111;font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">🔥 ${s.streak} wins</span></td>
-      </tr>`).join("")}
-    </tbody></table></div>
-    <div id="statsStreakDetail" style="max-width:520px;margin-top:16px;"></div>`;
+        <td><span class="streak-badge">${s.streak} wins</span></td>
+      </tr>
+      <tr class="streak-detail-row" data-detail-for="${i}" style="display:none;"><td colspan="3"></td></tr>`;
+  });
 
-  const detailEl = document.getElementById('statsStreakDetail');
-  const showDetail = (idx) => {
-    const s = streaks[idx];
-    detailEl.innerHTML = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px;">
-        ${teamLink(s.team1)} <span style="color:#6b7c73;font-weight:400;">v</span> ${teamLink(s.team2)}
-      </div>` + tvtMatchesTableHtml(s.matches);
-    detailEl.scrollIntoView({behavior:"smooth", block:"nearest"});
-  };
+  el.innerHTML = `<div class="table-wrap" style="max-width:560px;"><table class="standings compact h2h-record-table streaks-table"><thead><tr>
+      <th style="text-align:left;">Team</th><th style="text-align:left;">Opponent</th><th>Streak</th>
+    </tr></thead><tbody>
+      ${rowsHtml}
+    </tbody></table></div>`;
+
+  const buildDetailHtml = (s) => `<div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin:10px 0 8px;">
+      ${teamLink(s.team1)} <span style="color:#6b7c73;font-weight:400;">v</span> ${teamLink(s.team2)}
+    </div>` + tvtMatchesTableHtml(s.matches);
+
   el.querySelectorAll('.streak-row').forEach(tr=>{
     tr.addEventListener('click', (e)=>{
       // Ignore clicks on the team-link anchors themselves — let those navigate normally.
       if(e.target.closest('a')) return;
-      showDetail(parseInt(tr.dataset.idx,10));
+      const idx = tr.dataset.idx;
+      const detailRow = el.querySelector(`.streak-detail-row[data-detail-for="${idx}"]`);
+      const isOpen = detailRow.style.display !== "none";
+      // Close any other open detail row first, so only one is expanded at a time.
+      el.querySelectorAll('.streak-detail-row').forEach(row=>{ row.style.display = "none"; row.firstElementChild.innerHTML = ""; });
+      if(!isOpen){
+        detailRow.firstElementChild.innerHTML = buildDetailHtml(streaks[idx]);
+        detailRow.style.display = "";
+      }
     });
   });
 }
