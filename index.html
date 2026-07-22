@@ -384,6 +384,8 @@
   .tvt-select-option.inactive{opacity:0.6;}
   .tvt-select-option .roddy-div-tag{flex-shrink:0;min-width:26px;text-align:center;}
   .tvt-select-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .streak-row:hover{background:#F0EAD8;}
+  .streak-row.inactive{opacity:0.6;}
 
   .badge{
     display:inline-flex;align-items:center;justify-content:center;
@@ -1162,6 +1164,12 @@ async function load(){
     document.getElementById('statsContainer').innerHTML = "Loading streaks…";
     document.getElementById('statsContainer').className = "state-msg";
     try{
+      const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
+      const roddyRes = await fetch(csvUrlFor(roddyDiv));
+      if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
+      const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
+      parseRoddy(roddyRows); // populates roddyEntries — used for each team's division pill
+
       const res = await fetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
@@ -3250,22 +3258,49 @@ function findWinStreaks(rows){
     if(!/STREAK/i.test(streakFlag)) continue;
     flaggedRowCount++;
 
-    const team1 = cell(row, TVT_COL.TEAM1);
-    const team2 = cell(row, TVT_COL.TEAM2);
-    if(!team1 || !team2 || team1.toUpperCase() === team2.toUpperCase()) continue;
+    const team1Raw = cell(row, TVT_COL.TEAM1);
+    const team2Raw = cell(row, TVT_COL.TEAM2);
+    if(!team1Raw || !team2Raw || team1Raw.toUpperCase() === team2Raw.toUpperCase()) continue;
 
-    let longest = 0, current = 0;
+    const matches = [];
     for(let b=0; b<TVT_MAX_MATCHES; b++){
       const base = TVT_MATCH_START + b*TVT_MATCH_WIDTH;
       const comp = cell(row, base);
       const year = cell(row, base+1);
       if(!comp && !year) break;
-      const result = cell(row, base+3).toUpperCase();
-      if(result === "WIN"){ current++; longest = Math.max(longest, current); }
-      else current = 0;
+      matches.push({
+        comp, year,
+        round: cell(row, base+2),
+        result: cell(row, base+3),
+        for: cell(row, base+4),
+        against: cell(row, base+5)
+      });
     }
+
+    // Same double-up detection used on the Team vs Team page — two back-to-back
+    // entries, same season, identical scoreline, almost certainly one real fixture
+    // counted once per competition it fell under in the same round.
+    for(let i=1; i<matches.length; i++){
+      const a = matches[i-1], b2 = matches[i];
+      if(a.year && a.year === b2.year && a.for && a.for === b2.for && a.against && a.against === b2.against){
+        a.doubleUp = true; b2.doubleUp = true;
+      }
+    }
+
+    let longest = 0, current = 0;
+    matches.forEach(m=>{
+      if((m.result||"").toUpperCase() === "WIN"){ current++; longest = Math.max(longest, current); }
+      else current = 0;
+    });
+
     if(longest >= 3){
-      streaks.push({ team1, team2, streak: longest, row: r });
+      const team1Info = lookupTeamDivInfo(team1Raw);
+      const team2Info = lookupTeamDivInfo(team2Raw);
+      streaks.push({
+        team1: team1Info.display, team1Active: team1Info.active, team1DivShort: team1Info.divShort, team1DivColor: team1Info.divColor,
+        team2: team2Info.display, team2Active: team2Info.active, team2DivShort: team2Info.divShort, team2DivColor: team2Info.divColor,
+        streak: longest, matches, row: r
+      });
     }
   }
 
@@ -3282,21 +3317,53 @@ function renderWinStreaks(streaks){
     return;
   }
   el.className = "";
-  el.innerHTML = `<div class="table-wrap" style="max-width:520px;"><table class="standings compact h2h-record-table"><thead><tr>
+  const divPill = (short, color) => `<span class="roddy-div-tag" style="background:${color};">${short}</span>`;
+  el.innerHTML = `<div class="table-wrap" style="max-width:560px;"><table class="standings compact h2h-record-table"><thead><tr>
       <th style="text-align:left;">Team</th><th style="text-align:left;">Opponent</th><th>Streak</th>
     </tr></thead><tbody>
-      ${streaks.map(s => `<tr>
-        <td style="text-align:left;">${teamLink(s.team1)}</td>
-        <td style="text-align:left;">${teamLink(s.team2)}</td>
+      ${streaks.map((s,i) => `<tr class="streak-row${s.team1Active?"":" inactive"}" data-idx="${i}" style="cursor:pointer;">
+        <td style="text-align:left;">${divPill(s.team1DivShort, s.team1DivColor)} ${teamLink(s.team1)}</td>
+        <td style="text-align:left;">${divPill(s.team2DivShort, s.team2DivColor)} ${teamLink(s.team2)}</td>
         <td><span style="display:inline-block;background:#ffdd00;color:#111;font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">🔥 ${s.streak} wins</span></td>
       </tr>`).join("")}
-    </tbody></table></div>`;
+    </tbody></table></div>
+    <div id="statsStreakDetail" style="max-width:520px;margin-top:16px;"></div>`;
+
+  const detailEl = document.getElementById('statsStreakDetail');
+  const showDetail = (idx) => {
+    const s = streaks[idx];
+    detailEl.innerHTML = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px;">
+        ${teamLink(s.team1)} <span style="color:#6b7c73;font-weight:400;">v</span> ${teamLink(s.team2)}
+      </div>` + tvtMatchesTableHtml(s.matches);
+    detailEl.scrollIntoView({behavior:"smooth", block:"nearest"});
+  };
+  el.querySelectorAll('.streak-row').forEach(tr=>{
+    tr.addEventListener('click', (e)=>{
+      // Ignore clicks on the team-link anchors themselves — let those navigate normally.
+      if(e.target.closest('a')) return;
+      showDetail(parseInt(tr.dataset.idx,10));
+    });
+  });
 }
 
 let teamVsTeamDebug = {};
 
 function titleCaseFallback(name){
   return (name||"").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Shared lookup: proper-case display name + current division pill info for any team,
+// via the Roddy leaderboard (sheet stores names in ALL CAPS elsewhere). A team not
+// found there isn't currently entered in any division — flagged inactive.
+function lookupTeamDivInfo(rawName){
+  const roddyMatch = roddyEntries.find(e => (e.team||"").toUpperCase() === (rawName||"").toUpperCase());
+  const display = roddyMatch ? roddyMatch.team : titleCaseFallback(rawName);
+  const active = !!roddyMatch;
+  return {
+    display, active,
+    divShort: active ? getDivisionShortLabel(roddyMatch.division) : "N/A",
+    divColor: active ? getDivisionColorByLabel(roddyMatch.division) : "#8a9990"
+  };
 }
 
 function findTeamVsTeamRecords(rows, teamName){
