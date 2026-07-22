@@ -1888,6 +1888,10 @@ function getDivisionColorByLabel(text){
   if(t.includes("2B")) return "#990000";
   if(t.includes("3A")) return "#6aa84f";
   if(t.includes("3B")) return "#274e13";
+  // Older seasons before the conference split just say "Division 2"/"Division 3" —
+  // colour them the same as the B conference rather than falling back to grey.
+  if(/\b2\b/.test(t)) return "#990000";
+  if(/\b3\b/.test(t)) return "#274e13";
   return "#8a9990";
 }
 function getDivisionShortLabel(text){
@@ -1897,6 +1901,8 @@ function getDivisionShortLabel(text){
   if(t.includes("2B")) return "2B";
   if(t.includes("3A")) return "3A";
   if(t.includes("3B")) return "3B";
+  if(/\b2\b/.test(t)) return "D2";
+  if(/\b3\b/.test(t)) return "D3";
   return text || "—";
 }
 function hexToRgba(hex, alpha){
@@ -4052,7 +4058,7 @@ function parseHistoricalSeason(rows){
         eclKnockoutRawDump.push((rows[dr]||[]).map((c,ci)=> (ci>=22 && ci<=32 && c) ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "));
         fixtures.push({
           home, homeScore: cell(rows[dr]||[],23), awayScore: cell(rows[dr]||[],24),
-          away: mergedCell(rows[dr]||[], 25, 29)
+          away: cell(rows[dr]||[], 25) // confirmed: exact column, not merged
         });
       }
       eclKnockout.push({ name: koLabel, fixtures });
@@ -4148,9 +4154,9 @@ function histDivPill(tag){
   if(!tag) return `<span class="roddy-div-tag" style="background:#8a9990;visibility:hidden;">-</span>`;
   const label = tag === "D1" ? "D1" : tag.slice(1);
   // Older seasons before the 2A/2B and 3A/3B split just say "D2"/"D3" — colour them
-  // the same as the B conference rather than leaving them uncoloured.
+  // the same as the B conference, but keep showing "D2"/"D3" as the label text.
   const color = HIST_DIV_COLORS[label] || (label === "2" ? HIST_DIV_COLORS["2B"] : label === "3" ? HIST_DIV_COLORS["3B"] : "#8a9990");
-  const displayLabel = (label === "2") ? "2B" : (label === "3") ? "3B" : label;
+  const displayLabel = (label === "2") ? "D2" : (label === "3") ? "D3" : label;
   return `<span class="roddy-div-tag" style="background:${color};">${displayLabel}</span>`;
 }
 
