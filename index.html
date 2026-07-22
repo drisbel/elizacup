@@ -3950,18 +3950,25 @@ const HIST_DIV_COLORS = { D1:"#28427c", "2A":"#bc3532", "2B":"#990000", "3A":"#6
 let historyDebug = {};
 
 function parseHistoricalSeason(rows){
-  // ---- Divisions (A:J) — "ELIZA CUP"/"DIVISION 2A" etc label row, header row, then
-  // data rows until a blank Pos cell ends that division's block. Matched with
-  // startsWith rather than strict equality in case the sheet ever appends anything
-  // to the label (e.g. a season suffix). ----
+  // ---- Divisions (A:J) — the sheet's title+header text ends up concatenated into a
+  // single cell (e.g. "ELIZA CUP POS" in column A), rather than sitting on separate
+  // rows as a plain visual read would suggest. So: find the header ROW itself by its
+  // distinctive TEAM/PTS/STATUS column combo (reliable regardless of what's in column
+  // A), then read the division name out of column A by stripping a trailing "POS".
+  // Data starts the very next row. ----
   const divisions = {};
   for(let r=0; r<rows.length; r++){
-    const labelCell = cell(rows[r]||[], 0).toUpperCase();
-    if(!labelCell) continue;
-    const match = HIST_DIVISION_LABELS.find(d => labelCell === d.label || labelCell.startsWith(d.label));
+    const c1 = cell(rows[r]||[],1).toUpperCase();
+    const c2 = cell(rows[r]||[],2).toUpperCase();
+    const c9 = cell(rows[r]||[],9).toUpperCase();
+    if(c1 !== "TEAM" || c2 !== "PTS" || c9 !== "STATUS") continue;
+
+    const rawLabel = cell(rows[r]||[],0).toUpperCase().replace(/\s*POS\s*$/,"").trim();
+    const match = HIST_DIVISION_LABELS.find(d => rawLabel === d.label || rawLabel.endsWith(d.label) || d.label.endsWith(rawLabel));
     if(!match) continue;
+
     const teams = [];
-    for(let dr=r+2; dr<rows.length; dr++){
+    for(let dr=r+1; dr<rows.length; dr++){
       const pos = cell(rows[dr]||[], 0);
       if(!pos) break;
       teams.push({
@@ -3974,13 +3981,14 @@ function parseHistoricalSeason(rows){
     divisions[match.key] = { name: match.name, teams };
   }
 
-  // ---- Roddy (L:O) — find the "POS/TEAM" header, then read until blank. Accepts
-  // either cell matching in case one is renamed slightly, for resilience. ----
+  // ---- Roddy (L:O) — same concatenation issue ("RODDY POS" in column L), so find the
+  // header row via the TEAM/DIV/TOTAL combo in M:O instead of trusting column L's text.
   let roddyHeaderRow = -1;
   for(let r=0; r<rows.length; r++){
-    const l = cell(rows[r]||[],11).toUpperCase();
     const m = cell(rows[r]||[],12).toUpperCase();
-    if(l === "POS" && m === "TEAM"){ roddyHeaderRow = r; break; }
+    const n = cell(rows[r]||[],13).toUpperCase();
+    const o = cell(rows[r]||[],14).toUpperCase();
+    if(m === "TEAM" && n === "DIV" && o === "TOTAL"){ roddyHeaderRow = r; break; }
   }
   const roddy = [];
   if(roddyHeaderRow !== -1){
@@ -3998,25 +4006,27 @@ function parseHistoricalSeason(rows){
   {
     let current = null;
     for(let r=0; r<rows.length; r++){
-      const q = mergedCell(rows[r]||[], 16, 17), rc = cell(rows[r]||[],17), s = cell(rows[r]||[],18),
-            t = mergedCell(rows[r]||[], 19, 20), u = cell(rows[r]||[],20);
-      const qOnly = cell(rows[r]||[],16);
-      if(!qOnly && !rc && !s && !cell(rows[r]||[],19)) continue;
-      if(qOnly && !rc && !s && !cell(rows[r]||[],19)){ current = { name: qOnly, fixtures: [] }; facup.push(current); continue; }
-      if(current && qOnly && cell(rows[r]||[],19)){ current.fixtures.push({ home:qOnly, homeScore:rc, awayScore:s, away:cell(rows[r]||[],19), replay:/REPLAY/i.test(u) }); }
+      const rc = cell(rows[r]||[],17), s = cell(rows[r]||[],18), u = cell(rows[r]||[],20);
+      const qOnly = cell(rows[r]||[],16), tOnly = cell(rows[r]||[],19);
+      if(!qOnly && !rc && !s && !tOnly) continue;
+      if(qOnly && !rc && !s && !tOnly){ current = { name: qOnly, fixtures: [] }; facup.push(current); continue; }
+      if(current && qOnly && tOnly){ current.fixtures.push({ home:qOnly, homeScore:rc, awayScore:s, away:tOnly, replay:/REPLAY/i.test(u) }); }
     }
   }
 
-  // ---- ECL (W:AF) — "GROUP A/B/C" label + header row + data; "QUARTER FINALS" /
-  // "SEMI FINALS" / "FINAL" label with fixture rows immediately after, no header.
-  // Team names read via mergedCell in case a long name spans into the next column. ----
+  // ---- ECL (W:AF) — group titles can arrive as "ECL  GROUP A" (the section title
+  // merged in) rather than plain "GROUP A", so match by endsWith and normalize the
+  // display name. Groups: title row, header row, then data (r+2). Knockout: title row,
+  // fixtures immediately after (r+1), no header row. ----
   const GROUP_LABELS = ["GROUP A","GROUP B","GROUP C"];
   const KO_LABELS = ["QUARTER FINALS","SEMI FINALS","FINAL"];
   const eclGroups = [];
   const eclKnockout = [];
+  const eclKnockoutRawDump = [];
   for(let r=0; r<rows.length; r++){
     const w = cell(rows[r]||[],22).toUpperCase();
-    if(GROUP_LABELS.includes(w)){
+    const groupLabel = GROUP_LABELS.find(g => w === g || w.endsWith(g));
+    if(groupLabel){
       const teams = [];
       for(let dr=r+2; dr<rows.length; dr++){
         const pos = cell(rows[dr]||[],22);
@@ -4028,21 +4038,24 @@ function parseHistoricalSeason(rows){
           status: cell(rows[dr]||[],31)
         });
       }
-      eclGroups.push({ name: w, teams });
+      eclGroups.push({ name: groupLabel, teams });
       continue;
     }
-    if(KO_LABELS.includes(w)){
+    const koLabel = KO_LABELS.find(k => w === k || w.endsWith(k));
+    if(koLabel){
       const fixtures = [];
       for(let dr=r+1; dr<rows.length; dr++){
         const home = cell(rows[dr]||[],22);
         if(!home) break;
-        if(GROUP_LABELS.includes(home.toUpperCase()) || KO_LABELS.includes(home.toUpperCase())) break;
+        const homeUpper = home.toUpperCase();
+        if(GROUP_LABELS.some(g=>homeUpper.endsWith(g)) || KO_LABELS.some(k=>homeUpper.endsWith(k))) break;
+        eclKnockoutRawDump.push((rows[dr]||[]).map((c,ci)=> (ci>=22 && ci<=32 && c) ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "));
         fixtures.push({
           home, homeScore: cell(rows[dr]||[],23), awayScore: cell(rows[dr]||[],24),
-          away: mergedCell(rows[dr]||[], 25, 28)
+          away: mergedCell(rows[dr]||[], 25, 29)
         });
       }
-      eclKnockout.push({ name: w, fixtures });
+      eclKnockout.push({ name: koLabel, fixtures });
     }
   }
 
@@ -4053,6 +4066,7 @@ function parseHistoricalSeason(rows){
     facupRoundsFound: facup.map(rnd=>({name:rnd.name, fixtures:rnd.fixtures.length})),
     eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
     eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
+    eclKnockoutRawDump,
     rawRowDump: rows.slice(0, 6).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "))
   };
 
