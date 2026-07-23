@@ -546,6 +546,7 @@
   .h2h-round-label{text-align:center;font-size:12px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:18px;}
 
   .h2h-lineups{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .h2h-side{min-width:0;}
   .h2h-side h4{
     font-family:'Barlow Condensed',sans-serif;font-size:13px;text-transform:uppercase;
     letter-spacing:0.06em;color:#8a9990;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line-light);
@@ -1918,8 +1919,11 @@ function getDivisionColorByLabel(text){
   if(t.includes("2B")) return "#990000";
   if(t.includes("3A")) return "#6aa84f";
   if(t.includes("3B")) return "#274e13";
-  // Older seasons before the conference split just say "Division 2"/"Division 3" —
-  // colour them the same as the B conference rather than falling back to grey.
+  // Older seasons before the conference split just say "Division 2"/"Division 3" (or,
+  // apparently, "Segunda Division"/"Tercera Division") — colour them the same as the
+  // B conference rather than falling back to grey.
+  if(t.includes("SEGUNDA")) return "#990000";
+  if(t.includes("TERCERA")) return "#274e13";
   if(/\b2\b/.test(t)) return "#990000";
   if(/\b3\b/.test(t)) return "#274e13";
   return "#8a9990";
@@ -1931,6 +1935,8 @@ function getDivisionShortLabel(text){
   if(t.includes("2B")) return "2B";
   if(t.includes("3A")) return "3A";
   if(t.includes("3B")) return "3B";
+  if(t.includes("SEGUNDA")) return "D2";
+  if(t.includes("TERCERA")) return "D3";
   if(/\b2\b/.test(t)) return "D2";
   if(/\b3\b/.test(t)) return "D3";
   return text || "—";
@@ -3126,7 +3132,11 @@ async function loadTeamProfile(teamName){
               }
             });
           });
-          divisionData = { division: div, standingsRow, fixtures };
+          const allRounds = Object.keys(fixturesByRound).map(Number);
+          const seasonComplete = allRounds.length > 0 && allRounds.every(r =>
+            fixturesByRound[r].every(f => f.homeScore !== null && f.awayScore !== null)
+          );
+          divisionData = { division: div, standingsRow, fixtures, seasonComplete };
         })
       );
     }
@@ -3866,8 +3876,11 @@ function renderTeamProfile(data){
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(teamName)}';}`;
 
   // Overview
-  const leagueVal = (divisionData && divisionData.standingsRow) ? `${ordinal(divisionData.standingsRow.pos)} · ${divLabel}` : "—";
-  const roddyVal = roddyEntry ? `${ordinal(roddyEntry.pos)} · ${roddyEntry.total} pts` : "Not entered";
+  const isSeasonComplete = !!(divisionData && divisionData.seasonComplete);
+  const leagueIsChampion = isSeasonComplete && divisionData.standingsRow && parseInt(divisionData.standingsRow.pos,10) === 1;
+  const roddyIsChampion = isSeasonComplete && roddyEntry && parseInt(roddyEntry.pos,10) === 1;
+  const leagueVal = (divisionData && divisionData.standingsRow) ? `${leagueIsChampion ? "🏆 " : ""}${ordinal(divisionData.standingsRow.pos)} · ${divLabel}` : "—";
+  const roddyVal = roddyEntry ? `${roddyIsChampion ? "🏆 " : ""}${ordinal(roddyEntry.pos)} · ${roddyEntry.total} pts` : "Not entered";
 
   let html = `<div class="team-profile-top">
     <div class="team-profile-main">
@@ -4251,7 +4264,8 @@ function histDivPill(tag){
 // aligned).
 function histFixtureTableHtml(fixtures, showDivTags){
   if(!fixtures || !fixtures.length) return "";
-  return `<div class="table-wrap" style="max-width:640px;"><table class="standings compact h2h-record-table hist-fixture-table"><tbody>
+  const maxWidth = showDivTags ? 640 : 520;
+  return `<div class="table-wrap" style="max-width:${maxWidth}px;"><table class="standings compact h2h-record-table hist-fixture-table${showDivTags ? "" : " no-pills"}"><tbody>
     ${fixtures.map(f=>{
       const h = showDivTags ? splitTeamDivTag(f.home) : { name: f.home, tag: null };
       const a = showDivTags ? splitTeamDivTag(f.away) : { name: f.away, tag: null };
@@ -4260,13 +4274,14 @@ function histFixtureTableHtml(fixtures, showDivTags){
       const homeWin = hasScore && homeNum > awayNum;
       const awayWin = hasScore && awayNum > homeNum;
       const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:10px;text-transform:uppercase;">Replay</span>` : "";
+      const pillCol = (tag) => showDivTags ? `<td class="hist-fx-pill">${histDivPill(tag)}</td>` : "";
       return `<tr>
-        <td class="hist-fx-pill">${histDivPill(h.tag)}</td>
+        ${pillCol(h.tag)}
         <td class="hist-fx-team hist-fx-team-home${homeWin?" hist-fx-win":awayWin?" hist-fx-lose":""}">${teamLink(h.name)}</td>
         <td class="hist-fx-score${homeWin?" hist-fx-win":awayWin?" hist-fx-lose":""}">${f.homeScore || "—"}</td>
         <td class="hist-fx-score${awayWin?" hist-fx-win":homeWin?" hist-fx-lose":""}">${f.awayScore || "—"}</td>
         <td class="hist-fx-team hist-fx-team-away${awayWin?" hist-fx-win":homeWin?" hist-fx-lose":""}">${teamLink(a.name)}${replayTag}</td>
-        <td class="hist-fx-pill">${histDivPill(a.tag)}</td>
+        ${pillCol(a.tag)}
       </tr>`;
     }).join("")}
   </tbody></table></div>`;
