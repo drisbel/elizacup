@@ -218,7 +218,7 @@
     .team-profile-logo{width:130px;height:130px;order:-1;}
     .team-profile-heading{align-items:center;}
     .team-profile-name{font-size:30px;}
-    .team-profile-cards{max-width:100%;}
+    .team-profile-cards{max-width:100%;grid-template-columns:repeat(2,1fr);}
   }
 
 
@@ -3197,8 +3197,19 @@ async function loadTeamProfile(teamName){
 
   const trophies = findTeamTrophies(teamName); // static HONOUR_ROLL data — no fetch needed
 
+  let trophyNote = "";
+  const trophyLeadersDiv = DIVISIONS.find(d => d.id === "honour");
+  fetches.push(
+    fetch(csvUrlFor(trophyLeadersDiv)).then(r => r.text()).then(text => {
+      const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+      parseTrophyLeaders(rows);
+      const entry = trophyLeaders.find(t => (t.team||"").toUpperCase() === teamName.toUpperCase());
+      trophyNote = entry ? entry.notes : "";
+    }).catch(err => console.error("Trophy notes fetch failed", err))
+  );
+
   await Promise.all(fetches);
-  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies });
+  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote });
 }
 
 // ---------- Historical Record (dedicated tab, gid 1444343417) ----------
@@ -3748,10 +3759,13 @@ function overviewCardHtml(label, value, color){
   </div>`;
 }
 
-function teamTrophiesHtml(trophies){
+function teamTrophiesHtml(trophies, trophyNote){
+  const noteHtml = trophyNote
+    ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:10px;">${trophyNote}</div>`
+    : "";
   if(!trophies || !trophies.length){
     return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies</h2></div>
-      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No trophies yet.</p>`;
+      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No trophies yet.</p>${noteHtml}`;
   }
   return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies (${trophies.length})</h2></div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;max-width:640px;">
@@ -3762,7 +3776,7 @@ function teamTrophiesHtml(trophies){
           <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">${t.season}</div>
         </div>
       </div>`).join("")}
-    </div>`;
+    </div>${noteHtml}`;
 }
 
 // Converts a team name into the matching logo filename convention:
@@ -3808,7 +3822,7 @@ function teamPlaceholderLogoDataUri(name){
 function renderTeamProfile(data){
   const container = document.getElementById('teamProfileContainer');
   container.className = "";
-  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies } = data;
+  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote } = data;
 
   if(!roddyEntry && !divisionData){
     container.innerHTML = `<div class="state-msg error">Couldn't find "${teamName}" anywhere in the league. Check the Debug panel below.</div>`;
@@ -3835,17 +3849,19 @@ function renderTeamProfile(data){
           </div>` : ""}
         ${clubInfo && clubInfo.previousNames ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#a8a296;">Previously: ${clubInfo.previousNames}</div>` : ""}
       </div>
-      <div class="team-profile-cards">
-        ${overviewCardHtml("League Position", leagueVal, divColor)}
-        ${overviewCardHtml("Roddy Position", roddyVal, "#ffdd00")}
-        ${overviewCardHtml("FA Cup", facupStatusText(facupSummary), "#0a2f85")}
-        ${overviewCardHtml("ECL", eclStatusText(eclSummary, eclMatches), "#111111")}
-      </div>
     </div>
     <img src="${logoSrc}" alt="" class="team-profile-logo" onerror="${logoOnError}">
   </div>`;
 
-  html += teamTrophiesHtml(trophies);
+  html += teamTrophiesHtml(trophies, trophyNote);
+
+  html += `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Overview</h2></div>
+    <div class="team-profile-cards">
+      ${overviewCardHtml("League Position", leagueVal, divColor)}
+      ${overviewCardHtml("Roddy Position", roddyVal, "#ffdd00")}
+      ${overviewCardHtml("FA Cup", facupStatusText(facupSummary), "#0a2f85")}
+      ${overviewCardHtml("ECL", eclStatusText(eclSummary, eclMatches), "#111111")}
+    </div>`;
 
   // Season fixtures
   if(divisionData){
