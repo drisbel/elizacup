@@ -4027,6 +4027,7 @@ function parseHistoricalSeason(rows){
     { name: "GROUP C", base: 88 }  // CK
   ];
   const eclGroups = [];
+  const eclGroupsDebug = [];
   ECL_GROUP_BLOCKS.forEach(gb=>{
     let headerRow = -1;
     for(let r=0; r<rows.length; r++){
@@ -4048,6 +4049,11 @@ function parseHistoricalSeason(rows){
         });
       }
     }
+    eclGroupsDebug.push({
+      group: gb.name, base: gb.base, headerRowFound: headerRow===-1 ? null : headerRow+1, teamsFound: teams.length,
+      next4RowsRaw: rows.slice(headerRow===-1?0:headerRow+1, headerRow===-1?0:headerRow+5).map((row,i)=>
+        "row" + (headerRow+2+i) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "))
+    });
     eclGroups.push({ name: gb.name, teams });
   });
 
@@ -4098,6 +4104,7 @@ function parseHistoricalSeason(rows){
     roddyHeaderRow, roddyCount: roddy.length,
     facupRoundsFound: facup.map(rnd=>({name:rnd.name, fixtures:rnd.fixtures.length})),
     eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
+    eclGroupsDebug,
     eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
     eclKnockoutRawDump,
     rawRowDump: rows.slice(0, 35).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")).filter(line => !line.endsWith(":"))
