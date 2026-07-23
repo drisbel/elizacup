@@ -680,6 +680,24 @@
   table.h2h-record-table thead th:nth-child(n+2), table.h2h-record-table tbody td:nth-child(n+2){
     width:44px;text-align:center;
   }
+
+  /* Past Seasons FA Cup / ECL knockout fixture tables — table-layout:fixed guarantees
+     identical column widths (so scores land in the same spot) on every single fixture
+     table on the page, regardless of what's in each one; team names wrap instead of
+     forcing horizontal scroll. */
+  table.hist-fixture-table{table-layout:fixed;width:100%;margin-bottom:6px;}
+  table.hist-fixture-table tbody td.hist-fx-pill{width:32px;text-align:center;padding:6px 2px;}
+  table.hist-fixture-table tbody td.hist-fx-team{font-weight:600;overflow-wrap:break-word;word-break:break-word;white-space:normal;padding:6px 8px;}
+  table.hist-fixture-table tbody td.hist-fx-team-home{text-align:right;}
+  table.hist-fixture-table tbody td.hist-fx-team-away{text-align:left;}
+  table.hist-fixture-table tbody td.hist-fx-score{width:30px;font-weight:700;text-align:center;padding:6px 2px;}
+  table.hist-fixture-table tbody td.hist-fx-win{color:var(--turf);}
+  table.hist-fixture-table tbody td.hist-fx-lose{color:var(--red);}
+  @media (max-width:600px){
+    table.hist-fixture-table tbody td.hist-fx-team{font-size:11.5px;padding:5px 4px;}
+    table.hist-fixture-table tbody td.hist-fx-pill{width:26px;}
+    table.hist-fixture-table tbody td.hist-fx-score{width:24px;}
+  }
 </style>
 </head>
 <body>
@@ -3984,9 +4002,11 @@ const HIST_DIV_COLORS = { D1:"#28427c", "2A":"#bc3532", "2B":"#990000", "3A":"#6
 let historyDebug = {};
 
 function parseHistoricalSeason(rows){
-  // ---- Divisions — each now its own isolated block of columns (A:J, L:U, W:AF,
-  // AH:AQ, AS:BB), same idea as the ECL groups: just find that block's own
-  // POS/TEAM/PTS/STATUS header row directly, data starts the next row. ----
+  // ---- Divisions — each its own isolated block of columns (A:J, L:U, W:AF, AH:AQ,
+  // AS:BB). Not every season had a full 5-division structure (2A/2B/3A/3B split),
+  // so a block is only included if it actually has data — and rather than assuming
+  // what to call it, the table's own name (sitting directly above the POS column, on
+  // the row right before the header row) is read and used as the display name. ----
   const divisions = {};
   HIST_DIVISION_LABELS.forEach(db=>{
     let headerRow = -1;
@@ -3996,20 +4016,23 @@ function parseHistoricalSeason(rows){
       const c9 = cell(rows[r]||[],db.base+9).toUpperCase();
       if(c1 === "TEAM" && c2 === "PTS" && c9 === "STATUS"){ headerRow = r; break; }
     }
+    if(headerRow === -1) return; // this block is empty for this season — skip entirely
+
     const teams = [];
-    if(headerRow !== -1){
-      for(let dr=headerRow+1; dr<rows.length; dr++){
-        const pos = cell(rows[dr]||[],db.base);
-        if(!pos) break;
-        teams.push({
-          pos, team: cell(rows[dr]||[],db.base+1), pts: cell(rows[dr]||[],db.base+2),
-          w: cell(rows[dr]||[],db.base+3), d: cell(rows[dr]||[],db.base+4), l: cell(rows[dr]||[],db.base+5),
-          for: cell(rows[dr]||[],db.base+6), aga: cell(rows[dr]||[],db.base+7), dif: cell(rows[dr]||[],db.base+8),
-          status: cell(rows[dr]||[],db.base+9)
-        });
-      }
+    for(let dr=headerRow+1; dr<rows.length; dr++){
+      const pos = cell(rows[dr]||[],db.base);
+      if(!pos) break;
+      teams.push({
+        pos, team: cell(rows[dr]||[],db.base+1), pts: cell(rows[dr]||[],db.base+2),
+        w: cell(rows[dr]||[],db.base+3), d: cell(rows[dr]||[],db.base+4), l: cell(rows[dr]||[],db.base+5),
+        for: cell(rows[dr]||[],db.base+6), aga: cell(rows[dr]||[],db.base+7), dif: cell(rows[dr]||[],db.base+8),
+        status: cell(rows[dr]||[],db.base+9)
+      });
     }
-    divisions[db.key] = { name: db.name, teams };
+    if(!teams.length) return;
+
+    const titleRaw = cell(rows[headerRow-1]||[], db.base).trim();
+    divisions[db.key] = { name: titleRaw || db.name, teams };
   });
 
   // ---- Roddy (BD:BG) — now its own isolated block. Header row found via the
@@ -4228,18 +4251,22 @@ function histDivPill(tag){
 // aligned).
 function histFixtureTableHtml(fixtures, showDivTags){
   if(!fixtures || !fixtures.length) return "";
-  return `<div class="table-wrap" style="max-width:560px;"><table class="standings compact h2h-record-table"><tbody>
+  return `<div class="table-wrap" style="max-width:640px;"><table class="standings compact h2h-record-table hist-fixture-table"><tbody>
     ${fixtures.map(f=>{
       const h = showDivTags ? splitTeamDivTag(f.home) : { name: f.home, tag: null };
       const a = showDivTags ? splitTeamDivTag(f.away) : { name: f.away, tag: null };
+      const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
+      const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
+      const homeWin = hasScore && homeNum > awayNum;
+      const awayWin = hasScore && awayNum > homeNum;
       const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:10px;text-transform:uppercase;">Replay</span>` : "";
       return `<tr>
-        <td style="width:36px;">${histDivPill(h.tag)}</td>
-        <td style="text-align:right;font-weight:600;">${teamLink(h.name)}</td>
-        <td style="width:32px;font-weight:700;">${f.homeScore || "—"}</td>
-        <td style="width:32px;font-weight:700;">${f.awayScore || "—"}</td>
-        <td style="text-align:left;font-weight:600;">${teamLink(a.name)}${replayTag}</td>
-        <td style="width:36px;">${histDivPill(a.tag)}</td>
+        <td class="hist-fx-pill">${histDivPill(h.tag)}</td>
+        <td class="hist-fx-team hist-fx-team-home${homeWin?" hist-fx-win":awayWin?" hist-fx-lose":""}">${teamLink(h.name)}</td>
+        <td class="hist-fx-score${homeWin?" hist-fx-win":awayWin?" hist-fx-lose":""}">${f.homeScore || "—"}</td>
+        <td class="hist-fx-score${awayWin?" hist-fx-win":homeWin?" hist-fx-lose":""}">${f.awayScore || "—"}</td>
+        <td class="hist-fx-team hist-fx-team-away${awayWin?" hist-fx-win":homeWin?" hist-fx-lose":""}">${teamLink(a.name)}${replayTag}</td>
+        <td class="hist-fx-pill">${histDivPill(a.tag)}</td>
       </tr>`;
     }).join("")}
   </tbody></table></div>`;
@@ -4255,7 +4282,7 @@ function renderHistorySeason(data){
 
   const divTabsHtml = HIST_DIVISION_LABELS
     .filter(d => data.divisions[d.key])
-    .map(d => `<button class="round-tab hist-div-tab${d.key===historyActiveDivKey?" active":""}" data-key="${d.key}">${d.name}</button>`)
+    .map(d => `<button class="round-tab hist-div-tab${d.key===historyActiveDivKey?" active":""}" data-key="${d.key}">${data.divisions[d.key].name}</button>`)
     .join("");
 
   let html = `<div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Division Tables</h2></div>
