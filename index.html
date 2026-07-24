@@ -828,6 +828,15 @@
     <div id="historyContainer" class="state-msg">Loading past season data…</div>
   </section>
 
+  <section id="sideLeaguesSection" style="display:none;">
+    <div class="section-head">
+      <h2>Side Leagues</h2>
+      <span class="sub">Fantasy &amp; non-Eliza competitions run alongside the main league</span>
+    </div>
+    <div id="sideLeaguesTabs" class="round-tabs"></div>
+    <div id="sideLeaguesContainer" class="state-msg">Loading…</div>
+  </section>
+
   <section id="teamsSection" style="display:none;">
     <div class="section-head">
       <h2>Teams</h2>
@@ -870,6 +879,7 @@ const DIVISIONS = [
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#28427c", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
+  { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" }
 ];
 
@@ -995,6 +1005,7 @@ function togglePageSections(){
   const isHonour = type === "honour";
   const isStats = type === "stats";
   const isHistory = type === "history";
+  const isSideLeagues = type === "sideleagues";
   const isHome = type === "home";
   const isCalendar = type === "calendar";
   const isTeams = type === "teams";
@@ -1010,6 +1021,7 @@ function togglePageSections(){
   document.getElementById('honourSection').style.display = isHonour ? "" : "none";
   document.getElementById('statsSection').style.display = isStats ? "" : "none";
   document.getElementById('historySection').style.display = isHistory ? "" : "none";
+  document.getElementById('sideLeaguesSection').style.display = isSideLeagues ? "" : "none";
   document.getElementById('teamsSection').style.display = isTeams ? "" : "none";
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
@@ -1255,6 +1267,12 @@ async function load(){
   if(currentDivision.type === "history"){
     renderHistorySeasonTabs();
     await loadHistorySeason(HISTORY_SEASONS[0].key);
+    return;
+  }
+
+  if(currentDivision.type === "sideleagues"){
+    renderSideLeagueTabs();
+    await loadSideLeague(SIDE_LEAGUES[0].key);
     return;
   }
 
@@ -3996,57 +4014,57 @@ const HISTORY_SEASONS = [
   { key: "2526", label: "25/26", gid: "714261911" },
   { key: "2425", label: "24/25", gid: "1876453717" },
   { key: "2324", label: "23/24", gid: "1849997656" },
-  { key: "2223", label: "22/23", gid: "1635458493" },
-  { key: "2122", label: "21/22", gid: "87795931" }
+  { key: "2223", label: "22/23", gid: "1635458493" }
 ];
 
 function historyCsvUrlFor(gid){
   return `https://docs.google.com/spreadsheets/d/${HISTORY_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}&cachebust=` + Date.now();
 }
 
+const HIST_DIVISION_LABELS = [
+  { label: "ELIZA CUP", key: "d1", name: "Eliza Cup", base: 0 },   // A:J
+  { label: "DIVISION 2A", key: "d2a", name: "Division 2A", base: 11 }, // L:U
+  { label: "DIVISION 2B", key: "d2b", name: "Division 2B", base: 22 }, // W:AF
+  { label: "DIVISION 3A", key: "d3a", name: "Division 3A", base: 33 }, // AH:AQ
+  { label: "DIVISION 3B", key: "d3b", name: "Division 3B", base: 44 }  // AS:BB
+];
 const HIST_DIV_COLORS = { D1:"#28427c", "2A":"#bc3532", "2B":"#990000", "3A":"#6aa84f", "3B":"#274e13" };
 
 let historyDebug = {};
 
 function parseHistoricalSeason(rows){
-  // ---- Divisions — not every season used the same layout: some have a full 5-way
-  // 2A/2B/3A/3B split, others just one combined "Division 2", and earlier seasons
-  // only recorded POS/TEAM/PTS with no W/D/L/etc at all. Rather than assume fixed
-  // column positions, scan for the "POS TEAM PTS" signature wherever it actually
-  // appears (restricted to columns before Roddy's own block, so ECL/FA Cup/Roddy
-  // tables — which share the same POS/TEAM/PTS/.../STATUS header shape — never get
-  // mistaken for a division). The table's name sits directly above the POS column,
-  // on the row right before the header row. Any columns beyond PTS that don't exist
-  // for a given season (W/D/L/FOR/AGA/DIF/STATUS) just come back blank. ----
+  // ---- Divisions — each its own isolated block of columns (A:J, L:U, W:AF, AH:AQ,
+  // AS:BB). Not every season had a full 5-division structure (2A/2B/3A/3B split),
+  // so a block is only included if it actually has data — and rather than assuming
+  // what to call it, the table's own name (sitting directly above the POS column, on
+  // the row right before the header row) is read and used as the display name. ----
   const divisions = {};
-  let divIndex = 0;
-  const DIVISION_SCAN_LIMIT = 54; // Roddy's block starts at 55 (BD) — stop before it
-  for(let r=0; r<rows.length; r++){
-    const row = rows[r]||[];
-    for(let c=0; c<=DIVISION_SCAN_LIMIT; c++){
-      const c0 = cell(row,c).toUpperCase();
-      const c1 = cell(row,c+1).toUpperCase();
-      const c2 = cell(row,c+2).toUpperCase();
-      if(c0 !== "POS" || c1 !== "TEAM" || c2 !== "PTS") continue;
-
-      const teams = [];
-      for(let dr=r+1; dr<rows.length; dr++){
-        const pos = cell(rows[dr]||[], c);
-        if(!pos) break;
-        teams.push({
-          pos, team: cell(rows[dr]||[],c+1), pts: cell(rows[dr]||[],c+2),
-          w: cell(rows[dr]||[],c+3), d: cell(rows[dr]||[],c+4), l: cell(rows[dr]||[],c+5),
-          for: cell(rows[dr]||[],c+6), aga: cell(rows[dr]||[],c+7), dif: cell(rows[dr]||[],c+8),
-          status: cell(rows[dr]||[],c+9)
-        });
-      }
-      if(!teams.length) continue;
-
-      const titleRaw = cell(rows[r-1]||[], c).trim();
-      divisions["div" + divIndex] = { name: titleRaw || `Division ${divIndex+1}`, teams };
-      divIndex++;
+  HIST_DIVISION_LABELS.forEach(db=>{
+    let headerRow = -1;
+    for(let r=0; r<rows.length; r++){
+      const c1 = cell(rows[r]||[],db.base+1).toUpperCase();
+      const c2 = cell(rows[r]||[],db.base+2).toUpperCase();
+      const c9 = cell(rows[r]||[],db.base+9).toUpperCase();
+      if(c1 === "TEAM" && c2 === "PTS" && c9 === "STATUS"){ headerRow = r; break; }
     }
-  }
+    if(headerRow === -1) return; // this block is empty for this season — skip entirely
+
+    const teams = [];
+    for(let dr=headerRow+1; dr<rows.length; dr++){
+      const pos = cell(rows[dr]||[],db.base);
+      if(!pos) break;
+      teams.push({
+        pos, team: cell(rows[dr]||[],db.base+1), pts: cell(rows[dr]||[],db.base+2),
+        w: cell(rows[dr]||[],db.base+3), d: cell(rows[dr]||[],db.base+4), l: cell(rows[dr]||[],db.base+5),
+        for: cell(rows[dr]||[],db.base+6), aga: cell(rows[dr]||[],db.base+7), dif: cell(rows[dr]||[],db.base+8),
+        status: cell(rows[dr]||[],db.base+9)
+      });
+    }
+    if(!teams.length) return;
+
+    const titleRaw = cell(rows[headerRow-1]||[], db.base).trim();
+    divisions[db.key] = { name: titleRaw || db.name, teams };
+  });
 
   // ---- Roddy (BD:BG) — now its own isolated block. Header row found via the
   // TEAM/DIV/TOTAL combo (robust to whatever ends up in the Pos column's own text). ----
@@ -4080,19 +4098,6 @@ function parseHistoricalSeason(rows){
       if(qOnly && !rc && !s && !tOnly){ current = { name: qOnly, fixtures: [] }; facup.push(current); continue; }
       if(current && qOnly && tOnly){ current.fixtures.push({ home:qOnly, homeScore:rc, awayScore:s, away:tOnly, replay:/REPLAY/i.test(u) }); }
     }
-  }
-
-  // ---- Roddy/FA Cup "winners only" (I:J) — some early seasons don't have a full
-  // Roddy leaderboard or FA Cup bracket recorded, just the winner's name directly:
-  // a "RODDY" label with the winning team next to it, and a "FA CUP" label the same
-  // way, each on their own row. Only used as a fallback when the full tables above
-  // came up empty. ----
-  let roddyWinnerOnly = "", facupWinnerOnly = "";
-  for(let r=0; r<15 && r<rows.length; r++){
-    const label = cell(rows[r]||[],8).toUpperCase();
-    const val = cell(rows[r]||[],9);
-    if(label === "RODDY" && val) roddyWinnerOnly = val;
-    if(label === "FA CUP" && val) facupWinnerOnly = val;
   }
 
   // ---- ECL groups (BO:BX, BZ:CI, CK:CT) — each is now its own isolated block, so no
@@ -4178,8 +4183,8 @@ function parseHistoricalSeason(rows){
   historyDebug = {
     divisionsFound: Object.keys(divisions),
     divisionTeamCounts: Object.fromEntries(Object.entries(divisions).map(([k,v])=>[k,v.teams.length])),
-    roddyHeaderRow, roddyCount: roddy.length, roddyWinnerOnly,
-    facupRoundsFound: facup.map(rnd=>({name:rnd.name, fixtures:rnd.fixtures.length})), facupWinnerOnly,
+    roddyHeaderRow, roddyCount: roddy.length,
+    facupRoundsFound: facup.map(rnd=>({name:rnd.name, fixtures:rnd.fixtures.length})),
     eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
     eclGroupsDebug,
     eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
@@ -4187,7 +4192,7 @@ function parseHistoricalSeason(rows){
     rawRowDump: rows.slice(0, 35).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")).filter(line => !line.endsWith(":"))
   };
 
-  return { divisions, roddy, facup, eclGroups, eclKnockout, roddyWinnerOnly, facupWinnerOnly };
+  return { divisions, roddy, facup, eclGroups, eclKnockout };
 }
 
 function histDivStatusStyle(status){
@@ -4301,18 +4306,16 @@ function histFixtureTableHtml(fixtures, showDivTags){
 }
 
 let historySeasonData = null;
-let historyActiveDivKey = null;
+let historyActiveDivKey = "d1";
 
 function renderHistorySeason(data){
   historySeasonData = data;
   const el = document.getElementById('historyContainer');
   el.className = "";
 
-  const divKeys = Object.keys(data.divisions);
-  if(!divKeys.includes(historyActiveDivKey)) historyActiveDivKey = divKeys[0] || null;
-
-  const divTabsHtml = divKeys
-    .map(key => `<button class="round-tab hist-div-tab${key===historyActiveDivKey?" active":""}" data-key="${key}">${data.divisions[key].name}</button>`)
+  const divTabsHtml = HIST_DIVISION_LABELS
+    .filter(d => data.divisions[d.key])
+    .map(d => `<button class="round-tab hist-div-tab${d.key===historyActiveDivKey?" active":""}" data-key="${d.key}">${data.divisions[d.key].name}</button>`)
     .join("");
 
   let html = `<div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Division Tables</h2></div>
@@ -4320,17 +4323,13 @@ function renderHistorySeason(data){
     <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>`;
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Roddy Rodriguez Cup</h2></div>`;
-  html += data.roddy.length ? histRoddyTableHtml(data.roddy) : histWinnerOnlyHtml(data.roddyWinnerOnly);
+  html += histRoddyTableHtml(data.roddy);
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Eliza FA Cup</h2></div>`;
-  if(data.facup.length){
-    data.facup.forEach(round=>{
-      html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
-      html += histFixtureTableHtml(round.fixtures, true);
-    });
-  } else {
-    html += histWinnerOnlyHtml(data.facupWinnerOnly);
-  }
+  data.facup.forEach(round=>{
+    html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
+    html += histFixtureTableHtml(round.fixtures, true);
+  });
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Eliza Champions League</h2></div>`;
   html += data.eclGroups.map(histEclGroupTableHtml).join("");
@@ -4338,9 +4337,6 @@ function renderHistorySeason(data){
     html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
     html += histFixtureTableHtml(round.fixtures, false);
   });
-  if(!data.eclGroups.length && !data.eclKnockout.length){
-    html += `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No ECL data recorded for this season.</p>`;
-  }
 
   el.innerHTML = html;
 
@@ -4352,17 +4348,6 @@ function renderHistorySeason(data){
       document.getElementById('historyDivTableWrap').innerHTML = histDivisionTableHtml(historySeasonData.divisions[historyActiveDivKey]);
     });
   });
-}
-
-function histWinnerOnlyHtml(winner){
-  if(!winner) return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No data recorded for this season.</p>`;
-  return `<div style="display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:10px 16px;">
-    <span style="font-size:18px;">🏆</span>
-    <div>
-      <div style="font-family:'Barlow',sans-serif;font-size:10.5px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;">Winner</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;">${teamLink(winner)}</div>
-    </div>
-  </div>`;
 }
 
 function renderHistorySeasonTabs(){
@@ -4383,7 +4368,7 @@ async function loadHistorySeason(seasonKey){
   const el = document.getElementById('historyContainer');
   el.className = "state-msg";
   el.innerHTML = "Loading " + season.label + " data…";
-  historyActiveDivKey = null;
+  historyActiveDivKey = "d1";
   try{
     const res = await fetch(historyCsvUrlFor(season.gid));
     if(!res.ok) throw new Error("HTTP " + res.status);
@@ -4399,6 +4384,176 @@ async function loadHistorySeason(seasonKey){
     console.error(err);
     el.className = "state-msg error";
     el.innerHTML = "Couldn't load " + season.label + " data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+  }
+}
+
+// ---------- Side Leagues (Fantasy/non-Eliza competitions) ----------
+// A separate spreadsheet, one sub-league at a time (starting with FPL). Standings
+// tables are found by content — search for the competition's title text anywhere on
+// the sheet, then the header row below it, then read each column by matching its own
+// header label (rather than trusting fixed positions), since exact column layout on
+// this sheet hasn't been verified against live data yet.
+const SIDE_LEAGUES = [
+  { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" }
+];
+
+function sideLeagueCsvUrlFor(league){
+  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}&cachebust=` + Date.now();
+}
+
+function findColByHeader(headerRow, label){
+  for(let c=0; c<headerRow.length; c++){
+    if((headerRow[c]||"").toString().trim().toUpperCase() === label) return c;
+  }
+  return -1;
+}
+
+let sideLeagueDebug = {};
+
+function parseFplTable(rows, titleText){
+  let titleRow = -1, titleCol = -1;
+  for(let r=0; r<rows.length && titleRow===-1; r++){
+    const row = rows[r]||[];
+    for(let c=0; c<row.length; c++){
+      if((row[c]||"").toString().trim().toUpperCase() === titleText){ titleRow = r; titleCol = c; break; }
+    }
+  }
+  if(titleRow === -1) return { teams: [], debug: { titleFound: false } };
+
+  let headerRow = -1;
+  for(let r=titleRow; r<titleRow+6 && r<rows.length; r++){
+    const row = rows[r]||[];
+    const hasPos = row.some(c => (c||"").toString().trim().toUpperCase() === "POS");
+    const hasTeam = row.some(c => (c||"").toString().trim().toUpperCase() === "TEAM");
+    if(hasPos && hasTeam){ headerRow = r; break; }
+  }
+  if(headerRow === -1) return { teams: [], debug: { titleFound: true, titleRow, headerRow: -1 } };
+
+  const hRow = rows[headerRow]||[];
+  const cols = {
+    pos: findColByHeader(hRow,"POS"), team: findColByHeader(hRow,"TEAM"), pts: findColByHeader(hRow,"PTS"),
+    w: findColByHeader(hRow,"W"), d: findColByHeader(hRow,"D"), l: findColByHeader(hRow,"L"),
+    ptsFor: findColByHeader(hRow,"PTS +"), ptsAgn: findColByHeader(hRow,"PTS -"),
+    diff: findColByHeader(hRow,"DIFF"), status: findColByHeader(hRow,"STATUS")
+  };
+
+  const teams = [];
+  for(let dr=headerRow+1; dr<rows.length; dr++){
+    const pos = cell(rows[dr]||[], cols.pos);
+    if(!pos) break;
+    teams.push({
+      pos, team: cell(rows[dr]||[],cols.team), pts: cell(rows[dr]||[],cols.pts),
+      w: cell(rows[dr]||[],cols.w), d: cell(rows[dr]||[],cols.d), l: cell(rows[dr]||[],cols.l),
+      for: cols.ptsFor>=0 ? cell(rows[dr]||[],cols.ptsFor) : "",
+      aga: cols.ptsAgn>=0 ? cell(rows[dr]||[],cols.ptsAgn) : "",
+      dif: cols.diff>=0 ? cell(rows[dr]||[],cols.diff) : "",
+      status: cols.status>=0 ? cell(rows[dr]||[],cols.status) : ""
+    });
+  }
+  return { teams, debug: { titleFound: true, titleRow, titleCol, headerRow, cols } };
+}
+
+// Gameweek fixtures — now isolated column blocks (Team1/Score1/Score2/Team2), one
+// block per league, with a "GW1"/"GW2" label row in the first column marking each
+// gameweek, fixtures immediately below it (same pattern as the ECL knockout stage).
+function parseFplFixtures(rows, base){
+  const gameweeks = [];
+  const rawDump = [];
+  let current = null;
+  for(let r=0; r<rows.length; r++){
+    const c0 = cell(rows[r]||[], base);
+    if(/^GW\s*\d+/i.test(c0)){
+      current = { name: c0.toUpperCase().replace(/\s+/g,' ').trim(), fixtures: [] };
+      gameweeks.push(current);
+      continue;
+    }
+    if(!current) continue;
+    const home = cell(rows[r]||[], base);
+    const homeScore = cell(rows[r]||[], base+1);
+    const awayScore = cell(rows[r]||[], base+2);
+    const away = cell(rows[r]||[], base+3);
+    if(home && away){
+      rawDump.push({ row: r+1, home, homeScore, awayScore, away });
+      current.fixtures.push({ home, homeScore, awayScore, away });
+    }
+  }
+  return { gameweeks, rawDump };
+}
+
+function sideLeagueTableHtml(table){
+  if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
+  return `<div class="table-wrap"><table class="standings compact"><thead><tr>
+      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
+    </tr></thead><tbody>
+      ${table.teams.map(t=>`<tr style="${histDivStatusStyle(t.status)}">
+        <td>${t.pos}</td><td style="text-align:left;">${t.team}</td><td class="pts">${t.pts}</td>
+        <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
+      </tr>`).join("")}
+    </tbody></table></div>
+    ${table.teams.some(t=>t.status) ? histStatusLegendHtml() : ""}`;
+}
+
+function renderSideLeagueTabs(){
+  const tabsEl = document.getElementById('sideLeaguesTabs');
+  tabsEl.innerHTML = SIDE_LEAGUES.map(s => `<button class="round-tab" data-key="${s.key}">${s.label}</button>`).join("");
+  tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      loadSideLeague(btn.dataset.key);
+    });
+  });
+  if(tabsEl.firstChild) tabsEl.firstChild.classList.add('active');
+}
+
+async function loadSideLeague(leagueKey){
+  const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
+  const el = document.getElementById('sideLeaguesContainer');
+  el.className = "state-msg";
+  el.innerHTML = "Loading " + league.label + " data…";
+  try{
+    const res = await fetch(sideLeagueCsvUrlFor(league));
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const csvText = await res.text();
+    const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+
+    const premier = parseFplTable(rows, "ELIZA PREMIER LEAGUE");
+    const champ = parseFplTable(rows, "ELIZA CHAMPIONSHIP");
+    const premierFx = parseFplFixtures(rows, 33); // AH
+    const champFx = parseFplFixtures(rows, 40);   // AO
+
+    const fixturesSectionHtml = (title, data) => {
+      let html = `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${title} Fixtures</h2></div>`;
+      if(!data.gameweeks.length){
+        html += `<p class="state-msg">No fixtures found. Check the Debug panel below.</p>`;
+      }else{
+        data.gameweeks.forEach(gw=>{
+          html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${gw.name}</h4>`;
+          html += histFixtureTableHtml(gw.fixtures, false);
+        });
+      }
+      return html;
+    };
+
+    el.className = "";
+    el.innerHTML = `
+      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Eliza Premier League</h2></div>
+      ${sideLeagueTableHtml(premier)}
+      <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Eliza Championship</h2></div>
+      ${sideLeagueTableHtml(champ)}
+      ${fixturesSectionHtml("Premier League", premierFx)}
+      ${fixturesSectionHtml("Championship", champFx)}`;
+
+    sideLeagueDebug = {
+      premier: premier.debug, championship: champ.debug,
+      premierFixtures: { gameweeksFound: premierFx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: premierFx.rawDump },
+      championshipFixtures: { gameweeksFound: champFx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: champFx.rawDump }
+    };
+    document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+  }catch(err){
+    console.error(err);
+    el.className = "state-msg error";
+    el.innerHTML = "Couldn't load " + league.label + " data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
   }
 }
 
