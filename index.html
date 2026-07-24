@@ -4430,11 +4430,14 @@ function parseFplTable(rows, titleText){
   if(headerRow === -1) return { teams: [], debug: { titleFound: true, titleRow, headerRow: -1 } };
 
   const hRow = rows[headerRow]||[];
+  const shift = (c) => c >= 0 ? c + 1 : c;
+  // Column C under "TEAM" holds a logo image (not exported via CSV) — the real data
+  // for every column actually starts one column to the right of its header label.
   const cols = {
-    pos: findColByHeader(hRow,"POS"), team: findColByHeader(hRow,"TEAM"), pts: findColByHeader(hRow,"PTS"),
-    w: findColByHeader(hRow,"W"), d: findColByHeader(hRow,"D"), l: findColByHeader(hRow,"L"),
-    ptsFor: findColByHeader(hRow,"PTS +"), ptsAgn: findColByHeader(hRow,"PTS -"),
-    diff: findColByHeader(hRow,"DIFF"), status: findColByHeader(hRow,"STATUS")
+    pos: shift(findColByHeader(hRow,"POS")), team: shift(findColByHeader(hRow,"TEAM")), pts: shift(findColByHeader(hRow,"PTS")),
+    w: shift(findColByHeader(hRow,"W")), d: shift(findColByHeader(hRow,"D")), l: shift(findColByHeader(hRow,"L")),
+    ptsFor: shift(findColByHeader(hRow,"PTS +")), ptsAgn: shift(findColByHeader(hRow,"PTS -")),
+    diff: shift(findColByHeader(hRow,"DIFF")), status: shift(findColByHeader(hRow,"STATUS"))
   };
 
   const teams = [];
