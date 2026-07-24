@@ -370,6 +370,7 @@
     table.roddy-table th:nth-child(1), table.roddy-table td:nth-child(1){padding-left:8px; padding-right:3px;}
   }
   td.next-opp{font-size:11.5px;color:#5a6a63;white-space:nowrap;}
+  td.form-cell{white-space:nowrap;}
 
   /* Team vs Team (Head-to-Head vs Opponent) custom dropdown — a native <select> can't
      render coloured division pills inside its options, so this is a button + toggled
@@ -4401,14 +4402,21 @@ function sideLeagueCsvUrlFor(league){
   return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}&cachebust=` + Date.now();
 }
 
-function findColByHeader(headerRow, label){
-  for(let c=0; c<headerRow.length; c++){
-    if((headerRow[c]||"").toString().trim().toUpperCase() === label) return c;
+let sideLeagueDebug = {};
+
+function colIndexToLetter(idx){
+  let s = "", n = idx + 1;
+  while(n > 0){
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
   }
-  return -1;
+  return s;
 }
 
-let sideLeagueDebug = {};
+// Exact column letters as given: POS=B, TEAM=D (merged D:H), PTS=I, L=J, D=K, W=L,
+// PTS+=M, PTS-=N, DIFF=O, FORM=T:X, NEXT OPPONENT=Y (merged Y:AC), STATUS=AD.
+const FPL_COL = { pos:1, team:3, pts:8, l:9, d:10, w:11, ptsFor:12, ptsAgn:13, diff:14, formStart:19, formEnd:23, next:24, status:29 };
 
 function parseFplTable(rows, titleText){
   let titleRow = -1, titleCol = -1;
@@ -4422,35 +4430,31 @@ function parseFplTable(rows, titleText){
 
   // Confirmed: the header row is always exactly one row below the title row.
   const headerRow = titleRow + 1;
-  const hRow = rows[headerRow]||[];
-
-  // POS/TEAM/STATUS have real header text. PTS/W/D/L/PTS+/PTS-/DIFF sit under small
-  // icon images instead (same as the live Eliza Cup table's icons for those columns),
-  // so their header cells never carry exportable text — their positions are fixed
-  // relative to the header row instead, confirmed against a real data row:
-  // PTS(8) W(10) D(11) L(12) PTS+(13) PTS-(14) DIFF(15).
-  const cols = {
-    pos: findColByHeader(hRow,"POS"), team: findColByHeader(hRow,"TEAM")+1,
-    pts: 8, w: 10, d: 11, l: 12, ptsFor: 13, ptsAgn: 14, diff: 15,
-    status: findColByHeader(hRow,"STATUS")
-  };
+  const cols = FPL_COL;
 
   const teams = [];
   for(let dr=headerRow+1; dr<rows.length; dr++){
     const pos = cell(rows[dr]||[], cols.pos);
     if(!pos) break;
+    const form = [];
+    for(let fc=cols.formStart; fc<=cols.formEnd; fc++){
+      const v = cell(rows[dr]||[], fc);
+      if(v) form.push(v);
+    }
     teams.push({
       pos, team: cell(rows[dr]||[],cols.team), pts: cell(rows[dr]||[],cols.pts),
       w: cell(rows[dr]||[],cols.w), d: cell(rows[dr]||[],cols.d), l: cell(rows[dr]||[],cols.l),
-      for: cols.ptsFor>=0 ? cell(rows[dr]||[],cols.ptsFor) : "",
-      aga: cols.ptsAgn>=0 ? cell(rows[dr]||[],cols.ptsAgn) : "",
-      dif: cols.diff>=0 ? cell(rows[dr]||[],cols.diff) : "",
-      status: cols.status>=0 ? cell(rows[dr]||[],cols.status) : ""
+      for: cell(rows[dr]||[],cols.ptsFor), aga: cell(rows[dr]||[],cols.ptsAgn),
+      dif: cell(rows[dr]||[],cols.diff), status: cell(rows[dr]||[],cols.status),
+      form, next: cell(rows[dr]||[],cols.next)
     });
   }
-  const rawHeaderRow = hRow.map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
-  const rawFirstDataRow = (rows[headerRow+1]||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
-  return { teams, debug: { titleFound: true, titleRow, titleCol, headerRow, cols, rawHeaderRow, rawFirstDataRow } };
+  const hRow = rows[headerRow]||[];
+  const rawHeaderRow = hRow.map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
+  const rawFirstDataRow = (rows[headerRow+1]||[]).map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
+  const firstParsedTeam = teams[0] || null;
+  const colsAsLetters = Object.fromEntries(Object.entries(cols).map(([k,v])=>[k, colIndexToLetter(v)]));
+  return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, colsAsLetters, rawHeaderRow, rawFirstDataRow, firstParsedTeam } };
 }
 
 // Gameweek fixtures — now isolated column blocks (Team1/Score1/Score2/Team2), one
@@ -4483,12 +4487,20 @@ function parseFplFixtures(rows, base){
 function sideLeagueTableHtml(table){
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
+      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Form</th><th>Next</th>
     </tr></thead><tbody>
-      ${table.teams.map(t=>`<tr style="${histDivStatusStyle(t.status)}">
+      ${table.teams.map(t=>{
+        const formHtml = (t.form||[]).map(f=>{
+          const up = (f||"").toUpperCase();
+          const cls = up==="W" ? "form-w" : up==="L" ? "form-l" : up==="D" ? "form-d" : "form-blank";
+          return `<span class="form-pill ${cls}">${up || "–"}</span>`;
+        }).join("");
+        return `<tr style="${histDivStatusStyle(t.status)}">
         <td>${t.pos}</td><td style="text-align:left;">${t.team}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
-      </tr>`).join("")}
+        <td class="form-cell">${formHtml}</td><td class="next-opp">${t.next || "—"}</td>
+      </tr>`;
+      }).join("")}
     </tbody></table></div>
     ${table.teams.some(t=>t.status) ? histStatusLegendHtml() : ""}`;
 }
