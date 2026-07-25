@@ -4395,7 +4395,8 @@ async function loadHistorySeason(seasonKey){
 // header label (rather than trusting fixed positions), since exact column layout on
 // this sheet hasn't been verified against live data yet.
 const SIDE_LEAGUES = [
-  { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" }
+  { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
+  { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" }
 ];
 
 function sideLeagueCsvUrlFor(league){
@@ -4419,11 +4420,18 @@ function colIndexToLetter(idx){
 const FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, next:24, status:29 };
 
 function parseFplTable(rows, titleText){
+  // Some sheets (AFL Supercoach) reuse the table's title text as a decorative page
+  // banner higher up too — only accept a match if the row right below it genuinely
+  // looks like a header row (contains "TEAM"), otherwise keep searching further down.
   let titleRow = -1, titleCol = -1;
   for(let r=0; r<rows.length && titleRow===-1; r++){
     const row = rows[r]||[];
     for(let c=0; c<row.length; c++){
-      if((row[c]||"").toString().trim().toUpperCase() === titleText){ titleRow = r; titleCol = c; break; }
+      if((row[c]||"").toString().trim().toUpperCase() === titleText){
+        const nextRow = rows[r+1]||[];
+        const looksLikeHeader = nextRow.some(v => (v||"").toString().trim().toUpperCase() === "TEAM");
+        if(looksLikeHeader){ titleRow = r; titleCol = c; break; }
+      }
     }
   }
   if(titleRow === -1) return { teams: [], debug: { titleFound: false } };
@@ -4530,12 +4538,25 @@ let sideLeagueActiveRound = {};
 
 function renderSideLeagueContent(){
   const el = document.getElementById('sideLeaguesContainer');
+  el.className = "";
+
+  if(sideLeagueData.singleTable){
+    const { table, fx, label } = sideLeagueData;
+    el.innerHTML = `
+      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
+      ${sideLeagueTableHtml(table)}
+      <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
+      <div class="round-tabs" id="sideLeagueRoundTabs"></div>
+      <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
+    wireSideLeagueRoundTabs(fx, "single");
+    return;
+  }
+
   const isPremier = sideLeagueActiveDiv === "premier";
   const table = isPremier ? sideLeagueData.premier : sideLeagueData.champ;
   const fx = isPremier ? sideLeagueData.premierFx : sideLeagueData.champFx;
   const label = isPremier ? "Eliza Premier League" : "Eliza Championship";
 
-  el.className = "";
   el.innerHTML = `
     <div class="round-tabs" id="sideLeagueDivToggle">
       <button class="round-tab${isPremier?" active":""}" data-div="premier">Premier League</button>
@@ -4554,6 +4575,10 @@ function renderSideLeagueContent(){
     });
   });
 
+  wireSideLeagueRoundTabs(fx, sideLeagueActiveDiv);
+}
+
+function wireSideLeagueRoundTabs(fx, roundGroupKey){
   const roundTabsEl = document.getElementById('sideLeagueRoundTabs');
   const gws = fx.gameweeks;
   if(!gws.length){
@@ -4572,20 +4597,20 @@ function renderSideLeagueContent(){
     const hasPlayed = gw.fixtures.some(f => !isNaN(parseInt(f.homeScore,10)) && !isNaN(parseInt(f.awayScore,10)));
     if(hasPlayed) defaultIdx = i;
   });
-  const savedName = sideLeagueActiveRound[sideLeagueActiveDiv];
+  const savedName = sideLeagueActiveRound[roundGroupKey];
   const savedIdx = gws.findIndex(gw => gw.name === savedName);
   const activeIdx = savedIdx >= 0 ? savedIdx : defaultIdx;
 
   const roundButtons = roundTabsEl.querySelectorAll('.round-tab');
   roundButtons[activeIdx].classList.add('active');
-  sideLeagueActiveRound[sideLeagueActiveDiv] = gws[activeIdx].name;
+  sideLeagueActiveRound[roundGroupKey] = gws[activeIdx].name;
   renderSideLeagueFixtures(gws[activeIdx]);
 
   roundButtons.forEach((btn,i)=>{
     btn.addEventListener('click', ()=>{
       roundButtons.forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      sideLeagueActiveRound[sideLeagueActiveDiv] = gws[i].name;
+      sideLeagueActiveRound[roundGroupKey] = gws[i].name;
       renderSideLeagueFixtures(gws[i]);
     });
   });
@@ -4626,12 +4651,37 @@ async function loadSideLeague(leagueKey){
     const csvText = await res.text();
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
+    if(league.singleTable){
+      const table = parseFplTable(rows, league.titleText);
+      const fxA = parseFplFixtures(rows, 33); // AH
+      const fxB = parseFplFixtures(rows, 40); // AO
+      // Both blocks are the same league, just alternating rounds — merge and sort by
+      // round number instead of treating them as two separate divisions.
+      const gameweeks = [...fxA.gameweeks, ...fxB.gameweeks].sort((a,b)=>{
+        const na = parseInt((a.name.match(/\d+/)||["0"])[0],10);
+        const nb = parseInt((b.name.match(/\d+/)||["0"])[0],10);
+        return na - nb;
+      });
+
+      sideLeagueData = { singleTable: true, table, fx: { gameweeks }, label: league.label };
+      sideLeagueActiveRound = {};
+      renderSideLeagueContent();
+
+      sideLeagueDebug = {
+        table: table.debug,
+        fixturesBlockA: { gameweeksFound: fxA.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: fxA.rawDump },
+        fixturesBlockB: { gameweeksFound: fxB.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: fxB.rawDump }
+      };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+      return;
+    }
+
     const premier = parseFplTable(rows, "ELIZA PREMIER LEAGUE");
     const champ = parseFplTable(rows, "ELIZA CHAMPIONSHIP");
     const premierFx = parseFplFixtures(rows, 33); // AH
     const champFx = parseFplFixtures(rows, 40);   // AO
 
-    sideLeagueData = { premier, champ, premierFx, champFx };
+    sideLeagueData = { singleTable: false, premier, champ, premierFx, champFx };
     sideLeagueActiveDiv = "premier";
     sideLeagueActiveRound = {};
     renderSideLeagueContent();
