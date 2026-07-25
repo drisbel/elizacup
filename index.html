@@ -4416,7 +4416,7 @@ function colIndexToLetter(idx){
 
 // Exact column letters as given: POS=B, TEAM=D (merged D:H), PTS=I, L=J, D=K, W=L,
 // PTS+=M, PTS-=N, DIFF=O, FORM=T:X, NEXT OPPONENT=Y (merged Y:AC), STATUS=AD.
-const FPL_COL = { pos:1, team:3, pts:8, l:9, d:10, w:11, ptsFor:12, ptsAgn:13, diff:14, formStart:19, formEnd:23, next:24, status:29 };
+const FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, next:24, status:29 };
 
 function parseFplTable(rows, titleText){
   let titleRow = -1, titleCol = -1;
@@ -4432,21 +4432,22 @@ function parseFplTable(rows, titleText){
   const headerRow = titleRow + 1;
   const cols = FPL_COL;
 
+  // Form columns aren't fixed — same approach as the live division table: scan the
+  // first data row for 5 consecutive cells that are each exactly W/D/L, wherever they
+  // land, since this shifts as the season's round count grows.
+  const formCols = findFormColumns(rows[headerRow+1] || []);
+
   const teams = [];
   for(let dr=headerRow+1; dr<rows.length; dr++){
     const pos = cell(rows[dr]||[], cols.pos);
     if(!pos) break;
-    const form = [];
-    for(let fc=cols.formStart; fc<=cols.formEnd; fc++){
-      const v = cell(rows[dr]||[], fc);
-      if(v) form.push(v);
-    }
     teams.push({
       pos, team: cell(rows[dr]||[],cols.team), pts: cell(rows[dr]||[],cols.pts),
       w: cell(rows[dr]||[],cols.w), d: cell(rows[dr]||[],cols.d), l: cell(rows[dr]||[],cols.l),
       for: cell(rows[dr]||[],cols.ptsFor), aga: cell(rows[dr]||[],cols.ptsAgn),
       dif: cell(rows[dr]||[],cols.diff), status: cell(rows[dr]||[],cols.status),
-      form, next: cell(rows[dr]||[],cols.next)
+      form: formCols ? formCols.map(i => cell(rows[dr]||[],i)) : [],
+      next: cell(rows[dr]||[],cols.next)
     });
   }
   const hRow = rows[headerRow]||[];
@@ -4454,7 +4455,8 @@ function parseFplTable(rows, titleText){
   const rawFirstDataRow = (rows[headerRow+1]||[]).map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
   const firstParsedTeam = teams[0] || null;
   const colsAsLetters = Object.fromEntries(Object.entries(cols).map(([k,v])=>[k, colIndexToLetter(v)]));
-  return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, colsAsLetters, rawHeaderRow, rawFirstDataRow, firstParsedTeam } };
+  const formColsAsLetters = formCols ? formCols.map(colIndexToLetter) : null;
+  return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, colsAsLetters, formColsAsLetters, rawHeaderRow, rawFirstDataRow, firstParsedTeam } };
 }
 
 // Gameweek fixtures — now isolated column blocks (Team1/Score1/Score2/Team2), one
@@ -4505,6 +4507,101 @@ function sideLeagueTableHtml(table){
     ${table.teams.some(t=>t.status) ? histStatusLegendHtml() : ""}`;
 }
 
+function fplFixtureCardHtml(f){
+  const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
+  const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
+  const homeWin = hasScore && homeNum > awayNum;
+  const awayWin = hasScore && awayNum > homeNum;
+  const isDraw = hasScore && homeNum === awayNum;
+  const resultClass = (won) => hasScore ? (won ? "fx-win" : isDraw ? "fx-draw" : "fx-lose") : "";
+  const scoreHtml = hasScore
+    ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
+    : `<span class="upcoming">vs</span>`;
+  return `<div class="fixture-card">
+    <div class="fixture-team ${resultClass(homeWin)}">${f.home}</div>
+    <div class="fixture-score">${scoreHtml}</div>
+    <div class="fixture-team right ${resultClass(awayWin)}">${f.away}</div>
+  </div>`;
+}
+
+let sideLeagueData = null;
+let sideLeagueActiveDiv = "premier";
+let sideLeagueActiveRound = {};
+
+function renderSideLeagueContent(){
+  const el = document.getElementById('sideLeaguesContainer');
+  const isPremier = sideLeagueActiveDiv === "premier";
+  const table = isPremier ? sideLeagueData.premier : sideLeagueData.champ;
+  const fx = isPremier ? sideLeagueData.premierFx : sideLeagueData.champFx;
+  const label = isPremier ? "Eliza Premier League" : "Eliza Championship";
+
+  el.className = "";
+  el.innerHTML = `
+    <div class="round-tabs" id="sideLeagueDivToggle">
+      <button class="round-tab${isPremier?" active":""}" data-div="premier">Premier League</button>
+      <button class="round-tab${!isPremier?" active":""}" data-div="championship">Championship</button>
+    </div>
+    <div class="section-head" style="margin-top:20px;"><h2 style="font-size:18px;">${label}</h2></div>
+    ${sideLeagueTableHtml(table)}
+    <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
+    <div class="round-tabs" id="sideLeagueRoundTabs"></div>
+    <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
+
+  el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      sideLeagueActiveDiv = btn.dataset.div;
+      renderSideLeagueContent();
+    });
+  });
+
+  const roundTabsEl = document.getElementById('sideLeagueRoundTabs');
+  const gws = fx.gameweeks;
+  if(!gws.length){
+    roundTabsEl.innerHTML = "";
+    document.getElementById('sideLeagueFixtureContainer').className = "state-msg";
+    document.getElementById('sideLeagueFixtureContainer').innerHTML = "No fixtures found. Check the Debug panel below.";
+    return;
+  }
+
+  roundTabsEl.innerHTML = gws.map(gw => `<button class="round-tab" data-name="${gw.name}">${gw.name}</button>`).join("");
+
+  // Default to the most recent gameweek with any played result, same convention as
+  // the Eliza Cup division fixture tabs.
+  let defaultIdx = 0;
+  gws.forEach((gw,i)=>{
+    const hasPlayed = gw.fixtures.some(f => !isNaN(parseInt(f.homeScore,10)) && !isNaN(parseInt(f.awayScore,10)));
+    if(hasPlayed) defaultIdx = i;
+  });
+  const savedName = sideLeagueActiveRound[sideLeagueActiveDiv];
+  const savedIdx = gws.findIndex(gw => gw.name === savedName);
+  const activeIdx = savedIdx >= 0 ? savedIdx : defaultIdx;
+
+  const roundButtons = roundTabsEl.querySelectorAll('.round-tab');
+  roundButtons[activeIdx].classList.add('active');
+  sideLeagueActiveRound[sideLeagueActiveDiv] = gws[activeIdx].name;
+  renderSideLeagueFixtures(gws[activeIdx]);
+
+  roundButtons.forEach((btn,i)=>{
+    btn.addEventListener('click', ()=>{
+      roundButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      sideLeagueActiveRound[sideLeagueActiveDiv] = gws[i].name;
+      renderSideLeagueFixtures(gws[i]);
+    });
+  });
+}
+
+function renderSideLeagueFixtures(gw){
+  const container = document.getElementById('sideLeagueFixtureContainer');
+  if(!gw || !gw.fixtures.length){
+    container.className = "state-msg";
+    container.innerHTML = "No fixtures found for this gameweek.";
+    return;
+  }
+  container.className = "fixture-grid";
+  container.innerHTML = gw.fixtures.map(fplFixtureCardHtml).join("");
+}
+
 function renderSideLeagueTabs(){
   const tabsEl = document.getElementById('sideLeaguesTabs');
   tabsEl.innerHTML = SIDE_LEAGUES.map(s => `<button class="round-tab" data-key="${s.key}">${s.label}</button>`).join("");
@@ -4534,27 +4631,10 @@ async function loadSideLeague(leagueKey){
     const premierFx = parseFplFixtures(rows, 33); // AH
     const champFx = parseFplFixtures(rows, 40);   // AO
 
-    const fixturesSectionHtml = (title, data) => {
-      let html = `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${title} Fixtures</h2></div>`;
-      if(!data.gameweeks.length){
-        html += `<p class="state-msg">No fixtures found. Check the Debug panel below.</p>`;
-      }else{
-        data.gameweeks.forEach(gw=>{
-          html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${gw.name}</h4>`;
-          html += histFixtureTableHtml(gw.fixtures, false);
-        });
-      }
-      return html;
-    };
-
-    el.className = "";
-    el.innerHTML = `
-      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Eliza Premier League</h2></div>
-      ${sideLeagueTableHtml(premier)}
-      <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Eliza Championship</h2></div>
-      ${sideLeagueTableHtml(champ)}
-      ${fixturesSectionHtml("Premier League", premierFx)}
-      ${fixturesSectionHtml("Championship", champFx)}`;
+    sideLeagueData = { premier, champ, premierFx, champFx };
+    sideLeagueActiveDiv = "premier";
+    sideLeagueActiveRound = {};
+    renderSideLeagueContent();
 
     sideLeagueDebug = {
       premier: premier.debug, championship: champ.debug,
