@@ -130,6 +130,16 @@
   .honour-year-line:last-child{border-bottom:none;}
   .honour-year{color:#8a9990;flex-shrink:0;}
   .honour-winner{font-weight:600;text-align:right;}
+  .lms-pick-list{display:flex;flex-direction:column;gap:6px;max-width:560px;}
+  .lms-pick-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:9px 12px;
+    font-family:'Barlow',sans-serif;
+  }
+  .lms-participant{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lms-pick{font-size:12.5px;color:#3a4a44;flex:1.4;min-width:0;text-align:center;}
+  .lms-opponent{display:block;font-size:10.5px;color:#8a9990;}
+  .lms-result{font-weight:700;font-size:11px;padding:3px 10px;border-radius:12px;flex-shrink:0;}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -4680,6 +4690,7 @@ const SIDE_LEAGUES = [
   { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
+  { key: "auscup", label: "Australia Cup LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "241870503", isLmsCup: true },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
@@ -5029,6 +5040,90 @@ function renderHonourBoard(data){
     <div class="honour-board-grid">${cards}</div>`;
 }
 
+// Australia Cup LMS (Last Man Standing tipping): C7:AE35 on the Side Leagues sheet.
+// C = participant name, then 3-column round blocks (D=logo, skip; E=pick, with the
+// opponent text "v ***" on the row directly underneath; F=WIN/LOSS result). Each
+// participant occupies 2 physical rows so the pick and opponent line up together.
+function parseLmsCup(rows){
+  const headerRowIdx = 6; // row 7
+  const headerRow = rows[headerRowIdx] || [];
+  const rounds = [];
+  let blockStart = 3; // column D
+  let roundNum = 1;
+  while(blockStart + 2 <= 30){ // AE = col 30 is the end of the given range
+    const colD = blockStart, colE = blockStart+1, colF = blockStart+2;
+    const rawLabel = cell(headerRow, colE) || cell(headerRow, colD) || cell(headerRow, colF);
+    rounds.push({ name: rawLabel || ("Round " + roundNum), colD, colE, colF });
+    blockStart += 3;
+    roundNum++;
+  }
+
+  const participants = [];
+  const rawDump = [];
+  for(let r = 7; r+1 <= 34 && r < rows.length; r += 2){
+    const row1 = rows[r] || [];
+    const row2 = rows[r+1] || [];
+    const name = cell(row1, 2) || cell(row2, 2);
+    if(!name) continue;
+
+    const picks = rounds.map(rd => {
+      const pick = cell(row1, rd.colE);
+      const opponent = cell(row2, rd.colE);
+      const result = (cell(row1, rd.colF) || cell(row2, rd.colF)).toUpperCase();
+      return { round: rd.name, pick, opponent, result };
+    });
+
+    participants.push({ name, picks });
+    rawDump.push({ startRow: r+1, name, samplePicks: picks.filter(p=>p.pick).slice(0,3) });
+  }
+
+  return {
+    rounds: rounds.map(r=>r.name),
+    participants,
+    debug: { headerRow: headerRowIdx+1, roundsDetected: rounds.map(r=>r.name), participantsFound: participants.length, rawDump }
+  };
+}
+
+let lmsActiveRoundIdx = 0;
+
+function renderLmsCup(data){
+  const el = document.getElementById('sideLeaguesContainer');
+  if(!data.participants.length){
+    el.className = "state-msg";
+    el.innerHTML = "No Australia Cup LMS data found. Check the Debug panel below.";
+    return;
+  }
+  el.className = "";
+  if(lmsActiveRoundIdx >= data.rounds.length) lmsActiveRoundIdx = data.rounds.length - 1;
+  if(lmsActiveRoundIdx < 0) lmsActiveRoundIdx = 0;
+
+  const tabsHtml = data.rounds.map((name, idx) =>
+    `<button class="round-tab${idx===lmsActiveRoundIdx?' active':''}" data-idx="${idx}">${name}</button>`
+  ).join("");
+
+  const rowsHtml = data.participants.map(p => {
+    const pk = p.picks[lmsActiveRoundIdx] || {};
+    const resultColor = pk.result === "WIN" ? "#166534" : pk.result === "LOSS" ? "#991b1b" : "#6b7c73";
+    const resultBg = pk.result === "WIN" ? "#dcfce7" : pk.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
+    return `<div class="lms-pick-row">
+      <span class="lms-participant">${p.name}</span>
+      <span class="lms-pick">${pk.pick ? `${pk.pick}${pk.opponent ? `<span class="lms-opponent">${pk.opponent}</span>` : ""}` : "—"}</span>
+      <span class="lms-result" style="background:${resultBg};color:${resultColor};">${pk.result || "—"}</span>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
+    <div class="round-tabs">${tabsHtml}</div>
+    <div class="lms-pick-list">${rowsHtml}</div>`;
+
+  el.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      lmsActiveRoundIdx = parseInt(btn.dataset.idx, 10);
+      renderLmsCup(data);
+    });
+  });
+}
+
 async function loadSideLeague(leagueKey){
   const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
   const el = document.getElementById('sideLeaguesContainer');
@@ -5045,6 +5140,25 @@ async function loadSideLeague(leagueKey){
       console.error(err);
       el.className = "state-msg error";
       el.innerHTML = "Couldn't load Honour Board data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(league.isLmsCup){
+    try{
+      const res = await fetch(sideLeagueCsvUrlFor(league));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const data = parseLmsCup(rows);
+      lmsActiveRoundIdx = data.rounds.length - 1; // default to the most recent round
+      renderLmsCup(data);
+      sideLeagueDebug = { lmsCup: data.debug };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load Australia Cup LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
