@@ -114,11 +114,22 @@
   }
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
-  .honour-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+  .honour-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;align-items:start;}
   .honour-board-card{border:1px solid var(--line-light);border-radius:8px;padding:12px 14px;background:#fff;}
-  .honour-board-card h4{font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:0 0 8px;color:var(--pitch);}
-  .honour-board-card table{width:100%;}
-  .honour-board-card th,.honour-board-card td{font-size:12px;padding:4px 3px;}
+  .honour-board-card h4{font-family:'Barlow Condensed',sans-serif;font-size:16px;margin:0 0 8px;color:var(--pitch);}
+  .honour-subcomp{margin-bottom:10px;}
+  .honour-subcomp:last-child{margin-bottom:0;}
+  .honour-subcomp-name{
+    font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.04em;color:var(--pitch);margin-bottom:3px;
+  }
+  .honour-year-line{
+    display:flex;justify-content:space-between;gap:10px;font-family:'Barlow',sans-serif;
+    font-size:12.5px;padding:3px 0;border-bottom:1px dashed var(--line-light);
+  }
+  .honour-year-line:last-child{border-bottom:none;}
+  .honour-year{color:#8a9990;flex-shrink:0;}
+  .honour-winner{font-weight:600;text-align:right;}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -4889,14 +4900,14 @@ function renderSideLeagueTabs(activeKey){
   });
 }
 
-// Honour Board: D8:H62 on the Side Leagues sheet. D = competition name (blank on
-// sub-comp rows, since some competitions — e.g. BBL — split into League/Finals/
-// Overall winners below the main name). E:H = winner for 2023/2024/2025/2026.
+// Honour Board: D8:I51 on the Side Leagues sheet. D = competition name (blank on
+// sub-comp continuation rows), E = sub-competition (League/Finals/Overall etc.),
+// F:I = winner for 2023/2024/2025/2026.
 function parseHonourBoard(rows){
-  const startRow = 7, endRow = 61; // 0-indexed: sheet rows 8-62
+  const startRow = 7, endRow = 50; // 0-indexed: sheet rows 8-51
   const headerRow = rows[startRow] || [];
-  const headerCells = [cell(headerRow,4), cell(headerRow,5), cell(headerRow,6), cell(headerRow,7)];
-  const hasHeader = headerCells.some(Boolean);
+  const headerCells = [cell(headerRow,5), cell(headerRow,6), cell(headerRow,7), cell(headerRow,8)]; // F,G,H,I
+  const hasHeader = headerCells.every(v => /^(19|20)\d{2}$/.test(v));
   const dataStart = hasHeader ? startRow + 1 : startRow;
   const years = hasHeader ? headerCells : ["2023","2024","2025","2026"];
 
@@ -4905,21 +4916,21 @@ function parseHonourBoard(rows){
   let current = null;
   for(let r=dataStart; r<=endRow && r<rows.length; r++){
     const row = rows[r] || [];
-    const d = cell(row,3), e = cell(row,4), f = cell(row,5), g = cell(row,6), h = cell(row,7);
-    if(!d && !e && !f && !g && !h) continue;
-    rawDump.push({ row: r+1, D:d, E:e, F:f, G:g, H:h });
+    const d = cell(row,3), e = cell(row,4), f = cell(row,5), g = cell(row,6), h = cell(row,7), i = cell(row,8);
+    if(!d && !e && !f && !g && !h && !i) continue;
+    rawDump.push({ row: r+1, D:d, E:e, F:f, G:g, H:h, I:i });
     if(d){
-      current = { name: d, rows: [] };
+      current = { name: d, subs: [] };
       competitions.push(current);
     }
     if(!current) continue;
-    current.rows.push({ e, f, g, h });
+    current.subs.push({ name: e, f, g, h, i });
   }
 
   return {
     years,
     competitions,
-    debug: { headerRow: hasHeader ? startRow+1 : null, headerCells, competitionsFound: competitions.length, rawDump }
+    debug: { headerDetected: hasHeader, headerCells, competitionsFound: competitions.length, rawDump }
   };
 }
 
@@ -4934,17 +4945,19 @@ function renderHonourBoard(data){
   const years = data.years;
 
   const cards = data.competitions.map(comp => {
-    const multiRow = comp.rows.length > 1;
-    const rowsHtml = comp.rows.map((row,i) => `<tr>
-        ${multiRow ? `<td style="text-align:left;color:#8a9990;font-size:11px;">Result ${i+1}</td>` : ""}
-        <td>${row.e || "—"}</td><td>${row.f || "—"}</td><td>${row.g || "—"}</td><td>${row.h || "—"}</td>
-      </tr>`).join("");
+    const subsHtml = comp.subs.map(sub => {
+      const yearVals = [sub.f, sub.g, sub.h, sub.i];
+      const yearLines = years.map((y,idx)=>
+        `<div class="honour-year-line"><span class="honour-year">${y}</span><span class="honour-winner">${yearVals[idx] || "—"}</span></div>`
+      ).join("");
+      return `<div class="honour-subcomp">
+        ${sub.name ? `<div class="honour-subcomp-name">${sub.name}</div>` : ""}
+        ${yearLines}
+      </div>`;
+    }).join("");
     return `<div class="honour-board-card">
       <h4>${comp.name}</h4>
-      <table class="standings compact"><thead><tr>
-        ${multiRow ? "<th></th>" : ""}
-        <th>${years[0]}</th><th>${years[1]}</th><th>${years[2]}</th><th>${years[3]}</th>
-      </tr></thead><tbody>${rowsHtml}</tbody></table>
+      ${subsHtml}
     </div>`;
   }).join("");
 
