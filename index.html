@@ -817,6 +817,7 @@
       <h2 style="font-size:18px;">Win Streaks</h2>
       <span class="sub">Active 3+ game winning streaks, head-to-head</span>
     </div>
+    <p class="sub" style="margin:-4px 0 12px;">Click a row to see the full head-to-head match history.</p>
     <div id="statsContainer" class="state-msg">Loading streaks…</div>
   </section>
 
@@ -3551,7 +3552,7 @@ function renderWinStreaks(streaks){
 let teamVsTeamDebug = {};
 
 function titleCaseFallback(name){
-  return (name||"").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  return (name||"").toUpperCase();
 }
 
 // Shared lookup: proper-case display name + current division pill info for any team,
@@ -3883,7 +3884,16 @@ function renderTeamProfile(data){
   container.className = "";
   const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote } = data;
 
-  if(!roddyEntry && !divisionData){
+  const hasAnyData = !!(roddyEntry || divisionData
+    || (facupSummary && facupSummary.length)
+    || eclSummary || (eclMatches && eclMatches.length)
+    || (historicalRecords && historicalRecords.length)
+    || (h2hRecords && h2hRecords.length)
+    || (teamVsTeamOpponents && teamVsTeamOpponents.length)
+    || (clubInfo && (clubInfo.manager || clubInfo.yearEntered || clubInfo.previousNames))
+    || (trophies && trophies.length));
+
+  if(!hasAnyData){
     container.innerHTML = `<div class="state-msg error">Couldn't find "${teamName}" anywhere in the league. Check the Debug panel below.</div>`;
     return;
   }
@@ -3905,7 +3915,7 @@ function renderTeamProfile(data){
     <div class="team-profile-main">
       <div class="team-profile-heading">
         <h2 class="team-profile-name">${teamName}</h2>
-        ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">${divShort === "D1" ? divLabel : "Division " + divLabel}</span>` : ""}
+        ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">${divShort === "D1" ? divLabel : "Division " + divLabel}</span>` : `<span class="sub" style="background:#8a9990;color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Not currently in a division</span>`}
         ${clubInfo && (clubInfo.manager || clubInfo.yearEntered) ? `<div style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">
             ${clubInfo.manager ? `Manager: <b style="color:var(--ink);">${clubInfo.manager}</b>` : ""}${clubInfo.manager && clubInfo.yearEntered ? " · " : ""}${clubInfo.yearEntered ? `Est. ${clubInfo.yearEntered}` : ""}
           </div>` : ""}
@@ -4732,6 +4742,7 @@ const HOME_ICON_TROPHY = `<svg viewBox="0 0 24 24" width="26" height="26" fill="
 const HOME_ICON_TEAMS = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8.5" r="2.4"/><path d="M15.5 14.7c2.5.3 4.5 2.2 4.5 5.3"/></svg>`;
 const HOME_ICON_STATS = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="13" width="4" height="8" rx="0.5" fill="currentColor" stroke="none"/><rect x="10" y="8" width="4" height="13" rx="0.5" fill="currentColor" stroke="none"/><rect x="15" y="4" width="4" height="17" rx="0.5" fill="currentColor" stroke="none"/></svg>`;
 const HOME_ICON_HISTORY = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 8 8 8"/><polyline points="12 8 12 12 15 14"/></svg>`;
+const HOME_ICON_SIDELEAGUES = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
 
 // Some competitions (Division 2, Division 3) split into sub-divisions in more recent
 // seasons, and the sheet stores both winners in one cell for that season, e.g.
@@ -4803,6 +4814,7 @@ function renderHome(){
       ${homeCardHtml({id:"teams", title:"Teams", subtitle:"Search any club's profile", color:"#28427c", icon:HOME_ICON_TEAMS})}
       ${homeCardHtml({id:"stats", title:"Statistics", subtitle:"Win streaks &amp; league-wide stats", color:"#28427c", icon:HOME_ICON_STATS})}
       ${homeCardHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#28427c", icon:HOME_ICON_HISTORY})}
+      ${homeCardHtml({id:"sideleagues", title:"Side Leagues", subtitle:"FPL &amp; AFL Supercoach standings and fixtures", color:"#28427c", icon:HOME_ICON_SIDELEAGUES})}
     </div>
 
     <div class="section-head" style="margin-top:40px;">
