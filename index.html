@@ -305,7 +305,7 @@
   }
   table.standings thead th:nth-child(2), table.standings tbody td:nth-child(2),
   table.roddy-table thead th:nth-child(2), table.roddy-table tbody td:nth-child(2){
-    position:sticky; left:28px; z-index:3;
+    position:sticky; left:var(--sticky-col1-w, 28px); z-index:3;
   }
   table.trophy-table thead th:first-child, table.trophy-table tbody td:first-child,
   table.history-table thead th:first-child, table.history-table tbody td:first-child{
@@ -3730,19 +3730,18 @@ function renderWinStreaks(streaks){
     if(s.streak !== lastStreak){
       tierIndex++;
       const tierColor = TIER_COLORS[tierIndex % TIER_COLORS.length];
-      rowsHtml += `<tr class="streak-tier-row"><td colspan="3" style="background:${hexToRgba(tierColor,0.14)};color:${tierColor};border-top:2px solid ${tierColor};">${s.streak} game win streaks</td></tr>`;
+      rowsHtml += `<tr class="streak-tier-row"><td colspan="2" style="background:${hexToRgba(tierColor,0.14)};color:${tierColor};border-top:2px solid ${tierColor};">${s.streak} game win streaks</td></tr>`;
       lastStreak = s.streak;
     }
     rowsHtml += `<tr class="streak-row${(!s.team1Active || !s.team2Active) ? " inactive" : ""}" data-idx="${i}" style="cursor:pointer;">
         <td style="text-align:left;white-space:nowrap;">${divPill(s.team1DivShort, s.team1DivColor)} ${teamLink(s.team1)}</td>
         <td style="text-align:left;white-space:nowrap;">${divPill(s.team2DivShort, s.team2DivColor)} ${teamLink(s.team2)}</td>
-        <td><span class="streak-badge">${s.streak} wins</span></td>
       </tr>
-      <tr class="streak-detail-row" data-detail-for="${i}" style="display:none;"><td colspan="3"></td></tr>`;
+      <tr class="streak-detail-row" data-detail-for="${i}" style="display:none;"><td colspan="2"></td></tr>`;
   });
 
   el.innerHTML = `<div class="table-wrap" style="max-width:680px;"><table class="standings compact h2h-record-table streaks-table"><thead><tr>
-      <th style="text-align:left;width:38%;">Team</th><th style="text-align:left;width:38%;">Opponent</th><th style="width:24%;">Streak</th>
+      <th style="text-align:left;width:50%;">Team</th><th style="text-align:left;width:50%;">Opponent</th>
     </tr></thead><tbody>
       ${rowsHtml}
     </tbody></table></div>`;
@@ -4886,13 +4885,15 @@ function wireSideLeagueRoundTabs(fx, roundGroupKey){
 
   roundTabsEl.innerHTML = gws.map(gw => `<button class="round-tab" data-name="${gw.name}">${gw.name}</button>`).join("");
 
-  // Default to the most recent gameweek with any played result, same convention as
-  // the Eliza Cup division fixture tabs.
+  // Default to the most recent gameweek with any played (scored) result — walk
+  // backward from the last gameweek and stop at the first one with a score in it.
   let defaultIdx = 0;
-  gws.forEach((gw,i)=>{
-    const hasPlayed = gw.fixtures.some(f => !isNaN(parseInt(f.homeScore,10)) && !isNaN(parseInt(f.awayScore,10)));
-    if(hasPlayed) defaultIdx = i;
-  });
+  for(let i = gws.length - 1; i >= 0; i--){
+    const hasPlayed = gws[i].fixtures.some(f =>
+      !isNaN(parseInt(f.homeScore, 10)) && !isNaN(parseInt(f.awayScore, 10))
+    );
+    if(hasPlayed){ defaultIdx = i; break; }
+  }
   const savedName = sideLeagueActiveRound[roundGroupKey];
   const savedIdx = gws.findIndex(gw => gw.name === savedName);
   const activeIdx = savedIdx >= 0 ? savedIdx : defaultIdx;
@@ -4935,16 +4936,13 @@ function renderSideLeagueTabs(activeKey){
   });
 }
 
-// Honour Board: D8:I51 on the Side Leagues sheet. D = competition name (blank on
-// sub-comp continuation rows), E = sub-competition (League/Finals/Overall etc.),
-// F:I = winner for 2023/2024/2025/2026.
+// Honour Board: D8:I51 on the Side Leagues sheet. Row 8 = header (years in F:I),
+// data starts row 9. D = competition name (blank on sub-comp continuation rows),
+// E = sub-competition (League/Finals/Overall etc.), F:I = winner per year.
 function parseHonourBoard(rows){
-  const startRow = 7, endRow = 50; // 0-indexed: sheet rows 8-51
-  const headerRow = rows[startRow] || [];
-  const headerCells = [cell(headerRow,5), cell(headerRow,6), cell(headerRow,7), cell(headerRow,8)]; // F,G,H,I
-  const hasHeader = headerCells.every(v => /^(19|20)\d{2}$/.test(v));
-  const dataStart = hasHeader ? startRow + 1 : startRow;
-  const years = hasHeader ? headerCells : ["2023","2024","2025","2026"];
+  const headerRowIdx = 7, dataStart = 8, endRow = 50; // 0-indexed: header row 8, data rows 9-51
+  const headerRow = rows[headerRowIdx] || [];
+  const years = [cell(headerRow,5), cell(headerRow,6), cell(headerRow,7), cell(headerRow,8)]; // F,G,H,I
 
   const competitions = [];
   const rawDump = [];
@@ -4965,7 +4963,7 @@ function parseHonourBoard(rows){
   return {
     years,
     competitions,
-    debug: { headerDetected: hasHeader, headerCells, competitionsFound: competitions.length, rawDump }
+    debug: { headerRow: headerRowIdx+1, headerCells: years, dataStartRow: dataStart+1, competitionsFound: competitions.length, rawDump }
   };
 }
 
@@ -5041,54 +5039,49 @@ function renderHonourBoard(data){
     <div class="honour-board-grid">${cards}</div>`;
 }
 
-// Australia Cup LMS (Last Man Standing tipping): C7:AE35 on the Side Leagues sheet.
-// C = participant name, then 3-column round blocks (D=logo, skip; E=pick, with the
-// opponent text "v ***" on the row directly underneath; F=WIN/LOSS result). Each
-// participant occupies 2 physical rows so the pick and opponent line up together.
+// Australia Cup LMS (Last Man Standing tipping): C85:U99 on the Side Leagues sheet.
+// Header row 85, entries rows 86-99, one row per participant. C = participant name,
+// then 3-column round blocks: D = team picked, E = opponent, F = status (WIN/LOSS).
 function parseLmsCup(rows){
-  const headerRowIdx = 6; // row 7
+  const headerRowIdx = 84; // row 85
   const headerRow = rows[headerRowIdx] || [];
   const rounds = [];
   let blockStart = 3; // column D
   let roundNum = 1;
-  while(blockStart + 2 <= 30){ // AE = col 30 is the end of the given range
+  while(blockStart + 2 <= 20){ // U = col 20 is the end of the given range
     const colD = blockStart, colE = blockStart+1, colF = blockStart+2;
-    const rawLabel = cell(headerRow, colE) || cell(headerRow, colD) || cell(headerRow, colF);
+    const rawLabel = cell(headerRow, colD) || cell(headerRow, colE) || cell(headerRow, colF);
     rounds.push({ name: rawLabel || ("Round " + roundNum), colD, colE, colF });
     blockStart += 3;
     roundNum++;
   }
 
   const participants = [];
-  for(let r = 7; r+1 <= 34 && r < rows.length; r += 2){
-    const row1 = rows[r] || [];
-    const row2 = rows[r+1] || [];
-    const name = cell(row1, 2) || cell(row2, 2);
+  for(let r = 85; r <= 98 && r < rows.length; r++){ // rows 86-99
+    const row = rows[r] || [];
+    const name = cell(row, 2);
     if(!name) continue;
 
-    const picks = rounds.map(rd => {
-      const pick = cell(row1, rd.colE);
-      const opponent = cell(row2, rd.colE);
-      const result = (cell(row1, rd.colF) || cell(row2, rd.colF)).toUpperCase();
-      return { round: rd.name, pick, opponent, result };
-    });
+    const picks = rounds.map(rd => ({
+      round: rd.name,
+      pick: cell(row, rd.colD),
+      opponent: cell(row, rd.colE),
+      result: cell(row, rd.colF).toUpperCase()
+    }));
 
     participants.push({ name, picks });
   }
 
-  // Unprocessed dump, one line per physical sheet row, columns C through N (first
-  // 4 round-blocks) exactly as read — no pairing/grouping logic applied. This is
-  // the fastest way to spot exactly where an assumption about row/column layout
-  // is wrong, by comparing it directly against the sheet.
+  // Unprocessed dump, one line per physical sheet row, columns C through L (first
+  // 3 round-blocks) exactly as read.
   const rawGridDump = [];
-  for(let r = 6; r <= 34 && r < rows.length; r++){
+  for(let r = 84; r <= 98 && r < rows.length; r++){
     const row = rows[r] || [];
     rawGridDump.push({
       sheetRow: r+1,
       C: cell(row,2), D: cell(row,3), E: cell(row,4), F: cell(row,5),
       G: cell(row,6), H: cell(row,7), I: cell(row,8),
-      J: cell(row,9), K: cell(row,10), L: cell(row,11),
-      M: cell(row,12), N: cell(row,13)
+      J: cell(row,9), K: cell(row,10), L: cell(row,11)
     });
   }
 
@@ -5461,6 +5454,29 @@ function renderFACup(){
   tabsEl.firstChild.classList.add('active');
   renderFACupRound(0);
 }
+
+// Sticky Pos+Team columns assume column 1 renders at exactly 28px (the CSS width
+// set on it), so column 2's sticky offset can be hardcoded to match. But these
+// tables use table-layout:auto, so the *actual* rendered width can drift from that
+// assumption whenever a table's other columns change (e.g. adding the Side League
+// "Player" column) — silently breaking the lock. This measures the real width of
+// column 1 for every standings/roddy table on the page and corrects the offset via
+// a CSS variable, so it self-heals regardless of what columns a table has.
+function fixStickyCol2Offsets(){
+  document.querySelectorAll('table.standings, table.roddy-table').forEach(table=>{
+    const firstCell = table.querySelector('thead th:first-child') || table.querySelector('tbody td:first-child');
+    if(!firstCell) return;
+    const w = Math.round(firstCell.getBoundingClientRect().width);
+    if(w > 0) table.style.setProperty('--sticky-col1-w', w + 'px');
+  });
+}
+let stickyColFixTimer = null;
+function scheduleStickyColFix(){
+  clearTimeout(stickyColFixTimer);
+  stickyColFixTimer = setTimeout(fixStickyCol2Offsets, 60);
+}
+new MutationObserver(scheduleStickyColFix).observe(document.body, { childList:true, subtree:true });
+window.addEventListener('resize', scheduleStickyColFix);
 
 document.getElementById('divPill').textContent = currentDivision.pill;
 applyDivisionTheme(currentDivision);
