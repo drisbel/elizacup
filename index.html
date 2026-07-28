@@ -5044,10 +5044,10 @@ function renderHonourBoard(data){
 // then 3-column round blocks: D = team picked, E = opponent, F = status (WIN/LOSS).
 // Australia Cup LMS (Last Man Standing tipping) table on the Side Leagues sheet.
 // Located by searching for the unique title text "AUSTRALIA CUP LAST MAN STANDING"
-// rather than the round labels — those repeat in an old leftover table elsewhere in
-// the sheet, which is what caused the wrong table to be picked up previously. Once
-// found: title row, then header row directly below it, then one row per team below
-// that. Team name in column C; each round is a 3-column block (skip / tip / status).
+// (row 6) rather than round labels, since those can repeat elsewhere in the sheet.
+// Header row (round names, e.g. "Round 1") sits directly below the title; each round
+// is now a single column (no more separate opponent/status columns — the tip cell
+// is the full pick). Team name in column C, data rows start two rows below the title.
 function parseLmsCup(rows){
   let titleRowIdx = -1, nameCol = -1;
   for(let r=0; r<rows.length && titleRowIdx===-1; r++){
@@ -5069,15 +5069,13 @@ function parseLmsCup(rows){
   const dataStartIdx = titleRowIdx + 2;
   const headerRow = rows[headerRowIdx] || [];
 
-  // Round blocks are 3 columns wide (skip / tip / status) starting one column after
-  // the name column, e.g. name=C, block1 = D(skip)/E(tip)/F(status), block2 =
-  // G(skip)/H(tip)/I(status), etc. Keep adding blocks while the header row has text
-  // in the "tip" position.
+  // Each round is now a single column. Scan a generous range after the name column
+  // and take every column with header text as one round — this doesn't assume the
+  // round columns are contiguous, so a spacer column (like D before E) is fine.
   const rounds = [];
-  let blockStart = nameCol + 1;
-  while(cell(headerRow, blockStart+1) && rounds.length < 12){
-    rounds.push({ name: cell(headerRow, blockStart+1) || cell(headerRow, blockStart), colTip: blockStart+1, colStatus: blockStart+2 });
-    blockStart += 3;
+  for(let c = nameCol+1; c <= nameCol+30; c++){
+    const label = cell(headerRow, c);
+    if(label) rounds.push({ name: label, col: c });
   }
 
   const participants = [];
@@ -5086,28 +5084,19 @@ function parseLmsCup(rows){
     const name = cell(row, nameCol);
     if(!name) continue;
 
-    const picks = rounds.map(rd => ({
-      round: rd.name,
-      pick: cell(row, rd.colTip),
-      opponent: "",
-      result: cell(row, rd.colStatus).toUpperCase()
-    }));
-
+    const picks = rounds.map(rd => ({ round: rd.name, pick: cell(row, rd.col) }));
     participants.push({ name, picks });
   }
 
-  // Unprocessed dump: title row through the next 18 rows, name column + first 3
-  // round blocks, exactly as read.
+  // Unprocessed dump: title row through the next 18 rows, name column + first 6
+  // round columns, exactly as read.
+  const roundCols = rounds.slice(0,6).map(r=>r.col);
   const rawGridDump = [];
   for(let r = titleRowIdx; r < Math.min(rows.length, titleRowIdx+18); r++){
     const row = rows[r] || [];
-    rawGridDump.push({
-      sheetRow: r+1,
-      name: cell(row, nameCol),
-      block1: [cell(row, nameCol+1), cell(row, nameCol+2), cell(row, nameCol+3)],
-      block2: [cell(row, nameCol+4), cell(row, nameCol+5), cell(row, nameCol+6)],
-      block3: [cell(row, nameCol+7), cell(row, nameCol+8), cell(row, nameCol+9)]
-    });
+    const entry = { sheetRow: r+1, name: cell(row, nameCol) };
+    roundCols.forEach((c,idx)=> entry["round" + (idx+1)] = cell(row, c));
+    rawGridDump.push(entry);
   }
 
   return {
@@ -5137,15 +5126,11 @@ function renderLmsCup(data){
 
   const rowsHtml = data.participants.map(p => {
     const pk = p.picks[lmsActiveRoundIdx] || {};
-    const resultColor = pk.result === "WIN" ? "#166534" : pk.result === "LOSS" ? "#991b1b" : "#6b7c73";
-    const resultBg = pk.result === "WIN" ? "#dcfce7" : pk.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
     return `<div class="lms-pick-row">
       <span class="lms-participant">${p.name}</span>
       <span class="lms-pick-col">
         <span class="lms-pick">${pk.pick || "—"}</span>
-        ${pk.opponent ? `<span class="lms-opponent">${pk.opponent}</span>` : ""}
       </span>
-      <span class="lms-result" style="background:${resultBg};color:${resultColor};">${pk.result || "—"}</span>
     </div>`;
   }).join("");
 
