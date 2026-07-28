@@ -137,8 +137,9 @@
     font-family:'Barlow',sans-serif;
   }
   .lms-participant{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .lms-pick{font-size:12.5px;color:#3a4a44;flex:1.4;min-width:0;text-align:center;}
-  .lms-opponent{display:block;font-size:10.5px;color:#8a9990;}
+  .lms-pick-col{flex:1.4;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
+  .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);}
+  .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;}
   .lms-result{font-weight:700;font-size:11px;padding:3px 10px;border-radius:12px;flex-shrink:0;}
 
   /* ---------- Ticker (signature element) ---------- */
@@ -5059,7 +5060,6 @@ function parseLmsCup(rows){
   }
 
   const participants = [];
-  const rawDump = [];
   for(let r = 7; r+1 <= 34 && r < rows.length; r += 2){
     const row1 = rows[r] || [];
     const row2 = rows[r+1] || [];
@@ -5074,13 +5074,28 @@ function parseLmsCup(rows){
     });
 
     participants.push({ name, picks });
-    rawDump.push({ startRow: r+1, name, samplePicks: picks.filter(p=>p.pick).slice(0,3) });
+  }
+
+  // Unprocessed dump, one line per physical sheet row, columns C through N (first
+  // 4 round-blocks) exactly as read — no pairing/grouping logic applied. This is
+  // the fastest way to spot exactly where an assumption about row/column layout
+  // is wrong, by comparing it directly against the sheet.
+  const rawGridDump = [];
+  for(let r = 6; r <= 34 && r < rows.length; r++){
+    const row = rows[r] || [];
+    rawGridDump.push({
+      sheetRow: r+1,
+      C: cell(row,2), D: cell(row,3), E: cell(row,4), F: cell(row,5),
+      G: cell(row,6), H: cell(row,7), I: cell(row,8),
+      J: cell(row,9), K: cell(row,10), L: cell(row,11),
+      M: cell(row,12), N: cell(row,13)
+    });
   }
 
   return {
     rounds: rounds.map(r=>r.name),
     participants,
-    debug: { headerRow: headerRowIdx+1, roundsDetected: rounds.map(r=>r.name), participantsFound: participants.length, rawDump }
+    debug: { headerRow: headerRowIdx+1, roundsDetected: rounds.map(r=>r.name), participantsFound: participants.length, rawGridDump }
   };
 }
 
@@ -5107,7 +5122,10 @@ function renderLmsCup(data){
     const resultBg = pk.result === "WIN" ? "#dcfce7" : pk.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
     return `<div class="lms-pick-row">
       <span class="lms-participant">${p.name}</span>
-      <span class="lms-pick">${pk.pick ? `${pk.pick}${pk.opponent ? `<span class="lms-opponent">${pk.opponent}</span>` : ""}` : "—"}</span>
+      <span class="lms-pick-col">
+        <span class="lms-pick">${pk.pick || "—"}</span>
+        ${pk.opponent ? `<span class="lms-opponent">${pk.opponent}</span>` : ""}
+      </span>
       <span class="lms-result" style="background:${resultBg};color:${resultColor};">${pk.result || "—"}</span>
     </div>`;
   }).join("");
