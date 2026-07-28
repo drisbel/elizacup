@@ -5042,24 +5042,42 @@ function renderHonourBoard(data){
 // Australia Cup LMS (Last Man Standing tipping): C85:U99 on the Side Leagues sheet.
 // Header row 85, entries rows 86-99, one row per participant. C = participant name,
 // then 3-column round blocks: D = team picked, E = opponent, F = status (WIN/LOSS).
+// Australia Cup LMS (Last Man Standing tipping) table on the Side Leagues sheet.
+// Header row holds round labels starting "ROUND OF 32 - PHASE 1", participant name
+// one column to its left, then 3-column round blocks: pick / opponent / status.
+// We locate this by searching for the label text rather than trusting a fixed row
+// number — rows hidden above this table get silently dropped from the CSV export,
+// which shifts every row index up and makes a hardcoded row number unreliable.
 function parseLmsCup(rows){
-  const headerRowIdx = 84; // row 85
+  let headerRowIdx = -1, firstColIdx = -1;
+  for(let r=0; r<rows.length && headerRowIdx===-1; r++){
+    const row = rows[r] || [];
+    for(let c=2; c<row.length && c<=40; c++){
+      if(/ROUND OF 32/i.test(cell(row,c))){ headerRowIdx = r; firstColIdx = c; break; }
+    }
+  }
+
+  if(headerRowIdx === -1){
+    return {
+      rounds: [], participants: [],
+      debug: { headerRowFound: false, note: "Couldn't find 'ROUND OF 32' anywhere in the sheet.",
+        rawGridDump: rows.slice(0, 20).map((row,r)=>({ sheetRow: r+1, C: cell(row,2), D: cell(row,3), E: cell(row,4), F: cell(row,5) })) }
+    };
+  }
+
   const headerRow = rows[headerRowIdx] || [];
+  const nameCol = firstColIdx - 1;
   const rounds = [];
-  let blockStart = 3; // column D
-  let roundNum = 1;
-  while(blockStart + 2 <= 20){ // U = col 20 is the end of the given range
-    const colD = blockStart, colE = blockStart+1, colF = blockStart+2;
-    const rawLabel = cell(headerRow, colD) || cell(headerRow, colE) || cell(headerRow, colF);
-    rounds.push({ name: rawLabel || ("Round " + roundNum), colD, colE, colF });
+  let blockStart = firstColIdx;
+  while(cell(headerRow, blockStart) && rounds.length < 12){
+    rounds.push({ name: cell(headerRow, blockStart), colD: blockStart, colE: blockStart+1, colF: blockStart+2 });
     blockStart += 3;
-    roundNum++;
   }
 
   const participants = [];
-  for(let r = 85; r <= 98 && r < rows.length; r++){ // rows 86-99
+  for(let r = headerRowIdx+1; r < rows.length; r++){
     const row = rows[r] || [];
-    const name = cell(row, 2);
+    const name = cell(row, nameCol);
     if(!name) continue;
 
     const picks = rounds.map(rd => ({
@@ -5072,16 +5090,17 @@ function parseLmsCup(rows){
     participants.push({ name, picks });
   }
 
-  // Unprocessed dump, one line per physical sheet row, columns C through L (first
-  // 3 round-blocks) exactly as read.
+  // Unprocessed dump: header row plus the next 16 rows, name column + first 3
+  // round blocks, exactly as read.
   const rawGridDump = [];
-  for(let r = 84; r <= 98 && r < rows.length; r++){
+  for(let r = headerRowIdx; r < Math.min(rows.length, headerRowIdx+17); r++){
     const row = rows[r] || [];
     rawGridDump.push({
       sheetRow: r+1,
-      C: cell(row,2), D: cell(row,3), E: cell(row,4), F: cell(row,5),
-      G: cell(row,6), H: cell(row,7), I: cell(row,8),
-      J: cell(row,9), K: cell(row,10), L: cell(row,11)
+      name: cell(row, nameCol),
+      block1: [cell(row, firstColIdx), cell(row, firstColIdx+1), cell(row, firstColIdx+2)],
+      block2: [cell(row, firstColIdx+3), cell(row, firstColIdx+4), cell(row, firstColIdx+5)],
+      block3: [cell(row, firstColIdx+6), cell(row, firstColIdx+7), cell(row, firstColIdx+8)]
     });
   }
 
