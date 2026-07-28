@@ -3160,6 +3160,66 @@ function findClubInfo(rows, teamName){
   return null;
 }
 
+// ---------- Previous Names lookup (Past Seasons) ----------
+// Builds a full OLD NAME -> CURRENT NAME map across every team's "Previous Names"
+// field, so historical pages can link an old team name straight to that team's
+// current profile. Cached after first load since Club Info rarely changes mid-session.
+let previousNameMap = null;
+let previousNameMapPromise = null;
+
+function buildPreviousNameMap(rows){
+  const map = {};
+  let headerRow = -1;
+  const cols = {};
+  for(let r=0; r<Math.min(rows.length, 15); r++){
+    const row = rows[r]||[];
+    let found = 0;
+    row.forEach((c,ci)=>{
+      const v = (c||"").toString().trim().toUpperCase();
+      if(v === "CURRENT NAME"){ cols.name = ci; found++; }
+      if(v === "PREVIOUS NAMES"){ cols.previousNames = ci; found++; }
+    });
+    if(found >= 2){ headerRow = r; break; }
+  }
+  if(headerRow === -1 || cols.name === undefined || cols.previousNames === undefined) return map;
+
+  for(let r=headerRow+1; r<rows.length; r++){
+    const row = rows[r]||[];
+    const currentName = cell(row, cols.name);
+    const previousRaw = cell(row, cols.previousNames);
+    if(!currentName || !previousRaw) continue;
+    previousRaw.split(/[,;/]|(?:\s->\s)/i).map(s=>s.trim()).filter(Boolean).forEach(oldName=>{
+      map[oldName.toUpperCase()] = currentName;
+    });
+  }
+  return map;
+}
+
+async function loadPreviousNameMap(){
+  if(previousNameMap) return previousNameMap;
+  if(previousNameMapPromise) return previousNameMapPromise;
+  previousNameMapPromise = fetch(clubInfoCsvUrlFor()).then(r => r.text()).then(text => {
+    const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+    previousNameMap = buildPreviousNameMap(rows);
+    return previousNameMap;
+  }).catch(err => {
+    console.error("Previous name map fetch failed", err);
+    previousNameMap = {};
+    return previousNameMap;
+  });
+  return previousNameMapPromise;
+}
+
+// Same as teamLink(), but for historical pages: if the name shown was a team's old
+// name at the time, link to that team's *current* profile instead of a dead end,
+// while still displaying the historical name as written in that season's data.
+function histTeamLink(name){
+  if(!name) return "—";
+  const resolved = previousNameMap && previousNameMap[name.toUpperCase()];
+  if(resolved) return `<a href="#team=${encodeURIComponent(resolved)}" class="team-link">${name}</a>`;
+  return teamLink(name);
+}
+
 // ---------- Team trophies — reuses the Hall of Fame's own HONOUR_ROLL data rather
 // than parsing yet another sheet region, so it always matches what the Hall of Fame
 // page shows. parseHonourEntries already handles both single-winner seasons and the
@@ -4316,7 +4376,7 @@ function histDivisionTableHtml(division){
       <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     </tr></thead><tbody>
       ${division.teams.map(t=>`<tr style="${histDivStatusStyle(t.status)}">
-        <td>${t.pos}</td><td style="text-align:left;">${teamLink(t.team)}</td><td class="pts">${t.pts}</td>
+        <td>${t.pos}</td><td style="text-align:left;">${histTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
       </tr>`).join("")}
     </tbody></table></div>
@@ -4328,7 +4388,7 @@ function histRoddyTableHtml(roddy){
   return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
       <th>Pos</th><th style="text-align:left;">Team</th><th>Div</th><th>Total</th>
     </tr></thead><tbody>
-      ${roddy.map(e=>`<tr><td>${e.pos}</td><td class="roddy-team" style="text-align:left;">${teamLink(e.team)}</td>
+      ${roddy.map(e=>`<tr><td>${e.pos}</td><td class="roddy-team" style="text-align:left;">${histTeamLink(e.team)}</td>
         <td><span class="roddy-div-tag" style="background:${getDivisionColorByLabel(e.division)};">${getDivisionShortLabel(e.division)}</span></td>
         <td class="pts">${e.total}</td></tr>`).join("")}
     </tbody></table></div>`;
@@ -4341,7 +4401,7 @@ function histEclGroupTableHtml(group){
       <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     </tr></thead><tbody>
       ${group.teams.map(t=>`<tr style="${histEclStatusStyle(t.status)}">
-        <td>${t.pos}</td><td style="text-align:left;">${teamLink(t.team)}</td><td class="pts">${t.pts}</td>
+        <td>${t.pos}</td><td style="text-align:left;">${histTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.diff}</td>
       </tr>`).join("")}
     </tbody></table></div>
@@ -4387,9 +4447,9 @@ function histFacupFixtureCardHtml(f){
     : `<span class="upcoming">vs</span>`;
   const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:10px;text-transform:uppercase;">Replay</span>` : "";
   return `<div class="facup-card">
-    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${teamLink(h.name)}</span>${histDivPill(h.tag)}</div>
+    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(h.name)}</span>${histDivPill(h.tag)}</div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${teamLink(a.name)}</span>${replayTag}</div>
+    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${histTeamLink(a.name)}</span>${replayTag}</div>
   </div>`;
 }
 
@@ -4405,9 +4465,9 @@ function histEclFixtureCardHtml(f){
   const isDraw = played && homeNum === awayNum;
   const resultColor = (won) => !played ? "#F5F5F0" : won ? "#4ADE80" : isDraw ? "#FBBF24" : "#F87171";
   return `<div style="background:#1c1c1c;border:1px solid #333;border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
-    <span style="display:block;min-width:0;text-align:right;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(homeWon)};font-weight:${homeWon ? "700" : "400"};">${teamLink(f.home)}</span>
+    <span style="display:block;min-width:0;text-align:right;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(homeWon)};font-weight:${homeWon ? "700" : "400"};">${histTeamLink(f.home)}</span>
     <span style="font-weight:700;color:#ffdd00;white-space:nowrap;">${scoreText}</span>
-    <span style="display:block;min-width:0;text-align:left;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(awayWon)};font-weight:${awayWon ? "700" : "400"};">${teamLink(f.away)}</span>
+    <span style="display:block;min-width:0;text-align:left;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(awayWon)};font-weight:${awayWon ? "700" : "400"};">${histTeamLink(f.away)}</span>
   </div>`;
 }
 
@@ -4501,7 +4561,10 @@ async function loadHistorySeason(seasonKey){
   el.innerHTML = "Loading " + season.label + " data…";
   historyActiveDivKey = "d1";
   try{
-    const res = await fetch(historyCsvUrlFor(season.gid));
+    const [res] = await Promise.all([
+      fetch(historyCsvUrlFor(season.gid)),
+      loadPreviousNameMap()
+    ]);
     if(!res.ok) throw new Error("HTTP " + res.status);
     const csvText = await res.text();
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
@@ -4510,7 +4573,8 @@ async function loadHistorySeason(seasonKey){
     document.getElementById('historyUpdated').textContent = season.label + " season";
 
     document.getElementById('debugOut').textContent =
-      "History debug: " + JSON.stringify(historyDebug, null, 2);
+      "History debug: " + JSON.stringify(historyDebug, null, 2) + "\n\n" +
+      "Previous name map: " + JSON.stringify(previousNameMap, null, 2);
   }catch(err){
     console.error(err);
     el.className = "state-msg error";
