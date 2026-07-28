@@ -3465,8 +3465,15 @@ async function loadTeamProfile(teamName){
     }).catch(err => console.error("Trophy notes fetch failed", err))
   );
 
+  let sideLeagueHonours = [];
+  fetches.push(
+    loadHonourBoardData().then(data => {
+      sideLeagueHonours = findSideLeagueHonours(data, teamName);
+    }).catch(err => console.error("Side league honours fetch failed", err))
+  );
+
   await Promise.all(fetches);
-  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote });
+  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours });
 }
 
 // ---------- Historical Record (dedicated tab, gid 1444343417) ----------
@@ -4040,6 +4047,20 @@ function teamTrophiesHtml(trophies, trophyNote){
     </div>${noteHtml}`;
 }
 
+function sideLeagueHonoursHtml(honours){
+  if(!honours || !honours.length){
+    return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Side Leagues Honours</h2></div>
+      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No Side Leagues honours yet.</p>`;
+  }
+  return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Side Leagues Honours</h2></div>
+    <div style="max-width:480px;">
+      ${honours.map(h => `<div style="display:flex;justify-content:space-between;gap:10px;font-family:'Barlow',sans-serif;font-size:13px;padding:7px 0;border-bottom:1px dashed var(--line-light);">
+        <span style="color:#6b7c73;flex-shrink:0;">${h.year}</span>
+        <span style="text-align:right;font-weight:600;">${h.competition}${h.subComp ? ", " + h.subComp : ""}</span>
+      </div>`).join("")}
+    </div>`;
+}
+
 // Converts a team name into the matching logo filename convention:
 // lowercase, apostrophes/periods stripped, everything else -> hyphens.
 function teamLogoSlug(name){
@@ -4083,7 +4104,7 @@ function teamPlaceholderLogoDataUri(name){
 function renderTeamProfile(data){
   const container = document.getElementById('teamProfileContainer');
   container.className = "";
-  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote } = data;
+  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours } = data;
 
   const hasAnyData = !!(roddyEntry || divisionData
     || (facupSummary && facupSummary.length)
@@ -4092,7 +4113,8 @@ function renderTeamProfile(data){
     || (h2hRecords && h2hRecords.length)
     || (teamVsTeamOpponents && teamVsTeamOpponents.length)
     || (clubInfo && (clubInfo.manager || clubInfo.yearEntered || clubInfo.previousNames))
-    || (trophies && trophies.length));
+    || (trophies && trophies.length)
+    || (sideLeagueHonours && sideLeagueHonours.length));
 
   if(!hasAnyData){
     container.innerHTML = `<div class="state-msg error">Couldn't find "${teamName}" anywhere in the league. Check the Debug panel below.</div>`;
@@ -4176,6 +4198,7 @@ function renderTeamProfile(data){
   html += historicalRecordHtml(historicalRecords);
   html += h2hRecordHtml(h2hRecords);
   html += teamVsTeamSectionHtml(teamName, teamVsTeamOpponents);
+  html += sideLeagueHonoursHtml(sideLeagueHonours);
 
   container.innerHTML = html;
 
@@ -4934,6 +4957,46 @@ function parseHonourBoard(rows){
   };
 }
 
+// Cached loader so both the Honour Board tab and Team Profile pages (which need to
+// find a team's own wins) can reuse the same fetch instead of hitting the sheet twice.
+let honourBoardDataCache = null;
+let honourBoardDataPromise = null;
+async function loadHonourBoardData(){
+  if(honourBoardDataCache) return honourBoardDataCache;
+  if(honourBoardDataPromise) return honourBoardDataPromise;
+  const league = SIDE_LEAGUES.find(s => s.key === "honourboard");
+  honourBoardDataPromise = fetch(sideLeagueCsvUrlFor(league)).then(r => r.text()).then(text => {
+    const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+    honourBoardDataCache = parseHonourBoard(rows);
+    return honourBoardDataCache;
+  }).catch(err => {
+    console.error("Honour board fetch failed", err);
+    honourBoardDataCache = { years: ["2023","2024","2025","2026"], competitions: [], debug: {} };
+    return honourBoardDataCache;
+  });
+  return honourBoardDataPromise;
+}
+
+// Finds every year/competition/sub-competition a given team won, for the Team
+// Profile "Side Leagues Honours" section.
+function findSideLeagueHonours(honourBoardData, teamName){
+  const wins = [];
+  const upperTeam = (teamName||"").toUpperCase();
+  honourBoardData.competitions.forEach(comp=>{
+    comp.subs.forEach(sub=>{
+      const yearVals = [sub.f, sub.g, sub.h, sub.i];
+      honourBoardData.years.forEach((year, idx)=>{
+        const winner = yearVals[idx];
+        if(winner && winner.toUpperCase() === upperTeam){
+          wins.push({ year, competition: comp.name, subComp: sub.name });
+        }
+      });
+    });
+  });
+  wins.sort((a,b)=> b.year.localeCompare(a.year));
+  return wins;
+}
+
 function renderHonourBoard(data){
   const el = document.getElementById('sideLeaguesContainer');
   if(!data.competitions.length){
@@ -4947,12 +5010,13 @@ function renderHonourBoard(data){
   const cards = data.competitions.map(comp => {
     const subsHtml = comp.subs.map(sub => {
       const yearVals = [sub.f, sub.g, sub.h, sub.i];
-      const yearLines = years.map((y,idx)=>
-        `<div class="honour-year-line"><span class="honour-year">${y}</span><span class="honour-winner">${yearVals[idx] || "—"}</span></div>`
+      const yearLines = years.map((y,idx)=> yearVals[idx]
+        ? `<div class="honour-year-line"><span class="honour-year">${y}</span><span class="honour-winner">${yearVals[idx]}</span></div>`
+        : ""
       ).join("");
       return `<div class="honour-subcomp">
         ${sub.name ? `<div class="honour-subcomp-name">${sub.name}</div>` : ""}
-        ${yearLines}
+        ${yearLines || `<div class="honour-year-line" style="color:#a8a296;">No winners recorded</div>`}
       </div>`;
     }).join("");
     return `<div class="honour-board-card">
@@ -4973,11 +5037,7 @@ async function loadSideLeague(leagueKey){
 
   if(league.isHonourBoard){
     try{
-      const res = await fetch(sideLeagueCsvUrlFor(league));
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-      const data = parseHonourBoard(rows);
+      const data = await loadHonourBoardData();
       renderHonourBoard(data);
       sideLeagueDebug = { honourBoard: data.debug };
       document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
