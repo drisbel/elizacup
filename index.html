@@ -100,6 +100,21 @@
   }
   .div-tab:hover{border-color:var(--amber);color:var(--chalk);}
   .div-tab.active{background:var(--amber);border-color:var(--amber);color:var(--ink);}
+  .div-nav-group{position:relative;}
+  .div-tab-caret{font-size:9px;margin-left:3px;opacity:0.8;}
+  .div-nav-dropdown{
+    display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:30;
+    background:var(--pitch-2);border:1px solid var(--line);border-radius:10px;
+    padding:6px;min-width:190px;box-shadow:0 10px 24px rgba(0,0,0,0.3);
+  }
+  .div-nav-dropdown.open{display:block;}
+  .div-nav-dropdown-item{
+    display:block;width:100%;text-align:left;font-family:'Barlow',sans-serif;
+    font-size:13px;font-weight:600;padding:8px 10px;border-radius:6px;border:none;
+    background:transparent;color:var(--muted);cursor:pointer;
+  }
+  .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
+  .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -948,21 +963,79 @@ let formRoundLabels = [];
 let roddyEntries = [];
 let roddyDebug = {};
 
+// Top nav layout: most items are single buttons, but Divisions (D1/2A/2B/3A/3B) and
+// Cups (Roddy/FA Cup/ECL) are grouped into dropdowns to keep the bar from overflowing.
+const NAV_LAYOUT = [
+  { type: "single", id: "home" },
+  { type: "single", id: "calendar" },
+  { type: "single", id: "teams", label: "Team Profiles" },
+  { type: "group", key: "divisions", label: "Divisions", ids: ["d1","d2a","d2b","d3a","d3b"] },
+  { type: "group", key: "cups", label: "Cups", ids: ["roddy","facup","ecl"] },
+  { type: "single", id: "honour" },
+  { type: "single", id: "stats" },
+  { type: "single", id: "history" },
+  { type: "single", id: "sideleagues" }
+];
+
+function closeAllNavDropdowns(){
+  document.querySelectorAll('.div-nav-dropdown.open').forEach(dd=>dd.classList.remove('open'));
+}
+document.addEventListener('click', closeAllNavDropdowns);
+
+function goToDivision(div){
+  currentDivision = div;
+  location.hash = div.id;
+  document.getElementById('divPill').textContent = div.pill;
+  applyDivisionTheme(div);
+  renderDivNav();
+  load();
+}
+
 function renderDivNav(){
   const nav = document.getElementById('divNav');
-  nav.innerHTML = DIVISIONS.map(d =>
-    `<button class="div-tab${(d.id===currentDivision.id || (d.id==="teams" && currentDivision.type==="teamprofile"))?' active':''}" data-id="${d.id}">${d.label}</button>`
-  ).join("");
-  nav.querySelectorAll('.div-tab').forEach(btn=>{
+  const isTeamProfile = currentDivision.type === "teamprofile";
+
+  nav.innerHTML = NAV_LAYOUT.map(item=>{
+    if(item.type === "single"){
+      const d = DIVISIONS.find(x=>x.id===item.id);
+      const isActive = d.id===currentDivision.id || (d.id==="teams" && isTeamProfile);
+      return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
+    }
+    const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
+    const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
+    return `<div class="div-nav-group">
+      <button class="div-tab${activeChild?' active':''}" data-group="${item.key}" type="button">${activeChild ? activeChild.pill : item.label}<span class="div-tab-caret">▾</span></button>
+      <div class="div-nav-dropdown" id="navDropdown-${item.key}">
+        ${groupDivisions.map(d=>`<button class="div-nav-dropdown-item${d.id===currentDivision.id?' active':''}" data-id="${d.id}" type="button">${d.label}</button>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+
+  nav.querySelectorAll('.div-tab[data-id]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const div = DIVISIONS.find(d=>d.id===btn.dataset.id);
       if(div.id === currentDivision.id) return;
-      currentDivision = div;
-      location.hash = div.id;
-      document.getElementById('divPill').textContent = div.pill;
-      applyDivisionTheme(div);
-      renderDivNav();
-      load();
+      goToDivision(div);
+    });
+  });
+
+  nav.querySelectorAll('.div-nav-dropdown-item').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      closeAllNavDropdowns();
+      const div = DIVISIONS.find(d=>d.id===btn.dataset.id);
+      if(div.id === currentDivision.id) return;
+      goToDivision(div);
+    });
+  });
+
+  nav.querySelectorAll('.div-tab[data-group]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const dd = document.getElementById('navDropdown-' + btn.dataset.group);
+      const isOpen = dd.classList.contains('open');
+      closeAllNavDropdowns();
+      if(!isOpen) dd.classList.add('open');
     });
   });
 }
@@ -4528,13 +4601,14 @@ function parseFplTable(rows, titleText){
 // Gameweek fixtures — now isolated column blocks (Team1/Score1/Score2/Team2), one
 // block per league, with a "GW1"/"GW2" label row in the first column marking each
 // gameweek, fixtures immediately below it (same pattern as the ECL knockout stage).
-function parseFplFixtures(rows, base){
+function parseFplFixtures(rows, base, labelTest){
+  const test = labelTest || (v => /^GW\s*\d+/i.test(v));
   const gameweeks = [];
   const rawDump = [];
   let current = null;
   for(let r=0; r<rows.length; r++){
     const c0 = cell(rows[r]||[], base);
-    if(/^GW\s*\d+/i.test(c0)){
+    if(test(c0)){
       current = { name: c0.toUpperCase().replace(/\s+/g,' ').trim(), fixtures: [] };
       gameweeks.push(current);
       continue;
@@ -4551,6 +4625,10 @@ function parseFplFixtures(rows, base){
   }
   return { gameweeks, rawDump };
 }
+
+// AFL Supercoach round labels: "Round 1".."Round 20", then finals stages — none of
+// which use the "GW" prefix the FPL blocks use.
+const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
 
 function sideLeagueTableHtml(table){
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
@@ -4706,24 +4784,18 @@ async function loadSideLeague(leagueKey){
 
     if(league.singleTable){
       const table = parseFplTable(rows, league.titleText);
-      const fxA = parseFplFixtures(rows, 33); // AH
-      const fxB = parseFplFixtures(rows, 40); // AO
-      // Both blocks are the same league, just alternating rounds — merge and sort by
-      // round number instead of treating them as two separate divisions.
-      const gameweeks = [...fxA.gameweeks, ...fxB.gameweeks].sort((a,b)=>{
-        const na = parseInt((a.name.match(/\d+/)||["0"])[0],10);
-        const nb = parseInt((b.name.match(/\d+/)||["0"])[0],10);
-        return na - nb;
-      });
+      // AFL Supercoach fixtures now live in one continuous block: AK=Team1, AL=Team1
+      // score, AM=Team2 score, AN=Team2 — 20 rounds followed by Quarter/Semi/
+      // Preliminary/Final, not the GW-labelled two-block layout FPL uses.
+      const fx = parseFplFixtures(rows, 36, v => AFL_ROUND_RE.test(v)); // AK
 
-      sideLeagueData = { singleTable: true, table, fx: { gameweeks }, label: league.label };
+      sideLeagueData = { singleTable: true, table, fx, label: league.label };
       sideLeagueActiveRound = {};
       renderSideLeagueContent();
 
       sideLeagueDebug = {
         table: table.debug,
-        fixturesBlockA: { gameweeksFound: fxA.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: fxA.rawDump },
-        fixturesBlockB: { gameweeksFound: fxB.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: fxB.rawDump }
+        fixtures: { gameweeksFound: fx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: fx.rawDump }
       };
       document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
       return;
