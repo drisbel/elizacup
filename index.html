@@ -43,7 +43,6 @@
     color:var(--chalk);
     padding:28px 24px 0;
     position:relative;
-    overflow:hidden;
   }
   header.top::before{
     content:"";
@@ -4784,10 +4783,10 @@ async function loadSideLeague(leagueKey){
 
     if(league.singleTable){
       const table = parseFplTable(rows, league.titleText);
-      // AFL Supercoach fixtures now live in one continuous block: AK=Team1, AL=Team1
-      // score, AM=Team2 score, AN=Team2 — 20 rounds followed by Quarter/Semi/
+      // AFL Supercoach fixtures live in one continuous block: AH=Team1, AI=Team1
+      // score, AJ=Team2 score, AK=Team2 — 20 rounds followed by Quarter/Semi/
       // Preliminary/Final, not the GW-labelled two-block layout FPL uses.
-      const fx = parseFplFixtures(rows, 36, v => AFL_ROUND_RE.test(v)); // AK
+      const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
 
       sideLeagueData = { singleTable: true, table, fx, label: league.label };
       sideLeagueActiveRound = {};
