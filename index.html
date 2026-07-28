@@ -114,7 +114,11 @@
   }
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
-  table.honour-board-table tbody tr.honour-sub-row{background:rgba(0,0,0,0.02);}
+  .honour-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+  .honour-board-card{border:1px solid var(--line-light);border-radius:8px;padding:12px 14px;background:#fff;}
+  .honour-board-card h4{font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:0 0 8px;color:var(--pitch);}
+  .honour-board-card table{width:100%;}
+  .honour-board-card th,.honour-board-card td{font-size:12px;padding:4px 3px;}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -4887,58 +4891,65 @@ function renderSideLeagueTabs(activeKey){
 
 // Honour Board: D8:H62 on the Side Leagues sheet. D = competition name (blank on
 // sub-comp rows, since some competitions — e.g. BBL — split into League/Finals/
-// Overall winners below the main name). E:G are season/result columns, H a further
-// column whose exact meaning we're confirming from real data via the debug panel.
+// Overall winners below the main name). E:H = winner for 2023/2024/2025/2026.
 function parseHonourBoard(rows){
   const startRow = 7, endRow = 61; // 0-indexed: sheet rows 8-62
   const headerRow = rows[startRow] || [];
   const headerCells = [cell(headerRow,4), cell(headerRow,5), cell(headerRow,6), cell(headerRow,7)];
   const hasHeader = headerCells.some(Boolean);
   const dataStart = hasHeader ? startRow + 1 : startRow;
+  const years = hasHeader ? headerCells : ["2023","2024","2025","2026"];
 
-  const entries = [];
+  const competitions = [];
   const rawDump = [];
-  let lastComp = "";
+  let current = null;
   for(let r=dataStart; r<=endRow && r<rows.length; r++){
     const row = rows[r] || [];
     const d = cell(row,3), e = cell(row,4), f = cell(row,5), g = cell(row,6), h = cell(row,7);
     if(!d && !e && !f && !g && !h) continue;
     rawDump.push({ row: r+1, D:d, E:e, F:f, G:g, H:h });
-    if(d) lastComp = d;
-    entries.push({ competition: lastComp, isSubRow: !d, e, f, g, h });
+    if(d){
+      current = { name: d, rows: [] };
+      competitions.push(current);
+    }
+    if(!current) continue;
+    current.rows.push({ e, f, g, h });
   }
 
   return {
-    header: hasHeader ? headerCells : null,
-    entries,
-    debug: { headerRow: hasHeader ? startRow+1 : null, headerCells, entriesFound: entries.length, rawDump }
+    years,
+    competitions,
+    debug: { headerRow: hasHeader ? startRow+1 : null, headerCells, competitionsFound: competitions.length, rawDump }
   };
 }
 
 function renderHonourBoard(data){
   const el = document.getElementById('sideLeaguesContainer');
-  if(!data.entries.length){
+  if(!data.competitions.length){
     el.className = "state-msg";
     el.innerHTML = "No Honour Board data found. Check the Debug panel below.";
     return;
   }
   el.className = "";
-  const h = data.header || [];
-  let rowsHtml = "";
-  let lastComp = null;
-  data.entries.forEach(entry=>{
-    const showName = entry.competition !== lastComp;
-    lastComp = entry.competition;
-    rowsHtml += `<tr class="${entry.isSubRow ? 'honour-sub-row' : ''}">
-      <td style="text-align:left;font-weight:${showName ? '700' : '400'};${entry.isSubRow ? 'padding-left:22px;color:#8a9990;' : ''}">${showName ? entry.competition : ""}</td>
-      <td>${entry.e || "—"}</td><td>${entry.f || "—"}</td><td>${entry.g || "—"}</td><td>${entry.h || "—"}</td>
-    </tr>`;
-  });
+  const years = data.years;
+
+  const cards = data.competitions.map(comp => {
+    const multiRow = comp.rows.length > 1;
+    const rowsHtml = comp.rows.map((row,i) => `<tr>
+        ${multiRow ? `<td style="text-align:left;color:#8a9990;font-size:11px;">Result ${i+1}</td>` : ""}
+        <td>${row.e || "—"}</td><td>${row.f || "—"}</td><td>${row.g || "—"}</td><td>${row.h || "—"}</td>
+      </tr>`).join("");
+    return `<div class="honour-board-card">
+      <h4>${comp.name}</h4>
+      <table class="standings compact"><thead><tr>
+        ${multiRow ? "<th></th>" : ""}
+        <th>${years[0]}</th><th>${years[1]}</th><th>${years[2]}</th><th>${years[3]}</th>
+      </tr></thead><tbody>${rowsHtml}</tbody></table>
+    </div>`;
+  }).join("");
+
   el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Side Leagues Honour Board</h2></div>
-    <div class="table-wrap"><table class="standings compact honour-board-table"><thead><tr>
-      <th style="text-align:left;">Competition</th>
-      <th>${h[0] || "E"}</th><th>${h[1] || "F"}</th><th>${h[2] || "G"}</th><th>${h[3] || "H"}</th>
-    </tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+    <div class="honour-board-grid">${cards}</div>`;
 }
 
 async function loadSideLeague(leagueKey){
