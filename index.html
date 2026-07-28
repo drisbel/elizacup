@@ -5043,71 +5043,78 @@ function renderHonourBoard(data){
 // Header row 85, entries rows 86-99, one row per participant. C = participant name,
 // then 3-column round blocks: D = team picked, E = opponent, F = status (WIN/LOSS).
 // Australia Cup LMS (Last Man Standing tipping) table on the Side Leagues sheet.
-// Header row holds round labels starting "ROUND OF 32 - PHASE 1", participant name
-// one column to its left, then 3-column round blocks: pick / opponent / status.
-// We locate this by searching for the label text rather than trusting a fixed row
-// number — rows hidden above this table get silently dropped from the CSV export,
-// which shifts every row index up and makes a hardcoded row number unreliable.
+// Located by searching for the unique title text "AUSTRALIA CUP LAST MAN STANDING"
+// rather than the round labels — those repeat in an old leftover table elsewhere in
+// the sheet, which is what caused the wrong table to be picked up previously. Once
+// found: title row, then header row directly below it, then one row per team below
+// that. Team name in column C; each round is a 3-column block (skip / tip / status).
 function parseLmsCup(rows){
-  let headerRowIdx = -1, firstColIdx = -1;
-  for(let r=0; r<rows.length && headerRowIdx===-1; r++){
+  let titleRowIdx = -1, nameCol = -1;
+  for(let r=0; r<rows.length && titleRowIdx===-1; r++){
     const row = rows[r] || [];
-    for(let c=2; c<row.length && c<=40; c++){
-      if(/ROUND OF 32/i.test(cell(row,c))){ headerRowIdx = r; firstColIdx = c; break; }
+    for(let c=0; c<row.length && c<=40; c++){
+      if(/AUSTRALIA CUP LAST MAN STANDING/i.test(cell(row,c))){ titleRowIdx = r; nameCol = c; break; }
     }
   }
 
-  if(headerRowIdx === -1){
+  if(titleRowIdx === -1){
     return {
       rounds: [], participants: [],
-      debug: { headerRowFound: false, note: "Couldn't find 'ROUND OF 32' anywhere in the sheet.",
+      debug: { titleFound: false, note: "Couldn't find 'AUSTRALIA CUP LAST MAN STANDING' anywhere in the sheet.",
         rawGridDump: rows.slice(0, 20).map((row,r)=>({ sheetRow: r+1, C: cell(row,2), D: cell(row,3), E: cell(row,4), F: cell(row,5) })) }
     };
   }
 
+  const headerRowIdx = titleRowIdx + 1;
+  const dataStartIdx = titleRowIdx + 2;
   const headerRow = rows[headerRowIdx] || [];
-  const nameCol = firstColIdx - 1;
+
+  // Round blocks are 3 columns wide (skip / tip / status) starting one column after
+  // the name column, e.g. name=C, block1 = D(skip)/E(tip)/F(status), block2 =
+  // G(skip)/H(tip)/I(status), etc. Keep adding blocks while the header row has text
+  // in the "tip" position.
   const rounds = [];
-  let blockStart = firstColIdx;
-  while(cell(headerRow, blockStart) && rounds.length < 12){
-    rounds.push({ name: cell(headerRow, blockStart), colD: blockStart, colE: blockStart+1, colF: blockStart+2 });
+  let blockStart = nameCol + 1;
+  while(cell(headerRow, blockStart+1) && rounds.length < 12){
+    rounds.push({ name: cell(headerRow, blockStart+1) || cell(headerRow, blockStart), colTip: blockStart+1, colStatus: blockStart+2 });
     blockStart += 3;
   }
 
   const participants = [];
-  for(let r = headerRowIdx+1; r < rows.length; r++){
+  for(let r = dataStartIdx; r < rows.length; r++){
     const row = rows[r] || [];
     const name = cell(row, nameCol);
     if(!name) continue;
 
     const picks = rounds.map(rd => ({
       round: rd.name,
-      pick: cell(row, rd.colD),
-      opponent: cell(row, rd.colE),
-      result: cell(row, rd.colF).toUpperCase()
+      pick: cell(row, rd.colTip),
+      opponent: "",
+      result: cell(row, rd.colStatus).toUpperCase()
     }));
 
     participants.push({ name, picks });
   }
 
-  // Unprocessed dump: header row plus the next 16 rows, name column + first 3
+  // Unprocessed dump: title row through the next 18 rows, name column + first 3
   // round blocks, exactly as read.
   const rawGridDump = [];
-  for(let r = headerRowIdx; r < Math.min(rows.length, headerRowIdx+17); r++){
+  for(let r = titleRowIdx; r < Math.min(rows.length, titleRowIdx+18); r++){
     const row = rows[r] || [];
     rawGridDump.push({
       sheetRow: r+1,
       name: cell(row, nameCol),
-      block1: [cell(row, firstColIdx), cell(row, firstColIdx+1), cell(row, firstColIdx+2)],
-      block2: [cell(row, firstColIdx+3), cell(row, firstColIdx+4), cell(row, firstColIdx+5)],
-      block3: [cell(row, firstColIdx+6), cell(row, firstColIdx+7), cell(row, firstColIdx+8)]
+      block1: [cell(row, nameCol+1), cell(row, nameCol+2), cell(row, nameCol+3)],
+      block2: [cell(row, nameCol+4), cell(row, nameCol+5), cell(row, nameCol+6)],
+      block3: [cell(row, nameCol+7), cell(row, nameCol+8), cell(row, nameCol+9)]
     });
   }
 
   return {
     rounds: rounds.map(r=>r.name),
     participants,
-    debug: { headerRow: headerRowIdx+1, roundsDetected: rounds.map(r=>r.name), participantsFound: participants.length, rawGridDump }
+    debug: { titleFound: true, titleRow: titleRowIdx+1, headerRow: headerRowIdx+1, dataStartRow: dataStartIdx+1,
+      roundsDetected: rounds.map(r=>r.name), participantsFound: participants.length, rawGridDump }
   };
 }
 
