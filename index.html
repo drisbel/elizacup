@@ -4198,9 +4198,10 @@ function parseHistoricalSeason(rows){
 
 function histDivStatusStyle(status){
   const s = (status||"").toUpperCase();
-  if(s.includes("WINNER")) return "background:rgba(31,138,76,0.16);border-left:4px solid #1F8A4C;";
-  if(s.includes("PROMOTED")) return "background:rgba(31,138,76,0.10);border-left:4px solid #1F8A4C;";
-  if(s.includes("PLAYOFF")) return "background:rgba(201,154,46,0.14);border-left:4px solid #C99A2E;";
+  if(s.includes("WINNER")) return "background:rgba(20,83,45,0.20);border-left:4px solid #14532D;";
+  if(s.includes("PROMOTED")) return "background:rgba(74,222,128,0.20);border-left:4px solid #4ADE80;";
+  if(s.includes("PLAYOFF")) return "background:rgba(234,179,8,0.18);border-left:4px solid #EAB308;";
+  if(s.includes("FINALS")) return "background:rgba(37,99,235,0.16);border-left:4px solid #2563EB;";
   if(s.includes("RELEGATED")) return "background:rgba(188,53,50,0.12);border-left:4px solid var(--red);";
   return "";
 }
@@ -4215,8 +4216,10 @@ function histEclStatusStyle(status){
 
 function histStatusLegendHtml(){
   return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">
-    <span><span style="display:inline-block;width:10px;height:10px;background:#1F8A4C;border-radius:2px;margin-right:4px;"></span>Winner / Promoted</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#C99A2E;border-radius:2px;margin-right:4px;"></span>Playoffs</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#14532D;border-radius:2px;margin-right:4px;"></span>Winner</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#4ADE80;border-radius:2px;margin-right:4px;"></span>Automatic Promotion</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#EAB308;border-radius:2px;margin-right:4px;"></span>Promotion via playoff/finals</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:4px;"></span>Finals/Playoffs</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);border-radius:2px;margin-right:4px;"></span>Relegated</span>
   </div>`;
 }
