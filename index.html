@@ -130,17 +130,6 @@
   .honour-year-line:last-child{border-bottom:none;}
   .honour-year{color:#8a9990;flex-shrink:0;}
   .honour-winner{font-weight:600;text-align:right;}
-  .lms-pick-list{display:flex;flex-direction:column;gap:6px;max-width:560px;}
-  .lms-pick-row{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:9px 12px;
-    font-family:'Barlow',sans-serif;
-  }
-  .lms-participant{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .lms-pick-col{flex:1.4;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
-  .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);}
-  .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;}
-  .lms-result{font-weight:700;font-size:11px;padding:3px 10px;border-radius:12px;flex-shrink:0;}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -4690,7 +4679,6 @@ const SIDE_LEAGUES = [
   { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
-  { key: "auscup", label: "Australia Cup LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "241870503", isLmsCup: true },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
@@ -4936,18 +4924,40 @@ function renderSideLeagueTabs(activeKey){
   });
 }
 
-// Honour Board: D8:I51 on the Side Leagues sheet. Row 8 = header (years in F:I),
-// data starts row 9. D = competition name (blank on sub-comp continuation rows),
-// E = sub-competition (League/Finals/Overall etc.), F:I = winner per year.
+// Honour Board on the Side Leagues sheet. D = competition name (blank on sub-comp
+// continuation rows), E = sub-competition (League/Finals/Overall etc.), F:I = winner
+// per year. The header row (years in F:I) is located by searching for 4 consecutive
+// year-shaped values rather than trusting a fixed row number — rows hidden above
+// this table get dropped from the CSV export, which shifts every row index down
+// and makes a hardcoded row number unreliable (this is what caused row 14's content
+// to be misread as the header).
 function parseHonourBoard(rows){
-  const headerRowIdx = 7, dataStart = 8, endRow = 50; // 0-indexed: header row 8, data rows 9-51
+  const yearRe = /^(19|20)\d{2}$/;
+  let headerRowIdx = -1;
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    if(yearRe.test(cell(row,5)) && yearRe.test(cell(row,6)) && yearRe.test(cell(row,7)) && yearRe.test(cell(row,8))){
+      headerRowIdx = r;
+      break;
+    }
+  }
+
+  if(headerRowIdx === -1){
+    return {
+      years: ["", "", "", ""], competitions: [],
+      debug: { headerRowFound: false, note: "Couldn't find 4 consecutive year values in columns F:I anywhere in the sheet.",
+        rawDump: rows.slice(0, 20).map((row,r)=>({ row: r+1, D: cell(row,3), E: cell(row,4), F: cell(row,5), G: cell(row,6), H: cell(row,7), I: cell(row,8) })) }
+    };
+  }
+
+  const dataStart = headerRowIdx + 1;
   const headerRow = rows[headerRowIdx] || [];
   const years = [cell(headerRow,5), cell(headerRow,6), cell(headerRow,7), cell(headerRow,8)]; // F,G,H,I
 
   const competitions = [];
   const rawDump = [];
   let current = null;
-  for(let r=dataStart; r<=endRow && r<rows.length; r++){
+  for(let r=dataStart; r<rows.length; r++){
     const row = rows[r] || [];
     const d = cell(row,3), e = cell(row,4), f = cell(row,5), g = cell(row,6), h = cell(row,7), i = cell(row,8);
     if(!d && !e && !f && !g && !h && !i) continue;
@@ -4963,7 +4973,7 @@ function parseHonourBoard(rows){
   return {
     years,
     competitions,
-    debug: { headerRow: headerRowIdx+1, headerCells: years, dataStartRow: dataStart+1, competitionsFound: competitions.length, rawDump }
+    debug: { headerRowFound: true, headerRow: headerRowIdx+1, headerCells: years, dataStartRow: dataStart+1, competitionsFound: competitions.length, rawDump }
   };
 }
 
@@ -5039,113 +5049,6 @@ function renderHonourBoard(data){
     <div class="honour-board-grid">${cards}</div>`;
 }
 
-// Australia Cup LMS (Last Man Standing tipping): C85:U99 on the Side Leagues sheet.
-// Header row 85, entries rows 86-99, one row per participant. C = participant name,
-// then 3-column round blocks: D = team picked, E = opponent, F = status (WIN/LOSS).
-// Australia Cup LMS (Last Man Standing tipping) table on the Side Leagues sheet.
-// Located by searching for the unique title text "AUSTRALIA CUP LAST MAN STANDING"
-// (row 6) rather than round labels, since those can repeat elsewhere in the sheet.
-// Header row (round names, e.g. "Round 1") sits directly below the title; each round
-// is now a single column (no more separate opponent/status columns — the tip cell
-// is the full pick). Team name in column C, data rows start two rows below the title.
-function parseLmsCup(rows){
-  let titleRowIdx = -1, nameCol = -1;
-  for(let r=0; r<rows.length && titleRowIdx===-1; r++){
-    const row = rows[r] || [];
-    for(let c=0; c<row.length && c<=40; c++){
-      if(/AUSTRALIA CUP LAST MAN STANDING/i.test(cell(row,c))){ titleRowIdx = r; nameCol = c; break; }
-    }
-  }
-
-  if(titleRowIdx === -1){
-    return {
-      rounds: [], participants: [],
-      debug: { titleFound: false, note: "Couldn't find 'AUSTRALIA CUP LAST MAN STANDING' anywhere in the sheet.",
-        rawGridDump: rows.slice(0, 20).map((row,r)=>({ sheetRow: r+1, C: cell(row,2), D: cell(row,3), E: cell(row,4), F: cell(row,5) })) }
-    };
-  }
-
-  const headerRowIdx = titleRowIdx + 1;
-  const dataStartIdx = titleRowIdx + 2;
-  const headerRow = rows[headerRowIdx] || [];
-
-  // Each round is now a single column. Scan a generous range after the name column
-  // and take every column with header text as one round — this doesn't assume the
-  // round columns are contiguous, so a spacer column (like D before E) is fine.
-  const rounds = [];
-  for(let c = nameCol+1; c <= nameCol+30; c++){
-    const label = cell(headerRow, c);
-    if(label) rounds.push({ name: label, col: c });
-  }
-
-  const participants = [];
-  for(let r = dataStartIdx; r < rows.length; r++){
-    const row = rows[r] || [];
-    const name = cell(row, nameCol);
-    if(!name) continue;
-
-    const picks = rounds.map(rd => ({ round: rd.name, pick: cell(row, rd.col) }));
-    participants.push({ name, picks });
-  }
-
-  // Unprocessed dump: title row through the next 18 rows, name column + first 6
-  // round columns, exactly as read.
-  const roundCols = rounds.slice(0,6).map(r=>r.col);
-  const rawGridDump = [];
-  for(let r = titleRowIdx; r < Math.min(rows.length, titleRowIdx+18); r++){
-    const row = rows[r] || [];
-    const entry = { sheetRow: r+1, name: cell(row, nameCol) };
-    roundCols.forEach((c,idx)=> entry["round" + (idx+1)] = cell(row, c));
-    rawGridDump.push(entry);
-  }
-
-  return {
-    rounds: rounds.map(r=>r.name),
-    participants,
-    debug: { titleFound: true, titleRow: titleRowIdx+1, headerRow: headerRowIdx+1, dataStartRow: dataStartIdx+1,
-      roundsDetected: rounds.map(r=>r.name), participantsFound: participants.length, rawGridDump }
-  };
-}
-
-let lmsActiveRoundIdx = 0;
-
-function renderLmsCup(data){
-  const el = document.getElementById('sideLeaguesContainer');
-  if(!data.participants.length){
-    el.className = "state-msg";
-    el.innerHTML = "No Australia Cup LMS data found. Check the Debug panel below.";
-    return;
-  }
-  el.className = "";
-  if(lmsActiveRoundIdx >= data.rounds.length) lmsActiveRoundIdx = data.rounds.length - 1;
-  if(lmsActiveRoundIdx < 0) lmsActiveRoundIdx = 0;
-
-  const tabsHtml = data.rounds.map((name, idx) =>
-    `<button class="round-tab${idx===lmsActiveRoundIdx?' active':''}" data-idx="${idx}">${name}</button>`
-  ).join("");
-
-  const rowsHtml = data.participants.map(p => {
-    const pk = p.picks[lmsActiveRoundIdx] || {};
-    return `<div class="lms-pick-row">
-      <span class="lms-participant">${p.name}</span>
-      <span class="lms-pick-col">
-        <span class="lms-pick">${pk.pick || "—"}</span>
-      </span>
-    </div>`;
-  }).join("");
-
-  el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
-    <div class="round-tabs">${tabsHtml}</div>
-    <div class="lms-pick-list">${rowsHtml}</div>`;
-
-  el.querySelectorAll('.round-tab').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      lmsActiveRoundIdx = parseInt(btn.dataset.idx, 10);
-      renderLmsCup(data);
-    });
-  });
-}
-
 async function loadSideLeague(leagueKey){
   const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
   const el = document.getElementById('sideLeaguesContainer');
@@ -5162,25 +5065,6 @@ async function loadSideLeague(leagueKey){
       console.error(err);
       el.className = "state-msg error";
       el.innerHTML = "Couldn't load Honour Board data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
-    }
-    return;
-  }
-
-  if(league.isLmsCup){
-    try{
-      const res = await fetch(sideLeagueCsvUrlFor(league));
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-      const data = parseLmsCup(rows);
-      lmsActiveRoundIdx = data.rounds.length - 1; // default to the most recent round
-      renderLmsCup(data);
-      sideLeagueDebug = { lmsCup: data.debug };
-      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
-    }catch(err){
-      console.error(err);
-      el.className = "state-msg error";
-      el.innerHTML = "Couldn't load Australia Cup LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
