@@ -114,6 +114,7 @@
   }
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
+  table.honour-board-table tbody tr.honour-sub-row{background:rgba(0,0,0,0.02);}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -932,6 +933,11 @@ function getDivisionFromHash(){
     const teamName = decodeURIComponent(raw.slice(5));
     return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#28427c", gid: null };
   }
+  if(raw.startsWith("sideleagues=")){
+    const leagueKey = decodeURIComponent(raw.slice("sideleagues=".length));
+    const base = DIVISIONS.find(d => d.id === "sideleagues");
+    return { ...base, sideLeagueKey: leagueKey };
+  }
   return DIVISIONS.find(d => d.id === raw) || DIVISIONS[0];
 }
 
@@ -973,7 +979,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "honour" },
   { type: "single", id: "stats" },
   { type: "single", id: "history" },
-  { type: "single", id: "sideleagues" }
+  { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
 function closeAllNavDropdowns(){
@@ -990,6 +996,16 @@ function goToDivision(div){
   load();
 }
 
+function goToSideLeague(key){
+  const base = DIVISIONS.find(d=>d.id==="sideleagues");
+  currentDivision = { ...base, sideLeagueKey: key };
+  location.hash = "sideleagues=" + encodeURIComponent(key);
+  document.getElementById('divPill').textContent = base.pill;
+  applyDivisionTheme(base);
+  renderDivNav();
+  load();
+}
+
 function renderDivNav(){
   const nav = document.getElementById('divNav');
   const isTeamProfile = currentDivision.type === "teamprofile";
@@ -999,6 +1015,17 @@ function renderDivNav(){
       const d = DIVISIONS.find(x=>x.id===item.id);
       const isActive = d.id===currentDivision.id || (d.id==="teams" && isTeamProfile);
       return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
+    }
+    if(item.type === "sidegroup"){
+      const isActive = currentDivision.type === "sideleagues";
+      const activeKey = isActive ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
+      const activeLeague = activeKey ? SIDE_LEAGUES.find(s=>s.key===activeKey) : null;
+      return `<div class="div-nav-group">
+        <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
+        <div class="div-nav-dropdown" id="navDropdown-${item.key}">
+          ${SIDE_LEAGUES.map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
+        </div>
+      </div>`;
     }
     const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
     const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
@@ -1018,7 +1045,7 @@ function renderDivNav(){
     });
   });
 
-  nav.querySelectorAll('.div-nav-dropdown-item').forEach(btn=>{
+  nav.querySelectorAll('.div-nav-dropdown-item[data-id]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       closeAllNavDropdowns();
@@ -1028,10 +1055,31 @@ function renderDivNav(){
     });
   });
 
+  nav.querySelectorAll('.div-nav-dropdown-item[data-side-key]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      closeAllNavDropdowns();
+      const key = btn.dataset.sideKey;
+      const currentKey = currentDivision.type === "sideleagues" ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
+      if(currentKey === key) return;
+      goToSideLeague(key);
+    });
+  });
+
   nav.querySelectorAll('.div-tab[data-group]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       const dd = document.getElementById('navDropdown-' + btn.dataset.group);
+      const isOpen = dd.classList.contains('open');
+      closeAllNavDropdowns();
+      if(!isOpen) dd.classList.add('open');
+    });
+  });
+
+  nav.querySelectorAll('.div-tab[data-sidegroup]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const dd = document.getElementById('navDropdown-' + btn.dataset.sidegroup);
       const isOpen = dd.classList.contains('open');
       closeAllNavDropdowns();
       if(!isOpen) dd.classList.add('open');
@@ -1345,8 +1393,10 @@ async function load(){
   }
 
   if(currentDivision.type === "sideleagues"){
-    renderSideLeagueTabs();
-    await loadSideLeague(SIDE_LEAGUES[0].key);
+    const initialKey = (currentDivision.sideLeagueKey && SIDE_LEAGUES.some(s=>s.key===currentDivision.sideLeagueKey))
+      ? currentDivision.sideLeagueKey : SIDE_LEAGUES[0].key;
+    renderSideLeagueTabs(initialKey);
+    await loadSideLeague(initialKey);
     return;
   }
 
@@ -4591,7 +4641,8 @@ async function loadHistorySeason(seasonKey){
 const SIDE_LEAGUES = [
   { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
-  { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" }
+  { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
+  { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
 function sideLeagueCsvUrlFor(league){
@@ -4822,17 +4873,72 @@ function renderSideLeagueFixtures(gw){
   container.innerHTML = gw.fixtures.map(fplFixtureCardHtml).join("");
 }
 
-function renderSideLeagueTabs(){
+function renderSideLeagueTabs(activeKey){
   const tabsEl = document.getElementById('sideLeaguesTabs');
-  tabsEl.innerHTML = SIDE_LEAGUES.map(s => `<button class="round-tab" data-key="${s.key}">${s.label}</button>`).join("");
+  const initial = (activeKey && SIDE_LEAGUES.some(s=>s.key===activeKey)) ? activeKey : SIDE_LEAGUES[0].key;
+  tabsEl.innerHTML = SIDE_LEAGUES.map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}</button>`).join("");
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      loadSideLeague(btn.dataset.key);
+      if(btn.dataset.key === initial) return;
+      goToSideLeague(btn.dataset.key);
     });
   });
-  if(tabsEl.firstChild) tabsEl.firstChild.classList.add('active');
+}
+
+// Honour Board: D8:H62 on the Side Leagues sheet. D = competition name (blank on
+// sub-comp rows, since some competitions — e.g. BBL — split into League/Finals/
+// Overall winners below the main name). E:G are season/result columns, H a further
+// column whose exact meaning we're confirming from real data via the debug panel.
+function parseHonourBoard(rows){
+  const startRow = 7, endRow = 61; // 0-indexed: sheet rows 8-62
+  const headerRow = rows[startRow] || [];
+  const headerCells = [cell(headerRow,4), cell(headerRow,5), cell(headerRow,6), cell(headerRow,7)];
+  const hasHeader = headerCells.some(Boolean);
+  const dataStart = hasHeader ? startRow + 1 : startRow;
+
+  const entries = [];
+  const rawDump = [];
+  let lastComp = "";
+  for(let r=dataStart; r<=endRow && r<rows.length; r++){
+    const row = rows[r] || [];
+    const d = cell(row,3), e = cell(row,4), f = cell(row,5), g = cell(row,6), h = cell(row,7);
+    if(!d && !e && !f && !g && !h) continue;
+    rawDump.push({ row: r+1, D:d, E:e, F:f, G:g, H:h });
+    if(d) lastComp = d;
+    entries.push({ competition: lastComp, isSubRow: !d, e, f, g, h });
+  }
+
+  return {
+    header: hasHeader ? headerCells : null,
+    entries,
+    debug: { headerRow: hasHeader ? startRow+1 : null, headerCells, entriesFound: entries.length, rawDump }
+  };
+}
+
+function renderHonourBoard(data){
+  const el = document.getElementById('sideLeaguesContainer');
+  if(!data.entries.length){
+    el.className = "state-msg";
+    el.innerHTML = "No Honour Board data found. Check the Debug panel below.";
+    return;
+  }
+  el.className = "";
+  const h = data.header || [];
+  let rowsHtml = "";
+  let lastComp = null;
+  data.entries.forEach(entry=>{
+    const showName = entry.competition !== lastComp;
+    lastComp = entry.competition;
+    rowsHtml += `<tr class="${entry.isSubRow ? 'honour-sub-row' : ''}">
+      <td style="text-align:left;font-weight:${showName ? '700' : '400'};${entry.isSubRow ? 'padding-left:22px;color:#8a9990;' : ''}">${showName ? entry.competition : ""}</td>
+      <td>${entry.e || "—"}</td><td>${entry.f || "—"}</td><td>${entry.g || "—"}</td><td>${entry.h || "—"}</td>
+    </tr>`;
+  });
+  el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Side Leagues Honour Board</h2></div>
+    <div class="table-wrap"><table class="standings compact honour-board-table"><thead><tr>
+      <th style="text-align:left;">Competition</th>
+      <th>${h[0] || "E"}</th><th>${h[1] || "F"}</th><th>${h[2] || "G"}</th><th>${h[3] || "H"}</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
 }
 
 async function loadSideLeague(leagueKey){
@@ -4840,6 +4946,25 @@ async function loadSideLeague(leagueKey){
   const el = document.getElementById('sideLeaguesContainer');
   el.className = "state-msg";
   el.innerHTML = "Loading " + league.label + " data…";
+
+  if(league.isHonourBoard){
+    try{
+      const res = await fetch(sideLeagueCsvUrlFor(league));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const data = parseHonourBoard(rows);
+      renderHonourBoard(data);
+      sideLeagueDebug = { honourBoard: data.debug };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load Honour Board data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
   try{
     const res = await fetch(sideLeagueCsvUrlFor(league));
     if(!res.ok) throw new Error("HTTP " + res.status);
