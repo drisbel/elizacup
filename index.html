@@ -295,6 +295,14 @@
   /* Table */
   .table-wrap{overflow-x:auto;overflow-y:visible;border:1px solid var(--line-light);border-radius:4px;}
   table.standings{width:100%;border-collapse:collapse;min-width:640px;}
+  /* Rows with no special status/tier coloring have no background set at all, which
+     left the sticky Pos+Team columns transparent on those rows — letting other
+     columns (like the Side League "Player" column) show through as the table
+     scrolls horizontally underneath them. Give every row an explicit opaque
+     background as a baseline; status/tier styles applied inline on a <tr> still
+     take precedence over this since they're more specific. */
+  table.standings tbody tr, table.roddy-table tbody tr{ background-color:#fff; }
+
   table.standings thead th{
     background:var(--pitch);
     color:var(--chalk);
@@ -4875,6 +4883,71 @@ function fplFixtureCardHtml(f){
 let sideLeagueData = null;
 let sideLeagueActiveDiv = "premier";
 let sideLeagueActiveRound = {};
+let sideLeagueFplViewMode = "table";
+
+// FPL Roddy leaderboard: separate gid on the Side Leagues sheet. Title row 5,
+// header row 6, entries rows 7-36. B=Pos, D=Team, I=Player, K=GW, L=Chip, N=Pts,
+// Q=Overall Rank, S:V=4 "chips remaining" columns (labels read from the header row
+// rather than assumed, since we don't know the exact chip names/order up front).
+function fplRoddyCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk/gviz/tq?tqx=out:csv&gid=638425443&cachebust=` + Date.now();
+}
+
+function parseFplRoddy(rows){
+  const headerRowIdx = 5; // row 6
+  const headerRow = rows[headerRowIdx] || [];
+  const chipCols = [18,19,20,21]; // S,T,U,V
+  const chipHeaders = chipCols.map(c => cell(headerRow, c));
+
+  const entries = [];
+  const rawDump = [];
+  for(let r=6; r<=35 && r<rows.length; r++){ // rows 7-36
+    const row = rows[r] || [];
+    const pos = cell(row, 1); // B
+    if(!pos) continue;
+    const entry = {
+      pos, team: cell(row,3), player: cell(row,8), gw: cell(row,10), chip: cell(row,11),
+      pts: cell(row,13), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
+    };
+    entries.push(entry);
+    rawDump.push({ row: r+1, ...entry });
+  }
+
+  return { chipHeaders, entries, debug: { headerRow: headerRowIdx+1, chipHeaders, entriesFound: entries.length, rawDump } };
+}
+
+let fplRoddyData = null;
+let fplRoddyPromise = null;
+async function loadFplRoddyData(){
+  if(fplRoddyData) return fplRoddyData;
+  if(fplRoddyPromise) return fplRoddyPromise;
+  fplRoddyPromise = fetch(fplRoddyCsvUrlFor()).then(r => r.text()).then(text => {
+    const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+    fplRoddyData = parseFplRoddy(rows);
+    return fplRoddyData;
+  }).catch(err => {
+    console.error("FPL Roddy fetch failed", err);
+    fplRoddyData = { chipHeaders: [], entries: [], debug: { error: String(err) } };
+    return fplRoddyData;
+  });
+  return fplRoddyPromise;
+}
+
+function fplRoddyTableHtml(data){
+  if(!data.entries.length) return `<p class="state-msg">No Roddy data found. Check the Debug panel below.</p>`;
+  const chipLabels = data.chipHeaders.map((h,i) => h || ("Chip " + (i+1)));
+  return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
+      <th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th>
+      <th>GW</th><th>Chip</th><th>Pts</th><th>Ovr Rank</th>
+      ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
+    </tr></thead><tbody>
+      ${data.entries.map(e=>`<tr>
+        <td>${e.pos}</td><td style="text-align:left;">${e.team}</td><td style="text-align:left;">${e.player || "—"}</td>
+        <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td><td>${e.ovrRank || "—"}</td>
+        ${e.chips.map(c=>`<td>${c ? "✓" : "—"}</td>`).join("")}
+      </tr>`).join("")}
+    </tbody></table></div>`;
+}
 
 function renderSideLeagueContent(){
   const el = document.getElementById('sideLeaguesContainer');
@@ -4897,7 +4970,36 @@ function renderSideLeagueContent(){
   const fx = isPremier ? sideLeagueData.premierFx : sideLeagueData.champFx;
   const label = isPremier ? "Eliza Premier League" : "Eliza Championship";
 
+  const viewToggleHtml = `
+    <div class="round-tabs" id="sideLeagueFplViewToggle" style="margin-bottom:8px;">
+      <button class="round-tab${sideLeagueFplViewMode==='table'?' active':''}" data-view="table">Table</button>
+      <button class="round-tab${sideLeagueFplViewMode==='roddy'?' active':''}" data-view="roddy">Roddy</button>
+    </div>`;
+
+  if(sideLeagueFplViewMode === "roddy"){
+    el.innerHTML = `${viewToggleHtml}
+      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Eliza FPL Roddy</h2></div>
+      <div id="fplRoddyContainer" class="state-msg">Loading Roddy leaderboard…</div>`;
+    el.querySelectorAll('#sideLeagueFplViewToggle .round-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(sideLeagueFplViewMode === btn.dataset.view) return;
+        sideLeagueFplViewMode = btn.dataset.view;
+        renderSideLeagueContent();
+      });
+    });
+    loadFplRoddyData().then(data => {
+      const container = document.getElementById('fplRoddyContainer');
+      if(!container) return; // user navigated away before this resolved
+      container.className = "";
+      container.innerHTML = fplRoddyTableHtml(data);
+      sideLeagueDebug = Object.assign({}, sideLeagueDebug, { fplRoddy: data.debug });
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    });
+    return;
+  }
+
   el.innerHTML = `
+    ${viewToggleHtml}
     <div class="round-tabs" id="sideLeagueDivToggle">
       <button class="round-tab${isPremier?" active":""}" data-div="premier">Premier League</button>
       <button class="round-tab${!isPremier?" active":""}" data-div="championship">Championship</button>
@@ -4907,6 +5009,14 @@ function renderSideLeagueContent(){
     <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
     <div class="round-tabs" id="sideLeagueRoundTabs"></div>
     <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
+
+  el.querySelectorAll('#sideLeagueFplViewToggle .round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(sideLeagueFplViewMode === btn.dataset.view) return;
+      sideLeagueFplViewMode = btn.dataset.view;
+      renderSideLeagueContent();
+    });
+  });
 
   el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -4947,6 +5057,7 @@ function wireSideLeagueRoundTabs(fx, roundGroupKey){
   roundButtons[activeIdx].classList.add('active');
   sideLeagueActiveRound[roundGroupKey] = gws[activeIdx].name;
   renderSideLeagueFixtures(gws[activeIdx]);
+  try{ roundButtons[activeIdx].scrollIntoView({inline:'center', block:'nearest'}); }catch(e){}
 
   roundButtons.forEach((btn,i)=>{
     btn.addEventListener('click', ()=>{
@@ -5300,6 +5411,7 @@ async function loadSideLeague(leagueKey){
     const champFx = parseFplFixtures(rows, 40);   // AO
 
     sideLeagueData = { singleTable: false, premier, champ, premierFx, champFx };
+    sideLeagueFplViewMode = "table";
     sideLeagueActiveDiv = "premier";
     sideLeagueActiveRound = {};
     renderSideLeagueContent();
