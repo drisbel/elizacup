@@ -114,6 +114,10 @@
   }
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
+  .comp-switcher{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 24px 16px;}
+  .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #6b7c73);}
+  .comp-switcher .div-tab:hover{border-color:var(--amber);color:var(--ink);}
+  .comp-switcher .div-tab.active{background:var(--amber);border-color:var(--amber);color:var(--ink);}
   .honour-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;align-items:start;}
   .honour-board-card{border:1px solid var(--line-light);border-radius:8px;padding:12px 14px;background:#fff;}
   .honour-board-card h4{font-family:'Barlow Condensed',sans-serif;font-size:16px;margin:0 0 8px;color:var(--pitch);}
@@ -130,6 +134,18 @@
   .honour-year-line:last-child{border-bottom:none;}
   .honour-year{color:#8a9990;flex-shrink:0;}
   .honour-winner{font-weight:600;text-align:right;}
+  .lms-pick-list{display:flex;flex-direction:column;gap:6px;max-width:560px;}
+  .lms-pick-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:9px 12px;
+    font-family:'Barlow',sans-serif;
+  }
+  .lms-participant{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lms-pick-col{flex:1.4;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
+  .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);}
+  .lms-pick.eliminated{font-size:12px;font-weight:600;color:var(--red);font-style:italic;}
+  .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;}
+  .lms-result{font-weight:700;font-size:11px;padding:3px 10px;border-radius:12px;flex-shrink:0;}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -759,6 +775,7 @@
   <div class="comp-logo-hero" id="compLogoHero" style="display:none;">
     <img id="compLogoHeroImg" src="" alt="" onerror="this.style.display='none';">
   </div>
+  <div class="comp-switcher" id="compSwitcher" style="display:none;"></div>
 
   <section id="homeSection" style="display:none;">
     <div id="homeContainer"></div>
@@ -1172,6 +1189,31 @@ function togglePageSections(){
     heroEl.style.display = "";
   }else{
     heroEl.style.display = "none";
+  }
+
+  // Quick switcher between the 5 divisions (on division pages) or the 3 cups (on
+  // Roddy/FA Cup/ECL pages), so switching doesn't require the top nav dropdown.
+  const switcherEl = document.getElementById('compSwitcher');
+  let switcherIds = null;
+  if(isDivision) switcherIds = ["d1","d2a","d2b","d3a","d3b"];
+  else if(isRoddy || isFACup || isECL) switcherIds = ["roddy","facup","ecl"];
+
+  if(switcherIds){
+    switcherEl.innerHTML = switcherIds.map(id=>{
+      const d = DIVISIONS.find(x=>x.id===id);
+      return `<button class="div-tab${d.id===currentDivision.id?' active':''}" data-id="${d.id}">${d.pill}</button>`;
+    }).join("");
+    switcherEl.style.display = "";
+    switcherEl.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const div = DIVISIONS.find(d=>d.id===btn.dataset.id);
+        if(div.id === currentDivision.id) return;
+        goToDivision(div);
+      });
+    });
+  }else{
+    switcherEl.style.display = "none";
+    switcherEl.innerHTML = "";
   }
 }
 
@@ -4679,6 +4721,7 @@ const SIDE_LEAGUES = [
   { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
+  { key: "auscup", label: "Australia Cup LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "590890124", isLmsCup: true },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
@@ -5049,6 +5092,91 @@ function renderHonourBoard(data){
     <div class="honour-board-grid">${cards}</div>`;
 }
 
+// Australia Cup LMS (Last Man Standing tipping) on the Side Leagues sheet. Each
+// round is its own stacked block (like the FA Cup/ECL fixture rounds) rather than
+// side-by-side columns: column D holds either a round title ("ROUND OF 32 - PHASE
+// 1", etc.) or a participant name for the rows beneath that title, until the next
+// round title appears. F = pick (or "Eliminated + round" text if already knocked
+// out), G = opponent ("v Opponent"), H = WIN/LOSS/blank result.
+const LMS_ROUND_NAMES = [
+  "ROUND OF 32 - PHASE 1", "ROUND OF 32 - PHASE 2", "ROUND OF 16",
+  "QUARTER FINALS", "SEMI FINALS", "FINAL"
+];
+
+function parseLmsCup(rows){
+  const rounds = [];
+  let current = null;
+  const rawDump = [];
+
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    const d = cell(row,3); // column D
+    const dUpper = d.toUpperCase();
+
+    if(LMS_ROUND_NAMES.includes(dUpper)){
+      current = { name: d, entries: [] };
+      rounds.push(current);
+      continue;
+    }
+    if(!current) continue;
+
+    const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
+    if(!d && !f && !g && !h) continue;
+
+    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
+    rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
+  }
+
+  return {
+    rounds,
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), rawDump: rawDump.slice(0,40) }
+  };
+}
+
+let lmsActiveRoundIdx = 0;
+
+function renderLmsCup(data){
+  const el = document.getElementById('sideLeaguesContainer');
+  if(!data.rounds.length){
+    el.className = "state-msg";
+    el.innerHTML = "No Australia Cup LMS data found. Check the Debug panel below.";
+    return;
+  }
+  el.className = "";
+  if(lmsActiveRoundIdx >= data.rounds.length) lmsActiveRoundIdx = data.rounds.length - 1;
+  if(lmsActiveRoundIdx < 0) lmsActiveRoundIdx = 0;
+
+  const tabsHtml = data.rounds.map((rd, idx) =>
+    `<button class="round-tab${idx===lmsActiveRoundIdx?' active':''}" data-idx="${idx}">${rd.name}</button>`
+  ).join("");
+
+  const round = data.rounds[lmsActiveRoundIdx];
+  const rowsHtml = round.entries.map(e => {
+    const isEliminated = /^ELIMINATED/i.test(e.pick);
+    const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
+    const resultBg = e.result === "WIN" ? "#dcfce7" : e.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
+    return `<div class="lms-pick-row">
+      <span class="lms-participant">${e.name}</span>
+      <span class="lms-pick-col">
+        <span class="lms-pick${isEliminated ? ' eliminated' : ''}">${e.pick || "—"}</span>
+        ${e.opponent && !isEliminated ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
+      </span>
+      <span class="lms-result" style="background:${resultBg};color:${resultColor};">${e.result || "—"}</span>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
+    <div class="round-tabs">${tabsHtml}</div>
+    <div class="lms-pick-list">${rowsHtml}</div>`;
+
+  el.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      lmsActiveRoundIdx = parseInt(btn.dataset.idx, 10);
+      renderLmsCup(data);
+    });
+  });
+}
+
 async function loadSideLeague(leagueKey){
   const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
   const el = document.getElementById('sideLeaguesContainer');
@@ -5065,6 +5193,25 @@ async function loadSideLeague(leagueKey){
       console.error(err);
       el.className = "state-msg error";
       el.innerHTML = "Couldn't load Honour Board data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(league.isLmsCup){
+    try{
+      const res = await fetch(sideLeagueCsvUrlFor(league));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const data = parseLmsCup(rows);
+      lmsActiveRoundIdx = data.rounds.length - 1; // default to the most recent round
+      renderLmsCup(data);
+      sideLeagueDebug = { lmsCup: data.debug };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load Australia Cup LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
