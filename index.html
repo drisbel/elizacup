@@ -4883,7 +4883,6 @@ function fplFixtureCardHtml(f){
 let sideLeagueData = null;
 let sideLeagueActiveDiv = "premier";
 let sideLeagueActiveRound = {};
-let sideLeagueFplViewMode = "table";
 
 // FPL Roddy leaderboard: separate gid on the Side Leagues sheet. Title row 5,
 // header row 6, entries rows 7-36. B=Pos, D=Team, I=Player, K=GW, L=Chip, N=Pts,
@@ -4901,16 +4900,21 @@ function parseFplRoddy(rows){
 
   const entries = [];
   const rawDump = [];
+  let runningPos = 0;
   for(let r=6; r<=35 && r<rows.length; r++){ // rows 7-36
     const row = rows[r] || [];
-    const pos = cell(row, 1); // B
-    if(!pos) continue;
+    const team = cell(row, 3); // D
+    if(!team) continue; // anchor on Team, not Pos — the top 3 rows' Pos cell (B)
+                         // appears to be blank/formatted differently (e.g. a medal
+                         // icon instead of plain text), which was silently skipping them.
+    runningPos++;
+    const posRaw = cell(row, 1); // B
     const entry = {
-      pos, team: cell(row,3), player: cell(row,8), gw: cell(row,10), chip: cell(row,11),
+      pos: posRaw || String(runningPos), team, player: cell(row,8), gw: cell(row,10), chip: cell(row,11),
       pts: cell(row,13), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
     };
     entries.push(entry);
-    rawDump.push({ row: r+1, ...entry });
+    rawDump.push({ row: r+1, posRaw, ...entry });
   }
 
   return { chipHeaders, entries, debug: { headerRow: headerRowIdx+1, chipHeaders, entriesFound: entries.length, rawDump } };
@@ -4965,25 +4969,24 @@ function renderSideLeagueContent(){
     return;
   }
 
-  const isPremier = sideLeagueActiveDiv === "premier";
-  const table = isPremier ? sideLeagueData.premier : sideLeagueData.champ;
-  const fx = isPremier ? sideLeagueData.premierFx : sideLeagueData.champFx;
-  const label = isPremier ? "Eliza Premier League" : "Eliza Championship";
+  const label = sideLeagueActiveDiv === "premier" ? "Eliza Premier League"
+    : sideLeagueActiveDiv === "championship" ? "Eliza Championship" : "Eliza FPL Roddy";
 
-  const viewToggleHtml = `
-    <div class="round-tabs" id="sideLeagueFplViewToggle" style="margin-bottom:8px;">
-      <button class="round-tab${sideLeagueFplViewMode==='table'?' active':''}" data-view="table">Table</button>
-      <button class="round-tab${sideLeagueFplViewMode==='roddy'?' active':''}" data-view="roddy">Roddy</button>
+  const toggleHtml = `
+    <div class="round-tabs" id="sideLeagueDivToggle">
+      <button class="round-tab${sideLeagueActiveDiv==='premier'?' active':''}" data-div="premier">Premier League</button>
+      <button class="round-tab${sideLeagueActiveDiv==='championship'?' active':''}" data-div="championship">Championship</button>
+      <button class="round-tab${sideLeagueActiveDiv==='roddy'?' active':''}" data-div="roddy">Roddy</button>
     </div>`;
 
-  if(sideLeagueFplViewMode === "roddy"){
-    el.innerHTML = `${viewToggleHtml}
-      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Eliza FPL Roddy</h2></div>
+  if(sideLeagueActiveDiv === "roddy"){
+    el.innerHTML = `${toggleHtml}
+      <div class="section-head" style="margin-top:20px;"><h2 style="font-size:18px;">${label}</h2></div>
       <div id="fplRoddyContainer" class="state-msg">Loading Roddy leaderboard…</div>`;
-    el.querySelectorAll('#sideLeagueFplViewToggle .round-tab').forEach(btn=>{
+    el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        if(sideLeagueFplViewMode === btn.dataset.view) return;
-        sideLeagueFplViewMode = btn.dataset.view;
+        if(sideLeagueActiveDiv === btn.dataset.div) return;
+        sideLeagueActiveDiv = btn.dataset.div;
         renderSideLeagueContent();
       });
     });
@@ -4998,28 +5001,21 @@ function renderSideLeagueContent(){
     return;
   }
 
+  const isPremier = sideLeagueActiveDiv === "premier";
+  const table = isPremier ? sideLeagueData.premier : sideLeagueData.champ;
+  const fx = isPremier ? sideLeagueData.premierFx : sideLeagueData.champFx;
+
   el.innerHTML = `
-    ${viewToggleHtml}
-    <div class="round-tabs" id="sideLeagueDivToggle">
-      <button class="round-tab${isPremier?" active":""}" data-div="premier">Premier League</button>
-      <button class="round-tab${!isPremier?" active":""}" data-div="championship">Championship</button>
-    </div>
+    ${toggleHtml}
     <div class="section-head" style="margin-top:20px;"><h2 style="font-size:18px;">${label}</h2></div>
     ${sideLeagueTableHtml(table)}
     <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
     <div class="round-tabs" id="sideLeagueRoundTabs"></div>
     <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
 
-  el.querySelectorAll('#sideLeagueFplViewToggle .round-tab').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(sideLeagueFplViewMode === btn.dataset.view) return;
-      sideLeagueFplViewMode = btn.dataset.view;
-      renderSideLeagueContent();
-    });
-  });
-
   el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
+      if(sideLeagueActiveDiv === btn.dataset.div) return;
       sideLeagueActiveDiv = btn.dataset.div;
       renderSideLeagueContent();
     });
@@ -5411,7 +5407,6 @@ async function loadSideLeague(leagueKey){
     const champFx = parseFplFixtures(rows, 40);   // AO
 
     sideLeagueData = { singleTable: false, premier, champ, premierFx, champFx };
-    sideLeagueFplViewMode = "table";
     sideLeagueActiveDiv = "premier";
     sideLeagueActiveRound = {};
     renderSideLeagueContent();
