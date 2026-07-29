@@ -134,18 +134,30 @@
   .honour-year-line:last-child{border-bottom:none;}
   .honour-year{color:#8a9990;flex-shrink:0;}
   .honour-winner{font-weight:600;text-align:right;}
-  .lms-pick-list{display:flex;flex-direction:column;gap:6px;max-width:560px;}
+  .lms-pick-list{display:flex;flex-direction:column;gap:6px;max-width:620px;}
   .lms-pick-row{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    display:grid;grid-template-columns:1fr 1.3fr 64px;align-items:center;gap:10px;
     background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:9px 12px;
     font-family:'Barlow',sans-serif;
   }
-  .lms-participant{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .lms-pick-col{flex:1.4;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
-  .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);}
+  .lms-participant{font-weight:600;font-size:13px;min-width:0;overflow-wrap:break-word;word-break:break-word;}
+  .lms-pick-col{min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
+  .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);overflow-wrap:break-word;word-break:break-word;}
   .lms-pick.eliminated{font-size:12px;font-weight:600;color:var(--red);font-style:italic;}
-  .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;}
-  .lms-result{font-weight:700;font-size:11px;padding:3px 10px;border-radius:12px;flex-shrink:0;}
+  .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
+  .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
+  .facup-bracket-wrap{display:flex;gap:28px;overflow-x:auto;padding-bottom:14px;}
+  .facup-bracket-col{display:flex;flex-direction:column;min-width:170px;flex-shrink:0;}
+  .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#6b7c73;text-align:center;margin-bottom:8px;}
+  .facup-bracket-matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;}
+  .facup-bracket-match{border:1px solid var(--line-light);border-radius:6px;padding:6px 8px;background:#fff;}
+  .facup-bracket-side{
+    display:flex;justify-content:space-between;gap:6px;font-family:'Barlow',sans-serif;
+    font-size:12.5px;padding:3px 5px;border-radius:4px;cursor:pointer;color:#6b7c73;
+  }
+  .facup-bracket-side.won{font-weight:700;color:var(--ink);}
+  .facup-bracket-side.selected{background:rgba(255,221,0,0.35);color:var(--ink);}
+  .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;}
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -829,6 +841,7 @@
       <h2>Eliza FA Cup</h2>
       <span class="sub" id="facupUpdated"></span>
     </div>
+    <div id="facupViewToggle" class="round-tabs" style="margin-bottom:8px;"></div>
     <div id="facupRoundTabs" class="round-tabs"></div>
     <div id="facupContainer" class="state-msg">Loading bracket…</div>
   </section>
@@ -5158,9 +5171,14 @@ function parseLmsCup(rows){
     rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
   }
 
+  // "Current Round" manual dropdown, cell E28 — lets Dan control which round the
+  // page opens to without needing code changes each week.
+  const currentRoundLabel = cell(rows[27] || [], 4); // E28
+
   return {
     rounds,
-    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), headerCandidates, rawDump: rawDump.slice(0,40) }
+    currentRoundLabel,
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, headerCandidates, rawDump: rawDump.slice(0,40) }
   };
 }
 
@@ -5235,7 +5253,10 @@ async function loadSideLeague(leagueKey){
       const csvText = await res.text();
       const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
       const data = parseLmsCup(rows);
-      lmsActiveRoundIdx = data.rounds.length - 1; // default to the most recent round
+      const matchIdx = data.currentRoundLabel
+        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
+        : -1;
+      lmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1; // fall back to most recent round
       renderLmsCup(data);
       sideLeagueDebug = { lmsCup: data.debug };
       document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
@@ -5506,9 +5527,14 @@ function renderHomeSnapshot(){
   el.innerHTML = homeSnapshotHtml();
 }
 
+let facupViewMode = "rounds";
+let facupBracketSelectedTeam = null;
+
 function renderFACup(){
   const tabsEl = document.getElementById('facupRoundTabs');
+  const toggleEl = document.getElementById('facupViewToggle');
   if(facupRounds.length === 0){
+    toggleEl.innerHTML = "";
     tabsEl.innerHTML = "";
     document.getElementById('facupContainer').className = "state-msg error";
     document.getElementById('facupContainer').innerHTML = "Couldn't find the FA Cup bracket. Check the Debug panel below.";
@@ -5516,6 +5542,29 @@ function renderFACup(){
     return;
   }
   document.getElementById('facupUpdated').textContent = facupRounds.length + " rounds";
+
+  toggleEl.innerHTML = `
+    <button class="round-tab${facupViewMode==='rounds'?' active':''}" id="facupViewRoundsBtn">Rounds</button>
+    <button class="round-tab${facupViewMode==='bracket'?' active':''}" id="facupViewBracketBtn">Bracket</button>
+  `;
+  document.getElementById('facupViewRoundsBtn').addEventListener('click', ()=>{
+    if(facupViewMode === "rounds") return;
+    facupViewMode = "rounds";
+    renderFACup();
+  });
+  document.getElementById('facupViewBracketBtn').addEventListener('click', ()=>{
+    if(facupViewMode === "bracket") return;
+    facupViewMode = "bracket";
+    renderFACup();
+  });
+
+  if(facupViewMode === "bracket"){
+    tabsEl.style.display = "none";
+    renderFACupBracket();
+    return;
+  }
+
+  tabsEl.style.display = "";
   tabsEl.innerHTML = facupRounds.map((r,i)=>`<button class="round-tab" data-idx="${i}">${r.name}</button>`).join("");
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -5526,6 +5575,46 @@ function renderFACup(){
   });
   tabsEl.firstChild.classList.add('active');
   renderFACupRound(0);
+}
+
+// Full tournament bracket view, built purely from the existing round-by-round
+// fixture data — no bracket-position column needed. Clicking a team traces every
+// appearance of that name across all rounds by matching on team name, since the
+// data already records who won each match, not by pre-computed bracket slots.
+function renderFACupBracket(){
+  const container = document.getElementById('facupContainer');
+  container.className = "";
+
+  const colsHtml = facupRounds.map((round, ri) => {
+    const matchesHtml = round.fixtures.map(f => {
+      const hasScore = f.homeScore !== null && f.awayScore !== null;
+      const sides = [
+        { name: f.home.name, score: f.homeScore, isBye: f.isBye && f.byeSide === "home", won: hasScore && f.homeScore > f.awayScore },
+        { name: f.away.name, score: f.awayScore, isBye: f.isBye && f.byeSide === "away", won: hasScore && f.awayScore > f.homeScore }
+      ];
+      const sidesHtml = sides.map(side => {
+        const selected = facupBracketSelectedTeam && side.name && side.name.toUpperCase() === facupBracketSelectedTeam.toUpperCase();
+        const label = side.isBye ? "BYE" : (side.name || "TBD");
+        const clickAttr = side.name ? ` onclick="selectFacupBracketTeam('${side.name.replace(/'/g,"\\'")}')"` : "";
+        return `<div class="facup-bracket-side${selected?' selected':''}${side.won?' won':''}"${clickAttr}>
+          <span class="facup-bracket-name">${label}</span><span>${side.score===null?"":side.score}</span>
+        </div>`;
+      }).join("");
+      return `<div class="facup-bracket-match">${sidesHtml}</div>`;
+    }).join("");
+
+    return `<div class="facup-bracket-col" style="padding-top:${ri*24}px;">
+      <div class="facup-bracket-round-label">${round.name}</div>
+      <div class="facup-bracket-matches" style="gap:${16 + ri*32}px;">${matchesHtml}</div>
+    </div>`;
+  }).join("");
+
+  container.innerHTML = `<div class="facup-bracket-wrap">${colsHtml}</div>`;
+}
+
+function selectFacupBracketTeam(name){
+  facupBracketSelectedTeam = facupBracketSelectedTeam === name ? null : name;
+  renderFACupBracket();
 }
 
 // Sticky Pos+Team columns assume column 1 renders at exactly 28px (the CSS width
