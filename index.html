@@ -146,11 +146,9 @@
   .lms-pick.eliminated{font-size:12px;font-weight:600;color:var(--red);font-style:italic;}
   .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
-  .facup-bracket-wrap{display:flex;gap:28px;overflow-x:auto;padding-bottom:14px;}
-  .facup-bracket-col{display:flex;flex-direction:column;min-width:170px;flex-shrink:0;}
-  .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#6b7c73;text-align:center;margin-bottom:8px;}
-  .facup-bracket-matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;}
-  .facup-bracket-match{border:1px solid var(--line-light);border-radius:6px;padding:6px 8px;background:#fff;}
+  .facup-bracket-wrap{overflow-x:auto;padding-bottom:14px;}
+  .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#6b7c73;text-align:center;}
+  .facup-bracket-match{border:1px solid var(--line-light);border-radius:6px;padding:6px 8px;background:#fff;box-sizing:border-box;z-index:2;}
   .facup-bracket-side{
     display:flex;justify-content:space-between;gap:6px;font-family:'Barlow',sans-serif;
     font-size:12.5px;padding:3px 5px;border-radius:4px;cursor:pointer;color:#6b7c73;
@@ -2272,8 +2270,18 @@ function parseFACup(rows){
       const homeScore = /^\d+$/.test(homeScoreRaw) ? parseInt(homeScoreRaw,10) : null;
       const awayScore = /^\d+$/.test(awayScoreRaw) ? parseInt(awayScoreRaw,10) : null;
 
-      fixtures.push({ home, away, homeScore, awayScore, isBye, byeSide });
+      // Bracket slot number, column A — tells the bracket view exactly which match
+      // in the next round this one feeds into (slots 1&2 feed slot 1, 3&4 feed slot
+      // 2, etc.), instead of guessing from row order. Falls back to sequential
+      // position if a round hasn't had slot numbers added yet.
+      const slotRaw = cell(rows[r]||[], 0);
+      const slot = /^\d+$/.test(slotRaw) ? parseInt(slotRaw,10) : null;
+
+      fixtures.push({ home, away, homeScore, awayScore, isBye, byeSide, slot });
     }
+
+    fixtures.forEach((f,i) => { if(f.slot === null) f.slot = i+1; }); // fallback: sequential
+    fixtures.sort((a,b) => a.slot - b.slot);
 
     facupRounds.push({ name: marker.name, fixtures });
   });
@@ -5577,16 +5585,77 @@ function renderFACup(){
   renderFACupRound(0);
 }
 
-// Full tournament bracket view, built purely from the existing round-by-round
-// fixture data — no bracket-position column needed. Clicking a team traces every
-// appearance of that name across all rounds by matching on team name, since the
-// data already records who won each match, not by pre-computed bracket slots.
+// Full tournament bracket view, built from the round-by-round fixture data plus a
+// bracket slot number (column A) on each fixture row. Slots 1&2 in a round feed
+// slot 1 of the next round, 3&4 feed slot 2, etc. — so a match's vertical position
+// is computed as the midpoint of the two matches that feed it, which is what lets
+// real connector lines be drawn between them instead of just evenly spacing columns.
+// Clicking a team still traces every appearance of that name across rounds by
+// matching on team name, same as before.
+const FACUP_CARD_W = 172;
+const FACUP_COL_GAP = 46;
+const FACUP_MATCH_H = 54;
+const FACUP_MATCH_GAP0 = 22; // vertical gap between round-1 matches
+
+function computeFacupBracketLayout(rounds){
+  const layout = [];
+  rounds.forEach((round, ri) => {
+    const roundLayout = round.fixtures.map(f => ({ slot: f.slot, fixture: f }));
+    if(ri === 0){
+      const spacing = FACUP_MATCH_H + FACUP_MATCH_GAP0;
+      roundLayout.forEach(m => {
+        m.top = (m.slot - 1) * spacing;
+        m.center = m.top + FACUP_MATCH_H / 2;
+      });
+    }else{
+      const prev = layout[ri - 1];
+      roundLayout.forEach((m, i) => {
+        const feedA = prev.find(pm => pm.slot === m.slot * 2 - 1);
+        const feedB = prev.find(pm => pm.slot === m.slot * 2);
+        let center;
+        if(feedA && feedB) center = (feedA.center + feedB.center) / 2;
+        else if(feedA) center = feedA.center;
+        else if(feedB) center = feedB.center;
+        else center = i * (FACUP_MATCH_H + FACUP_MATCH_GAP0);
+        m.center = center;
+        m.top = center - FACUP_MATCH_H / 2;
+        m.feedA = feedA || null;
+        m.feedB = feedB || null;
+      });
+    }
+    layout.push(roundLayout);
+  });
+  return layout;
+}
+
 function renderFACupBracket(){
   const container = document.getElementById('facupContainer');
   container.className = "";
 
+  const LABEL_H = 26; // reserved space at the top of the wrap for round-name labels
+  const layout = computeFacupBracketLayout(facupRounds);
+  const contentHeight = Math.max(...layout.flat().map(m => m.top + FACUP_MATCH_H)) + 10;
+  const totalHeight = contentHeight + LABEL_H;
+  const totalWidth = facupRounds.length * FACUP_CARD_W + (facupRounds.length - 1) * FACUP_COL_GAP;
+
+  let connectorsSvg = "";
+  for(let ri=1; ri<layout.length; ri++){
+    const colXPrevRight = (ri-1) * (FACUP_CARD_W + FACUP_COL_GAP) + FACUP_CARD_W;
+    const colXThisLeft = ri * (FACUP_CARD_W + FACUP_COL_GAP);
+    layout[ri].forEach(m => {
+      [m.feedA, m.feedB].forEach(feed => {
+        if(!feed) return;
+        const midX = (colXPrevRight + colXThisLeft) / 2;
+        const y1 = feed.center + LABEL_H, y2 = m.center + LABEL_H;
+        connectorsSvg += `<path d="M${colXPrevRight} ${y1} L${midX} ${y1} L${midX} ${y2} L${colXThisLeft} ${y2}" fill="none" stroke="#c9c2b0" stroke-width="1.5"/>`;
+      });
+    });
+  }
+
   const colsHtml = facupRounds.map((round, ri) => {
-    const matchesHtml = round.fixtures.map(f => {
+    const colX = ri * (FACUP_CARD_W + FACUP_COL_GAP);
+    const matchesHtml = layout[ri].map(m => {
+      const f = m.fixture;
       const hasScore = f.homeScore !== null && f.awayScore !== null;
       const sides = [
         { name: f.home.name, score: f.homeScore, isBye: f.isBye && f.byeSide === "home", won: hasScore && f.homeScore > f.awayScore },
@@ -5600,16 +5669,16 @@ function renderFACupBracket(){
           <span class="facup-bracket-name">${label}</span><span>${side.score===null?"":side.score}</span>
         </div>`;
       }).join("");
-      return `<div class="facup-bracket-match">${sidesHtml}</div>`;
+      return `<div class="facup-bracket-match" style="position:absolute;left:${colX}px;top:${m.top + LABEL_H}px;width:${FACUP_CARD_W}px;">${sidesHtml}</div>`;
     }).join("");
 
-    return `<div class="facup-bracket-col" style="padding-top:${ri*24}px;">
-      <div class="facup-bracket-round-label">${round.name}</div>
-      <div class="facup-bracket-matches" style="gap:${16 + ri*32}px;">${matchesHtml}</div>
-    </div>`;
+    return `<div class="facup-bracket-round-label" style="position:absolute;left:${colX}px;top:0;width:${FACUP_CARD_W}px;">${round.name}</div>${matchesHtml}`;
   }).join("");
 
-  container.innerHTML = `<div class="facup-bracket-wrap">${colsHtml}</div>`;
+  container.innerHTML = `<div class="facup-bracket-wrap" style="position:relative;height:${totalHeight}px;width:${totalWidth}px;">
+    <svg style="position:absolute;top:0;left:0;pointer-events:none;" width="${totalWidth}" height="${totalHeight}">${connectorsSvg}</svg>
+    ${colsHtml}
+  </div>`;
 }
 
 function selectFacupBracketTeam(name){
