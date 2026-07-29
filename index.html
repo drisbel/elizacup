@@ -5103,6 +5103,27 @@ const LMS_ROUND_NAMES = [
   "QUARTER FINALS", "SEMI FINALS", "FINAL"
 ];
 
+// Normalizes away dash-character variants (Sheets often auto-converts a typed "-"
+// into an en/em-dash) and collapses whitespace, so "ROUND OF 32 – PHASE 1" still
+// matches "ROUND OF 32 - PHASE 1".
+function normalizeLmsText(s){
+  return (s||"").toString().toUpperCase().replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim();
+}
+
+function isLmsRoundHeader(rawText){
+  const norm = normalizeLmsText(rawText);
+  if(!norm) return false;
+  if(LMS_ROUND_NAMES.some(name => normalizeLmsText(name) === norm)) return true;
+  // Loose fallback in case of further formatting drift (extra punctuation, etc.)
+  if(/^ROUND OF 32.*PHASE 1/.test(norm)) return true;
+  if(/^ROUND OF 32.*PHASE 2/.test(norm)) return true;
+  if(/^ROUND OF 16/.test(norm)) return true;
+  if(/^QUARTER FINAL/.test(norm)) return true;
+  if(/^SEMI FINAL/.test(norm)) return true;
+  if(norm === "FINAL") return true;
+  return false;
+}
+
 function parseLmsCup(rows){
   const rounds = [];
   let current = null;
@@ -5111,9 +5132,8 @@ function parseLmsCup(rows){
   for(let r=0; r<rows.length; r++){
     const row = rows[r] || [];
     const d = cell(row,3); // column D
-    const dUpper = d.toUpperCase();
 
-    if(LMS_ROUND_NAMES.includes(dUpper)){
+    if(isLmsRoundHeader(d)){
       current = { name: d, entries: [] };
       rounds.push(current);
       continue;
