@@ -5128,10 +5128,21 @@ function parseLmsCup(rows){
   const rounds = [];
   let current = null;
   const rawDump = [];
+  const headerCandidates = [];
 
   for(let r=0; r<rows.length; r++){
     const row = rows[r] || [];
     const d = cell(row,3); // column D
+
+    // Unconditional diagnostic: every non-blank D cell in the first 45 rows, whether
+    // or not it matched as a round header, plus its raw character codes — reveals
+    // invisible/non-standard characters that a visual comparison can't show.
+    if(d && r < 45){
+      headerCandidates.push({
+        row: r+1, text: d, matched: isLmsRoundHeader(d), length: d.length,
+        charCodes: d.split("").map(c => c.charCodeAt(0))
+      });
+    }
 
     if(isLmsRoundHeader(d)){
       current = { name: d, entries: [] };
@@ -5149,7 +5160,7 @@ function parseLmsCup(rows){
 
   return {
     rounds,
-    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), rawDump: rawDump.slice(0,40) }
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), headerCandidates, rawDump: rawDump.slice(0,40) }
   };
 }
 
