@@ -150,6 +150,8 @@
   .lms-pick-col{min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
   .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);overflow-wrap:break-word;word-break:break-word;}
   .lms-pick.eliminated{font-size:12px;font-weight:600;color:var(--red);font-style:italic;}
+  .lms-pick.awaiting{color:#b45309;}
+  .lms-pick.entered{color:#166534;}
   .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
   .facup-bracket-wrap{display:flex;gap:28px;overflow-x:auto;padding-bottom:14px;}
@@ -5776,12 +5778,16 @@ function renderLmsCup(data){
   const round = data.rounds[lmsActiveRoundIdx];
   const rowsHtml = round.entries.map(e => {
     const isEliminated = /^ELIMINATED/i.test(e.pick);
+    const isAwaiting = /AWAITING TIP/i.test(e.pick);
+    const isEntered = e.pick && !isEliminated && !isAwaiting;
+    const pickClass = isEliminated ? ' eliminated' : isAwaiting ? ' awaiting' : isEntered ? ' entered' : '';
+    const pickIcon = isAwaiting ? '⚠ ' : isEntered ? '✓ ' : '';
     const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
     const resultBg = e.result === "WIN" ? "#dcfce7" : e.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
     return `<div class="lms-pick-row">
       <span class="lms-participant">${e.name}</span>
       <span class="lms-pick-col">
-        <span class="lms-pick${isEliminated ? ' eliminated' : ''}">${e.pick || "—"}</span>
+        <span class="lms-pick${pickClass}">${pickIcon}${e.pick || "—"}</span>
         ${e.opponent && !isEliminated ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
       </span>
       <span class="lms-result" style="background:${resultBg};color:${resultColor};">${e.result || "—"}</span>
