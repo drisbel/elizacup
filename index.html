@@ -5165,6 +5165,15 @@ function fplRoddyCsvUrlFor(){
 }
 
 function parseFplRoddy(rows){
+  // Unconditional dump of the very top of the fetched data, regardless of where
+  // the header search lands — this is the fastest way to see exactly what's
+  // arriving in each row/column and compare it directly against the real sheet,
+  // rather than trusting a "row" number that may not equal the sheet's own row
+  // numbering (e.g. if rows are hidden but still included in the export).
+  const topOfSheetDump = rows.slice(0, 10).map((row,r) => ({
+    fetchedRowIndex: r+1, A: cell(row,0), B: cell(row,1), C: cell(row,2), D: cell(row,3), E: cell(row,4)
+  }));
+
   // Header row located by searching for "TEAM" in column D, rather than trusting a
   // fixed row number — this table's row position has already shifted twice as
   // content above it changed, so a hardcoded index isn't reliable here.
@@ -5173,7 +5182,7 @@ function parseFplRoddy(rows){
     if(cell(rows[r]||[], 3).toUpperCase() === "TEAM"){ headerRowIdx = r; break; }
   }
   if(headerRowIdx === -1){
-    return { chipHeaders: [], entries: [], debug: { headerRowFound: false, note: "Couldn't find 'TEAM' header in column D anywhere in the sheet." } };
+    return { chipHeaders: [], entries: [], debug: { headerRowFound: false, note: "Couldn't find 'TEAM' header in column D anywhere in the sheet.", topOfSheetDump } };
   }
 
   const headerRow = rows[headerRowIdx] || [];
@@ -5196,10 +5205,10 @@ function parseFplRoddy(rows){
       pts: cell(row,13), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
     };
     entries.push(entry);
-    rawDump.push({ row: r+1, posRaw, ...entry });
+    rawDump.push({ fetchedRowIndex: r+1, posRaw, ...entry });
   }
 
-  return { chipHeaders, entries, debug: { headerRow: headerRowIdx+1, chipHeaders, entriesFound: entries.length, rawDump } };
+  return { chipHeaders, entries, debug: { headerFetchedRowIndex: headerRowIdx+1, chipHeaders, entriesFound: entries.length, topOfSheetDump, rawDump } };
 }
 
 let fplRoddyData = null;
