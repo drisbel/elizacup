@@ -978,7 +978,7 @@
       <select id="tipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
 
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
-      <input id="tipsTeamInput" type="text" autocomplete="off" style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:6px;box-sizing:border-box;">
+      <select id="tipsTeamInput" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:6px;box-sizing:border-box;"></select>
       <div id="tipsDuplicateWarning" style="display:none;font-family:'Barlow',sans-serif;font-size:12px;color:#991b1b;margin-bottom:10px;"></div>
 
       <button type="submit" class="refresh-btn" style="position:static;">Submit Tip</button>
@@ -1415,7 +1415,7 @@ function initDrawTool(){
 // Paste your deployed Google Apps Script Web App URL here once set up — see the
 // doPost script provided alongside this feature. Left blank shows a warning
 // instead of silently failing.
-const LMS_TIPS_APPS_SCRIPT_URL = "";
+const LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzp-On3f8ByMBuLo7hO4T0Jq_n1jvpbnVpqtKVUYhLU_2Yk8wN_KWFSVBaBWZd4Nss/exec";
 
 let tipsWired = false;
 let tipsLmsData = null; // { rounds, currentRoundLabel } from parseLmsCup
@@ -1443,6 +1443,15 @@ async function initTipsTool(){
       return;
     }
 
+    // Reference list of available teams, column AY — one team per row, order/
+    // position not assumed, just collects every non-blank cell in that column.
+    const teamListRaw = [];
+    for(let r=0; r<rows.length; r++){
+      const v = cell(rows[r]||[], 50); // AY
+      if(v && !/^TEAMS?$/i.test(v)) teamListRaw.push(v);
+    }
+    tipsLmsData.teamList = [...new Set(teamListRaw)].sort((a,b)=>a.localeCompare(b));
+
     // Alive participants: anyone in the most recent round whose pick doesn't
     // start with "Eliminated".
     const latestRound = tipsLmsData.rounds[tipsLmsData.rounds.length - 1];
@@ -1451,8 +1460,9 @@ async function initTipsTool(){
       .map(e => e.name)
       .sort((a,b) => a.localeCompare(b));
 
-    // Each participant's team-pick history across all rounds, for the soft
-    // duplicate warning (standard LMS rule: can't reuse a team until the Final).
+    // Each participant's team-pick history across all rounds, for disabling
+    // already-used teams in the dropdown (standard LMS rule: can't reuse a team
+    // until the Final).
     const history = {};
     tipsLmsData.rounds.forEach(round => {
       const isFinal = normalizeLmsText(round.name) === "FINAL";
@@ -1477,16 +1487,16 @@ async function initTipsTool(){
     formEl.style.display = "";
 
     document.getElementById('debugOut').textContent = "LMS Tips debug: " + JSON.stringify({
-      aliveParticipants, currentRoundLabel: tipsLmsData.currentRoundLabel, historySample: history
+      aliveParticipants, currentRoundLabel: tipsLmsData.currentRoundLabel, teamListFound: tipsLmsData.teamList.length, teamList: tipsLmsData.teamList, historySample: history
     }, null, 2);
 
     if(!tipsWired){
-      document.getElementById('tipsTeamInput').addEventListener('input', checkTipDuplicate);
-      document.getElementById('tipsParticipant').addEventListener('change', checkTipDuplicate);
+      document.getElementById('tipsParticipant').addEventListener('change', renderTipTeamOptions);
+      document.getElementById('tipsRound').addEventListener('change', renderTipTeamOptions);
       document.getElementById('tipsForm').addEventListener('submit', submitTip);
       tipsWired = true;
     }
-    checkTipDuplicate();
+    renderTipTeamOptions();
   }catch(err){
     console.error(err);
     loadingEl.className = "state-msg error";
@@ -1494,22 +1504,24 @@ async function initTipsTool(){
   }
 }
 
-function checkTipDuplicate(){
-  const warnEl = document.getElementById('tipsDuplicateWarning');
+// Repopulates the team dropdown for whichever participant/round is currently
+// selected, greying out (but still visible, for transparency) any team that
+// participant has already used in an earlier round.
+function renderTipTeamOptions(){
+  if(!tipsLmsData) return;
+  const teamSel = document.getElementById('tipsTeamInput');
   const participant = document.getElementById('tipsParticipant').value;
-  const team = document.getElementById('tipsTeamInput').value.trim().toUpperCase();
   const roundName = document.getElementById('tipsRound').value;
-  if(normalizeLmsText(roundName) === "FINAL" || !team || !tipsLmsData){
-    warnEl.style.display = "none";
-    return;
-  }
+  const isFinal = normalizeLmsText(roundName) === "FINAL";
   const usedTeams = (tipsLmsData.history && tipsLmsData.history[participant]) || [];
-  if(usedTeams.includes(team)){
-    warnEl.textContent = `⚠ ${participant} has already tipped this team in an earlier round.`;
-    warnEl.style.display = "";
-  }else{
-    warnEl.style.display = "none";
-  }
+
+  const previousValue = teamSel.value;
+  teamSel.innerHTML = `<option value="">Select a team…</option>` + tipsLmsData.teamList.map(t => {
+    const used = !isFinal && usedTeams.includes(t.toUpperCase());
+    return `<option value="${t}"${used ? " disabled" : ""}>${t}${used ? " (already used)" : ""}</option>`;
+  }).join("");
+  if([...teamSel.options].some(o => o.value === previousValue)) teamSel.value = previousValue;
+  document.getElementById('tipsDuplicateWarning').style.display = "none";
 }
 
 async function submitTip(e){
