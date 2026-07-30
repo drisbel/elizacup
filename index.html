@@ -957,34 +957,6 @@
 
     <div id="drawFixtureList" style="display:flex;flex-direction:column;gap:8px;max-width:480px;"></div>
   </section>
-
-  <section id="tipsSection" style="display:none;">
-    <div class="section-head">
-      <h2>LMS Tips</h2>
-      <span class="sub">Admin tool — not linked from the main nav</span>
-    </div>
-
-    <div id="tipsConfigWarning" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:480px;margin-bottom:16px;">
-      No Apps Script URL configured yet — submissions won't actually save. Set <code>LMS_TIPS_APPS_SCRIPT_URL</code> in the code once deployed.
-    </div>
-
-    <div id="tipsLoadingMsg" class="state-msg">Loading participants…</div>
-
-    <form id="tipsForm" style="display:none;max-width:420px;">
-      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Your team name</label>
-      <select id="tipsParticipant" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
-
-      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Round</label>
-      <select id="tipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
-
-      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
-      <select id="tipsTeamInput" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:6px;box-sizing:border-box;"></select>
-      <div id="tipsDuplicateWarning" style="display:none;font-family:'Barlow',sans-serif;font-size:12px;color:#991b1b;margin-bottom:10px;"></div>
-
-      <button type="submit" class="refresh-btn" style="position:static;">Submit Tip</button>
-      <div id="tipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
-    </form>
-  </section>
 </main>
 
 <footer>
@@ -1016,8 +988,7 @@ const DIVISIONS = [
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
-  { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" },
-  { id: "tips", label: "LMS Tips",                 pill: "LMS Tips", gid: null, teams: 0, color: "#28427c", type: "tips" }
+  { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1255,7 +1226,6 @@ function togglePageSections(){
   const isTeamProfile = type === "teamprofile";
   const isDraw = type === "draw";
   const isNews = type === "news";
-  const isTips = type === "tips";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1272,7 +1242,6 @@ function togglePageSections(){
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
-  document.getElementById('tipsSection').style.display = isTips ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1416,154 +1385,6 @@ function initDrawTool(){
 // doPost script provided alongside this feature. Left blank shows a warning
 // instead of silently failing.
 const LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzp-On3f8ByMBuLo7hO4T0Jq_n1jvpbnVpqtKVUYhLU_2Yk8wN_KWFSVBaBWZd4Nss/exec";
-
-let tipsWired = false;
-let tipsLmsData = null; // { rounds, currentRoundLabel } from parseLmsCup
-
-async function initTipsTool(){
-  const warningEl = document.getElementById('tipsConfigWarning');
-  warningEl.style.display = LMS_TIPS_APPS_SCRIPT_URL ? "none" : "";
-
-  const loadingEl = document.getElementById('tipsLoadingMsg');
-  const formEl = document.getElementById('tipsForm');
-  loadingEl.style.display = "";
-  loadingEl.className = "state-msg";
-  formEl.style.display = "none";
-
-  try{
-    const league = SIDE_LEAGUES.find(s => s.key === "auscup");
-    const res = await fetch(sideLeagueCsvUrlFor(league));
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const csvText = await res.text();
-    const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-    tipsLmsData = parseLmsCup(rows);
-
-    if(!tipsLmsData.rounds.length){
-      loadingEl.innerHTML = "Couldn't load LMS round data. Check the Debug panel below.";
-      return;
-    }
-
-    // Reference list of available teams, column AY — one team per row, order/
-    // position not assumed, just collects every non-blank cell in that column.
-    const teamListRaw = [];
-    for(let r=0; r<rows.length; r++){
-      const v = cell(rows[r]||[], 50); // AY
-      if(v && !/^TEAMS?$/i.test(v)) teamListRaw.push(v);
-    }
-    tipsLmsData.teamList = [...new Set(teamListRaw)].sort((a,b)=>a.localeCompare(b));
-
-    // Alive participants: anyone in the most recent round whose pick doesn't
-    // start with "Eliminated".
-    const latestRound = tipsLmsData.rounds[tipsLmsData.rounds.length - 1];
-    const aliveParticipants = latestRound.entries
-      .filter(e => !/^ELIMINATED/i.test(e.pick))
-      .map(e => e.name)
-      .sort((a,b) => a.localeCompare(b));
-
-    // Each participant's team-pick history across all rounds, for disabling
-    // already-used teams in the dropdown (standard LMS rule: can't reuse a team
-    // until the Final).
-    const history = {};
-    tipsLmsData.rounds.forEach(round => {
-      const isFinal = normalizeLmsText(round.name) === "FINAL";
-      if(isFinal) return; // repeats allowed in the Final
-      round.entries.forEach(e => {
-        if(!e.pick || /^ELIMINATED/i.test(e.pick) || /AWAITING TIP/i.test(e.pick)) return;
-        if(!history[e.name]) history[e.name] = [];
-        history[e.name].push(e.pick.toUpperCase());
-      });
-    });
-    tipsLmsData.history = history;
-
-    const participantSel = document.getElementById('tipsParticipant');
-    participantSel.innerHTML = aliveParticipants.map(n => `<option value="${n}">${n}</option>`).join("");
-
-    const roundSel = document.getElementById('tipsRound');
-    roundSel.innerHTML = tipsLmsData.rounds.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
-    const currentIdx = tipsLmsData.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(tipsLmsData.currentRoundLabel));
-    roundSel.selectedIndex = currentIdx !== -1 ? currentIdx : tipsLmsData.rounds.length - 1;
-
-    loadingEl.style.display = "none";
-    formEl.style.display = "";
-
-    document.getElementById('debugOut').textContent = "LMS Tips debug: " + JSON.stringify({
-      aliveParticipants, currentRoundLabel: tipsLmsData.currentRoundLabel, teamListFound: tipsLmsData.teamList.length, teamList: tipsLmsData.teamList, historySample: history
-    }, null, 2);
-
-    if(!tipsWired){
-      document.getElementById('tipsParticipant').addEventListener('change', renderTipTeamOptions);
-      document.getElementById('tipsRound').addEventListener('change', renderTipTeamOptions);
-      document.getElementById('tipsForm').addEventListener('submit', submitTip);
-      tipsWired = true;
-    }
-    renderTipTeamOptions();
-  }catch(err){
-    console.error(err);
-    loadingEl.className = "state-msg error";
-    loadingEl.innerHTML = "Couldn't load LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
-  }
-}
-
-// Repopulates the team dropdown for whichever participant/round is currently
-// selected, greying out (but still visible, for transparency) any team that
-// participant has already used in an earlier round.
-function renderTipTeamOptions(){
-  if(!tipsLmsData) return;
-  const teamSel = document.getElementById('tipsTeamInput');
-  const participant = document.getElementById('tipsParticipant').value;
-  const roundName = document.getElementById('tipsRound').value;
-  const isFinal = normalizeLmsText(roundName) === "FINAL";
-  const usedTeams = (tipsLmsData.history && tipsLmsData.history[participant]) || [];
-
-  const previousValue = teamSel.value;
-  teamSel.innerHTML = `<option value="">Select a team…</option>` + tipsLmsData.teamList.map(t => {
-    const used = !isFinal && usedTeams.includes(t.toUpperCase());
-    return `<option value="${t}"${used ? " disabled" : ""}>${t}${used ? " (already used)" : ""}</option>`;
-  }).join("");
-  if([...teamSel.options].some(o => o.value === previousValue)) teamSel.value = previousValue;
-  document.getElementById('tipsDuplicateWarning').style.display = "none";
-}
-
-async function submitTip(e){
-  e.preventDefault();
-  const statusEl = document.getElementById('tipsSubmitStatus');
-  const participant = document.getElementById('tipsParticipant').value;
-  const round = document.getElementById('tipsRound').value;
-  const tip = document.getElementById('tipsTeamInput').value.trim();
-
-  if(!tip){
-    statusEl.style.color = "#991b1b";
-    statusEl.textContent = "Enter a team before submitting.";
-    return;
-  }
-  if(!LMS_TIPS_APPS_SCRIPT_URL){
-    statusEl.style.color = "#991b1b";
-    statusEl.textContent = "Submissions aren't configured yet — see the warning above.";
-    return;
-  }
-
-  statusEl.style.color = "#6b7c73";
-  statusEl.textContent = "Submitting…";
-  try{
-    // no-cors: Apps Script Web Apps don't return CORS headers by default, so the
-    // response can't be read — this just fires the request and assumes success if
-    // no network error was thrown. Re-submitting overwrites the previous tip for
-    // this participant+round, since the site always reads the *latest* matching
-    // row as the authoritative tip.
-    await fetch(LMS_TIPS_APPS_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ round, teamName: participant, tip })
-    });
-    statusEl.style.color = "#166534";
-    statusEl.textContent = `Submitted: ${participant} tipped ${tip} for ${round}.`;
-  }catch(err){
-    console.error(err);
-    statusEl.style.color = "#991b1b";
-    statusEl.textContent = "Couldn't submit — check your connection and try again.";
-  }
-}
 
 async function load(){
   togglePageSections();
@@ -1855,11 +1676,6 @@ async function load(){
 
   if(currentDivision.type === "news"){
     renderNewsPage();
-    return;
-  }
-
-  if(currentDivision.type === "tips"){
-    initTipsTool();
     return;
   }
 
@@ -5754,14 +5570,142 @@ function parseLmsCup(rows){
   // page opens to without needing code changes each week.
   const currentRoundLabel = cell(rows[27] || [], 4); // E28
 
+  // Team reference list for the tips form: AY = team name, AX = "Eliminated" flag
+  // written next to it. Collected as every non-blank AY cell, in whatever order
+  // they appear — no fixed row range assumed.
+  const teamList = [];
+  for(let r=0; r<rows.length; r++){
+    const name = cell(rows[r]||[], 50); // AY
+    if(!name || /^TEAMS?$/i.test(name)) continue;
+    teamList.push({ name, eliminated: /ELIMINATED/i.test(cell(rows[r]||[], 49)) }); // AX
+  }
+
+  // Each participant's team-pick history across all rounds, for disabling
+  // already-used teams in the tips form (standard LMS rule: can't reuse a team
+  // until the Final).
+  const history = {};
+  rounds.forEach(round => {
+    if(normalizeLmsText(round.name) === "FINAL") return; // repeats allowed in the Final
+    round.entries.forEach(e => {
+      if(!e.pick || /^ELIMINATED/i.test(e.pick) || /AWAITING TIP/i.test(e.pick)) return;
+      if(!history[e.name]) history[e.name] = [];
+      history[e.name].push(e.pick.toUpperCase());
+    });
+  });
+
   return {
     rounds,
     currentRoundLabel,
-    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, headerCandidates, rawDump: rawDump.slice(0,40) }
+    teamList,
+    history,
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, teamListFound: teamList.length, teamList, headerCandidates, rawDump: rawDump.slice(0,40) }
   };
 }
 
 let lmsActiveRoundIdx = 0;
+
+function lmsTipsFormHtml(data){
+  const latestRound = data.rounds[data.rounds.length - 1];
+  const aliveParticipants = latestRound.entries
+    .filter(e => !/^ELIMINATED/i.test(e.pick))
+    .map(e => e.name)
+    .sort((a,b) => a.localeCompare(b));
+
+  return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Submit Your Tip</h2></div>
+    ${!LMS_TIPS_APPS_SCRIPT_URL ? `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:420px;margin-bottom:16px;">No Apps Script URL configured — submissions won't save.</div>` : ""}
+    <form id="lmsTipsForm" style="max-width:420px;">
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Your team name</label>
+      <select id="lmsTipsParticipant" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+        ${aliveParticipants.map(n=>`<option value="${n}">${n}</option>`).join("")}
+      </select>
+
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Round</label>
+      <select id="lmsTipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+        ${data.rounds.map(r=>`<option value="${r.name}">${r.name}</option>`).join("")}
+      </select>
+
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
+      <select id="lmsTipsTeam" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
+
+      <button type="submit" class="refresh-btn" style="position:static;">Submit Tip</button>
+      <div id="lmsTipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
+    </form>`;
+}
+
+// Repopulates the team dropdown for whichever participant/round is currently
+// selected. A team is disabled (greyed out, still visible for transparency) if
+// it's marked Eliminated in column AX, or if this participant already used it in
+// an earlier round (not enforced for the Final).
+function renderLmsTipTeamOptions(data){
+  const teamSel = document.getElementById('lmsTipsTeam');
+  if(!teamSel) return;
+  const participant = document.getElementById('lmsTipsParticipant').value;
+  const roundName = document.getElementById('lmsTipsRound').value;
+  const isFinal = normalizeLmsText(roundName) === "FINAL";
+  const usedTeams = (data.history && data.history[participant]) || [];
+
+  const previousValue = teamSel.value;
+  teamSel.innerHTML = `<option value="">Select a team…</option>` + data.teamList.map(t => {
+    const usedByParticipant = !isFinal && usedTeams.includes(t.name.toUpperCase());
+    const disabled = t.eliminated || usedByParticipant;
+    const suffix = t.eliminated ? " (eliminated)" : usedByParticipant ? " (already used)" : "";
+    return `<option value="${t.name}"${disabled ? " disabled" : ""}>${t.name}${suffix}</option>`;
+  }).join("");
+  if([...teamSel.options].some(o => o.value === previousValue)) teamSel.value = previousValue;
+}
+
+function wireLmsTipsForm(data){
+  const roundSel = document.getElementById('lmsTipsRound');
+  const currentIdx = data.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(data.currentRoundLabel));
+  roundSel.selectedIndex = currentIdx !== -1 ? currentIdx : data.rounds.length - 1;
+
+  renderLmsTipTeamOptions(data);
+
+  document.getElementById('lmsTipsParticipant').addEventListener('change', ()=> renderLmsTipTeamOptions(data));
+  roundSel.addEventListener('change', ()=> renderLmsTipTeamOptions(data));
+  document.getElementById('lmsTipsForm').addEventListener('submit', submitLmsTip);
+}
+
+async function submitLmsTip(e){
+  e.preventDefault();
+  const statusEl = document.getElementById('lmsTipsSubmitStatus');
+  const participant = document.getElementById('lmsTipsParticipant').value;
+  const round = document.getElementById('lmsTipsRound').value;
+  const tip = document.getElementById('lmsTipsTeam').value.trim();
+
+  if(!tip){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Select a team before submitting.";
+    return;
+  }
+  if(!LMS_TIPS_APPS_SCRIPT_URL){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Submissions aren't configured yet.";
+    return;
+  }
+
+  statusEl.style.color = "#6b7c73";
+  statusEl.textContent = "Submitting…";
+  try{
+    // no-cors: Apps Script Web Apps don't return CORS headers by default, so the
+    // response can't be read — this just fires the request and assumes success if
+    // no network error was thrown. Resubmitting overwrites the previous tip for
+    // this participant+round, since the site always reads the *latest* matching
+    // row as the authoritative tip.
+    await fetch(LMS_TIPS_APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ round, teamName: participant, tip })
+    });
+    statusEl.style.color = "#166534";
+    statusEl.textContent = `Submitted: ${participant} tipped ${tip} for ${round}.`;
+  }catch(err){
+    console.error(err);
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Couldn't submit — check your connection and try again.";
+  }
+}
 
 function renderLmsCup(data){
   const el = document.getElementById('sideLeaguesContainer');
@@ -5795,7 +5739,8 @@ function renderLmsCup(data){
 
   el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
-    <div class="lms-pick-list">${rowsHtml}</div>`;
+    <div class="lms-pick-list">${rowsHtml}</div>
+    ${lmsTipsFormHtml(data)}`;
 
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -5803,6 +5748,8 @@ function renderLmsCup(data){
       renderLmsCup(data);
     });
   });
+
+  wireLmsTipsForm(data);
 }
 
 async function loadSideLeague(leagueKey){
