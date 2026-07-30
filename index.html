@@ -898,6 +898,14 @@
     <div id="historyContainer" class="state-msg">Loading past season data…</div>
   </section>
 
+  <section id="newsSection" style="display:none;">
+    <div class="section-head">
+      <h2>News</h2>
+      <span class="sub" id="newsUpdated"></span>
+    </div>
+    <div id="newsContainer" class="state-msg">Loading news…</div>
+  </section>
+
   <section id="sideLeaguesSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues</h2>
@@ -977,6 +985,7 @@ const DIVISIONS = [
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#28427c", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
+  { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
   { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
@@ -1061,6 +1070,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "honour" },
   { type: "single", id: "stats" },
   { type: "single", id: "history" },
+  { type: "single", id: "news" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
@@ -1095,10 +1105,12 @@ function renderDivNav(){
   nav.innerHTML = NAV_LAYOUT.map(item=>{
     if(item.type === "single"){
       const d = DIVISIONS.find(x=>x.id===item.id);
+      if(!isPageVisible(d.id)) return "";
       const isActive = d.id===currentDivision.id || (d.id==="teams" && isTeamProfile);
       return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
     }
     if(item.type === "sidegroup"){
+      if(!isPageVisible("sideleagues")) return "";
       const isActive = currentDivision.type === "sideleagues";
       const activeKey = isActive ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
       const activeLeague = activeKey ? SIDE_LEAGUES.find(s=>s.key===activeKey) : null;
@@ -1109,7 +1121,8 @@ function renderDivNav(){
         </div>
       </div>`;
     }
-    const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
+    const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id)).filter(d=>isPageVisible(d.id));
+    if(!groupDivisions.length) return "";
     const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
     return `<div class="div-nav-group">
       <button class="div-tab${activeChild?' active':''}" data-group="${item.key}" type="button">${activeChild ? activeChild.pill : item.label}<span class="div-tab-caret">▾</span></button>
@@ -1215,6 +1228,7 @@ function togglePageSections(){
   const isTeams = type === "teams";
   const isTeamProfile = type === "teamprofile";
   const isDraw = type === "draw";
+  const isNews = type === "news";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1230,6 +1244,7 @@ function togglePageSections(){
   document.getElementById('teamsSection').style.display = isTeams ? "" : "none";
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
+  document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1653,6 +1668,11 @@ async function load(){
 
   if(currentDivision.type === "draw"){
     initDrawTool();
+    return;
+  }
+
+  if(currentDivision.type === "news"){
+    renderNewsPage();
     return;
   }
 
@@ -3423,6 +3443,90 @@ function findClubInfo(rows, teamName){
   return null;
 }
 
+// ---------- Site Control (page visibility + News) ----------
+// Two independent column blocks on one sheet tab: Page ID/Visible/Notes/URL (A:D)
+// and Date/Title/Body/Published/Image (G:K) for News. Located by header text
+// rather than trusting fixed row numbers, same reasoning as everywhere else on
+// this site — a hidden row above either block would otherwise silently shift
+// everything. Fetched once and cached; both blocks come from the same request.
+const SITE_CONTROL_SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
+const SITE_CONTROL_GID = "1134879108";
+function siteControlCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${SITE_CONTROL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SITE_CONTROL_GID}&cachebust=` + Date.now();
+}
+
+function findSiteControlHeader(rows, matchText, maxRow){
+  for(let r=0; r<Math.min(rows.length, maxRow||20); r++){
+    const row = rows[r] || [];
+    for(let c=0; c<row.length; c++){
+      if((row[c]||"").toString().trim().toUpperCase() === matchText) return { row: r, col: c };
+    }
+  }
+  return null;
+}
+
+function parseSiteControl(rows){
+  const pvHeader = findSiteControlHeader(rows, "PAGE ID");
+  const pageVisibility = {};
+  const pvRawDump = [];
+  if(pvHeader){
+    const hc = pvHeader.col;
+    for(let r=pvHeader.row+1; r<rows.length; r++){
+      const row = rows[r] || [];
+      const pageId = cell(row, hc), visible = cell(row, hc+1), notes = cell(row, hc+2), url = cell(row, hc+3);
+      if(!pageId && !visible && !notes && !url) continue;
+      if(!pageId) continue;
+      pageVisibility[pageId.toUpperCase()] = { visible: visible.toUpperCase() !== "NO", notes, url };
+      pvRawDump.push({ row: r+1, pageId, visible, notes, url });
+    }
+  }
+
+  const newsHeader = findSiteControlHeader(rows, "DATE");
+  const newsItems = [];
+  const newsRawDump = [];
+  if(newsHeader){
+    const hc = newsHeader.col;
+    for(let r=newsHeader.row+1; r<rows.length; r++){
+      const row = rows[r] || [];
+      const date = cell(row, hc), title = cell(row, hc+1), body = cell(row, hc+2), published = cell(row, hc+3), image = cell(row, hc+4);
+      if(!date && !title && !body) continue;
+      newsRawDump.push({ row: r+1, date, title, published, image });
+      if(published.toUpperCase() === "YES") newsItems.push({ date, title, body, image });
+    }
+  }
+  newsItems.sort((a,b) => b.date.localeCompare(a.date));
+
+  return {
+    pageVisibility, newsItems,
+    debug: {
+      pageVisibilityHeaderFound: !!pvHeader, pvRawDump,
+      newsHeaderFound: !!newsHeader, newsItemsFound: newsItems.length, newsRawDump
+    }
+  };
+}
+
+let siteControlData = { pageVisibility: {}, newsItems: [] }; // safe default before first load
+let siteControlPromise = null;
+async function loadSiteControlData(){
+  if(siteControlPromise) return siteControlPromise;
+  siteControlPromise = fetch(siteControlCsvUrlFor()).then(r => r.text()).then(text => {
+    const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+    siteControlData = parseSiteControl(rows);
+    return siteControlData;
+  }).catch(err => {
+    console.error("Site Control fetch failed", err);
+    return siteControlData; // keep the safe default — never let this block the whole site
+  });
+  return siteControlPromise;
+}
+
+// Fail-safe default: a Page ID not listed in the sheet at all is treated as
+// visible, so an incomplete Site Control sheet can never accidentally hide pages.
+function isPageVisible(pageId){
+  const entry = siteControlData.pageVisibility[(pageId||"").toUpperCase()];
+  return entry ? entry.visible : true;
+}
+
 // ---------- Previous Names lookup (Past Seasons) ----------
 // Builds a full OLD NAME -> CURRENT NAME map across every team's "Previous Names"
 // field, so historical pages can link an old team name straight to that team's
@@ -4826,6 +4930,39 @@ function renderHistorySeason(data){
   });
 }
 
+// ---------- News ----------
+function newsCardHtml(item){
+  const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
+  return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
+    ${item.image ? `<img src="${item.image}" alt="" style="width:100%;max-height:280px;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
+    <div style="padding:16px 18px;">
+      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#8a9990;margin-bottom:4px;">${item.date}</div>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
+      <div style="font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);">${paragraphs}</div>
+    </div>
+  </article>`;
+}
+
+function renderNewsPage(){
+  const container = document.getElementById('newsContainer');
+  container.className = "state-msg";
+  container.innerHTML = "Loading news…";
+  loadSiteControlData().then(data => {
+    document.getElementById('newsUpdated').textContent = data.newsItems.length + " article" + (data.newsItems.length===1?"":"s");
+    document.getElementById('debugOut').textContent = "Site Control debug: " + JSON.stringify(data.debug, null, 2);
+
+    if(!data.newsItems.length){
+      container.className = "state-msg";
+      container.innerHTML = "No news articles published yet. Check the Debug panel below.";
+      return;
+    }
+    container.className = "";
+    container.innerHTML = `<div style="display:flex;flex-direction:column;gap:20px;max-width:640px;">
+      ${data.newsItems.map(newsCardHtml).join("")}
+    </div>`;
+  });
+}
+
 function renderHistorySeasonTabs(){
   const tabsEl = document.getElementById('historySeasonTabs');
   tabsEl.innerHTML = HISTORY_SEASONS.map(s => `<button class="round-tab" data-key="${s.key}">${s.label}</button>`).join("");
@@ -5561,6 +5698,7 @@ async function loadSideLeague(leagueKey){
 
 // ---------- Home page ----------
 function homeCardHtml({id, title, subtitle, color, logo, icon}){
+  if(!isPageVisible(id)) return "";
   const media = logo
     ? `<img src="${logo}" alt="" class="home-card-icon" onerror="this.style.display='none';">`
     : icon
@@ -5576,7 +5714,8 @@ function homeCardHtml({id, title, subtitle, color, logo, icon}){
 }
 
 function homeDivisionsCardHtml(){
-  const divs = DIVISIONS.filter(d => d.type === "division");
+  const divs = DIVISIONS.filter(d => d.type === "division" && isPageVisible(d.id));
+  if(!divs.length) return "";
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
   return `<div class="home-card" data-id="d1" style="border-left:5px solid #28427c;cursor:pointer;">
     <div class="home-card-top">
@@ -5595,6 +5734,7 @@ const HOME_ICON_TEAMS = `<svg viewBox="0 0 24 24" width="26" height="26" fill="n
 const HOME_ICON_STATS = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="13" width="4" height="8" rx="0.5" fill="currentColor" stroke="none"/><rect x="10" y="8" width="4" height="13" rx="0.5" fill="currentColor" stroke="none"/><rect x="15" y="4" width="4" height="17" rx="0.5" fill="currentColor" stroke="none"/></svg>`;
 const HOME_ICON_HISTORY = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 8 8 8"/><polyline points="12 8 12 12 15 14"/></svg>`;
 const HOME_ICON_SIDELEAGUES = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
+const HOME_ICON_NEWS = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13a2 2 0 0 1 2 2v13a1 1 0 0 1-1.4.9L14 18H6a2 2 0 0 1-2-2V4z"/><line x1="7" y1="8" x2="15" y2="8"/><line x1="7" y1="11.5" x2="15" y2="11.5"/><line x1="7" y1="15" x2="11" y2="15"/></svg>`;
 
 // Some competitions (Division 2, Division 3) split into sub-divisions in more recent
 // seasons, and the sheet stores both winners in one cell for that season, e.g.
@@ -5667,6 +5807,7 @@ function renderHome(){
       ${homeCardHtml({id:"stats", title:"Statistics", subtitle:"Win streaks &amp; league-wide stats", color:"#28427c", icon:HOME_ICON_STATS})}
       ${homeCardHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#28427c", icon:HOME_ICON_HISTORY})}
       ${homeCardHtml({id:"sideleagues", title:"Side Leagues", subtitle:"Fixtures and standings from all non-Eliza competitions", color:"#28427c", icon:HOME_ICON_SIDELEAGUES})}
+      ${homeCardHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#28427c", icon:HOME_ICON_NEWS})}
     </div>
 
     <div class="section-head" style="margin-top:40px;">
@@ -5885,8 +6026,11 @@ window.addEventListener('resize', scheduleStickyColFix);
 
 document.getElementById('divPill').textContent = currentDivision.pill;
 applyDivisionTheme(currentDivision);
-renderDivNav();
-load();
+(async function bootstrap(){
+  await loadSiteControlData(); // resolves quickly even on failure — see its own catch
+  renderDivNav();
+  load();
+})();
 </script>
 </body>
 </html>
