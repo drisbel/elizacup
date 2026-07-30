@@ -5165,7 +5165,17 @@ function fplRoddyCsvUrlFor(){
 }
 
 function parseFplRoddy(rows){
-  const headerRowIdx = 5; // row 6
+  // Header row located by searching for "TEAM" in column D, rather than trusting a
+  // fixed row number — this table's row position has already shifted twice as
+  // content above it changed, so a hardcoded index isn't reliable here.
+  let headerRowIdx = -1;
+  for(let r=0; r<Math.min(rows.length, 20); r++){
+    if(cell(rows[r]||[], 3).toUpperCase() === "TEAM"){ headerRowIdx = r; break; }
+  }
+  if(headerRowIdx === -1){
+    return { chipHeaders: [], entries: [], debug: { headerRowFound: false, note: "Couldn't find 'TEAM' header in column D anywhere in the sheet." } };
+  }
+
   const headerRow = rows[headerRowIdx] || [];
   const chipCols = [18,19,20,21]; // S,T,U,V
   const chipHeaders = chipCols.map(c => cell(headerRow, c));
@@ -5173,7 +5183,7 @@ function parseFplRoddy(rows){
   const entries = [];
   const rawDump = [];
   let runningPos = 0;
-  for(let r=6; r<=35 && r<rows.length; r++){ // rows 7-36
+  for(let r=headerRowIdx+1; r<rows.length; r++){
     const row = rows[r] || [];
     const team = cell(row, 3); // D
     if(!team) continue; // anchor on Team, not Pos — the top 3 rows' Pos cell (B)
@@ -6027,7 +6037,8 @@ window.addEventListener('resize', scheduleStickyColFix);
 document.getElementById('divPill').textContent = currentDivision.pill;
 applyDivisionTheme(currentDivision);
 (async function bootstrap(){
-  await loadSiteControlData(); // resolves quickly even on failure — see its own catch
+  const siteControl = await loadSiteControlData(); // resolves quickly even on failure — see its own catch
+  console.log("Site Control debug:", siteControl.debug); // visit the News page for this in the on-page Debug panel too
   renderDivNav();
   load();
 })();
