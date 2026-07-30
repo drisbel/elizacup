@@ -88,6 +88,12 @@
     padding:5px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
   }
   .refresh-btn:hover{border-color:var(--turf);color:var(--turf);}
+  .lms-submit-btn{
+    background:var(--pitch);border:1px solid var(--pitch);color:#fff;
+    font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
+    padding:9px 18px;border-radius:5px;cursor:pointer;
+  }
+  .lms-submit-btn:hover{background:var(--pitch-2);border-color:var(--pitch-2);}
 
   .div-nav{
     display:flex;gap:6px;flex-wrap:wrap;padding-bottom:12px;
@@ -5593,12 +5599,32 @@ function parseLmsCup(rows){
     });
   });
 
+  // Fixture reference blocks (N:S) — one block per round, title like "Round of
+  // 16 Fixtures" in column N, Home team in Q, Away team in S. Shown next to the
+  // tips form so people can see the actual matchups before picking. Matched to
+  // a round by stripping the " Fixtures" suffix and comparing names.
+  const fixtureBlocks = [];
+  let currentBlock = null;
+  for(let r=0; r<rows.length; r++){
+    const titleText = cell(rows[r]||[], 13).trim(); // N
+    if(/FIXTURES$/i.test(titleText)){
+      currentBlock = { roundName: titleText.replace(/FIXTURES$/i, "").trim(), fixtures: [] };
+      fixtureBlocks.push(currentBlock);
+      continue;
+    }
+    if(!currentBlock) continue;
+    const home = cell(rows[r]||[], 16), away = cell(rows[r]||[], 18); // Q, S
+    if(!home && !away) continue;
+    currentBlock.fixtures.push({ home, away });
+  }
+
   return {
     rounds,
     currentRoundLabel,
     teamList,
     history,
-    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, teamListFound: teamList.length, teamList, headerCandidates, rawDump: rawDump.slice(0,40) }
+    fixtureBlocks,
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, teamListFound: teamList.length, teamList, fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})), headerCandidates, rawDump: rawDump.slice(0,40) }
   };
 }
 
@@ -5620,14 +5646,16 @@ function lmsTipsFormHtml(data){
       </select>
 
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Round</label>
-      <select id="lmsTipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+      <select id="lmsTipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:6px;box-sizing:border-box;">
         ${data.rounds.map(r=>`<option value="${r.name}">${r.name}</option>`).join("")}
       </select>
+
+      <div id="lmsTipsFixtureList" style="margin-bottom:14px;"></div>
 
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
       <select id="lmsTipsTeam" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
 
-      <button type="submit" class="refresh-btn" style="position:static;">Submit Tip</button>
+      <button type="submit" class="lms-submit-btn">Submit Tip</button>
       <div id="lmsTipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
     </form>`;
 }
@@ -5654,15 +5682,38 @@ function renderLmsTipTeamOptions(data){
   if([...teamSel.options].some(o => o.value === previousValue)) teamSel.value = previousValue;
 }
 
+// Shows the actual fixtures for whichever round is selected in the tips form,
+// so people can see the matchups before picking a team. Matched to the fixture
+// blocks (N:S) by round name.
+function renderLmsTipFixtures(data){
+  const el = document.getElementById('lmsTipsFixtureList');
+  if(!el) return;
+  const roundName = document.getElementById('lmsTipsRound').value;
+  const block = data.fixtureBlocks.find(b => normalizeLmsText(b.roundName) === normalizeLmsText(roundName));
+  if(!block || !block.fixtures.length){
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = `<div style="border:1px solid var(--line-light);border-radius:6px;padding:8px 10px;background:#fafaf8;">
+    ${block.fixtures.map(f => `<div style="display:flex;justify-content:space-between;gap:8px;font-family:'Barlow',sans-serif;font-size:12px;padding:3px 0;">
+      <span style="text-align:right;flex:1;">${f.home}</span><span style="color:#8a9990;flex-shrink:0;">v</span><span style="text-align:left;flex:1;">${f.away}</span>
+    </div>`).join("")}
+  </div>`;
+}
+
 function wireLmsTipsForm(data){
   const roundSel = document.getElementById('lmsTipsRound');
   const currentIdx = data.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(data.currentRoundLabel));
   roundSel.selectedIndex = currentIdx !== -1 ? currentIdx : data.rounds.length - 1;
 
   renderLmsTipTeamOptions(data);
+  renderLmsTipFixtures(data);
 
   document.getElementById('lmsTipsParticipant').addEventListener('change', ()=> renderLmsTipTeamOptions(data));
-  roundSel.addEventListener('change', ()=> renderLmsTipTeamOptions(data));
+  roundSel.addEventListener('change', ()=> {
+    renderLmsTipTeamOptions(data);
+    renderLmsTipFixtures(data);
+  });
   document.getElementById('lmsTipsForm').addEventListener('submit', submitLmsTip);
 }
 
