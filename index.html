@@ -957,6 +957,34 @@
 
     <div id="drawFixtureList" style="display:flex;flex-direction:column;gap:8px;max-width:480px;"></div>
   </section>
+
+  <section id="tipsSection" style="display:none;">
+    <div class="section-head">
+      <h2>LMS Tips</h2>
+      <span class="sub">Admin tool — not linked from the main nav</span>
+    </div>
+
+    <div id="tipsConfigWarning" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:480px;margin-bottom:16px;">
+      No Apps Script URL configured yet — submissions won't actually save. Set <code>LMS_TIPS_APPS_SCRIPT_URL</code> in the code once deployed.
+    </div>
+
+    <div id="tipsLoadingMsg" class="state-msg">Loading participants…</div>
+
+    <form id="tipsForm" style="display:none;max-width:420px;">
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Your team name</label>
+      <select id="tipsParticipant" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
+
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Round</label>
+      <select id="tipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
+
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
+      <input id="tipsTeamInput" type="text" autocomplete="off" style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:6px;box-sizing:border-box;">
+      <div id="tipsDuplicateWarning" style="display:none;font-family:'Barlow',sans-serif;font-size:12px;color:#991b1b;margin-bottom:10px;"></div>
+
+      <button type="submit" class="refresh-btn" style="position:static;">Submit Tip</button>
+      <div id="tipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
+    </form>
+  </section>
 </main>
 
 <footer>
@@ -988,7 +1016,8 @@ const DIVISIONS = [
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
-  { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
+  { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" },
+  { id: "tips", label: "LMS Tips",                 pill: "LMS Tips", gid: null, teams: 0, color: "#28427c", type: "tips" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1105,12 +1134,10 @@ function renderDivNav(){
   nav.innerHTML = NAV_LAYOUT.map(item=>{
     if(item.type === "single"){
       const d = DIVISIONS.find(x=>x.id===item.id);
-      if(!isPageVisible(d.id)) return "";
       const isActive = d.id===currentDivision.id || (d.id==="teams" && isTeamProfile);
       return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
     }
     if(item.type === "sidegroup"){
-      if(!isPageVisible("sideleagues")) return "";
       const isActive = currentDivision.type === "sideleagues";
       const activeKey = isActive ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
       const activeLeague = activeKey ? SIDE_LEAGUES.find(s=>s.key===activeKey) : null;
@@ -1121,8 +1148,7 @@ function renderDivNav(){
         </div>
       </div>`;
     }
-    const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id)).filter(d=>isPageVisible(d.id));
-    if(!groupDivisions.length) return "";
+    const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
     const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
     return `<div class="div-nav-group">
       <button class="div-tab${activeChild?' active':''}" data-group="${item.key}" type="button">${activeChild ? activeChild.pill : item.label}<span class="div-tab-caret">▾</span></button>
@@ -1229,6 +1255,7 @@ function togglePageSections(){
   const isTeamProfile = type === "teamprofile";
   const isDraw = type === "draw";
   const isNews = type === "news";
+  const isTips = type === "tips";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1245,6 +1272,7 @@ function togglePageSections(){
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
+  document.getElementById('tipsSection').style.display = isTips ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1381,6 +1409,148 @@ function initDrawTool(){
     drawWired = true;
   }
   renderDrawTool();
+}
+
+// ---------- LMS Tips submission (admin tool) ----------
+// Paste your deployed Google Apps Script Web App URL here once set up — see the
+// doPost script provided alongside this feature. Left blank shows a warning
+// instead of silently failing.
+const LMS_TIPS_APPS_SCRIPT_URL = "";
+
+let tipsWired = false;
+let tipsLmsData = null; // { rounds, currentRoundLabel } from parseLmsCup
+
+async function initTipsTool(){
+  const warningEl = document.getElementById('tipsConfigWarning');
+  warningEl.style.display = LMS_TIPS_APPS_SCRIPT_URL ? "none" : "";
+
+  const loadingEl = document.getElementById('tipsLoadingMsg');
+  const formEl = document.getElementById('tipsForm');
+  loadingEl.style.display = "";
+  loadingEl.className = "state-msg";
+  formEl.style.display = "none";
+
+  try{
+    const league = SIDE_LEAGUES.find(s => s.key === "auscup");
+    const res = await fetch(sideLeagueCsvUrlFor(league));
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const csvText = await res.text();
+    const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+    tipsLmsData = parseLmsCup(rows);
+
+    if(!tipsLmsData.rounds.length){
+      loadingEl.innerHTML = "Couldn't load LMS round data. Check the Debug panel below.";
+      return;
+    }
+
+    // Alive participants: anyone in the most recent round whose pick doesn't
+    // start with "Eliminated".
+    const latestRound = tipsLmsData.rounds[tipsLmsData.rounds.length - 1];
+    const aliveParticipants = latestRound.entries
+      .filter(e => !/^ELIMINATED/i.test(e.pick))
+      .map(e => e.name)
+      .sort((a,b) => a.localeCompare(b));
+
+    // Each participant's team-pick history across all rounds, for the soft
+    // duplicate warning (standard LMS rule: can't reuse a team until the Final).
+    const history = {};
+    tipsLmsData.rounds.forEach(round => {
+      const isFinal = normalizeLmsText(round.name) === "FINAL";
+      if(isFinal) return; // repeats allowed in the Final
+      round.entries.forEach(e => {
+        if(!e.pick || /^ELIMINATED/i.test(e.pick) || /AWAITING TIP/i.test(e.pick)) return;
+        if(!history[e.name]) history[e.name] = [];
+        history[e.name].push(e.pick.toUpperCase());
+      });
+    });
+    tipsLmsData.history = history;
+
+    const participantSel = document.getElementById('tipsParticipant');
+    participantSel.innerHTML = aliveParticipants.map(n => `<option value="${n}">${n}</option>`).join("");
+
+    const roundSel = document.getElementById('tipsRound');
+    roundSel.innerHTML = tipsLmsData.rounds.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
+    const currentIdx = tipsLmsData.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(tipsLmsData.currentRoundLabel));
+    roundSel.selectedIndex = currentIdx !== -1 ? currentIdx : tipsLmsData.rounds.length - 1;
+
+    loadingEl.style.display = "none";
+    formEl.style.display = "";
+
+    document.getElementById('debugOut').textContent = "LMS Tips debug: " + JSON.stringify({
+      aliveParticipants, currentRoundLabel: tipsLmsData.currentRoundLabel, historySample: history
+    }, null, 2);
+
+    if(!tipsWired){
+      document.getElementById('tipsTeamInput').addEventListener('input', checkTipDuplicate);
+      document.getElementById('tipsParticipant').addEventListener('change', checkTipDuplicate);
+      document.getElementById('tipsForm').addEventListener('submit', submitTip);
+      tipsWired = true;
+    }
+    checkTipDuplicate();
+  }catch(err){
+    console.error(err);
+    loadingEl.className = "state-msg error";
+    loadingEl.innerHTML = "Couldn't load LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+  }
+}
+
+function checkTipDuplicate(){
+  const warnEl = document.getElementById('tipsDuplicateWarning');
+  const participant = document.getElementById('tipsParticipant').value;
+  const team = document.getElementById('tipsTeamInput').value.trim().toUpperCase();
+  const roundName = document.getElementById('tipsRound').value;
+  if(normalizeLmsText(roundName) === "FINAL" || !team || !tipsLmsData){
+    warnEl.style.display = "none";
+    return;
+  }
+  const usedTeams = (tipsLmsData.history && tipsLmsData.history[participant]) || [];
+  if(usedTeams.includes(team)){
+    warnEl.textContent = `⚠ ${participant} has already tipped this team in an earlier round.`;
+    warnEl.style.display = "";
+  }else{
+    warnEl.style.display = "none";
+  }
+}
+
+async function submitTip(e){
+  e.preventDefault();
+  const statusEl = document.getElementById('tipsSubmitStatus');
+  const participant = document.getElementById('tipsParticipant').value;
+  const round = document.getElementById('tipsRound').value;
+  const tip = document.getElementById('tipsTeamInput').value.trim();
+
+  if(!tip){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Enter a team before submitting.";
+    return;
+  }
+  if(!LMS_TIPS_APPS_SCRIPT_URL){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Submissions aren't configured yet — see the warning above.";
+    return;
+  }
+
+  statusEl.style.color = "#6b7c73";
+  statusEl.textContent = "Submitting…";
+  try{
+    // no-cors: Apps Script Web Apps don't return CORS headers by default, so the
+    // response can't be read — this just fires the request and assumes success if
+    // no network error was thrown. Re-submitting overwrites the previous tip for
+    // this participant+round, since the site always reads the *latest* matching
+    // row as the authoritative tip.
+    await fetch(LMS_TIPS_APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ round, teamName: participant, tip })
+    });
+    statusEl.style.color = "#166534";
+    statusEl.textContent = `Submitted: ${participant} tipped ${tip} for ${round}.`;
+  }catch(err){
+    console.error(err);
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Couldn't submit — check your connection and try again.";
+  }
 }
 
 async function load(){
@@ -1673,6 +1843,11 @@ async function load(){
 
   if(currentDivision.type === "news"){
     renderNewsPage();
+    return;
+  }
+
+  if(currentDivision.type === "tips"){
+    initTipsTool();
     return;
   }
 
@@ -3520,13 +3695,6 @@ async function loadSiteControlData(){
   return siteControlPromise;
 }
 
-// Fail-safe default: a Page ID not listed in the sheet at all is treated as
-// visible, so an incomplete Site Control sheet can never accidentally hide pages.
-function isPageVisible(pageId){
-  const entry = siteControlData.pageVisibility[(pageId||"").toUpperCase()];
-  return entry ? entry.visible : true;
-}
-
 // ---------- Previous Names lookup (Past Seasons) ----------
 // Builds a full OLD NAME -> CURRENT NAME map across every team's "Previous Names"
 // field, so historical pages can link an old team name straight to that team's
@@ -5202,7 +5370,7 @@ function parseFplRoddy(rows){
     const posRaw = cell(row, 1); // B
     const entry = {
       pos: posRaw || String(runningPos), team, player: cell(row,8), gw: cell(row,10), chip: cell(row,11),
-      pts: cell(row,13), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
+      pts: cell(row,12), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
     };
     entries.push(entry);
     rawDump.push({ fetchedRowIndex: r+1, posRaw, ...entry });
@@ -5717,7 +5885,6 @@ async function loadSideLeague(leagueKey){
 
 // ---------- Home page ----------
 function homeCardHtml({id, title, subtitle, color, logo, icon}){
-  if(!isPageVisible(id)) return "";
   const media = logo
     ? `<img src="${logo}" alt="" class="home-card-icon" onerror="this.style.display='none';">`
     : icon
@@ -5733,8 +5900,7 @@ function homeCardHtml({id, title, subtitle, color, logo, icon}){
 }
 
 function homeDivisionsCardHtml(){
-  const divs = DIVISIONS.filter(d => d.type === "division" && isPageVisible(d.id));
-  if(!divs.length) return "";
+  const divs = DIVISIONS.filter(d => d.type === "division");
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
   return `<div class="home-card" data-id="d1" style="border-left:5px solid #28427c;cursor:pointer;">
     <div class="home-card-top">
@@ -6045,12 +6211,8 @@ window.addEventListener('resize', scheduleStickyColFix);
 
 document.getElementById('divPill').textContent = currentDivision.pill;
 applyDivisionTheme(currentDivision);
-(async function bootstrap(){
-  const siteControl = await loadSiteControlData(); // resolves quickly even on failure — see its own catch
-  console.log("Site Control debug:", siteControl.debug); // visit the News page for this in the on-page Debug panel too
-  renderDivNav();
-  load();
-})();
+renderDivNav();
+load();
 </script>
 </body>
 </html>
