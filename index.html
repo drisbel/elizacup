@@ -166,6 +166,10 @@
   .facup-bracket-side.won{font-weight:700;color:var(--ink);}
   .facup-bracket-side.selected{background:rgba(255,221,0,0.35);color:var(--ink);}
   .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;}
+  .facup-bracket-pill{
+    display:inline-block;color:#fff;font-size:9px;font-weight:700;
+    padding:1px 5px;border-radius:8px;margin-right:5px;vertical-align:middle;
+  }
 
   /* ---------- Ticker (signature element) ---------- */
   .ticker-wrap{
@@ -727,14 +731,15 @@
 
   /* Trophy Leaders: Team is column 1 here (there's no separate Pos column like the
      standings tables have), so lock it in place with an explicit width and opaque
-     background while the ten trophy columns scroll underneath. */
+     background while the ten trophy columns scroll underneath. Names wrap rather
+     than truncate, so a long team name is never hidden. */
   table.trophy-table thead th:first-child,
   table.trophy-table tbody td:first-child{
     position:sticky;
     left:0;
     z-index:3;
     width:140px; min-width:140px; max-width:140px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    white-space:normal; overflow-wrap:break-word; word-break:break-word;
     text-align:left; padding-left:12px; font-weight:600;
   }
   table.trophy-table tbody td:first-child{
@@ -746,7 +751,7 @@
   @media (max-width:600px){
     table.trophy-table thead th:first-child,
     table.trophy-table tbody td:first-child{
-      width:100px; min-width:100px; max-width:100px;
+      width:88px; min-width:88px; max-width:88px;
     }
   }
   table.home-mini-table{min-width:0;}
@@ -2427,8 +2432,15 @@ function parseFACup(rows){
 
       const homeHasTeam = /\(.+\)/.test(homeRaw);
       const awayHasTeam = /\(.+\)/.test(awayRaw);
-      // A valid fixture row has a team name with a "(DIVISION)" tag on at least one side.
-      if(!homeHasTeam && !awayHasTeam) continue;
+      // A valid fixture row has real content on at least one side — either an
+      // Eliza team with a "(DIVISION)" tag, or any other non-blank team name.
+      // External/non-Eliza opponents don't get a division tag at all, so a bye
+      // against one of those (survivor has no tag, other side is literal "BYE")
+      // was being skipped entirely by a tag-only check before bye detection
+      // ever ran — this is what caused those Round of 64 byes to vanish.
+      const homeHasContent = homeHasTeam || (homeRaw.trim() && !isByeText(homeRaw));
+      const awayHasContent = awayHasTeam || (awayRaw.trim() && !isByeText(awayRaw));
+      if(!homeHasContent && !awayHasContent) continue;
 
       const home = parseTeamDiv(homeRaw);
       const away = parseTeamDiv(awayRaw);
@@ -4948,6 +4960,23 @@ function newsCardHtml(item){
   </article>`;
 }
 
+// Shortened version for the home page — first paragraph only, capped length,
+// with a "Read more" link through to the full News page rather than dumping
+// the whole article on the home page.
+function newsExcerptCardHtml(item){
+  const firstPara = (item.body.split("\n").map(p=>p.trim()).filter(Boolean)[0]) || "";
+  const excerpt = firstPara.length > 220 ? firstPara.slice(0, 220).trim() + "…" : firstPara;
+  return `<a href="#news" style="display:flex;gap:14px;border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;text-decoration:none;color:inherit;">
+    ${item.image ? `<img src="${item.image}" alt="" style="width:120px;flex-shrink:0;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
+    <div style="padding:14px 16px 14px 0;padding-left:${item.image ? '0':'16px'};min-width:0;">
+      <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#8a9990;margin-bottom:3px;">${item.date}</div>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;margin:0 0 6px;color:var(--pitch);">${item.title}</h3>
+      <p style="font-family:'Barlow',sans-serif;font-size:13px;line-height:1.45;color:var(--ink);margin:0 0 6px;">${excerpt}</p>
+      <span style="font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;color:var(--pitch);">Read more →</span>
+    </div>
+  </a>`;
+}
+
 function renderNewsPage(){
   const container = document.getElementById('newsContainer');
   container.className = "state-msg";
@@ -6117,7 +6146,7 @@ function renderHome(){
     const newsSection = document.getElementById('homeLatestNewsSection');
     const newsContainer = document.getElementById('homeLatestNewsContainer');
     if(!newsSection || !newsContainer || !data.newsItems.length) return; // no articles yet, or user navigated away
-    newsContainer.innerHTML = `<div style="max-width:640px;">${newsCardHtml(data.newsItems[0])}</div>`;
+    newsContainer.innerHTML = `<div style="max-width:640px;">${newsExcerptCardHtml(data.newsItems[0])}</div>`;
     newsSection.style.display = "";
   });
   container.querySelectorAll('.home-card, .home-mini-pill').forEach(el=>{
@@ -6266,15 +6295,16 @@ function renderFACupBracket(){
     const matchesHtml = round.fixtures.map(f => {
       const hasScore = f.homeScore !== null && f.awayScore !== null;
       const sides = [
-        { name: f.home.name, score: f.homeScore, isBye: f.isBye && f.byeSide === "home", won: hasScore && f.homeScore > f.awayScore },
-        { name: f.away.name, score: f.awayScore, isBye: f.isBye && f.byeSide === "away", won: hasScore && f.awayScore > f.homeScore }
+        { name: f.home.name, division: f.home.division, score: f.homeScore, isBye: f.isBye && f.byeSide === "home", won: hasScore && f.homeScore > f.awayScore },
+        { name: f.away.name, division: f.away.division, score: f.awayScore, isBye: f.isBye && f.byeSide === "away", won: hasScore && f.awayScore > f.homeScore }
       ];
       const sidesHtml = sides.map(side => {
         const selected = facupBracketSelectedTeam && side.name && side.name.toUpperCase() === facupBracketSelectedTeam.toUpperCase();
         const label = side.isBye ? "BYE" : (side.name || "TBD");
+        const pill = side.division ? `<span class="facup-bracket-pill" style="background:${getDivisionColorByLabel(side.division)};">${getDivisionShortLabel(side.division)}</span>` : "";
         const clickAttr = side.name ? ` onclick="selectFacupBracketTeam('${side.name.replace(/'/g,"\\'")}')"` : "";
         return `<div class="facup-bracket-side${selected?' selected':''}${side.won?' won':''}"${clickAttr}>
-          <span class="facup-bracket-name">${label}</span><span>${side.score===null?"":side.score}</span>
+          <span class="facup-bracket-name">${pill}${label}</span><span>${side.score===null?"":side.score}</span>
         </div>`;
       }).join("");
       return `<div class="facup-bracket-match">${sidesHtml}</div>`;
