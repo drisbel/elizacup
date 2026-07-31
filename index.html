@@ -5578,6 +5578,10 @@ function parseLmsCup(rows){
   // page opens to without needing code changes each week.
   const currentRoundLabel = cell(rows[27] || [], 4); // E28
 
+  // Deadline countdown: title in G27, deadline text in G28 (e.g. "10 AUG 7.30PM AEST").
+  const deadlineTitle = cell(rows[26] || [], 6); // G27
+  const deadlineRaw = cell(rows[27] || [], 6); // G28
+
   // Team reference list for the tips form: AY = team name, AX = "Eliminated" flag
   // written next to it. Collected as every non-blank AY cell, in whatever order
   // they appear — no fixed row range assumed.
@@ -5623,14 +5627,71 @@ function parseLmsCup(rows){
   return {
     rounds,
     currentRoundLabel,
+    deadlineTitle,
+    deadlineRaw,
     teamList,
     history,
     fixtureBlocks,
-    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, teamListFound: teamList.length, teamList, fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})), headerCandidates, rawDump: rawDump.slice(0,40) }
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, deadlineTitle, deadlineRaw, teamListFound: teamList.length, teamList, fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})), headerCandidates, rawDump: rawDump.slice(0,40) }
   };
 }
 
 let lmsActiveRoundIdx = 0;
+
+// Parses deadline text like "10 AUG 7.30PM AEST" (accepts ":" or "." as the
+// time separator). AEST is treated as a fixed UTC+10 offset, matching the label
+// exactly as written rather than trying to account for daylight saving. Assumes
+// the current year, rolling to next year if the parsed date would otherwise be
+// more than a day in the past (handles a deadline that crosses New Year's).
+function parseLmsDeadline(text){
+  const m = (text||"").match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{1,2})[:.](\d{2})\s*(AM|PM)/i);
+  if(!m) return null;
+  const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+  const month = months[m[2].slice(0,3).toUpperCase()];
+  if(month === undefined) return null;
+  const day = parseInt(m[1],10);
+  let hour = parseInt(m[3],10) % 12;
+  if(m[5].toUpperCase() === "PM") hour += 12;
+  const minute = parseInt(m[4],10);
+
+  const now = new Date();
+  const year = now.getFullYear();
+  let dt = new Date(Date.UTC(year, month, day, hour-10, minute)); // AEST = UTC+10
+  if(dt.getTime() < now.getTime() - 86400000) dt = new Date(Date.UTC(year+1, month, day, hour-10, minute));
+  return dt;
+}
+
+let lmsCountdownInterval = null;
+function startLmsCountdown(deadlineDate){
+  if(lmsCountdownInterval) clearInterval(lmsCountdownInterval);
+  if(!deadlineDate) return;
+  function tick(){
+    const el = document.getElementById('lmsCountdownTimer');
+    if(!el){ clearInterval(lmsCountdownInterval); return; }
+    const diff = deadlineDate.getTime() - Date.now();
+    if(diff <= 0){
+      el.textContent = "Deadline passed";
+      clearInterval(lmsCountdownInterval);
+      return;
+    }
+    const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000);
+    const m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
+  }
+  tick();
+  lmsCountdownInterval = setInterval(tick, 1000);
+}
+
+function lmsDeadlineHtml(data){
+  const deadlineDate = parseLmsDeadline(data.deadlineRaw);
+  return `<div style="background:var(--pitch);color:#fff;border-radius:8px;padding:14px 18px;max-width:420px;margin-bottom:8px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.03em;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">${data.deadlineTitle || "Deadline"}</div>
+    <div id="lmsCountdownTimer" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;">${deadlineDate ? "" : "Awaiting Schedule Release"}</div>
+  </div>
+  <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 20px;">
+    Any tips not entered prior to the deadline will be randomly selected via a wheel generator in the Discord server.
+  </p>`;
+}
 
 function lmsTipsFormHtml(data){
   const latestRound = data.rounds[data.rounds.length - 1];
@@ -5640,6 +5701,7 @@ function lmsTipsFormHtml(data){
     .sort((a,b) => a.localeCompare(b));
 
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Submit Your Tip</h2></div>
+    ${lmsDeadlineHtml(data)}
     ${!LMS_TIPS_APPS_SCRIPT_URL ? `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:420px;margin-bottom:16px;">No Apps Script URL configured — submissions won't save.</div>` : ""}
     <form id="lmsTipsForm" style="max-width:420px;">
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Your team name</label>
@@ -5704,6 +5766,8 @@ function renderLmsTipFixtures(data){
 }
 
 function wireLmsTipsForm(data){
+  startLmsCountdown(parseLmsDeadline(data.deadlineRaw));
+
   const roundSel = document.getElementById('lmsTipsRound');
   const currentIdx = data.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(data.currentRoundLabel));
   roundSel.selectedIndex = currentIdx !== -1 ? currentIdx : data.rounds.length - 1;
