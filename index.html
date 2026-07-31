@@ -5713,6 +5713,7 @@ function lmsTipsFormHtml(data){
     <form id="lmsTipsForm" style="max-width:420px;">
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Your team name</label>
       <select id="lmsTipsParticipant" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+        <option value="" selected disabled>Select your team name…</option>
         ${aliveParticipants.map(n=>`<option value="${n}">${n}</option>`).join("")}
       </select>
 
@@ -5797,6 +5798,11 @@ async function submitLmsTip(e){
   const round = document.getElementById('lmsTipsRound').value;
   const tip = document.getElementById('lmsTipsTeam').value.trim();
 
+  if(!participant){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Select your team name before submitting.";
+    return;
+  }
   if(!tip){
     statusEl.style.color = "#991b1b";
     statusEl.textContent = "Select a team before submitting.";
