@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eliza Cup — Division 1</title>
+<title>Eliza Cup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -1220,6 +1220,7 @@ function compLogoPathFor(division){
 
 function togglePageSections(){
   const type = currentDivision.type;
+  document.title = type === "home" ? "Eliza Cup" : `Eliza Cup — ${currentDivision.pill || currentDivision.label}`;
   const isDivision = type === "division";
   const isRoddy = type === "roddy";
   const isFACup = type === "facup";
@@ -6088,6 +6089,13 @@ function renderHome(){
       ${homeCardHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#28427c", icon:HOME_ICON_NEWS})}
     </div>
 
+    <div id="homeLatestNewsSection" style="display:none;">
+      <div class="section-head" style="margin-top:40px;">
+        <h2 style="font-size:22px;">Latest News</h2>
+      </div>
+      <div id="homeLatestNewsContainer"></div>
+    </div>
+
     <div class="section-head" style="margin-top:40px;">
       <h2 style="font-size:22px;">Latest from Division 1</h2>
     </div>
@@ -6105,6 +6113,13 @@ function renderHome(){
       ${homeReigningChampionHtml("Division 3")}
     </div>
   `;
+  loadSiteControlData().then(data => {
+    const newsSection = document.getElementById('homeLatestNewsSection');
+    const newsContainer = document.getElementById('homeLatestNewsContainer');
+    if(!newsSection || !newsContainer || !data.newsItems.length) return; // no articles yet, or user navigated away
+    newsContainer.innerHTML = `<div style="max-width:640px;">${newsCardHtml(data.newsItems[0])}</div>`;
+    newsSection.style.display = "";
+  });
   container.querySelectorAll('.home-card, .home-mini-pill').forEach(el=>{
     el.addEventListener('click', (e)=>{
       e.preventDefault();
