@@ -5574,9 +5574,21 @@ function parseLmsCup(rows){
     rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
   }
 
-  // "Current Round" manual dropdown, cell E28 — lets Dan control which round the
-  // page opens to without needing code changes each week.
-  const currentRoundLabel = cell(rows[27] || [], 4); // E28
+  // Round / Deadline / Current reference table, columns X:Z — X = round name,
+  // Y = deadline (DD/MM/YYYY HH:MM:SS, always AEST), Z = "TRUE" for whichever
+  // round is current. This is now the single source of truth for both the
+  // current-round default and each round's deadline, replacing the old E28 cell
+  // and the fixture-block-derived deadline (both proved unreliable).
+  const deadlineMap = {};
+  let currentRoundLabel = "";
+  for(let r=0; r<rows.length; r++){
+    const roundName = cell(rows[r]||[], 23); // X
+    if(!roundName) continue;
+    const deadlineRaw = cell(rows[r]||[], 24); // Y
+    const isCurrent = cell(rows[r]||[], 25).trim().toUpperCase() === "TRUE"; // Z
+    deadlineMap[normalizeLmsText(roundName)] = deadlineRaw;
+    if(isCurrent) currentRoundLabel = roundName;
+  }
 
   // Team reference list for the tips form: AY = team name, AX = "Eliminated" flag
   // written next to it. Collected as every non-blank AY cell, in whatever order
@@ -5602,10 +5614,8 @@ function parseLmsCup(rows){
   });
 
   // Fixture reference blocks (N:S) — one block per round, title like "Round of
-  // 16 Fixtures" in column N on the title row, then each fixture row below has
-  // its match date/time in N (format DD/MM/YYYY HH:MM:SS, always AEST), Home
-  // team in Q, Away team in S. The deadline for a round is taken as the first
-  // fixture's date/time in that round's block.
+  // 16 Fixtures" in column N on the title row, Home team in Q, Away team in S.
+  // Shown next to the tips form so people can see the matchups before picking.
   const fixtureBlocks = [];
   let currentBlock = null;
   for(let r=0; r<rows.length; r++){
@@ -5618,17 +5628,17 @@ function parseLmsCup(rows){
     if(!currentBlock) continue;
     const home = cell(rows[r]||[], 16), away = cell(rows[r]||[], 18); // Q, S
     if(!home && !away) continue;
-    currentBlock.fixtures.push({ home, away, dateRaw: nCell });
+    currentBlock.fixtures.push({ home, away });
   }
-  fixtureBlocks.forEach(b => { b.deadlineRaw = b.fixtures.length ? b.fixtures[0].dateRaw : ""; });
 
   return {
     rounds,
     currentRoundLabel,
+    deadlineMap,
     teamList,
     history,
     fixtureBlocks,
-    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, teamListFound: teamList.length, teamList, fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length, deadlineRaw:b.deadlineRaw})), headerCandidates, rawDump: rawDump.slice(0,40) }
+    debug: { roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })), currentRoundLabel, deadlineMap, teamListFound: teamList.length, teamList, fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})), headerCandidates, rawDump: rawDump.slice(0,40) }
   };
 }
 
@@ -5670,14 +5680,13 @@ function startLmsCountdown(deadlineDate){
   lmsCountdownInterval = setInterval(tick, 1000);
 }
 
-// Deadline for whichever round is currently selected — taken from that round's
-// fixture block's first match date/time (column N). Re-run on every round change.
+// Deadline for whichever round is currently selected — looked up from the
+// Round/Deadline/Current reference table (X:Z). Re-run on every round change.
 function renderLmsTipDeadline(data){
   const box = document.getElementById('lmsTipsDeadlineBox');
   if(!box) return;
   const roundName = document.getElementById('lmsTipsRound').value;
-  const block = data.fixtureBlocks.find(b => normalizeLmsText(b.roundName) === normalizeLmsText(roundName));
-  const deadlineRaw = block ? block.deadlineRaw : "";
+  const deadlineRaw = data.deadlineMap[normalizeLmsText(roundName)] || "";
   const deadlineDate = parseLmsDeadline(deadlineRaw);
 
   box.innerHTML = `<div style="background:var(--pitch);color:#fff;border-radius:8px;padding:14px 18px;max-width:420px;margin-bottom:8px;">
