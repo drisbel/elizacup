@@ -5578,9 +5578,9 @@ function parseLmsCup(rows){
   // page opens to without needing code changes each week.
   const currentRoundLabel = cell(rows[27] || [], 4); // E28
 
-  // Deadline countdown: title in G27, deadline text in G28 (e.g. "10 AUG 7.30PM AEST").
-  const deadlineTitle = cell(rows[26] || [], 6); // G27
-  const deadlineRaw = cell(rows[27] || [], 6); // G28
+  // Deadline countdown: title in X27, deadline text in X28 (e.g. "10 AUG 7.30PM AEST").
+  const deadlineTitle = cell(rows[26] || [], 23); // X27
+  const deadlineRaw = cell(rows[27] || [], 23); // X28
 
   // Team reference list for the tips form: AY = team name, AX = "Eliminated" flag
   // written next to it. Collected as every non-blank AY cell, in whatever order
@@ -5687,6 +5687,7 @@ function lmsDeadlineHtml(data){
   return `<div style="background:var(--pitch);color:#fff;border-radius:8px;padding:14px 18px;max-width:420px;margin-bottom:8px;">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.03em;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">${data.deadlineTitle || "Deadline"}</div>
     <div id="lmsCountdownTimer" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;">${deadlineDate ? "" : "Awaiting Schedule Release"}</div>
+    ${deadlineDate ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;opacity:0.8;margin-top:4px;">${data.deadlineRaw}</div>` : ""}
   </div>
   <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 20px;">
     Any tips not entered prior to the deadline will be randomly selected via a wheel generator in the Discord server.
