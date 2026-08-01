@@ -931,24 +931,6 @@
     <div id="aboutContainer" class="state-msg">Loading…</div>
   </section>
 
-  <section id="contactSection" style="display:none;">
-    <div class="section-head">
-      <h2>Contact</h2>
-    </div>
-    <div style="max-width:760px;">
-      <iframe
-        src="https://docs.google.com/forms/d/e/1FAIpQLSd8EXkjj5M0i5BVTkm99VEfsYDRfNGik_RoxrGXLXKDUTVQDQ/viewform?embedded=true"
-        width="100%"
-        height="1100"
-        frameborder="0"
-        marginheight="0"
-        marginwidth="0"
-        style="border:1px solid var(--line-light);border-radius:8px;background:#fff;">
-        Loading contact form…
-      </iframe>
-    </div>
-  </section>
-
   <section id="sideLeaguesSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues</h2>
@@ -1030,7 +1012,6 @@ const DIVISIONS = [
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
-  { id: "contact", label: "Contact",                 pill: "Contact", gid: null, teams: 0, color: "#28427c", type: "contact" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
   { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
@@ -1117,7 +1098,6 @@ const NAV_LAYOUT = [
   { type: "single", id: "history" },
   { type: "single", id: "news" },
   { type: "single", id: "about" },
-  { type: "single", id: "contact" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
@@ -1275,7 +1255,6 @@ function togglePageSections(){
   const isDraw = type === "draw";
   const isNews = type === "news";
   const isAbout = type === "about";
-  const isContact = type === "contact";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1293,7 +1272,6 @@ function togglePageSections(){
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
-  document.getElementById('contactSection').style.display = isContact ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1750,10 +1728,6 @@ async function load(){
   if(currentDivision.type === "about"){
     renderAboutPage();
     return;
-  }
-
-  if(currentDivision.type === "contact"){
-    return; // static embed, nothing to fetch
   }
 
   document.getElementById('tableContainer').innerHTML = "Loading standings…";
@@ -5214,13 +5188,31 @@ function contentSectionHtml(section){
   </div>`;
 }
 
-let aboutActiveTab = "about"; // "about" | "rulebook"
+let aboutActiveTab = "about"; // "about" | "rulebook" | "contact"
+
+const CONTACT_FORM_EMBED_SRC = "https://docs.google.com/forms/d/e/1FAIpQLSd8EXkjj5M0i5BVTkm99VEfsYDRfNGik_RoxrGXLXKDUTVQDQ/viewform?embedded=true";
+
+function contactFormHtml(){
+  return `<div style="max-width:760px;">
+    <iframe
+      src="${CONTACT_FORM_EMBED_SRC}"
+      width="100%"
+      height="1100"
+      frameborder="0"
+      marginheight="0"
+      marginwidth="0"
+      style="border:1px solid var(--line-light);border-radius:8px;background:#fff;">
+      Loading contact form…
+    </iframe>
+  </div>`;
+}
 
 function renderAboutPage(){
   const toggleEl = document.getElementById('aboutViewToggle');
   toggleEl.innerHTML = `
     <button class="round-tab${aboutActiveTab==='about'?' active':''}" data-tab="about">About</button>
     <button class="round-tab${aboutActiveTab==='rulebook'?' active':''}" data-tab="rulebook">Rulebook</button>
+    <button class="round-tab${aboutActiveTab==='contact'?' active':''}" data-tab="contact">Contact</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -5230,6 +5222,13 @@ function renderAboutPage(){
   });
 
   const container = document.getElementById('aboutContainer');
+
+  if(aboutActiveTab === "contact"){
+    container.className = "";
+    container.innerHTML = contactFormHtml();
+    return;
+  }
+
   container.className = "state-msg";
   container.innerHTML = "Loading…";
 
