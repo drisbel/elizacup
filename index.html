@@ -930,6 +930,13 @@
     <div id="aboutContainer" class="state-msg">Loading…</div>
   </section>
 
+  <section id="rulebookSection" style="display:none;">
+    <div class="section-head">
+      <h2>Rulebook</h2>
+    </div>
+    <div id="rulebookContainer" class="state-msg">Loading…</div>
+  </section>
+
   <section id="sideLeaguesSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues</h2>
@@ -1011,6 +1018,7 @@ const DIVISIONS = [
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
+  { id: "rulebook", label: "Rulebook",               pill: "Rulebook", gid: null, teams: 0, color: "#28427c", type: "rulebook" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
   { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
@@ -1097,6 +1105,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "history" },
   { type: "single", id: "news" },
   { type: "single", id: "about" },
+  { type: "single", id: "rulebook" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
@@ -1254,6 +1263,7 @@ function togglePageSections(){
   const isDraw = type === "draw";
   const isNews = type === "news";
   const isAbout = type === "about";
+  const isRulebook = type === "rulebook";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1271,6 +1281,7 @@ function togglePageSections(){
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
+  document.getElementById('rulebookSection').style.display = isRulebook ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1726,6 +1737,11 @@ async function load(){
 
   if(currentDivision.type === "about"){
     renderAboutPage();
+    return;
+  }
+
+  if(currentDivision.type === "rulebook"){
+    renderRulebookPage();
     return;
   }
 
@@ -5176,6 +5192,60 @@ function renderAboutPage(){
     }
     container.className = "";
     container.innerHTML = data.sections.map(aboutSectionHtml).join("");
+  });
+}
+
+// ---------- Rulebook ----------
+// Same pattern as About: rulebook.json at the repo root (managed via
+// admin.html), an array of sections in display order — each { heading, body }.
+function rulebookJsonUrlFor(){
+  return "rulebook.json?cachebust=" + Date.now();
+}
+
+let rulebookData = { sections: [], debug: {} };
+let rulebookPromise = null;
+async function loadRulebookData(){
+  if(rulebookPromise) return rulebookPromise;
+  rulebookPromise = fetch(rulebookJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("rulebook.json fetch failed: " + r.status);
+    return r.json();
+  }).then(raw => {
+    const sections = Array.isArray(raw) ? raw : [];
+    rulebookData = { sections, debug: { sectionCount: sections.length } };
+    return rulebookData;
+  }).catch(err => {
+    console.error("rulebook.json fetch failed", err);
+    rulebookData = { sections: [], debug: { error: err.message } };
+    return rulebookData;
+  });
+  return rulebookPromise;
+}
+
+// Reuses aboutSectionHtml's markup/paragraph-splitting exactly — kept as a
+// separate function name so the two pages can diverge in styling later
+// without one edit accidentally affecting the other.
+function rulebookSectionHtml(section){
+  const paragraphs = (section.body||"").split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
+  return `<div style="margin-bottom:32px;">
+    <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 12px;color:var(--pitch);">${section.heading||""}</h3>
+    <div style="font-family:'Barlow',sans-serif;font-size:14.5px;line-height:1.6;color:var(--ink);max-width:720px;">${paragraphs}</div>
+  </div>`;
+}
+
+function renderRulebookPage(){
+  const container = document.getElementById('rulebookContainer');
+  container.className = "state-msg";
+  container.innerHTML = "Loading…";
+  loadRulebookData().then(data => {
+    document.getElementById('debugOut').textContent = "Rulebook debug: " + JSON.stringify(data.debug, null, 2);
+
+    if(!data.sections.length){
+      container.className = "state-msg";
+      container.innerHTML = "Rulebook content coming soon.";
+      return;
+    }
+    container.className = "";
+    container.innerHTML = data.sections.map(rulebookSectionHtml).join("");
   });
 }
 

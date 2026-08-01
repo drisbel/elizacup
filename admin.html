@@ -272,6 +272,34 @@
       <div id="aboutSectionListEl"></div>
     </div>
 
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Rulebook</h2>
+
+    <div class="card">
+      <h2 id="rulebookFormTitle">New section</h2>
+      <div class="field">
+        <label for="rHeading">Heading</label>
+        <input type="text" id="rHeading" placeholder="Section heading">
+      </div>
+      <div class="field">
+        <label for="rBody">Body</label>
+        <textarea id="rBody" placeholder="Section text. Press Enter for a new paragraph."></textarea>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveRulebookBtn">Save section</button>
+        <button class="btn btn-ghost" id="cancelRulebookEditBtn" style="display:none;">Cancel edit</button>
+        <span class="status-msg" id="rulebookFormStatus"></span>
+      </div>
+      <div class="hint" style="margin-top:12px;">Sections display on the Rulebook page in the order they appear below. Reordering isn't supported yet — delete and re-add in the order you want for now.</div>
+    </div>
+
+    <div class="card">
+      <h2>Sections</h2>
+      <div id="rulebookLoadingList">Loading rulebook.json…</div>
+      <div id="rulebookEmptyState" style="display:none;">No sections yet. Add one above — the first save will create rulebook.json in the repo.</div>
+      <div id="rulebookSectionListEl"></div>
+    </div>
+
   </div>
 
 </main>
@@ -282,6 +310,7 @@ const REPO = "elizacup";
 const BRANCH = "main";
 const NEWS_PATH = "news.json";
 const ABOUT_PATH = "about.json";
+const RULEBOOK_PATH = "rulebook.json";
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
 let token = null;
@@ -338,6 +367,7 @@ function showPanel() {
   $("logoutBtn").style.display = "inline-block";
   loadNews();
   loadAbout();
+  loadRulebook();
 }
 
 // ---------- Load news.json ----------
@@ -699,6 +729,177 @@ function setAboutFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- Rulebook: load ----------
+
+let rulebookSections = [];    // in-memory array of section objects
+let rulebookSha = null;       // sha of rulebook.json, null if file doesn't exist yet
+let rulebookEditingId = null; // id of section currently being edited, null if new
+
+async function loadRulebook() {
+  $("rulebookLoadingList").style.display = "block";
+  $("rulebookEmptyState").style.display = "none";
+  $("rulebookSectionListEl").innerHTML = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/contents/${RULEBOOK_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    if (res.status === 404) {
+      rulebookSections = [];
+      rulebookSha = null;
+    } else if (res.ok) {
+      const data = await res.json();
+      rulebookSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      rulebookSections = JSON.parse(decoded || "[]");
+    } else {
+      throw new Error(`Failed to load rulebook.json (status ${res.status})`);
+    }
+    renderRulebookList();
+  } catch (err) {
+    $("rulebookLoadingList").textContent = "Error loading sections: " + err.message;
+  }
+}
+
+function renderRulebookList() {
+  $("rulebookLoadingList").style.display = "none";
+  const list = $("rulebookSectionListEl");
+  list.innerHTML = "";
+
+  if (!rulebookSections.length) {
+    $("rulebookEmptyState").style.display = "block";
+    return;
+  }
+  $("rulebookEmptyState").style.display = "none";
+
+  rulebookSections.forEach((s, i) => {
+    const item = document.createElement("div");
+    item.className = "article-item";
+    item.innerHTML = `
+      <div class="meta">
+        <div class="title">${i + 1}. ${escapeHtml(s.heading || "(untitled)")}</div>
+      </div>
+      <div class="item-actions">
+        <button data-edit="${s.id}">Edit</button>
+        <button data-delete="${s.id}">Delete</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+
+  list.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => startEditRulebook(btn.getAttribute("data-edit")));
+  });
+  list.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteRulebookSection(btn.getAttribute("data-delete")));
+  });
+}
+
+// ---------- Rulebook: form ----------
+
+function startEditRulebook(id) {
+  const s = rulebookSections.find(x => String(x.id) === String(id));
+  if (!s) return;
+  rulebookEditingId = s.id;
+  $("rHeading").value = s.heading || "";
+  $("rBody").value = s.body || "";
+  $("rulebookFormTitle").textContent = "Edit section";
+  $("cancelRulebookEditBtn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEditRulebook() {
+  rulebookEditingId = null;
+  $("rHeading").value = "";
+  $("rBody").value = "";
+  $("rulebookFormTitle").textContent = "New section";
+  $("cancelRulebookEditBtn").style.display = "none";
+  $("rulebookFormStatus").textContent = "";
+}
+
+function deleteRulebookSection(id) {
+  const s = rulebookSections.find(x => String(x.id) === String(id));
+  if (!s) return;
+  if (!confirm(`Delete "${s.heading || "this section"}"? This can't be undone.`)) return;
+  rulebookSections = rulebookSections.filter(x => String(x.id) !== String(id));
+  commitRulebook(`Delete rulebook section: ${s.heading || s.id}`).then(() => {
+    if (rulebookEditingId === s.id) cancelEditRulebook();
+  });
+}
+
+async function saveRulebookSection() {
+  const heading = $("rHeading").value.trim();
+  const body = $("rBody").value.trim();
+
+  if (!heading) {
+    setRulebookFormStatus("Heading is required.", true);
+    return;
+  }
+
+  if (rulebookEditingId) {
+    const idx = rulebookSections.findIndex(x => String(x.id) === String(rulebookEditingId));
+    if (idx !== -1) {
+      rulebookSections[idx] = { ...rulebookSections[idx], heading, body };
+    }
+  } else {
+    rulebookSections.push({
+      id: Date.now().toString(36),
+      heading, body
+    });
+  }
+
+  const msg = rulebookEditingId ? `Update rulebook section: ${heading}` : `Add rulebook section: ${heading}`;
+  const ok = await commitRulebook(msg);
+  if (ok) {
+    cancelEditRulebook();
+  }
+}
+
+// ---------- Rulebook: commit ----------
+
+async function commitRulebook(message) {
+  $("saveRulebookBtn").disabled = true;
+  setRulebookFormStatus("Saving…", false);
+
+  try {
+    const jsonStr = JSON.stringify(rulebookSections, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message,
+      content: b64,
+      branch: BRANCH
+    };
+    if (rulebookSha) body.sha = rulebookSha;
+
+    const res = await fetch(`${API_BASE}/contents/${RULEBOOK_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const data = await res.json();
+    rulebookSha = data.content.sha;
+    setRulebookFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+    renderRulebookList();
+    return true;
+  } catch (err) {
+    setRulebookFormStatus("Save failed: " + err.message, true);
+    return false;
+  } finally {
+    $("saveRulebookBtn").disabled = false;
+  }
+}
+
+function setRulebookFormStatus(msg, isError) {
+  const el = $("rulebookFormStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
 // ---------- Wire up ----------
 
 $("loginBtn").addEventListener("click", tryLogin);
@@ -708,6 +909,8 @@ $("saveArticleBtn").addEventListener("click", saveArticle);
 $("cancelEditBtn").addEventListener("click", cancelEdit);
 $("saveAboutBtn").addEventListener("click", saveAboutSection);
 $("cancelAboutEditBtn").addEventListener("click", cancelEditAbout);
+$("saveRulebookBtn").addEventListener("click", saveRulebookSection);
+$("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
 
 // Restore session if token already present
 (function init() {
