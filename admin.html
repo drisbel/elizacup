@@ -174,6 +174,25 @@
   #emptyState{color:var(--muted);font-size:13.5px;padding:10px 2px;}
   #loadingList{color:var(--muted);font-size:13.5px;}
   .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;}
+  .fmt-toolbar{display:flex;gap:6px;margin-bottom:6px;}
+  .fmt-btn{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:5px;
+    width:30px;
+    height:28px;
+    font-family:Georgia,serif;
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink);
+  }
+  .fmt-btn:hover{background:#eef1f5;border-color:var(--pitch-2);}
+  .fmt-btn.b{font-weight:700;}
+  .fmt-btn.u{text-decoration:underline;}
+  .fmt-btn.i{font-style:italic;}
 </style>
 </head>
 <body>
@@ -223,8 +242,13 @@
       </div>
       <div class="field">
         <label for="fBody">Body</label>
+        <div class="fmt-toolbar">
+          <button type="button" class="fmt-btn b" data-fmt-target="fBody" data-fmt-tag="strong" title="Bold">B</button>
+          <button type="button" class="fmt-btn u" data-fmt-target="fBody" data-fmt-tag="u" title="Underline">U</button>
+          <button type="button" class="fmt-btn i" data-fmt-target="fBody" data-fmt-tag="em" title="Italic">I</button>
+        </div>
         <textarea id="fBody" placeholder="Article text. Leave a blank line between paragraphs."></textarea>
-        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site.</div>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site. Select text and click B/U/I to format it.</div>
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="fPublished" checked>
@@ -254,8 +278,13 @@
       </div>
       <div class="field">
         <label for="aBody">Body</label>
+        <div class="fmt-toolbar">
+          <button type="button" class="fmt-btn b" data-fmt-target="aBody" data-fmt-tag="strong" title="Bold">B</button>
+          <button type="button" class="fmt-btn u" data-fmt-target="aBody" data-fmt-tag="u" title="Underline">U</button>
+          <button type="button" class="fmt-btn i" data-fmt-target="aBody" data-fmt-tag="em" title="Italic">I</button>
+        </div>
         <textarea id="aBody" placeholder="Section text. Press Enter for a new paragraph."></textarea>
-        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site.</div>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site. Select text and click B/U/I to format it.</div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" id="saveAboutBtn">Save section</button>
@@ -282,8 +311,13 @@
       </div>
       <div class="field">
         <label for="rBody">Body</label>
+        <div class="fmt-toolbar">
+          <button type="button" class="fmt-btn b" data-fmt-target="rBody" data-fmt-tag="strong" title="Bold">B</button>
+          <button type="button" class="fmt-btn u" data-fmt-target="rBody" data-fmt-tag="u" title="Underline">U</button>
+          <button type="button" class="fmt-btn i" data-fmt-target="rBody" data-fmt-tag="em" title="Italic">I</button>
+        </div>
         <textarea id="rBody" placeholder="Section text. Press Enter for a new paragraph."></textarea>
-        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site.</div>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site. Select text and click B/U/I to format it.</div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" id="saveRulebookBtn">Save section</button>
@@ -911,6 +945,42 @@ $("saveAboutBtn").addEventListener("click", saveAboutSection);
 $("cancelAboutEditBtn").addEventListener("click", cancelEditAbout);
 $("saveRulebookBtn").addEventListener("click", saveRulebookSection);
 $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
+
+// ---------- Formatting toolbar (Bold / Underline / Italic) ----------
+// Wraps the selected text in a textarea with an HTML tag. Works because the
+// site renders body text as raw HTML (no escaping), so <strong>/<u>/<em>
+// tags typed or inserted here render as real formatting on the live site.
+function wrapSelection(textareaId, tag){
+  const el = $(textareaId);
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const value = el.value;
+  const selected = value.slice(start, end);
+  const openTag = `<${tag}>`;
+  const closeTag = `</${tag}>`;
+
+  let newText, newCursorStart, newCursorEnd;
+  if(selected.length){
+    newText = value.slice(0, start) + openTag + selected + closeTag + value.slice(end);
+    newCursorStart = start + openTag.length;
+    newCursorEnd = newCursorStart + selected.length;
+  } else {
+    // no selection — insert empty tag pair with cursor placed between them
+    newText = value.slice(0, start) + openTag + closeTag + value.slice(end);
+    newCursorStart = start + openTag.length;
+    newCursorEnd = newCursorStart;
+  }
+
+  el.value = newText;
+  el.focus();
+  el.setSelectionRange(newCursorStart, newCursorEnd);
+}
+
+document.querySelectorAll(".fmt-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    wrapSelection(btn.getAttribute("data-fmt-target"), btn.getAttribute("data-fmt-tag"));
+  });
+});
 
 // Restore session if token already present
 (function init() {

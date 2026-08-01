@@ -927,14 +927,26 @@
     <div class="section-head">
       <h2>About</h2>
     </div>
+    <div id="aboutViewToggle" class="round-tabs" style="margin-bottom:16px;"></div>
     <div id="aboutContainer" class="state-msg">Loading…</div>
   </section>
 
-  <section id="rulebookSection" style="display:none;">
+  <section id="contactSection" style="display:none;">
     <div class="section-head">
-      <h2>Rulebook</h2>
+      <h2>Contact</h2>
     </div>
-    <div id="rulebookContainer" class="state-msg">Loading…</div>
+    <div style="max-width:760px;">
+      <iframe
+        src="https://docs.google.com/forms/d/e/1FAIpQLSd8EXkjj5M0i5BVTkm99VEfsYDRfNGik_RoxrGXLXKDUTVQDQ/viewform?embedded=true"
+        width="100%"
+        height="1100"
+        frameborder="0"
+        marginheight="0"
+        marginwidth="0"
+        style="border:1px solid var(--line-light);border-radius:8px;background:#fff;">
+        Loading contact form…
+      </iframe>
+    </div>
   </section>
 
   <section id="sideLeaguesSection" style="display:none;">
@@ -1018,7 +1030,7 @@ const DIVISIONS = [
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
-  { id: "rulebook", label: "Rulebook",               pill: "Rulebook", gid: null, teams: 0, color: "#28427c", type: "rulebook" },
+  { id: "contact", label: "Contact",                 pill: "Contact", gid: null, teams: 0, color: "#28427c", type: "contact" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
   { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
@@ -1105,7 +1117,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "history" },
   { type: "single", id: "news" },
   { type: "single", id: "about" },
-  { type: "single", id: "rulebook" },
+  { type: "single", id: "contact" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
@@ -1263,7 +1275,7 @@ function togglePageSections(){
   const isDraw = type === "draw";
   const isNews = type === "news";
   const isAbout = type === "about";
-  const isRulebook = type === "rulebook";
+  const isContact = type === "contact";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1281,7 +1293,7 @@ function togglePageSections(){
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
-  document.getElementById('rulebookSection').style.display = isRulebook ? "" : "none";
+  document.getElementById('contactSection').style.display = isContact ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1740,9 +1752,8 @@ async function load(){
     return;
   }
 
-  if(currentDivision.type === "rulebook"){
-    renderRulebookPage();
-    return;
+  if(currentDivision.type === "contact"){
+    return; // static embed, nothing to fetch
   }
 
   document.getElementById('tableContainer').innerHTML = "Loading standings…";
@@ -5142,13 +5153,17 @@ function renderNewsPage(){
   });
 }
 
-// ---------- About ----------
-// About page content lives in about.json at the repo root (managed via
-// admin.html), same pattern as News. An array of sections in display order —
-// each { heading, body }. Body paragraphs split the same way as News (each
-// line becomes its own paragraph).
+// ---------- About / Rulebook ----------
+// Both pages live under the "About" nav item, switched via a round-tabs
+// toggle at the top (same pattern as the Side Leagues division toggle).
+// Content for each comes from its own JSON file at the repo root — about.json
+// and rulebook.json — both managed via admin.html, same array-of-sections
+// format: [{ heading, body }, ...] rendered in file order.
 function aboutJsonUrlFor(){
   return "about.json?cachebust=" + Date.now();
+}
+function rulebookJsonUrlFor(){
+  return "rulebook.json?cachebust=" + Date.now();
 }
 
 let aboutData = { sections: [], debug: {} };
@@ -5170,38 +5185,6 @@ async function loadAboutData(){
   return aboutPromise;
 }
 
-function aboutSectionHtml(section){
-  const paragraphs = (section.body||"").split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
-  return `<div style="margin-bottom:32px;">
-    <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 12px;color:var(--pitch);">${section.heading||""}</h3>
-    <div style="font-family:'Barlow',sans-serif;font-size:14.5px;line-height:1.6;color:var(--ink);max-width:720px;">${paragraphs}</div>
-  </div>`;
-}
-
-function renderAboutPage(){
-  const container = document.getElementById('aboutContainer');
-  container.className = "state-msg";
-  container.innerHTML = "Loading…";
-  loadAboutData().then(data => {
-    document.getElementById('debugOut').textContent = "About debug: " + JSON.stringify(data.debug, null, 2);
-
-    if(!data.sections.length){
-      container.className = "state-msg";
-      container.innerHTML = "About page content coming soon.";
-      return;
-    }
-    container.className = "";
-    container.innerHTML = data.sections.map(aboutSectionHtml).join("");
-  });
-}
-
-// ---------- Rulebook ----------
-// Same pattern as About: rulebook.json at the repo root (managed via
-// admin.html), an array of sections in display order — each { heading, body }.
-function rulebookJsonUrlFor(){
-  return "rulebook.json?cachebust=" + Date.now();
-}
-
 let rulebookData = { sections: [], debug: {} };
 let rulebookPromise = null;
 async function loadRulebookData(){
@@ -5221,10 +5204,9 @@ async function loadRulebookData(){
   return rulebookPromise;
 }
 
-// Reuses aboutSectionHtml's markup/paragraph-splitting exactly — kept as a
-// separate function name so the two pages can diverge in styling later
-// without one edit accidentally affecting the other.
-function rulebookSectionHtml(section){
+// Shared section markup for both — kept as one function since About and
+// Rulebook sections use identical structure (heading + paragraph body).
+function contentSectionHtml(section){
   const paragraphs = (section.body||"").split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
   return `<div style="margin-bottom:32px;">
     <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 12px;color:var(--pitch);">${section.heading||""}</h3>
@@ -5232,20 +5214,39 @@ function rulebookSectionHtml(section){
   </div>`;
 }
 
-function renderRulebookPage(){
-  const container = document.getElementById('rulebookContainer');
+let aboutActiveTab = "about"; // "about" | "rulebook"
+
+function renderAboutPage(){
+  const toggleEl = document.getElementById('aboutViewToggle');
+  toggleEl.innerHTML = `
+    <button class="round-tab${aboutActiveTab==='about'?' active':''}" data-tab="about">About</button>
+    <button class="round-tab${aboutActiveTab==='rulebook'?' active':''}" data-tab="rulebook">Rulebook</button>
+  `;
+  toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      aboutActiveTab = btn.dataset.tab;
+      renderAboutPage();
+    });
+  });
+
+  const container = document.getElementById('aboutContainer');
   container.className = "state-msg";
   container.innerHTML = "Loading…";
-  loadRulebookData().then(data => {
-    document.getElementById('debugOut').textContent = "Rulebook debug: " + JSON.stringify(data.debug, null, 2);
+
+  const loader = aboutActiveTab === "rulebook" ? loadRulebookData() : loadAboutData();
+  const emptyMsg = aboutActiveTab === "rulebook" ? "Rulebook content coming soon." : "About page content coming soon.";
+  const debugLabel = aboutActiveTab === "rulebook" ? "Rulebook debug: " : "About debug: ";
+
+  loader.then(data => {
+    document.getElementById('debugOut').textContent = debugLabel + JSON.stringify(data.debug, null, 2);
 
     if(!data.sections.length){
       container.className = "state-msg";
-      container.innerHTML = "Rulebook content coming soon.";
+      container.innerHTML = emptyMsg;
       return;
     }
     container.className = "";
-    container.innerHTML = data.sections.map(rulebookSectionHtml).join("");
+    container.innerHTML = data.sections.map(contentSectionHtml).join("");
   });
 }
 
