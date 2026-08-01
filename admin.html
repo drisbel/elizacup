@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eliza Cup — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch:#28427c;
+    --pitch-2:#3a5a9e;
+    --amber:#ffdd00;
+    --ink:#1c2733;
+    --muted:#6b7686;
+    --line:#e2e6ec;
+    --bg:#f5f7fa;
+    --danger:#b3261e;
+    --ok:#1e7e34;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Barlow',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  header{
+    background:var(--pitch);
+    color:#fff;
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  header h1{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:22px;
+    letter-spacing:.5px;
+    margin:0;
+    text-transform:uppercase;
+  }
+  header .sub{font-size:13px;color:#c9d4ea;margin-top:2px;}
+  #logoutBtn{
+    background:transparent;
+    border:1px solid rgba(255,255,255,.4);
+    color:#fff;
+    padding:7px 14px;
+    border-radius:6px;
+    font-family:'Barlow',sans-serif;
+    font-size:13px;
+    cursor:pointer;
+  }
+  #logoutBtn:hover{background:rgba(255,255,255,.12);}
+
+  main{max-width:900px;margin:0 auto;padding:28px 20px 60px;}
+
+  /* ---- Login screen ---- */
+  #loginScreen{
+    max-width:420px;
+    margin:80px auto;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:32px;
+    box-shadow:0 2px 10px rgba(20,30,50,.06);
+  }
+  #loginScreen h2{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:20px;
+    text-transform:uppercase;
+    margin:0 0 6px;
+    color:var(--pitch);
+  }
+  #loginScreen p{font-size:13.5px;color:var(--muted);margin:0 0 20px;line-height:1.5;}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink);}
+  input[type=password],input[type=text],textarea,select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:'Barlow',sans-serif;
+    font-size:14px;
+    background:#fff;
+    color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:140px;line-height:1.5;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--pitch-2);outline-offset:1px;}
+  .field{margin-bottom:16px;}
+  .btn{
+    display:inline-block;
+    padding:10px 18px;
+    border-radius:6px;
+    border:none;
+    font-family:'Barlow',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--pitch);color:#fff;}
+  .btn-primary:hover{background:var(--pitch-2);}
+  .btn-primary:disabled{background:#9aa7bd;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{background:#eef1f5;}
+  .btn-danger{background:transparent;border:1px solid var(--danger);color:var(--danger);}
+  .btn-danger:hover{background:#fbeceb;}
+  #loginError{color:var(--danger);font-size:13px;margin-top:12px;display:none;}
+
+  /* ---- Panel ---- */
+  #panel{display:none;}
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px;
+    margin-bottom:22px;
+  }
+  .card h2{
+    font-family:'Barlow Condensed',sans-serif;
+    text-transform:uppercase;
+    font-size:17px;
+    color:var(--pitch);
+    margin:0 0 16px;
+  }
+  .row{display:flex;gap:14px;}
+  .row .field{flex:1;}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .checkbox-row input{width:auto;}
+  .checkbox-row label{margin:0;font-weight:500;}
+  .form-actions{display:flex;gap:10px;align-items:center;margin-top:6px;}
+  .status-msg{font-size:13px;margin-left:4px;}
+  .status-msg.ok{color:var(--ok);}
+  .status-msg.err{color:var(--danger);}
+
+  /* article list */
+  .article-item{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .article-item .meta{flex:1;min-width:0;}
+  .article-item .title{font-weight:600;font-size:15px;margin-bottom:2px;}
+  .article-item .date{font-size:12.5px;color:var(--muted);}
+  .badge{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    padding:2px 8px;
+    border-radius:20px;
+    margin-left:8px;
+  }
+  .badge.pub{background:#e5f4e8;color:var(--ok);}
+  .badge.draft{background:#f0f1f3;color:var(--muted);}
+  .item-actions{display:flex;gap:8px;flex-shrink:0;}
+  .item-actions button{
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:6px 10px;
+    font-size:12.5px;
+    cursor:pointer;
+    font-family:'Barlow',sans-serif;
+  }
+  .item-actions button:hover{background:#eef1f5;}
+  #emptyState{color:var(--muted);font-size:13.5px;padding:10px 2px;}
+  #loadingList{color:var(--muted);font-size:13.5px;}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Eliza Cup Admin</h1>
+    <div class="sub" id="repoLabel">drisbel/elizacup</div>
+  </div>
+  <button id="logoutBtn" style="display:none;">Log out</button>
+</header>
+
+<main>
+
+  <!-- LOGIN -->
+  <div id="loginScreen">
+    <h2>Sign in</h2>
+    <p>Paste a fine-grained GitHub token scoped to the <strong>elizacup</strong> repo with Contents: Read and write access. It's kept only in this tab's session storage.</p>
+    <div class="field">
+      <label for="tokenInput">GitHub token</label>
+      <input type="password" id="tokenInput" placeholder="github_pat_...">
+    </div>
+    <button class="btn btn-primary" id="loginBtn">Unlock panel</button>
+    <div id="loginError"></div>
+  </div>
+
+  <!-- PANEL -->
+  <div id="panel">
+
+    <div class="card">
+      <h2 id="formTitle">New article</h2>
+      <div class="row">
+        <div class="field">
+          <label for="fDate">Date</label>
+          <input type="text" id="fDate" placeholder="YYYY-MM-DD">
+        </div>
+        <div class="field">
+          <label for="fImage">Image (repo path or full URL)</label>
+          <input type="text" id="fImage" placeholder="news-images/example.jpg">
+        </div>
+      </div>
+      <div class="field">
+        <label for="fTitle">Title</label>
+        <input type="text" id="fTitle" placeholder="Article title">
+      </div>
+      <div class="field">
+        <label for="fBody">Body</label>
+        <textarea id="fBody" placeholder="Article text. Leave a blank line between paragraphs."></textarea>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site.</div>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="fPublished" checked>
+        <label for="fPublished">Published (visible on site)</label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveArticleBtn">Save article</button>
+        <button class="btn btn-ghost" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+        <span class="status-msg" id="formStatus"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Articles</h2>
+      <div id="loadingList">Loading news.json…</div>
+      <div id="emptyState" style="display:none;">No articles yet. Add one above — the first save will create news.json in the repo.</div>
+      <div id="articleList"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const OWNER = "drisbel";
+const REPO = "elizacup";
+const BRANCH = "main";
+const NEWS_PATH = "news.json";
+const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
+
+let token = null;
+let articles = [];      // in-memory array of article objects
+let currentSha = null;  // sha of news.json, null if file doesn't exist yet
+let editingId = null;   // id of article currently being edited, null if new
+
+const $ = (id) => document.getElementById(id);
+
+// ---------- Auth ----------
+
+function ghHeaders(extra = {}) {
+  return {
+    "Authorization": `Bearer ${token}`,
+    "Accept": "application/vnd.github+json",
+    ...extra
+  };
+}
+
+async function tryLogin() {
+  const t = $("tokenInput").value.trim();
+  $("loginError").style.display = "none";
+  if (!t) return;
+
+  $("loginBtn").disabled = true;
+  $("loginBtn").textContent = "Checking…";
+
+  try {
+    const res = await fetch(API_BASE, { headers: { "Authorization": `Bearer ${t}`, "Accept": "application/vnd.github+json" } });
+    if (!res.ok) {
+      throw new Error(res.status === 401 ? "Token invalid or expired." : `Couldn't access ${OWNER}/${REPO} (status ${res.status}). Check the token's repo access and permissions.`);
+    }
+    token = t;
+    sessionStorage.setItem("elizacup_admin_token", t);
+    showPanel();
+  } catch (err) {
+    $("loginError").textContent = err.message;
+    $("loginError").style.display = "block";
+  } finally {
+    $("loginBtn").disabled = false;
+    $("loginBtn").textContent = "Unlock panel";
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem("elizacup_admin_token");
+  token = null;
+  location.reload();
+}
+
+function showPanel() {
+  $("loginScreen").style.display = "none";
+  $("panel").style.display = "block";
+  $("logoutBtn").style.display = "inline-block";
+  loadNews();
+}
+
+// ---------- Load news.json ----------
+
+async function loadNews() {
+  $("loadingList").style.display = "block";
+  $("emptyState").style.display = "none";
+  $("articleList").innerHTML = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/contents/${NEWS_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    if (res.status === 404) {
+      articles = [];
+      currentSha = null;
+    } else if (res.ok) {
+      const data = await res.json();
+      currentSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      articles = JSON.parse(decoded || "[]");
+    } else {
+      throw new Error(`Failed to load news.json (status ${res.status})`);
+    }
+    renderList();
+  } catch (err) {
+    $("loadingList").textContent = "Error loading articles: " + err.message;
+  }
+}
+
+function renderList() {
+  $("loadingList").style.display = "none";
+  const list = $("articleList");
+  list.innerHTML = "";
+
+  if (!articles.length) {
+    $("emptyState").style.display = "block";
+    return;
+  }
+  $("emptyState").style.display = "none";
+
+  // newest first by date string
+  const sorted = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+  sorted.forEach(a => {
+    const item = document.createElement("div");
+    item.className = "article-item";
+    item.innerHTML = `
+      <div class="meta">
+        <div class="title">${escapeHtml(a.title || "(untitled)")}
+          <span class="badge ${a.published ? "pub" : "draft"}">${a.published ? "Published" : "Draft"}</span>
+        </div>
+        <div class="date">${escapeHtml(a.date || "no date")}</div>
+      </div>
+      <div class="item-actions">
+        <button data-edit="${a.id}">Edit</button>
+        <button data-delete="${a.id}">Delete</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+
+  list.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => startEdit(btn.getAttribute("data-edit")));
+  });
+  list.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteArticle(btn.getAttribute("data-delete")));
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+// ---------- Form: add / edit ----------
+
+function startEdit(id) {
+  const a = articles.find(x => String(x.id) === String(id));
+  if (!a) return;
+  editingId = a.id;
+  $("fDate").value = a.date || "";
+  $("fImage").value = a.image || "";
+  $("fTitle").value = a.title || "";
+  $("fBody").value = a.body || "";
+  $("fPublished").checked = !!a.published;
+  $("formTitle").textContent = "Edit article";
+  $("cancelEditBtn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEdit() {
+  editingId = null;
+  $("fDate").value = "";
+  $("fImage").value = "";
+  $("fTitle").value = "";
+  $("fBody").value = "";
+  $("fPublished").checked = true;
+  $("formTitle").textContent = "New article";
+  $("cancelEditBtn").style.display = "none";
+  $("formStatus").textContent = "";
+}
+
+function deleteArticle(id) {
+  const a = articles.find(x => String(x.id) === String(id));
+  if (!a) return;
+  if (!confirm(`Delete "${a.title || "this article"}"? This can't be undone.`)) return;
+  articles = articles.filter(x => String(x.id) !== String(id));
+  commitNews(`Delete article: ${a.title || a.id}`).then(() => {
+    if (editingId === a.id) cancelEdit();
+  });
+}
+
+async function saveArticle() {
+  const date = $("fDate").value.trim();
+  const title = $("fTitle").value.trim();
+  const body = $("fBody").value.trim();
+  const image = $("fImage").value.trim();
+  const published = $("fPublished").checked;
+
+  if (!title || !date) {
+    setFormStatus("Title and date are required.", true);
+    return;
+  }
+
+  if (editingId) {
+    const idx = articles.findIndex(x => String(x.id) === String(editingId));
+    if (idx !== -1) {
+      articles[idx] = { ...articles[idx], date, title, body, image, published };
+    }
+  } else {
+    articles.push({
+      id: Date.now().toString(36),
+      date, title, body, image, published
+    });
+  }
+
+  const msg = editingId ? `Update article: ${title}` : `Add article: ${title}`;
+  const ok = await commitNews(msg);
+  if (ok) {
+    cancelEdit();
+  }
+}
+
+// ---------- Commit to GitHub ----------
+
+async function commitNews(message) {
+  $("saveArticleBtn").disabled = true;
+  setFormStatus("Saving…", false);
+
+  try {
+    const jsonStr = JSON.stringify(articles, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message,
+      content: b64,
+      branch: BRANCH
+    };
+    if (currentSha) body.sha = currentSha;
+
+    const res = await fetch(`${API_BASE}/contents/${NEWS_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const data = await res.json();
+    currentSha = data.content.sha;
+    setFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+    renderList();
+    return true;
+  } catch (err) {
+    setFormStatus("Save failed: " + err.message, true);
+    return false;
+  } finally {
+    $("saveArticleBtn").disabled = false;
+  }
+}
+
+function setFormStatus(msg, isError) {
+  const el = $("formStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
+// ---------- Wire up ----------
+
+$("loginBtn").addEventListener("click", tryLogin);
+$("tokenInput").addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
+$("logoutBtn").addEventListener("click", logout);
+$("saveArticleBtn").addEventListener("click", saveArticle);
+$("cancelEditBtn").addEventListener("click", cancelEdit);
+
+// Restore session if token already present
+(function init() {
+  const saved = sessionStorage.getItem("elizacup_admin_token");
+  if (saved) {
+    token = saved;
+    showPanel();
+  }
+})();
+</script>
+</body>
+</html>
