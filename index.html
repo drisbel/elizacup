@@ -820,6 +820,12 @@
       <span class="sub" id="calendarUpdated"></span>
     </div>
     <div id="calendarContainer" class="state-msg">Loading calendar…</div>
+
+    <div class="section-head" style="margin-top:32px;">
+      <h2 style="font-size:18px;">Season Fixtures</h2>
+      <span class="sub" id="seasonFixturesUpdated"></span>
+    </div>
+    <div id="seasonFixturesContainer" class="state-msg">Loading fixtures…</div>
   </section>
 
   <section id="tableSection">
@@ -1448,9 +1454,25 @@ async function load(){
       parseCalendar(rows);
       renderCalendar();
 
+      document.getElementById('seasonFixturesContainer').innerHTML = "Loading fixtures…";
+      document.getElementById('seasonFixturesContainer').className = "state-msg";
+      try{
+        const sfRes = await fetch(seasonFixturesCsvUrlFor());
+        if(!sfRes.ok) throw new Error("HTTP " + sfRes.status);
+        const sfText = await sfRes.text();
+        const sfRows = Papa.parse(sfText, {skipEmptyLines:false}).data;
+        const seasonRounds = parseSeasonFixtures(sfRows);
+        renderSeasonFixtures(seasonRounds);
+      }catch(sfErr){
+        console.error(sfErr);
+        document.getElementById('seasonFixturesContainer').className = "state-msg error";
+        document.getElementById('seasonFixturesContainer').innerHTML = "Couldn't load season fixtures. Check the Debug panel below.";
+      }
+
       document.getElementById('debugOut').textContent =
         "Calendar rounds found: " + calendarRounds.length + "\n" +
         "Calendar debug: " + JSON.stringify(calendarDebug, null, 2) + "\n\n" +
+        "Season Fixtures debug: " + JSON.stringify(seasonFixturesDebug, null, 2) + "\n\n" +
         JSON.stringify(calendarRounds, null, 2);
 
       setStatus("Live — updated " + new Date().toLocaleString());
@@ -3338,6 +3360,88 @@ const CAL_COMP_COLORS = [
   { key: "faCup",    label: "FA Cup*",    bg: "#0a2f85", fg: "#fff" },
   { key: "ecl",      label: "ECL*",       bg: "#111111", fg: "#fff" }
 ];
+
+// ---------- Season Fixtures (full list, grouped by round) ----------
+const SEASON_FIXTURES_SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
+const SEASON_FIXTURES_GID = "269266692";
+function seasonFixturesCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SEASON_FIXTURES_GID}&cachebust=` + Date.now();
+}
+
+let seasonFixturesDebug = {};
+
+// B:F — Date, Home, Home Score, Away Score, Away. Header located by searching
+// for "DATE" in column B rather than a fixed row. Rounds are grouped by
+// consecutive fixtures sharing the same date (blank date on a row just
+// continues the previous round, since fixture lists usually only put the date
+// on the first row of each round). Round numbers are best-effort matched
+// against the existing round-schedule data by date; falls back to sequential
+// numbering if no match is found.
+function parseSeasonFixtures(rows){
+  let headerRowIdx = -1;
+  for(let r=0; r<Math.min(rows.length, 15); r++){
+    if(cell(rows[r]||[], 1).toUpperCase() === "DATE"){ headerRowIdx = r; break; }
+  }
+  const dataStart = headerRowIdx === -1 ? 0 : headerRowIdx + 1;
+
+  const flat = [];
+  for(let r=dataStart; r<rows.length; r++){
+    const row = rows[r] || [];
+    const date = cell(row,1), home = cell(row,2), homeScore = cell(row,3), awayScore = cell(row,4), away = cell(row,5);
+    if(!date && !home && !away) continue;
+    flat.push({ date, home, homeScore, awayScore, away });
+  }
+
+  const rounds = [];
+  let current = null;
+  flat.forEach(f => {
+    if(!current || (f.date && f.date !== current.date)){
+      current = { date: f.date, fixtures: [] };
+      rounds.push(current);
+    }
+    current.fixtures.push(f);
+  });
+
+  rounds.forEach((r,i) => {
+    const match = calendarRounds.find(cr => cr.date && r.date && cr.date.trim() === r.date.trim());
+    r.roundLabel = match ? ("Round " + match.round) : ("Round " + (i+1));
+  });
+
+  seasonFixturesDebug = { headerRowFound: headerRowIdx !== -1, headerRow: headerRowIdx+1, roundsFound: rounds.length, rawSample: flat.slice(0,20) };
+  return rounds;
+}
+
+function seasonFixtureCardHtml(f){
+  const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
+  const played = !isNaN(homeNum) && !isNaN(awayNum);
+  const draw = played && homeNum === awayNum;
+  const cls = (win) => played ? (win ? "fx-win" : draw ? "fx-draw" : "fx-lose") : "";
+  return `<div class="fixture-card" style="cursor:default;">
+    <span class="fixture-team ${cls(played && homeNum > awayNum)}">${teamLink(f.home)}</span>
+    <span class="fixture-score">${played ? `<span class="${cls(homeNum>awayNum)}">${f.homeScore}</span> – <span class="${cls(awayNum>homeNum)}">${f.awayScore}</span>` : `<span class="upcoming">vs</span>`}</span>
+    <span class="fixture-team right ${cls(played && awayNum > homeNum)}">${teamLink(f.away)}</span>
+  </div>`;
+}
+
+function renderSeasonFixtures(rounds){
+  const container = document.getElementById('seasonFixturesContainer');
+  if(!rounds.length){
+    container.className = "state-msg";
+    container.innerHTML = "No season fixtures found. Check the Debug panel below.";
+    document.getElementById('seasonFixturesUpdated').textContent = "";
+    return;
+  }
+  container.className = "";
+  container.innerHTML = rounds.map(r => `
+    <div style="margin-bottom:22px;">
+      <h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:0 0 8px;">${r.roundLabel}${r.date ? " — " + r.date : ""}</h4>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${r.fixtures.map(seasonFixtureCardHtml).join("")}
+      </div>
+    </div>
+  `).join("");
+  document.getElementById('seasonFixturesUpdated').textContent = rounds.length + " rounds";
+}
 
 function renderCalendar(){
   const container = document.getElementById('calendarContainer');
