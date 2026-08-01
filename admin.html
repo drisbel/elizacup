@@ -203,6 +203,8 @@
   <!-- PANEL -->
   <div id="panel">
 
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">News</h2>
+
     <div class="card">
       <h2 id="formTitle">New article</h2>
       <div class="row">
@@ -242,6 +244,34 @@
       <div id="articleList"></div>
     </div>
 
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">About Page</h2>
+
+    <div class="card">
+      <h2 id="aboutFormTitle">New section</h2>
+      <div class="field">
+        <label for="aHeading">Heading</label>
+        <input type="text" id="aHeading" placeholder="About The Eliza Cup">
+      </div>
+      <div class="field">
+        <label for="aBody">Body</label>
+        <textarea id="aBody" placeholder="Section text. Press Enter for a new paragraph."></textarea>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveAboutBtn">Save section</button>
+        <button class="btn btn-ghost" id="cancelAboutEditBtn" style="display:none;">Cancel edit</button>
+        <span class="status-msg" id="aboutFormStatus"></span>
+      </div>
+      <div class="hint" style="margin-top:12px;">Sections display on the About page in the order they appear below. Reordering isn't supported yet — delete and re-add in the order you want for now.</div>
+    </div>
+
+    <div class="card">
+      <h2>Sections</h2>
+      <div id="aboutLoadingList">Loading about.json…</div>
+      <div id="aboutEmptyState" style="display:none;">No sections yet. Add one above — the first save will create about.json in the repo.</div>
+      <div id="aboutSectionListEl"></div>
+    </div>
+
   </div>
 
 </main>
@@ -251,6 +281,7 @@ const OWNER = "drisbel";
 const REPO = "elizacup";
 const BRANCH = "main";
 const NEWS_PATH = "news.json";
+const ABOUT_PATH = "about.json";
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
 let token = null;
@@ -306,6 +337,7 @@ function showPanel() {
   $("panel").style.display = "block";
   $("logoutBtn").style.display = "inline-block";
   loadNews();
+  loadAbout();
 }
 
 // ---------- Load news.json ----------
@@ -496,6 +528,177 @@ function setFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- About page: load ----------
+
+let aboutSections = [];    // in-memory array of section objects
+let aboutSha = null;       // sha of about.json, null if file doesn't exist yet
+let aboutEditingId = null; // id of section currently being edited, null if new
+
+async function loadAbout() {
+  $("aboutLoadingList").style.display = "block";
+  $("aboutEmptyState").style.display = "none";
+  $("aboutSectionListEl").innerHTML = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/contents/${ABOUT_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    if (res.status === 404) {
+      aboutSections = [];
+      aboutSha = null;
+    } else if (res.ok) {
+      const data = await res.json();
+      aboutSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      aboutSections = JSON.parse(decoded || "[]");
+    } else {
+      throw new Error(`Failed to load about.json (status ${res.status})`);
+    }
+    renderAboutList();
+  } catch (err) {
+    $("aboutLoadingList").textContent = "Error loading sections: " + err.message;
+  }
+}
+
+function renderAboutList() {
+  $("aboutLoadingList").style.display = "none";
+  const list = $("aboutSectionListEl");
+  list.innerHTML = "";
+
+  if (!aboutSections.length) {
+    $("aboutEmptyState").style.display = "block";
+    return;
+  }
+  $("aboutEmptyState").style.display = "none";
+
+  aboutSections.forEach((s, i) => {
+    const item = document.createElement("div");
+    item.className = "article-item";
+    item.innerHTML = `
+      <div class="meta">
+        <div class="title">${i + 1}. ${escapeHtml(s.heading || "(untitled)")}</div>
+      </div>
+      <div class="item-actions">
+        <button data-edit="${s.id}">Edit</button>
+        <button data-delete="${s.id}">Delete</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+
+  list.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => startEditAbout(btn.getAttribute("data-edit")));
+  });
+  list.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteAboutSection(btn.getAttribute("data-delete")));
+  });
+}
+
+// ---------- About page: form ----------
+
+function startEditAbout(id) {
+  const s = aboutSections.find(x => String(x.id) === String(id));
+  if (!s) return;
+  aboutEditingId = s.id;
+  $("aHeading").value = s.heading || "";
+  $("aBody").value = s.body || "";
+  $("aboutFormTitle").textContent = "Edit section";
+  $("cancelAboutEditBtn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEditAbout() {
+  aboutEditingId = null;
+  $("aHeading").value = "";
+  $("aBody").value = "";
+  $("aboutFormTitle").textContent = "New section";
+  $("cancelAboutEditBtn").style.display = "none";
+  $("aboutFormStatus").textContent = "";
+}
+
+function deleteAboutSection(id) {
+  const s = aboutSections.find(x => String(x.id) === String(id));
+  if (!s) return;
+  if (!confirm(`Delete "${s.heading || "this section"}"? This can't be undone.`)) return;
+  aboutSections = aboutSections.filter(x => String(x.id) !== String(id));
+  commitAbout(`Delete about section: ${s.heading || s.id}`).then(() => {
+    if (aboutEditingId === s.id) cancelEditAbout();
+  });
+}
+
+async function saveAboutSection() {
+  const heading = $("aHeading").value.trim();
+  const body = $("aBody").value.trim();
+
+  if (!heading) {
+    setAboutFormStatus("Heading is required.", true);
+    return;
+  }
+
+  if (aboutEditingId) {
+    const idx = aboutSections.findIndex(x => String(x.id) === String(aboutEditingId));
+    if (idx !== -1) {
+      aboutSections[idx] = { ...aboutSections[idx], heading, body };
+    }
+  } else {
+    aboutSections.push({
+      id: Date.now().toString(36),
+      heading, body
+    });
+  }
+
+  const msg = aboutEditingId ? `Update about section: ${heading}` : `Add about section: ${heading}`;
+  const ok = await commitAbout(msg);
+  if (ok) {
+    cancelEditAbout();
+  }
+}
+
+// ---------- About page: commit ----------
+
+async function commitAbout(message) {
+  $("saveAboutBtn").disabled = true;
+  setAboutFormStatus("Saving…", false);
+
+  try {
+    const jsonStr = JSON.stringify(aboutSections, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message,
+      content: b64,
+      branch: BRANCH
+    };
+    if (aboutSha) body.sha = aboutSha;
+
+    const res = await fetch(`${API_BASE}/contents/${ABOUT_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const data = await res.json();
+    aboutSha = data.content.sha;
+    setAboutFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+    renderAboutList();
+    return true;
+  } catch (err) {
+    setAboutFormStatus("Save failed: " + err.message, true);
+    return false;
+  } finally {
+    $("saveAboutBtn").disabled = false;
+  }
+}
+
+function setAboutFormStatus(msg, isError) {
+  const el = $("aboutFormStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
 // ---------- Wire up ----------
 
 $("loginBtn").addEventListener("click", tryLogin);
@@ -503,6 +706,8 @@ $("tokenInput").addEventListener("keydown", e => { if (e.key === "Enter") tryLog
 $("logoutBtn").addEventListener("click", logout);
 $("saveArticleBtn").addEventListener("click", saveArticle);
 $("cancelEditBtn").addEventListener("click", cancelEdit);
+$("saveAboutBtn").addEventListener("click", saveAboutSection);
+$("cancelAboutEditBtn").addEventListener("click", cancelEditAbout);
 
 // Restore session if token already present
 (function init() {

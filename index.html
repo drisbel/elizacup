@@ -923,6 +923,13 @@
     <div id="newsContainer" class="state-msg">Loading news…</div>
   </section>
 
+  <section id="aboutSection" style="display:none;">
+    <div class="section-head">
+      <h2>About</h2>
+    </div>
+    <div id="aboutContainer" class="state-msg">Loading…</div>
+  </section>
+
   <section id="sideLeaguesSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues</h2>
@@ -1003,6 +1010,7 @@ const DIVISIONS = [
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#28427c", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
+  { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
   { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
@@ -1088,6 +1096,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "stats" },
   { type: "single", id: "history" },
   { type: "single", id: "news" },
+  { type: "single", id: "about" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
@@ -1244,6 +1253,7 @@ function togglePageSections(){
   const isTeamProfile = type === "teamprofile";
   const isDraw = type === "draw";
   const isNews = type === "news";
+  const isAbout = type === "about";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1260,6 +1270,7 @@ function togglePageSections(){
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
+  document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1710,6 +1721,11 @@ async function load(){
 
   if(currentDivision.type === "news"){
     renderNewsPage();
+    return;
+  }
+
+  if(currentDivision.type === "about"){
+    renderAboutPage();
     return;
   }
 
@@ -5107,6 +5123,59 @@ function renderNewsPage(){
     container.innerHTML = `<div style="display:flex;flex-direction:column;gap:20px;max-width:640px;">
       ${data.newsItems.map(newsCardHtml).join("")}
     </div>`;
+  });
+}
+
+// ---------- About ----------
+// About page content lives in about.json at the repo root (managed via
+// admin.html), same pattern as News. An array of sections in display order —
+// each { heading, body }. Body paragraphs split the same way as News (each
+// line becomes its own paragraph).
+function aboutJsonUrlFor(){
+  return "about.json?cachebust=" + Date.now();
+}
+
+let aboutData = { sections: [], debug: {} };
+let aboutPromise = null;
+async function loadAboutData(){
+  if(aboutPromise) return aboutPromise;
+  aboutPromise = fetch(aboutJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("about.json fetch failed: " + r.status);
+    return r.json();
+  }).then(raw => {
+    const sections = Array.isArray(raw) ? raw : [];
+    aboutData = { sections, debug: { sectionCount: sections.length } };
+    return aboutData;
+  }).catch(err => {
+    console.error("about.json fetch failed", err);
+    aboutData = { sections: [], debug: { error: err.message } };
+    return aboutData;
+  });
+  return aboutPromise;
+}
+
+function aboutSectionHtml(section){
+  const paragraphs = (section.body||"").split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
+  return `<div style="margin-bottom:32px;">
+    <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 12px;color:var(--pitch);">${section.heading||""}</h3>
+    <div style="font-family:'Barlow',sans-serif;font-size:14.5px;line-height:1.6;color:var(--ink);max-width:720px;">${paragraphs}</div>
+  </div>`;
+}
+
+function renderAboutPage(){
+  const container = document.getElementById('aboutContainer');
+  container.className = "state-msg";
+  container.innerHTML = "Loading…";
+  loadAboutData().then(data => {
+    document.getElementById('debugOut').textContent = "About debug: " + JSON.stringify(data.debug, null, 2);
+
+    if(!data.sections.length){
+      container.className = "state-msg";
+      container.innerHTML = "About page content coming soon.";
+      return;
+    }
+    container.className = "";
+    container.innerHTML = data.sections.map(aboutSectionHtml).join("");
   });
 }
 
