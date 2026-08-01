@@ -3564,12 +3564,13 @@ function findClubInfo(rows, teamName){
   return null;
 }
 
-// ---------- Site Control (page visibility + News) ----------
-// Two independent column blocks on one sheet tab: Page ID/Visible/Notes/URL (A:D)
-// and Date/Title/Body/Published/Image (G:K) for News. Located by header text
-// rather than trusting fixed row numbers, same reasoning as everywhere else on
-// this site — a hidden row above either block would otherwise silently shift
-// everything. Fetched once and cached; both blocks come from the same request.
+// ---------- Site Control (page visibility) ----------
+// Page ID/Visible/Notes/URL block (A:D) on the Site Control sheet tab. Located
+// by header text rather than trusting fixed row numbers, same reasoning as
+// everywhere else on this site — a hidden row above the block would otherwise
+// silently shift everything. Note: page-visibility filtering itself was built
+// and then reverted (see project notes) — this parses the data but nothing
+// currently reads pageVisibility. Left in place in case that feature returns.
 const SITE_CONTROL_SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
 const SITE_CONTROL_GID = "1134879108";
 function siteControlCsvUrlFor(){
@@ -3602,31 +3603,13 @@ function parseSiteControl(rows){
     }
   }
 
-  const newsHeader = findSiteControlHeader(rows, "DATE");
-  const newsItems = [];
-  const newsRawDump = [];
-  if(newsHeader){
-    const hc = newsHeader.col;
-    for(let r=newsHeader.row+1; r<rows.length; r++){
-      const row = rows[r] || [];
-      const date = cell(row, hc), title = cell(row, hc+1), body = cell(row, hc+2), published = cell(row, hc+3), image = cell(row, hc+4);
-      if(!date && !title && !body) continue;
-      newsRawDump.push({ row: r+1, date, title, published, image });
-      if(published.toUpperCase() === "YES") newsItems.push({ date, title, body, image });
-    }
-  }
-  newsItems.sort((a,b) => b.date.localeCompare(a.date));
-
   return {
-    pageVisibility, newsItems,
-    debug: {
-      pageVisibilityHeaderFound: !!pvHeader, pvRawDump,
-      newsHeaderFound: !!newsHeader, newsItemsFound: newsItems.length, newsRawDump
-    }
+    pageVisibility,
+    debug: { pageVisibilityHeaderFound: !!pvHeader, pvRawDump }
   };
 }
 
-let siteControlData = { pageVisibility: {}, newsItems: [] }; // safe default before first load
+let siteControlData = { pageVisibility: {} }; // safe default before first load
 let siteControlPromise = null;
 async function loadSiteControlData(){
   if(siteControlPromise) return siteControlPromise;
@@ -3639,6 +3622,39 @@ async function loadSiteControlData(){
     return siteControlData; // keep the safe default — never let this block the whole site
   });
   return siteControlPromise;
+}
+
+// ---------- News ----------
+// News now lives in news.json at the repo root (managed via admin.html), not
+// the Site Control sheet. Fetched once and cached; only published:true items
+// are shown, newest first by date string (YYYY-MM-DD sorts correctly).
+function newsJsonUrlFor(){
+  return "news.json?cachebust=" + Date.now();
+}
+
+let newsData = { newsItems: [], debug: {} }; // safe default before first load
+let newsPromise = null;
+async function loadNewsData(){
+  if(newsPromise) return newsPromise;
+  newsPromise = fetch(newsJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("news.json fetch failed: " + r.status);
+    return r.json();
+  }).then(raw => {
+    const all = Array.isArray(raw) ? raw : [];
+    const newsItems = all
+      .filter(a => a && a.published)
+      .sort((a,b) => (b.date||"").localeCompare(a.date||""));
+    newsData = {
+      newsItems,
+      debug: { totalArticlesInFile: all.length, publishedCount: newsItems.length }
+    };
+    return newsData;
+  }).catch(err => {
+    console.error("news.json fetch failed", err);
+    newsData = { newsItems: [], debug: { error: err.message } };
+    return newsData; // keep a safe default — never let this block the whole site
+  });
+  return newsPromise;
 }
 
 // ---------- Previous Names lookup (Past Seasons) ----------
@@ -5078,9 +5094,9 @@ function renderNewsPage(){
   const container = document.getElementById('newsContainer');
   container.className = "state-msg";
   container.innerHTML = "Loading news…";
-  loadSiteControlData().then(data => {
+  loadNewsData().then(data => {
     document.getElementById('newsUpdated').textContent = data.newsItems.length + " article" + (data.newsItems.length===1?"":"s");
-    document.getElementById('debugOut').textContent = "Site Control debug: " + JSON.stringify(data.debug, null, 2);
+    document.getElementById('debugOut').textContent = "News debug: " + JSON.stringify(data.debug, null, 2);
 
     if(!data.newsItems.length){
       container.className = "state-msg";
@@ -6239,7 +6255,7 @@ function renderHome(){
       ${homeReigningChampionHtml("Division 3")}
     </div>
   `;
-  loadSiteControlData().then(data => {
+  loadNewsData().then(data => {
     const newsSection = document.getElementById('homeLatestNewsSection');
     const newsContainer = document.getElementById('homeLatestNewsContainer');
     if(!newsSection || !newsContainer || !data.newsItems.length) return; // no articles yet, or user navigated away
