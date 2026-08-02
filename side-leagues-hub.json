@@ -20,8 +20,11 @@
     "label": "AFL Supercoach",
     "status": "active",
     "code": "",
-    "notes": "",
-    "link": "#sideleagues=afl"
+    "notes": "LEAGUE UNDERWAY\nView AFL page for more information.",
+    "link": "#sideleagues=afl",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false
   },
   {
     "id": "msbhw36i",
