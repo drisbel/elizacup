@@ -14,5 +14,13 @@
     "code": "https://supercoach.com.au/epl/classic/?action=join-league&code=145912",
     "notes": "ONLY 6 SPOTS REMAINING",
     "link": "#sideleagues=eplsc"
+  },
+  {
+    "id": "msbhvee7",
+    "label": "AFL Supercoach",
+    "status": "active",
+    "code": "",
+    "notes": "",
+    "link": "#sideleagues=afl"
   }
 ]
