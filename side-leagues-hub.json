@@ -54,18 +54,5 @@
     "closeDate": "",
     "countdownEnabled": false,
     "roundInfo": "ROUND OF 16"
-  },
-  {
-    "id": "msc5pqqu",
-    "label": "UCL Fantasy",
-    "status": "complete",
-    "roundInfo": "",
-    "winner": "KALLO FC",
-    "code": "",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "notes": "",
-    "link": ""
   }
 ]
