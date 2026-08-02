@@ -648,8 +648,14 @@
   .slh-code a:hover, .slh-notes a:hover{color:#3a5a9e;}
   .slh-round-info{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;
-    background:#eef1f5;color:var(--pitch);border-radius:6px;padding:6px 10px;display:inline-block;
+    background:#e5f4e8;color:#1e7e34;border-radius:6px;padding:6px 10px;display:inline-block;
   }
+  .slh-winner{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;
+    background:#fff4d6;color:#8a6700;border-radius:6px;padding:8px 12px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .slh-winner .trophy{font-size:17px;}
   .slh-closing{font-family:'Barlow',sans-serif;font-size:12.5px;color:#6b7c73;}
   .slh-closing .slh-closing-label{font-weight:600;}
   .slh-countdown{
@@ -5450,6 +5456,7 @@ function slhCardHtml(c){
       <span class="slh-status ${statusClass}">${statusLabel}</span>
     </div>
     ${c.status === "active" && c.roundInfo ? `<div class="slh-round-info">${c.roundInfo}</div>` : ""}
+    ${c.status === "complete" && c.winner ? `<div class="slh-winner"><span class="trophy">🏆</span> ${c.winner}</div>` : ""}
     ${c.status === "signups" && c.code ? `<div class="slh-code">${autoLinkify(c.code)}</div>` : ""}
     ${closingHtml}
     ${c.notes ? `<div class="slh-notes">${autoLinkify(c.notes)}</div>` : ""}

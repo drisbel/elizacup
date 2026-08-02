@@ -297,6 +297,9 @@
     </div>
     <button class="btn btn-primary" id="loginBtn">Unlock panel</button>
     <div id="loginError"></div>
+    <div style="margin-top:18px;text-align:center;">
+      <a href="index.html" style="font-family:'Barlow',sans-serif;font-size:13px;color:var(--muted);text-decoration:none;">← Return to main site</a>
+    </div>
   </div>
 
   <!-- PANEL -->
@@ -523,6 +526,11 @@
         <label for="slhRoundInfo">Current round / status note</label>
         <input type="text" id="slhRoundInfo" placeholder="Round 5 of 10 (only shown when status is Active)">
         <div class="hint">Free text — a round number, "awaiting results", whatever's useful. Update this weekly.</div>
+      </div>
+
+      <div class="field" id="slhWinnerField">
+        <label for="slhWinner">Winner 🏆</label>
+        <input type="text" id="slhWinner" placeholder="Team or player name (only shown when status is Complete)">
       </div>
 
       <div class="field" id="slhCodeField">
@@ -1508,6 +1516,7 @@ function renderSlhList() {
 function updateSlhCodeFieldVisibility(){
   const status = $("slhStatus").value;
   $("slhRoundInfoField").style.display = status === "active" ? "" : "none";
+  $("slhWinnerField").style.display = status === "complete" ? "" : "none";
   $("slhCodeField").style.display = status === "signups" ? "" : "none";
   $("slhClosingFields").style.display = status === "signups" ? "" : "none";
   updateSlhClosingSubFieldsVisibility();
@@ -1524,6 +1533,7 @@ function startEditSlh(id) {
   $("slhLabel").value = c.label || "";
   $("slhStatus").value = c.status || "active";
   $("slhRoundInfo").value = c.roundInfo || "";
+  $("slhWinner").value = c.winner || "";
   $("slhCode").value = c.code || "";
   $("slhCloseEnabled").checked = !!c.closeEnabled;
   $("slhCloseDate").value = c.closeDate || "";
@@ -1541,6 +1551,7 @@ function cancelEditSlh() {
   $("slhLabel").value = "";
   $("slhStatus").value = "active";
   $("slhRoundInfo").value = "";
+  $("slhWinner").value = "";
   $("slhCode").value = "";
   $("slhCloseEnabled").checked = false;
   $("slhCloseDate").value = "";
@@ -1567,6 +1578,7 @@ async function saveSlhCard() {
   const label = $("slhLabel").value.trim();
   const status = $("slhStatus").value;
   const roundInfo = $("slhRoundInfo").value.trim();
+  const winner = $("slhWinner").value.trim();
   const code = $("slhCode").value.trim();
   const closeEnabled = $("slhCloseEnabled").checked;
   const closeDate = $("slhCloseDate").value.trim();
@@ -1582,12 +1594,12 @@ async function saveSlhCard() {
   if (slhEditingId) {
     const idx = slhCards.findIndex(x => String(x.id) === String(slhEditingId));
     if (idx !== -1) {
-      slhCards[idx] = { ...slhCards[idx], label, status, roundInfo, code, closeEnabled, closeDate, countdownEnabled, notes, link };
+      slhCards[idx] = { ...slhCards[idx], label, status, roundInfo, winner, code, closeEnabled, closeDate, countdownEnabled, notes, link };
     }
   } else {
     slhCards.push({
       id: Date.now().toString(36),
-      label, status, roundInfo, code, closeEnabled, closeDate, countdownEnabled, notes, link
+      label, status, roundInfo, winner, code, closeEnabled, closeDate, countdownEnabled, notes, link
     });
   }
 
