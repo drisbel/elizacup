@@ -17,7 +17,12 @@
     "status": "signups",
     "code": "https://supercoach.com.au/epl/classic/?action=join-league&code=145912",
     "notes": "ONLY 6 SPOTS REMAINING",
-    "link": "#sideleagues=eplsc"
+    "link": "#sideleagues=eplsc",
+    "roundInfo": "",
+    "winners": [],
+    "closeEnabled": true,
+    "closeDate": "22/08/2026 05:00:00 AM",
+    "countdownEnabled": false
   },
   {
     "id": "msbhvee7",
