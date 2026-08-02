@@ -338,8 +338,8 @@
         </div>
         <div class="field">
           <label for="bnCountdownDeadline">Deadline (AEST)</label>
-          <input type="text" id="bnCountdownDeadline" placeholder="DD/MM/YYYY HH:MM:SS">
-          <div class="hint">Same format as the LMS tip deadlines — e.g. 08/08/2026 18:00:00. Always treated as AEST (not DST-aware).</div>
+          <input type="text" id="bnCountdownDeadline" placeholder="DD/MM/YYYY HH:MM:SS AM/PM">
+          <div class="hint">Same format as the LMS tip deadlines — e.g. 08/08/2026 06:00:00 PM. Always treated as AEST (not DST-aware).</div>
         </div>
       </div>
 
@@ -482,6 +482,24 @@
       <div class="field" id="slhCodeField">
         <label for="slhCode">Signup code / info</label>
         <input type="text" id="slhCode" placeholder="Code: ABC123 (only shown when status is Taking signups)">
+      </div>
+
+      <div class="field" id="slhClosingFields">
+        <div class="checkbox-row">
+          <input type="checkbox" id="slhCloseEnabled">
+          <label for="slhCloseEnabled">Show a closing date for signups</label>
+        </div>
+        <div class="sub-field" id="slhClosingSubFields">
+          <div class="field">
+            <label for="slhCloseDate">Closing date (AEST)</label>
+            <input type="text" id="slhCloseDate" placeholder="DD/MM/YYYY HH:MM:SS AM/PM">
+            <div class="hint">Same format as the LMS tip deadlines and site banner — e.g. 08/08/2026 06:00:00 PM. Always treated as AEST (not DST-aware).</div>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="slhCountdownEnabled">
+            <label for="slhCountdownEnabled">Show as a live countdown (instead of a plain date)</label>
+          </div>
+        </div>
       </div>
 
       <div class="field">
@@ -1437,7 +1455,14 @@ function renderSlhList() {
 // ---------- Side Leagues Hub: form ----------
 
 function updateSlhCodeFieldVisibility(){
-  $("slhCodeField").style.display = $("slhStatus").value === "signups" ? "" : "none";
+  const showSignupFields = $("slhStatus").value === "signups";
+  $("slhCodeField").style.display = showSignupFields ? "" : "none";
+  $("slhClosingFields").style.display = showSignupFields ? "" : "none";
+  updateSlhClosingSubFieldsVisibility();
+}
+
+function updateSlhClosingSubFieldsVisibility(){
+  $("slhClosingSubFields").style.display = $("slhCloseEnabled").checked ? "" : "none";
 }
 
 function startEditSlh(id) {
@@ -1447,6 +1472,9 @@ function startEditSlh(id) {
   $("slhLabel").value = c.label || "";
   $("slhStatus").value = c.status || "active";
   $("slhCode").value = c.code || "";
+  $("slhCloseEnabled").checked = !!c.closeEnabled;
+  $("slhCloseDate").value = c.closeDate || "";
+  $("slhCountdownEnabled").checked = !!c.countdownEnabled;
   $("slhNotes").value = c.notes || "";
   $("slhLink").value = c.link || "";
   updateSlhCodeFieldVisibility();
@@ -1460,6 +1488,9 @@ function cancelEditSlh() {
   $("slhLabel").value = "";
   $("slhStatus").value = "active";
   $("slhCode").value = "";
+  $("slhCloseEnabled").checked = false;
+  $("slhCloseDate").value = "";
+  $("slhCountdownEnabled").checked = false;
   $("slhNotes").value = "";
   $("slhLink").value = "";
   updateSlhCodeFieldVisibility();
@@ -1482,6 +1513,9 @@ async function saveSlhCard() {
   const label = $("slhLabel").value.trim();
   const status = $("slhStatus").value;
   const code = $("slhCode").value.trim();
+  const closeEnabled = $("slhCloseEnabled").checked;
+  const closeDate = $("slhCloseDate").value.trim();
+  const countdownEnabled = $("slhCountdownEnabled").checked;
   const notes = $("slhNotes").value.trim();
   const link = $("slhLink").value.trim();
 
@@ -1493,12 +1527,12 @@ async function saveSlhCard() {
   if (slhEditingId) {
     const idx = slhCards.findIndex(x => String(x.id) === String(slhEditingId));
     if (idx !== -1) {
-      slhCards[idx] = { ...slhCards[idx], label, status, code, notes, link };
+      slhCards[idx] = { ...slhCards[idx], label, status, code, closeEnabled, closeDate, countdownEnabled, notes, link };
     }
   } else {
     slhCards.push({
       id: Date.now().toString(36),
-      label, status, code, notes, link
+      label, status, code, closeEnabled, closeDate, countdownEnabled, notes, link
     });
   }
 
@@ -1813,6 +1847,7 @@ $("bnCountdownEnabled").addEventListener("change", updateBannerCountdownFieldsVi
 $("saveSlhBtn").addEventListener("click", saveSlhCard);
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
+$("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);
 updateSlhCodeFieldVisibility();
 
 // ---------- Formatting toolbar (Bold / Underline / Italic) ----------
