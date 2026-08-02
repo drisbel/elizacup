@@ -201,6 +201,20 @@
   .radio-row input{width:auto;}
   .radio-row label{margin:0;font-weight:500;font-size:14px;}
   .sub-field{margin-left:24px;padding-left:14px;border-left:2px solid var(--line);margin-top:10px;margin-bottom:16px;}
+
+  .admin-section-nav{
+    display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;
+    position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5;
+  }
+  .admin-section-btn{
+    background:#fff;border:1px solid var(--line);border-radius:20px;
+    padding:8px 16px;font-family:'Barlow',sans-serif;font-weight:600;font-size:13px;
+    color:var(--muted);cursor:pointer;white-space:nowrap;
+  }
+  .admin-section-btn:hover{background:#eef1f5;}
+  .admin-section-btn.active{background:var(--pitch);color:#fff;border-color:var(--pitch);}
+  .admin-section{display:none;}
+  .admin-section.active{display:block;}
   .style-toggle{display:flex;gap:8px;margin-bottom:16px;}
   .style-toggle button{
     flex:1;
@@ -288,6 +302,17 @@
   <!-- PANEL -->
   <div id="panel">
 
+    <div class="admin-section-nav" id="adminSectionNav">
+      <button type="button" class="admin-section-btn active" data-section="pagevisibility">Page Visibility</button>
+      <button type="button" class="admin-section-btn" data-section="banner">Site Banner</button>
+      <button type="button" class="admin-section-btn" data-section="news">News</button>
+      <button type="button" class="admin-section-btn" data-section="about">About Page</button>
+      <button type="button" class="admin-section-btn" data-section="rulebook">Rulebook</button>
+      <button type="button" class="admin-section-btn" data-section="sideleagues">Side Leagues</button>
+      <button type="button" class="admin-section-btn" data-section="draw">Fixture Draw</button>
+    </div>
+
+    <div class="admin-section active" id="section-pagevisibility">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">Page Visibility</h2>
 
     <div class="card">
@@ -300,6 +325,9 @@
       </div>
     </div>
 
+    </div>
+
+    <div class="admin-section" id="section-banner">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Site Banner</h2>
 
     <div class="card">
@@ -349,6 +377,9 @@
       </div>
     </div>
 
+    </div>
+
+    <div class="admin-section" id="section-news">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">News</h2>
 
     <div class="card">
@@ -395,6 +426,9 @@
       <div id="articleList"></div>
     </div>
 
+    </div>
+
+    <div class="admin-section" id="section-about">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">About Page</h2>
 
     <div class="card">
@@ -428,6 +462,9 @@
       <div id="aboutSectionListEl"></div>
     </div>
 
+    </div>
+
+    <div class="admin-section" id="section-rulebook">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Rulebook</h2>
 
     <div class="card">
@@ -461,6 +498,9 @@
       <div id="rulebookSectionListEl"></div>
     </div>
 
+    </div>
+
+    <div class="admin-section" id="section-sideleagues">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Side Leagues Overview</h2>
 
     <div class="card">
@@ -534,6 +574,9 @@
       <div id="slhListEl"></div>
     </div>
 
+    </div>
+
+    <div class="admin-section" id="section-draw">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Fixture Draw</h2>
 
     <div class="card">
@@ -585,6 +628,8 @@
       </div>
 
       <div id="drawFixtureList" style="margin-top:18px;"></div>
+    </div>
+
     </div>
 
   </div>
@@ -1852,6 +1897,16 @@ $("drawNextBtn").addEventListener("click", drawNext);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 $("drawStyleListBtn").addEventListener("click", () => setDrawStyle("list"));
 $("drawStyleWheelBtn").addEventListener("click", () => setDrawStyle("wheel"));
+
+// ---------- Admin section switcher ----------
+document.querySelectorAll(".admin-section-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const key = btn.getAttribute("data-section");
+    document.querySelectorAll(".admin-section-btn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".admin-section").forEach(s => s.classList.toggle("active", s.id === "section-" + key));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});
 $("saveBannerBtn").addEventListener("click", saveBanner);
 $("bnCountdownEnabled").addEventListener("change", updateBannerCountdownFieldsVisibility);
 $("saveSlhBtn").addEventListener("click", saveSlhCard);
