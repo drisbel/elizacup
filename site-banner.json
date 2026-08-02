@@ -1,9 +1,9 @@
 {
   "enabled": true,
-  "message": "TEST",
-  "scope": "site",
+  "message": "FPL and EPL Supercoach League now open!",
+  "scope": "home",
   "countdown": {
-    "enabled": false,
+    "enabled": true,
     "label": "Deadline",
     "deadline": "22/08/2026 05:00 AM"
   }
