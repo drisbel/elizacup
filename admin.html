@@ -1165,12 +1165,15 @@ function setRulebookFormStatus(msg, isError) {
 }
 
 // ---------- Fixture Draw ----------
-// Client-side only — no GitHub API calls, nothing to commit. Same underlying
-// fairness either way: a Fisher-Yates shuffle of the pasted team list at
-// Start. List mode reveals that pre-shuffled order one click at a time.
-// Wheel mode reveals the exact same order, just dressed up as a spin —
-// the wheel always lands on drawPot[0], so results are identical to List
-// mode for the same input, only the presentation differs.
+// Client-side only — no GitHub API calls, nothing to commit.
+// List mode: a Fisher-Yates shuffle of the pasted team list at Start, then
+// revealed front-to-back one click at a time — a standard unbiased shuffle.
+// Wheel mode: each spin picks a fresh, independent, uniformly random index
+// from whatever teams currently remain (Math.random() * remainingCount),
+// removes that exact team, and rotates the wheel to land on that slice. All
+// slices are always equal angle (360 / remaining count), so every team on
+// the wheel has exactly the same 1-in-n chance on every single spin — the
+// landing slice is never predetermined or biased toward any position.
 let drawPot = [];
 let drawPending = null; // a team drawn but waiting to be paired
 let drawFixtures = [];
@@ -1337,9 +1340,16 @@ function drawSpin(){
 
   const n = drawPot.length;
   const anglePerSliceDeg = 360 / n;
-  // Wheel always lands on drawPot[0] — same underlying draw order as List mode.
-  const sliceCenterDeg = 0 * anglePerSliceDeg + anglePerSliceDeg/2;
-  const extraSpins = 5;
+
+  // Fresh, independent, uniformly random pick among all teams currently on
+  // the wheel — every slice has an equal 1/n chance on every spin, and the
+  // landing position varies spin to spin (not fixed to any particular slice).
+  const winningIndex = Math.floor(Math.random() * n);
+  const sliceCenterDeg = winningIndex * anglePerSliceDeg + anglePerSliceDeg/2;
+
+  // Extra full rotations are randomized too — purely cosmetic (more/less
+  // spin before landing), has no effect on which slice wins.
+  const extraSpins = 5 + Math.floor(Math.random() * 3); // 5–7 full spins
   const rotationDeg = extraSpins*360 + ((360 - sliceCenterDeg) % 360);
 
   const canvas = $("drawWheelCanvas");
@@ -1347,9 +1357,10 @@ function drawSpin(){
   canvas.style.transform = `rotate(${rotationDeg}deg)`;
 
   setTimeout(() => {
-    const picked = drawPot.shift();
+    const picked = drawPot.splice(winningIndex, 1)[0];
     drawRecordPick(picked);
 
+    // Always show the result once the spin lands, every time.
     $("drawWheelPickName").textContent = picked;
     $("drawWheelPick").style.display = "";
     renderDrawShared();
