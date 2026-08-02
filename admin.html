@@ -239,6 +239,12 @@
     margin:16px 0;
     display:none;
   }
+  @keyframes drawPop{
+    0%{transform:scale(0.8);opacity:0;}
+    60%{transform:scale(1.06);opacity:1;}
+    100%{transform:scale(1);opacity:1;}
+  }
+  .draw-pick-box.pop{animation:drawPop 0.45s cubic-bezier(0.34,1.56,0.64,1);}
   .draw-pick-box .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px;}
   .draw-pick-box .name{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;}
   .draw-fixture-row{
@@ -1244,6 +1250,20 @@ function drawRecordPick(picked){
   }
 }
 
+// Shows a "Just drawn" box with the given name, popping it in every time —
+// including on repeat spins where it's already visible. display:none is the
+// CSS default for these boxes, so this always sets an explicit visible value
+// (never an empty string, which would just fall back to the CSS default of
+// none rather than showing anything).
+function showDrawPick(boxId, nameId, name){
+  const box = $(boxId);
+  $(nameId).textContent = name;
+  box.style.display = "block";
+  box.classList.remove("pop");
+  void box.offsetWidth; // force reflow so the animation restarts on repeat picks
+  box.classList.add("pop");
+}
+
 function renderDrawShared(){
   $("drawPotCount").textContent = drawPot.length || drawPending !== null
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
@@ -1264,13 +1284,13 @@ function drawNext(){
   const picked = drawPot.shift();
   drawRecordPick(picked);
 
-  const pickEl = $("drawCurrentPick");
-  const pickNameEl = $("drawCurrentPickName");
   if(drawPending !== null){
-    pickEl.style.display = "";
-    pickNameEl.textContent = drawPending;
+    showDrawPick("drawCurrentPick", "drawCurrentPickName", drawPending);
   }else{
-    pickEl.style.display = "none";
+    // This pick completed a pair rather than starting a new one — still show
+    // who was just drawn (the away side of the fixture that just got added).
+    const lastFixture = drawFixtures[drawFixtures.length - 1];
+    showDrawPick("drawCurrentPick", "drawCurrentPickName", lastFixture.away);
   }
   renderDrawShared();
 }
@@ -1361,8 +1381,7 @@ function drawSpin(){
     drawRecordPick(picked);
 
     // Always show the result once the spin lands, every time.
-    $("drawWheelPickName").textContent = picked;
-    $("drawWheelPick").style.display = "";
+    showDrawPick("drawWheelPick", "drawWheelPickName", picked);
     renderDrawShared();
 
     // Reset instantly (no transition) and redraw with the remaining, smaller pot
