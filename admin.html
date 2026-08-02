@@ -197,6 +197,58 @@
   .pv-row:last-child{border-bottom:none;}
   .pv-row input{width:auto;}
   .pv-row label{margin:0;font-weight:500;font-size:14px;flex:1;cursor:pointer;}
+  .style-toggle{display:flex;gap:8px;margin-bottom:16px;}
+  .style-toggle button{
+    flex:1;
+    padding:9px 14px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-family:'Barlow',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--muted);
+    cursor:pointer;
+  }
+  .style-toggle button.active{background:var(--pitch);color:#fff;border-color:var(--pitch);}
+  .style-toggle button:hover:not(.active){background:#eef1f5;}
+  .wheel-wrap{position:relative;width:340px;max-width:100%;margin:20px auto 8px;}
+  .wheel-pointer{
+    position:absolute;
+    top:-6px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0;height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-top:22px solid var(--pitch);
+    z-index:2;
+  }
+  #drawWheelCanvas{
+    display:block;
+    border-radius:50%;
+    box-shadow:0 2px 14px rgba(20,30,50,.18);
+  }
+  .draw-pick-box{
+    background:var(--pitch);
+    color:#fff;
+    border-radius:10px;
+    padding:24px;
+    text-align:center;
+    max-width:420px;
+    margin:16px 0;
+    display:none;
+  }
+  .draw-pick-box .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px;}
+  .draw-pick-box .name{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;}
+  .draw-fixture-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:10px 14px;font-family:'Barlow',sans-serif;margin-bottom:8px;
+  }
+  .draw-fixture-row .team{font-weight:600;font-size:13px;flex:1;}
+  .draw-fixture-row .team.away{text-align:right;}
+  .draw-fixture-row .num{font-size:11px;color:var(--muted);flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -348,6 +400,59 @@
       <div id="rulebookLoadingList">Loading rulebook.json…</div>
       <div id="rulebookEmptyState" style="display:none;">No sections yet. Add one above — the first save will create rulebook.json in the repo.</div>
       <div id="rulebookSectionListEl"></div>
+    </div>
+
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Fixture Draw</h2>
+
+    <div class="card">
+      <h2>Team list</h2>
+      <div class="field">
+        <label for="drawTeamInput">Teams (one per line)</label>
+        <textarea id="drawTeamInput" rows="8" placeholder="Team A&#10;Team B&#10;Team C&#10;..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Reveal style</label>
+        <div class="style-toggle">
+          <button type="button" id="drawStyleListBtn" class="active">List — draw one at a time</button>
+          <button type="button" id="drawStyleWheelBtn">Wheel spinner</button>
+        </div>
+      </div>
+
+      <div class="form-actions" style="margin-bottom:6px;">
+        <button class="btn btn-primary" id="drawStartBtn">Start Draw</button>
+        <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
+        <button class="btn btn-ghost" id="drawCopyBtn">Copy Results</button>
+      </div>
+      <div class="hint" id="drawPotCount"></div>
+
+      <!-- List mode -->
+      <div id="drawListMode">
+        <div class="form-actions" style="margin-top:14px;">
+          <button class="btn btn-primary" id="drawNextBtn" disabled>Draw Next Team</button>
+        </div>
+        <div class="draw-pick-box" id="drawCurrentPick">
+          <div class="kicker">Just drawn</div>
+          <div class="name" id="drawCurrentPickName"></div>
+        </div>
+      </div>
+
+      <!-- Wheel mode -->
+      <div id="drawWheelMode" style="display:none;">
+        <div class="wheel-wrap">
+          <div class="wheel-pointer"></div>
+          <canvas id="drawWheelCanvas" width="340" height="340"></canvas>
+        </div>
+        <div style="text-align:center;margin-bottom:10px;">
+          <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
+        </div>
+        <div class="draw-pick-box" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
+          <div class="kicker">Just drawn</div>
+          <div class="name" id="drawWheelPickName"></div>
+        </div>
+      </div>
+
+      <div id="drawFixtureList" style="margin-top:18px;"></div>
     </div>
 
   </div>
@@ -1059,6 +1164,215 @@ function setRulebookFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- Fixture Draw ----------
+// Client-side only — no GitHub API calls, nothing to commit. Same underlying
+// fairness either way: a Fisher-Yates shuffle of the pasted team list at
+// Start. List mode reveals that pre-shuffled order one click at a time.
+// Wheel mode reveals the exact same order, just dressed up as a spin —
+// the wheel always lands on drawPot[0], so results are identical to List
+// mode for the same input, only the presentation differs.
+let drawPot = [];
+let drawPending = null; // a team drawn but waiting to be paired
+let drawFixtures = [];
+let drawStyle = "list"; // "list" | "wheel"
+let drawSpinning = false;
+
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function drawStart(){
+  const teams = $("drawTeamInput").value.split("\n").map(t=>t.trim()).filter(Boolean);
+  if(teams.length < 2){
+    alert("Enter at least 2 teams (one per line) before starting the draw.");
+    return;
+  }
+  drawPot = shuffleArray(teams);
+  drawPending = null;
+  drawFixtures = [];
+  $("drawNextBtn").disabled = false;
+  $("drawSpinBtn").disabled = false;
+  renderDrawShared();
+  if(drawStyle === "wheel") drawRenderWheel();
+}
+
+function drawReset(){
+  drawPot = [];
+  drawPending = null;
+  drawFixtures = [];
+  drawSpinning = false;
+  $("drawNextBtn").disabled = true;
+  $("drawSpinBtn").disabled = true;
+  $("drawCurrentPick").style.display = "none";
+  $("drawWheelPick").style.display = "none";
+  renderDrawShared();
+  if(drawStyle === "wheel") drawRenderWheel();
+}
+
+function drawCopyResults(){
+  let text = drawFixtures.map(f => `${f.home} vs ${f.away}`).join("\n");
+  if(drawPending) text += (text ? "\n" : "") + `${drawPending} vs (pending)`;
+  if(!text){ alert("No results to copy yet."); return; }
+  navigator.clipboard.writeText(text).then(()=>{
+    alert("Results copied — paste into your fixtures sheet.");
+  }).catch(()=>{
+    alert("Couldn't copy automatically. Select and copy the results manually.");
+  });
+}
+
+// Records one pick (shared by both List's "Draw Next Team" and Wheel's spin
+// landing) — pairs it with a pending team, or holds it as pending if it's the
+// first of a pair.
+function drawRecordPick(picked){
+  if(drawPending === null){
+    drawPending = picked;
+  }else{
+    drawFixtures.push({ home: drawPending, away: picked });
+    drawPending = null;
+  }
+  if(!drawPot.length){
+    $("drawNextBtn").disabled = true;
+    $("drawSpinBtn").disabled = true;
+  }
+}
+
+function renderDrawShared(){
+  $("drawPotCount").textContent = drawPot.length || drawPending !== null
+    ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
+    : (drawFixtures.length ? "Draw complete." : "");
+
+  $("drawFixtureList").innerHTML = drawFixtures.map((f,i) => `
+    <div class="draw-fixture-row">
+      <span class="team">${escapeHtml(f.home)}</span>
+      <span class="num">Fixture ${i+1}</span>
+      <span class="team away">${escapeHtml(f.away)}</span>
+    </div>`).join("");
+}
+
+// ---------- Draw: List mode ----------
+
+function drawNext(){
+  if(!drawPot.length || drawStyle !== "list") return;
+  const picked = drawPot.shift();
+  drawRecordPick(picked);
+
+  const pickEl = $("drawCurrentPick");
+  const pickNameEl = $("drawCurrentPickName");
+  if(drawPending !== null){
+    pickEl.style.display = "";
+    pickNameEl.textContent = drawPending;
+  }else{
+    pickEl.style.display = "none";
+  }
+  renderDrawShared();
+}
+
+// ---------- Draw: Wheel mode ----------
+
+const WHEEL_COLORS = ["#28427c","#3a5a9e","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"];
+
+function drawRenderWheel(){
+  const canvas = $("drawWheelCanvas");
+  const ctx = canvas.getContext("2d");
+  const size = canvas.width;
+  const center = size / 2;
+  const radius = center - 4;
+  ctx.clearRect(0, 0, size, size);
+
+  const teams = drawPot;
+  const n = teams.length;
+  if(!n){
+    ctx.beginPath();
+    ctx.arc(center, center, radius, 0, Math.PI*2);
+    ctx.fillStyle = "#eef1f5";
+    ctx.fill();
+    return;
+  }
+
+  const anglePerSlice = (Math.PI*2) / n;
+  teams.forEach((team, i) => {
+    const startAngle = -Math.PI/2 + i*anglePerSlice; // slice 0 starts at top (12 o'clock)
+    const endAngle = startAngle + anglePerSlice;
+
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label, drawn radially outward from center along the slice's midline
+    const midAngle = startAngle + anglePerSlice/2;
+    ctx.save();
+    ctx.translate(center, center);
+    ctx.rotate(midAngle);
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.font = "600 12px Barlow, sans-serif";
+    let label = team;
+    const maxWidth = radius - 16;
+    while(ctx.measureText(label).width > maxWidth && label.length > 3){
+      label = label.slice(0, -1);
+    }
+    if(label !== team) label = label.slice(0, -1) + "…";
+    ctx.fillText(label, radius - 10, 0);
+    ctx.restore();
+  });
+}
+
+function drawSpin(){
+  if(drawSpinning || !drawPot.length || drawStyle !== "wheel") return;
+  drawSpinning = true;
+  $("drawSpinBtn").disabled = true;
+  $("drawWheelPick").style.display = "none";
+
+  const n = drawPot.length;
+  const anglePerSliceDeg = 360 / n;
+  // Wheel always lands on drawPot[0] — same underlying draw order as List mode.
+  const sliceCenterDeg = 0 * anglePerSliceDeg + anglePerSliceDeg/2;
+  const extraSpins = 5;
+  const rotationDeg = extraSpins*360 + ((360 - sliceCenterDeg) % 360);
+
+  const canvas = $("drawWheelCanvas");
+  canvas.style.transition = "transform 4s cubic-bezier(0.15, 0.65, 0.1, 1)";
+  canvas.style.transform = `rotate(${rotationDeg}deg)`;
+
+  setTimeout(() => {
+    const picked = drawPot.shift();
+    drawRecordPick(picked);
+
+    $("drawWheelPickName").textContent = picked;
+    $("drawWheelPick").style.display = "";
+    renderDrawShared();
+
+    // Reset instantly (no transition) and redraw with the remaining, smaller pot
+    canvas.style.transition = "none";
+    canvas.style.transform = "rotate(0deg)";
+    drawRenderWheel();
+
+    drawSpinning = false;
+    if(drawPot.length) $("drawSpinBtn").disabled = false;
+  }, 4000);
+}
+
+function setDrawStyle(style){
+  drawStyle = style;
+  $("drawStyleListBtn").classList.toggle("active", style === "list");
+  $("drawStyleWheelBtn").classList.toggle("active", style === "wheel");
+  $("drawListMode").style.display = style === "list" ? "" : "none";
+  $("drawWheelMode").style.display = style === "wheel" ? "" : "none";
+  if(style === "wheel") drawRenderWheel();
+}
+
 // ---------- Wire up ----------
 
 $("loginBtn").addEventListener("click", tryLogin);
@@ -1071,6 +1385,13 @@ $("cancelAboutEditBtn").addEventListener("click", cancelEditAbout);
 $("saveRulebookBtn").addEventListener("click", saveRulebookSection);
 $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
 $("savePvBtn").addEventListener("click", savePageVisibility);
+$("drawStartBtn").addEventListener("click", drawStart);
+$("drawResetBtn").addEventListener("click", drawReset);
+$("drawCopyBtn").addEventListener("click", drawCopyResults);
+$("drawNextBtn").addEventListener("click", drawNext);
+$("drawSpinBtn").addEventListener("click", drawSpin);
+$("drawStyleListBtn").addEventListener("click", () => setDrawStyle("list"));
+$("drawStyleWheelBtn").addEventListener("click", () => setDrawStyle("wheel"));
 
 // ---------- Formatting toolbar (Bold / Underline / Italic) ----------
 // Wraps the selected text in a textarea with an HTML tag. Works because the

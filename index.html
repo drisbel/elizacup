@@ -694,6 +694,7 @@
     font-size:11px;color:#8a9a92;background:var(--pitch);
   }
   footer a{color:var(--amber);text-decoration:none;}
+  footer a.footer-admin-link{color:inherit;text-decoration:none;padding:0 2px;}
 
   details.debug{max-width:1080px;margin:0 auto 40px;padding:0 24px;}
   details.debug summary{font-family:'Barlow',sans-serif;font-size:11px;color:#8a9a92;cursor:pointer;}
@@ -954,38 +955,10 @@
   <section id="teamProfileSection" style="display:none;">
     <div id="teamProfileContainer" class="state-msg">Loading team profile…</div>
   </section>
-
-  <section id="drawSection" style="display:none;">
-    <div class="section-head">
-      <h2>Fixture Draw</h2>
-      <span class="sub">Admin tool — not linked from the main nav</span>
-    </div>
-    <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;max-width:560px;">
-      Paste in the team list (one per line), then draw one team at a time. Nothing
-      auto-advances, so take your screenshot after each pull whenever you're ready
-      for the next one.
-    </p>
-    <textarea id="drawTeamInput" rows="8" style="width:100%;max-width:420px;font-family:'Barlow',sans-serif;font-size:13px;padding:10px;border:1px solid var(--line-light);border-radius:6px;box-sizing:border-box;display:block;margin:14px 0;"></textarea>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-      <button class="refresh-btn" id="drawStartBtn" style="position:static;">Start Draw</button>
-      <button class="refresh-btn" id="drawNextBtn" style="position:static;" disabled>Draw Next Team</button>
-      <button class="refresh-btn" id="drawResetBtn" style="position:static;">Reset</button>
-      <button class="refresh-btn" id="drawCopyBtn" style="position:static;">Copy Results</button>
-    </div>
-
-    <div id="drawPotCount" style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;margin-bottom:14px;"></div>
-
-    <div id="drawCurrentPick" style="display:none;background:var(--pitch);color:#fff;border-radius:10px;padding:28px;text-align:center;max-width:420px;margin-bottom:24px;">
-      <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.75;margin-bottom:8px;">Just drawn</div>
-      <div id="drawCurrentPickName" style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;"></div>
-    </div>
-
-    <div id="drawFixtureList" style="display:flex;flex-direction:column;gap:8px;max-width:480px;"></div>
-  </section>
 </main>
 
 <footer>
-  Data pulled live from the Eliza Cup Google Sheet · built for the league, not affiliated with any official competition
+  Data pulled live from the Eliza Cup Google Sheet · built for the league, not affiliated with any official competition <a href="admin.html" class="footer-admin-link" aria-label="Admin">·</a>
 </footer>
 
 <details class="debug">
@@ -1013,8 +986,7 @@ const DIVISIONS = [
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
-  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" },
-  { id: "draw", label: "Fixture Draw",             pill: "Fixture Draw", gid: null, teams: 0, color: "#28427c", type: "draw" }
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1297,7 +1269,6 @@ function togglePageSections(){
   const isCalendar = type === "calendar";
   const isTeams = type === "teams";
   const isTeamProfile = type === "teamprofile";
-  const isDraw = type === "draw";
   const isNews = type === "news";
   const isAbout = type === "about";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
@@ -1314,7 +1285,6 @@ function togglePageSections(){
   document.getElementById('sideLeaguesSection').style.display = isSideLeagues ? "" : "none";
   document.getElementById('teamsSection').style.display = isTeams ? "" : "none";
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
-  document.getElementById('drawSection').style.display = isDraw ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
@@ -1354,105 +1324,6 @@ function togglePageSections(){
     switcherEl.style.display = "none";
     switcherEl.innerHTML = "";
   }
-}
-
-// ---------- Fixture Draw (admin tool) ----------
-// Deliberately step-by-step rather than an auto-playing animation — nothing
-// advances on its own, so there's no "pause" needed: just don't click Next until
-// the screenshot of the current pick is done.
-let drawPot = [];
-let drawPending = null; // a team drawn but waiting to be paired
-let drawFixtures = [];
-let drawWired = false;
-
-function shuffleArray(arr){
-  const a = arr.slice();
-  for(let i = a.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function drawStart(){
-  const teams = document.getElementById('drawTeamInput').value.split("\n").map(t=>t.trim()).filter(Boolean);
-  if(teams.length < 2){
-    alert("Enter at least 2 teams (one per line) before starting the draw.");
-    return;
-  }
-  drawPot = shuffleArray(teams);
-  drawPending = null;
-  drawFixtures = [];
-  document.getElementById('drawNextBtn').disabled = false;
-  renderDrawTool();
-}
-
-function drawNext(){
-  if(!drawPot.length) return;
-  const picked = drawPot.shift();
-  if(drawPending === null){
-    drawPending = picked;
-  }else{
-    drawFixtures.push({ home: drawPending, away: picked });
-    drawPending = null;
-  }
-  if(!drawPot.length) document.getElementById('drawNextBtn').disabled = true;
-  renderDrawTool();
-}
-
-function drawReset(){
-  drawPot = [];
-  drawPending = null;
-  drawFixtures = [];
-  document.getElementById('drawNextBtn').disabled = true;
-  renderDrawTool();
-}
-
-function drawCopyResults(){
-  let text = drawFixtures.map(f => `${f.home} vs ${f.away}`).join("\n");
-  if(drawPending) text += (text ? "\n" : "") + `${drawPending} vs (pending)`;
-  if(!text){ alert("No results to copy yet."); return; }
-  navigator.clipboard.writeText(text).then(()=>{
-    alert("Results copied — paste into your fixtures sheet.");
-  }).catch(()=>{
-    alert("Couldn't copy automatically. Select and copy the results manually.");
-  });
-}
-
-function renderDrawTool(){
-  const potCountEl = document.getElementById('drawPotCount');
-  const remaining = drawPot.length + (drawPending !== null ? 1 : 0);
-  potCountEl.textContent = drawPot.length || drawPending !== null
-    ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
-    : (drawFixtures.length ? "Draw complete." : "");
-
-  const pickEl = document.getElementById('drawCurrentPick');
-  const pickNameEl = document.getElementById('drawCurrentPickName');
-  if(drawPending !== null){
-    pickEl.style.display = "";
-    pickNameEl.textContent = drawPending;
-  }else{
-    pickEl.style.display = "none";
-  }
-
-  const listEl = document.getElementById('drawFixtureList');
-  listEl.innerHTML = drawFixtures.map((f,i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;">
-      <span style="font-weight:600;font-size:13px;text-align:right;flex:1;">${f.home}</span>
-      <span style="font-size:11px;color:#8a9990;flex-shrink:0;">Fixture ${i+1}</span>
-      <span style="font-weight:600;font-size:13px;text-align:left;flex:1;">${f.away}</span>
-    </div>`).join("");
-}
-
-function initDrawTool(){
-  if(!drawWired){
-    document.getElementById('drawStartBtn').addEventListener('click', drawStart);
-    document.getElementById('drawNextBtn').addEventListener('click', drawNext);
-    document.getElementById('drawResetBtn').addEventListener('click', drawReset);
-    document.getElementById('drawCopyBtn').addEventListener('click', drawCopyResults);
-    drawWired = true;
-  }
-  renderDrawTool();
 }
 
 // ---------- LMS Tips submission (admin tool) ----------
@@ -1757,11 +1628,6 @@ async function load(){
       document.getElementById('teamProfileContainer').innerHTML =
         "Couldn't load this team's profile. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
-    return;
-  }
-
-  if(currentDivision.type === "draw"){
-    initDrawTool();
     return;
   }
 
