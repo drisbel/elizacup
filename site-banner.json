@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "message": "FPL and Supercoach EPL leagues open! View Side Leagus Hub for info!",
+  "scope": "home",
+  "countdown": {
+    "enabled": true,
+    "label": "Deadline",
+    "deadline": "22/08/2026 05:00 AM"
+  }
+}
