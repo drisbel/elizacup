@@ -529,8 +529,13 @@
       </div>
 
       <div class="field" id="slhWinnerField">
-        <label for="slhWinner">Winner 🏆</label>
-        <input type="text" id="slhWinner" placeholder="Team or player name (only shown when status is Complete)">
+        <label>Winners 🏆</label>
+        <div class="hint" style="margin-bottom:8px;">Add one or more — useful for leagues with multiple divisions/competitions (e.g. "FPL Premier: John Smith"). Shown on Active or Complete cards.</div>
+        <div id="slhWinnersList" style="margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="slhWinnerInput" placeholder="e.g. FPL Premier: John Smith" style="flex:1;">
+          <button type="button" class="btn btn-ghost" id="slhAddWinnerBtn">Add</button>
+        </div>
       </div>
 
       <div class="field" id="slhCodeField">
@@ -1448,6 +1453,7 @@ function setRulebookFormStatus(msg, isError) {
 let slhCards = [];      // in-memory array of card objects
 let slhSha = null;      // sha of side-leagues-hub.json, null if file doesn't exist yet
 let slhEditingId = null; // id of card currently being edited, null if new
+let slhFormWinners = []; // in-progress list of winners for the card currently being edited
 
 const SLH_STATUS_LABEL = { active: "Active", signups: "Taking signups", complete: "Complete" };
 
@@ -1516,7 +1522,7 @@ function renderSlhList() {
 function updateSlhCodeFieldVisibility(){
   const status = $("slhStatus").value;
   $("slhRoundInfoField").style.display = status === "active" ? "" : "none";
-  $("slhWinnerField").style.display = status === "complete" ? "" : "none";
+  $("slhWinnerField").style.display = (status === "complete" || status === "active") ? "" : "none";
   $("slhCodeField").style.display = status === "signups" ? "" : "none";
   $("slhClosingFields").style.display = status === "signups" ? "" : "none";
   updateSlhClosingSubFieldsVisibility();
@@ -1526,6 +1532,37 @@ function updateSlhClosingSubFieldsVisibility(){
   $("slhClosingSubFields").style.display = $("slhCloseEnabled").checked ? "" : "none";
 }
 
+function renderSlhWinnersList(){
+  const list = $("slhWinnersList");
+  if(!slhFormWinners.length){
+    list.innerHTML = `<div class="hint">No winners added yet.</div>`;
+    return;
+  }
+  list.innerHTML = slhFormWinners.map((w, i) => `
+    <div class="pv-row">
+      <label style="flex:1;">🏆 ${escapeHtml(w)}</label>
+      <button type="button" data-remove-winner="${i}" class="fmt-btn" style="width:auto;padding:4px 10px;" title="Remove">×</button>
+    </div>
+  `).join("");
+  list.querySelectorAll("[data-remove-winner]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-remove-winner"), 10);
+      slhFormWinners.splice(idx, 1);
+      renderSlhWinnersList();
+    });
+  });
+}
+
+function addSlhWinner(){
+  const input = $("slhWinnerInput");
+  const val = input.value.trim();
+  if(!val) return;
+  slhFormWinners.push(val);
+  input.value = "";
+  renderSlhWinnersList();
+  input.focus();
+}
+
 function startEditSlh(id) {
   const c = slhCards.find(x => String(x.id) === String(id));
   if (!c) return;
@@ -1533,7 +1570,8 @@ function startEditSlh(id) {
   $("slhLabel").value = c.label || "";
   $("slhStatus").value = c.status || "active";
   $("slhRoundInfo").value = c.roundInfo || "";
-  $("slhWinner").value = c.winner || "";
+  slhFormWinners = Array.isArray(c.winners) ? [...c.winners] : (c.winner ? [c.winner] : []);
+  renderSlhWinnersList();
   $("slhCode").value = c.code || "";
   $("slhCloseEnabled").checked = !!c.closeEnabled;
   $("slhCloseDate").value = c.closeDate || "";
@@ -1551,7 +1589,9 @@ function cancelEditSlh() {
   $("slhLabel").value = "";
   $("slhStatus").value = "active";
   $("slhRoundInfo").value = "";
-  $("slhWinner").value = "";
+  slhFormWinners = [];
+  renderSlhWinnersList();
+  $("slhWinnerInput").value = "";
   $("slhCode").value = "";
   $("slhCloseEnabled").checked = false;
   $("slhCloseDate").value = "";
@@ -1578,7 +1618,7 @@ async function saveSlhCard() {
   const label = $("slhLabel").value.trim();
   const status = $("slhStatus").value;
   const roundInfo = $("slhRoundInfo").value.trim();
-  const winner = $("slhWinner").value.trim();
+  const winners = [...slhFormWinners];
   const code = $("slhCode").value.trim();
   const closeEnabled = $("slhCloseEnabled").checked;
   const closeDate = $("slhCloseDate").value.trim();
@@ -1594,12 +1634,13 @@ async function saveSlhCard() {
   if (slhEditingId) {
     const idx = slhCards.findIndex(x => String(x.id) === String(slhEditingId));
     if (idx !== -1) {
-      slhCards[idx] = { ...slhCards[idx], label, status, roundInfo, winner, code, closeEnabled, closeDate, countdownEnabled, notes, link };
+      slhCards[idx] = { ...slhCards[idx], label, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link };
+      delete slhCards[idx].winner; // migrate off the old single-winner field
     }
   } else {
     slhCards.push({
       id: Date.now().toString(36),
-      label, status, roundInfo, winner, code, closeEnabled, closeDate, countdownEnabled, notes, link
+      label, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link
     });
   }
 
@@ -1922,10 +1963,13 @@ document.querySelectorAll(".admin-section-btn").forEach(btn => {
 $("saveBannerBtn").addEventListener("click", saveBanner);
 $("bnCountdownEnabled").addEventListener("change", updateBannerCountdownFieldsVisibility);
 $("saveSlhBtn").addEventListener("click", saveSlhCard);
+$("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
+$("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
 $("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);
 updateSlhCodeFieldVisibility();
+renderSlhWinnersList();
 
 // ---------- Formatting toolbar (Bold / Underline / Italic) ----------
 // Wraps the selected text in a textarea with an HTML tag. Works because the
