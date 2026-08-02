@@ -6,5 +6,13 @@
     "code": "https://fantasy.premierleague.com/leagues/auto-join/6bf4qz",
     "notes": "Link is for FPL Roddy League.\nPremier League and Championship H2H leagues will also be run via Side League sheet, as well as FPL Cup",
     "link": "#sideleagues=fpl"
+  },
+  {
+    "id": "msbhtmyz",
+    "label": "EPL Supercoach",
+    "status": "signups",
+    "code": "https://supercoach.com.au/epl/classic/?action=join-league&code=145912",
+    "notes": "ONLY 6 SPOTS REMAINING",
+    "link": "#sideleagues=eplsc"
   }
 ]
