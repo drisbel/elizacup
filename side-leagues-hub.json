@@ -42,7 +42,10 @@
     "label": "Australia Cup LMS",
     "status": "active",
     "code": "",
-    "notes": "",
-    "link": "#sideleagues=auscup"
+    "notes": "LEAGUE UNDERWAY\nView Australia Cup LMS page for more information.",
+    "link": "#sideleagues=auscup",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false
   }
 ]
