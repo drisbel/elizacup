@@ -1204,6 +1204,51 @@ function renderDivNav(){
       if(!isOpen) dd.classList.add('open');
     });
   });
+
+  applyPageVisibility();
+}
+
+// ---------- Page Visibility ----------
+// Hides specific pages from the nav and home page cards without touching
+// their routing — a hidden page is still reachable by direct link/hash, only
+// its discoverability is affected. This replaces the old Site Control sheet
+// version, which was reverted because the initial page bootstrap awaited a
+// full Google Sheets round-trip before rendering anything. This version reads
+// a small same-origin page-visibility.json (managed via admin.html) and never
+// blocks the initial render: nav/home paint immediately using the safe
+// default (everything visible), then get filtered in place once the fetch
+// resolves — normally near-instant since it's a tiny static file on the same
+// domain, not a cross-origin Sheets request.
+let pageVisibilityMap = {}; // { pageId: false } for hidden pages; absent/true = visible
+let pageVisibilityPromise = null;
+function pageVisibilityJsonUrlFor(){
+  return "page-visibility.json?cachebust=" + Date.now();
+}
+async function loadPageVisibilityData(){
+  if(pageVisibilityPromise) return pageVisibilityPromise;
+  pageVisibilityPromise = fetch(pageVisibilityJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("page-visibility.json fetch failed: " + r.status);
+    return r.json();
+  }).then(map => {
+    pageVisibilityMap = (map && typeof map === "object") ? map : {};
+    return pageVisibilityMap;
+  }).catch(err => {
+    console.error("page-visibility.json fetch failed", err);
+    pageVisibilityMap = {}; // safe default — everything stays visible
+    return pageVisibilityMap;
+  });
+  return pageVisibilityPromise;
+}
+
+// Applies the current pageVisibilityMap to whatever nav/home elements are in
+// the DOM right now. Safe to call repeatedly — re-render of nav or home cards
+// calls this automatically, and it's also re-run once the fetch resolves so
+// anything already on screen gets filtered retroactively.
+function applyPageVisibility(){
+  document.querySelectorAll('#divNav [data-id], .home-card[data-id]').forEach(el=>{
+    const id = el.getAttribute('data-id');
+    el.style.display = (pageVisibilityMap[id] === false) ? "none" : "";
+  });
 }
 
 window.addEventListener('hashchange', ()=>{
@@ -6416,6 +6461,7 @@ function renderHome(){
       load();
     });
   });
+  applyPageVisibility();
 }
 
 function homeSnapshotHtml(){
@@ -6662,6 +6708,11 @@ document.getElementById('divPill').textContent = currentDivision.pill;
 applyDivisionTheme(currentDivision);
 renderDivNav();
 load();
+
+// Fire-and-forget: never blocks initial render. Nav/home already painted with
+// everything visible by the time this resolves; this just retroactively hides
+// whatever page-visibility.json marks as hidden.
+loadPageVisibilityData().then(()=> applyPageVisibility());
 </script>
 </body>
 </html>

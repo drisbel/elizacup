@@ -193,6 +193,10 @@
   .fmt-btn.b{font-weight:700;}
   .fmt-btn.u{text-decoration:underline;}
   .fmt-btn.i{font-style:italic;}
+  .pv-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);}
+  .pv-row:last-child{border-bottom:none;}
+  .pv-row input{width:auto;}
+  .pv-row label{margin:0;font-weight:500;font-size:14px;flex:1;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -222,7 +226,19 @@
   <!-- PANEL -->
   <div id="panel">
 
-    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">News</h2>
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">Page Visibility</h2>
+
+    <div class="card">
+      <h2>Show / hide pages</h2>
+      <div class="hint" style="margin-bottom:14px;">Hiding a page removes it from the nav and home page cards — it's still reachable by direct link, just not listed. Unchecked = hidden.</div>
+      <div id="pvList"></div>
+      <div class="form-actions" style="margin-top:16px;">
+        <button class="btn btn-primary" id="savePvBtn">Save visibility</button>
+        <span class="status-msg" id="pvFormStatus"></span>
+      </div>
+    </div>
+
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">News</h2>
 
     <div class="card">
       <h2 id="formTitle">New article</h2>
@@ -345,6 +361,7 @@ const BRANCH = "main";
 const NEWS_PATH = "news.json";
 const ABOUT_PATH = "about.json";
 const RULEBOOK_PATH = "rulebook.json";
+const PAGE_VISIBILITY_PATH = "page-visibility.json";
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
 let token = null;
@@ -353,6 +370,113 @@ let currentSha = null;  // sha of news.json, null if file doesn't exist yet
 let editingId = null;   // id of article currently being edited, null if new
 
 const $ = (id) => document.getElementById(id);
+
+// ---------- Page Visibility ----------
+// Fixed list of pages that appear in the site's nav / home cards. Mirrors the
+// DIVISIONS array in index.html (excluding "home" itself and "draw", which is
+// deliberately not in the nav already). If a new page gets added to the site
+// later, add it here too so it shows up as a toggle.
+const PAGE_VISIBILITY_PAGES = [
+  { id: "calendar", label: "Calendar" },
+  { id: "d1", label: "Division 1 (Eliza Cup)" },
+  { id: "d2a", label: "Division 2A" },
+  { id: "d2b", label: "Division 2B" },
+  { id: "d3a", label: "Division 3A" },
+  { id: "d3b", label: "Division 3B" },
+  { id: "roddy", label: "Roddy Rodriguez Cup" },
+  { id: "facup", label: "Eliza FA Cup" },
+  { id: "ecl", label: "Eliza Champions League" },
+  { id: "honour", label: "Hall of Fame" },
+  { id: "stats", label: "Statistics" },
+  { id: "history", label: "Past Seasons" },
+  { id: "news", label: "News" },
+  { id: "about", label: "About" },
+  { id: "sideleagues", label: "Side Leagues" },
+  { id: "teams", label: "Teams" }
+];
+
+let pvMap = {};   // { pageId: false } for hidden; absent/true = visible
+let pvSha = null; // sha of page-visibility.json, null if file doesn't exist yet
+
+async function loadPageVisibility() {
+  try {
+    const res = await fetch(`${API_BASE}/contents/${PAGE_VISIBILITY_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    if (res.status === 404) {
+      pvMap = {};
+      pvSha = null;
+    } else if (res.ok) {
+      const data = await res.json();
+      pvSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      pvMap = JSON.parse(decoded || "{}");
+    } else {
+      throw new Error(`Failed to load page-visibility.json (status ${res.status})`);
+    }
+  } catch (err) {
+    $("pvList").innerHTML = `<div style="color:var(--danger);font-size:13px;">Error loading page visibility: ${err.message}</div>`;
+    return;
+  }
+  renderPvList();
+}
+
+function renderPvList() {
+  const list = $("pvList");
+  list.innerHTML = PAGE_VISIBILITY_PAGES.map(p => `
+    <div class="pv-row">
+      <input type="checkbox" id="pv-${p.id}" ${pvMap[p.id] === false ? "" : "checked"}>
+      <label for="pv-${p.id}">${escapeHtml(p.label)}</label>
+    </div>
+  `).join("");
+}
+
+async function savePageVisibility() {
+  $("savePvBtn").disabled = true;
+  setPvFormStatus("Saving…", false);
+
+  const newMap = {};
+  PAGE_VISIBILITY_PAGES.forEach(p => {
+    const checked = $("pv-" + p.id).checked;
+    if (!checked) newMap[p.id] = false; // only store hidden pages, keep the file small
+  });
+  pvMap = newMap;
+
+  try {
+    const jsonStr = JSON.stringify(pvMap, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message: "Update page visibility",
+      content: b64,
+      branch: BRANCH
+    };
+    if (pvSha) body.sha = pvSha;
+
+    const res = await fetch(`${API_BASE}/contents/${PAGE_VISIBILITY_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const data = await res.json();
+    pvSha = data.content.sha;
+    setPvFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+  } catch (err) {
+    setPvFormStatus("Save failed: " + err.message, true);
+  } finally {
+    $("savePvBtn").disabled = false;
+  }
+}
+
+function setPvFormStatus(msg, isError) {
+  const el = $("pvFormStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
 
 // ---------- Auth ----------
 
@@ -399,6 +523,7 @@ function showPanel() {
   $("loginScreen").style.display = "none";
   $("panel").style.display = "block";
   $("logoutBtn").style.display = "inline-block";
+  loadPageVisibility();
   loadNews();
   loadAbout();
   loadRulebook();
@@ -945,6 +1070,7 @@ $("saveAboutBtn").addEventListener("click", saveAboutSection);
 $("cancelAboutEditBtn").addEventListener("click", cancelEditAbout);
 $("saveRulebookBtn").addEventListener("click", saveRulebookSection);
 $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
+$("savePvBtn").addEventListener("click", savePageVisibility);
 
 // ---------- Formatting toolbar (Bold / Underline / Italic) ----------
 // Wraps the selected text in a textarea with an HTML tag. Works because the
