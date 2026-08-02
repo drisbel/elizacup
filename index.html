@@ -605,6 +605,53 @@
     margin-bottom:3px;text-align:center;
   }
 
+  #siteBanner{
+    display:none;
+    background:var(--amber);
+    color:var(--pitch);
+    text-align:center;
+    padding:11px 20px;
+    font-family:'Barlow',sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+  }
+  #siteBanner .banner-inner{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;}
+  #siteBanner .banner-countdown{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;
+    background:rgba(40,66,124,0.12);padding:2px 10px;border-radius:5px;
+  }
+  @media (max-width:600px){
+    #siteBanner{font-size:12.5px;padding:9px 14px;}
+  }
+
+  .slh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+  .slh-card{
+    background:#fff;border:1px solid var(--line-light);border-radius:10px;
+    padding:20px;display:flex;flex-direction:column;gap:10px;
+  }
+  .slh-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .slh-card-label{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--pitch);}
+  .slh-status{
+    font-family:'Barlow',sans-serif;font-size:10.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.04em;padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;
+  }
+  .slh-status.active{background:#e5f4e8;color:#1e7e34;}
+  .slh-status.complete{background:#eef0f2;color:#6b7c73;}
+  .slh-status.signups{background:#fff4d6;color:#8a6700;}
+  .slh-code{
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+    background:#f5f7fa;border:1px dashed var(--line-light);border-radius:6px;
+    padding:8px 10px;color:var(--ink,#1c2733);
+  }
+  .slh-notes{font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;line-height:1.5;}
+  .slh-link-btn{
+    align-self:flex-start;margin-top:auto;
+    background:var(--pitch);color:#fff;text-decoration:none;
+    font-family:'Barlow',sans-serif;font-weight:600;font-size:12.5px;
+    padding:8px 14px;border-radius:6px;
+  }
+  .slh-link-btn:hover{background:#3a5a9e;}
+
   /* ---------- Head-to-head section ---------- */
   .h2h-card{
     background:#fff;border:1px solid var(--line-light);border-radius:10px;
@@ -800,6 +847,8 @@
   </div>
 </header>
 
+<div id="siteBanner"><div class="banner-inner"></div></div>
+
 <div class="ticker-wrap">
   <div class="ticker-label">Latest round</div>
   <div class="ticker-track" id="tickerTrack">
@@ -936,6 +985,14 @@
     <div id="aboutContainer" class="state-msg">Loading…</div>
   </section>
 
+  <section id="sideLeaguesHubSection" style="display:none;">
+    <div class="section-head">
+      <h2>Side Leagues</h2>
+      <span class="sub">Overview of every side league — status, signup codes, and links</span>
+    </div>
+    <div id="sideLeaguesHubContainer" class="state-msg">Loading…</div>
+  </section>
+
   <section id="sideLeaguesSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues</h2>
@@ -990,6 +1047,7 @@ const DIVISIONS = [
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
+  { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagueshub" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" }
 ];
 
@@ -1112,12 +1170,14 @@ function renderDivNav(){
       return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
     }
     if(item.type === "sidegroup"){
-      const isActive = currentDivision.type === "sideleagues";
-      const activeKey = isActive ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
+      const isActive = currentDivision.type === "sideleagues" || currentDivision.type === "sideleagueshub";
+      const isHub = currentDivision.type === "sideleagueshub";
+      const activeKey = (isActive && !isHub) ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
       const activeLeague = activeKey ? SIDE_LEAGUES.find(s=>s.key===activeKey) : null;
       return `<div class="div-nav-group">
         <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
         <div class="div-nav-dropdown" id="navDropdown-${item.key}">
+          <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Overview</button>
           ${SIDE_LEAGUES.map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
         </div>
       </div>`;
@@ -1227,6 +1287,87 @@ function applyPageVisibility(){
   });
 }
 
+// ---------- Site Banner ----------
+// Managed via admin.html (site-banner.json). A single optional message shown
+// either site-wide or only on the home page, with an optional countdown
+// timer using the same fixed-AEST parsing convention as the LMS deadline
+// countdown (see parseLmsDeadline) — same known limitation: not DST-aware.
+// Fetched non-blocking, same pattern as page-visibility.json — never delays
+// initial render.
+let siteBannerData = null;
+let siteBannerPromise = null;
+function siteBannerJsonUrlFor(){
+  return "site-banner.json?cachebust=" + Date.now();
+}
+async function loadSiteBannerData(){
+  if(siteBannerPromise) return siteBannerPromise;
+  siteBannerPromise = fetch(siteBannerJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("site-banner.json fetch failed: " + r.status);
+    return r.json();
+  }).then(data => {
+    siteBannerData = (data && typeof data === "object") ? data : null;
+    return siteBannerData;
+  }).catch(err => {
+    console.error("site-banner.json fetch failed", err);
+    siteBannerData = null;
+    return siteBannerData;
+  });
+  return siteBannerPromise;
+}
+
+let bannerCountdownInterval = null;
+function startBannerCountdown(deadlineDate){
+  if(bannerCountdownInterval) clearInterval(bannerCountdownInterval);
+  if(!deadlineDate) return;
+  function tick(){
+    const el = document.getElementById('bannerCountdownTimer');
+    if(!el){ clearInterval(bannerCountdownInterval); return; }
+    const diff = deadlineDate.getTime() - Date.now();
+    if(diff <= 0){
+      el.textContent = "Time's up";
+      clearInterval(bannerCountdownInterval);
+      return;
+    }
+    const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000);
+    const m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+    el.textContent = d>0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`;
+  }
+  tick();
+  bannerCountdownInterval = setInterval(tick, 1000);
+}
+
+// Re-run on every page navigation (called from togglePageSections) so a
+// home-only banner correctly appears/disappears as the user moves around.
+function applySiteBanner(){
+  const el = document.getElementById('siteBanner');
+  if(!siteBannerData || !siteBannerData.enabled || !siteBannerData.message){
+    el.style.display = "none";
+    if(bannerCountdownInterval) clearInterval(bannerCountdownInterval);
+    return;
+  }
+  const scope = siteBannerData.scope === "home" ? "home" : "site";
+  const isHome = currentDivision.type === "home";
+  if(scope === "home" && !isHome){
+    el.style.display = "none";
+    if(bannerCountdownInterval) clearInterval(bannerCountdownInterval);
+    return;
+  }
+
+  const inner = el.querySelector('.banner-inner');
+  const countdown = siteBannerData.countdown || {};
+  const deadlineDate = countdown.enabled ? parseLmsDeadline(countdown.deadline || "") : null;
+
+  inner.innerHTML = `<span>${siteBannerData.message}</span>` +
+    (countdown.enabled && deadlineDate ? `<span class="banner-countdown">${countdown.label ? countdown.label + " " : ""}<span id="bannerCountdownTimer"></span></span>` : "");
+
+  el.style.display = "";
+  if(countdown.enabled && deadlineDate){
+    startBannerCountdown(deadlineDate);
+  }else if(bannerCountdownInterval){
+    clearInterval(bannerCountdownInterval);
+  }
+}
+
 window.addEventListener('hashchange', ()=>{
   const div = getDivisionFromHash();
   if(div.id === currentDivision.id) return;
@@ -1269,6 +1410,7 @@ function togglePageSections(){
   const isStats = type === "stats";
   const isHistory = type === "history";
   const isSideLeagues = type === "sideleagues";
+  const isSideLeaguesHub = type === "sideleagueshub";
   const isHome = type === "home";
   const isCalendar = type === "calendar";
   const isTeams = type === "teams";
@@ -1287,6 +1429,7 @@ function togglePageSections(){
   document.getElementById('statsSection').style.display = isStats ? "" : "none";
   document.getElementById('historySection').style.display = isHistory ? "" : "none";
   document.getElementById('sideLeaguesSection').style.display = isSideLeagues ? "" : "none";
+  document.getElementById('sideLeaguesHubSection').style.display = isSideLeaguesHub ? "" : "none";
   document.getElementById('teamsSection').style.display = isTeams ? "" : "none";
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
@@ -1328,6 +1471,8 @@ function togglePageSections(){
     switcherEl.style.display = "none";
     switcherEl.innerHTML = "";
   }
+
+  applySiteBanner();
 }
 
 // ---------- LMS Tips submission (admin tool) ----------
@@ -1581,6 +1726,11 @@ async function load(){
   if(currentDivision.type === "history"){
     renderHistorySeasonTabs();
     await loadHistorySeason(HISTORY_SEASONS[0].key);
+    return;
+  }
+
+  if(currentDivision.type === "sideleagueshub"){
+    renderSideLeaguesHub();
     return;
   }
 
@@ -5234,6 +5384,66 @@ const SIDE_LEAGUES = [
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
+// ---------- Side Leagues Hub ----------
+// The landing/overview page for Side Leagues — reached via "Overview" at the
+// top of the Side Leagues dropdown. Managed via admin.html
+// (side-leagues-hub.json): an array of cards, each independent of the
+// SIDE_LEAGUES array above so a card can exist before its page does (e.g.
+// "taking signups" ahead of a season starting), or link externally.
+function sideLeaguesHubJsonUrlFor(){
+  return "side-leagues-hub.json?cachebust=" + Date.now();
+}
+let sideLeaguesHubData = { cards: [], debug: {} };
+let sideLeaguesHubPromise = null;
+async function loadSideLeaguesHubData(){
+  if(sideLeaguesHubPromise) return sideLeaguesHubPromise;
+  sideLeaguesHubPromise = fetch(sideLeaguesHubJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("side-leagues-hub.json fetch failed: " + r.status);
+    return r.json();
+  }).then(raw => {
+    const cards = Array.isArray(raw) ? raw : [];
+    sideLeaguesHubData = { cards, debug: { cardCount: cards.length } };
+    return sideLeaguesHubData;
+  }).catch(err => {
+    console.error("side-leagues-hub.json fetch failed", err);
+    sideLeaguesHubData = { cards: [], debug: { error: err.message } };
+    return sideLeaguesHubData;
+  });
+  return sideLeaguesHubPromise;
+}
+
+const SLH_STATUS_LABEL = { active: "Active", complete: "Complete", signups: "Signups Open" };
+
+function slhCardHtml(c){
+  const statusClass = c.status === "signups" ? "signups" : c.status === "complete" ? "complete" : "active";
+  const statusLabel = SLH_STATUS_LABEL[c.status] || "Active";
+  return `<div class="slh-card">
+    <div class="slh-card-top">
+      <div class="slh-card-label">${c.label||""}</div>
+      <span class="slh-status ${statusClass}">${statusLabel}</span>
+    </div>
+    ${c.status === "signups" && c.code ? `<div class="slh-code">${c.code}</div>` : ""}
+    ${c.notes ? `<div class="slh-notes">${c.notes}</div>` : ""}
+    ${c.link ? `<a class="slh-link-btn" href="${c.link}">View league</a>` : ""}
+  </div>`;
+}
+
+function renderSideLeaguesHub(){
+  const container = document.getElementById('sideLeaguesHubContainer');
+  container.className = "state-msg";
+  container.innerHTML = "Loading…";
+  loadSideLeaguesHubData().then(data => {
+    document.getElementById('debugOut').textContent = "Side Leagues Hub debug: " + JSON.stringify(data.debug, null, 2);
+    if(!data.cards.length){
+      container.className = "state-msg";
+      container.innerHTML = "Side Leagues overview coming soon.";
+      return;
+    }
+    container.className = "";
+    container.innerHTML = `<div class="slh-grid">${data.cards.map(slhCardHtml).join("")}</div>`;
+  });
+}
+
 function sideLeagueCsvUrlFor(league){
   return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}&cachebust=` + Date.now();
 }
@@ -6597,6 +6807,10 @@ load();
 // everything visible by the time this resolves; this just retroactively hides
 // whatever page-visibility.json marks as hidden.
 loadPageVisibilityData().then(()=> applyPageVisibility());
+
+// Fire-and-forget: banner starts hidden by default; shows itself once the
+// fetch resolves, if enabled and in scope for the current page.
+loadSiteBannerData().then(()=> applySiteBanner());
 </script>
 </body>
 </html>

@@ -197,6 +197,10 @@
   .pv-row:last-child{border-bottom:none;}
   .pv-row input{width:auto;}
   .pv-row label{margin:0;font-weight:500;font-size:14px;flex:1;cursor:pointer;}
+  .radio-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .radio-row input{width:auto;}
+  .radio-row label{margin:0;font-weight:500;font-size:14px;}
+  .sub-field{margin-left:24px;padding-left:14px;border-left:2px solid var(--line);margin-top:10px;margin-bottom:16px;}
   .style-toggle{display:flex;gap:8px;margin-bottom:16px;}
   .style-toggle button{
     flex:1;
@@ -293,6 +297,55 @@
       <div class="form-actions" style="margin-top:16px;">
         <button class="btn btn-primary" id="savePvBtn">Save visibility</button>
         <span class="status-msg" id="pvFormStatus"></span>
+      </div>
+    </div>
+
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Site Banner</h2>
+
+    <div class="card">
+      <h2>Announcement banner</h2>
+      <div class="checkbox-row">
+        <input type="checkbox" id="bnEnabled">
+        <label for="bnEnabled">Show banner</label>
+      </div>
+
+      <div class="field">
+        <label for="bnMessage">Message</label>
+        <input type="text" id="bnMessage" placeholder="Round 5 tips close this Friday!">
+      </div>
+
+      <div class="field">
+        <label>Where it shows</label>
+        <div class="radio-row">
+          <input type="radio" name="bnScope" id="bnScopeSite" value="site" checked>
+          <label for="bnScopeSite">Site-wide (every page)</label>
+        </div>
+        <div class="radio-row">
+          <input type="radio" name="bnScope" id="bnScopeHome" value="home">
+          <label for="bnScopeHome">Home page only</label>
+        </div>
+      </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="bnCountdownEnabled">
+        <label for="bnCountdownEnabled">Include a countdown timer</label>
+      </div>
+
+      <div class="sub-field" id="bnCountdownFields">
+        <div class="field">
+          <label for="bnCountdownLabel">Countdown label</label>
+          <input type="text" id="bnCountdownLabel" placeholder="Tips close in">
+        </div>
+        <div class="field">
+          <label for="bnCountdownDeadline">Deadline (AEST)</label>
+          <input type="text" id="bnCountdownDeadline" placeholder="DD/MM/YYYY HH:MM:SS">
+          <div class="hint">Same format as the LMS tip deadlines — e.g. 08/08/2026 18:00:00. Always treated as AEST (not DST-aware).</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveBannerBtn">Save banner</button>
+        <span class="status-msg" id="bannerFormStatus"></span>
       </div>
     </div>
 
@@ -408,6 +461,55 @@
       <div id="rulebookSectionListEl"></div>
     </div>
 
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Side Leagues Overview</h2>
+
+    <div class="card">
+      <h2 id="slhFormTitle">New league card</h2>
+      <div class="field">
+        <label for="slhLabel">League name</label>
+        <input type="text" id="slhLabel" placeholder="Fantasy Premier League">
+      </div>
+
+      <div class="field">
+        <label for="slhStatus">Status</label>
+        <select id="slhStatus">
+          <option value="active">Active</option>
+          <option value="signups">Taking signups</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+
+      <div class="field" id="slhCodeField">
+        <label for="slhCode">Signup code / info</label>
+        <input type="text" id="slhCode" placeholder="Code: ABC123 (only shown when status is Taking signups)">
+      </div>
+
+      <div class="field">
+        <label for="slhNotes">Notes (optional)</label>
+        <textarea id="slhNotes" placeholder="Short blurb — season dates, how to join, etc." style="min-height:80px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="slhLink">Link (optional)</label>
+        <input type="text" id="slhLink" placeholder="#sideleagues=fpl or a full https:// URL">
+        <div class="hint">Use an internal link like #sideleagues=fpl to point at that league's page on this site, or a full URL to link elsewhere.</div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveSlhBtn">Save card</button>
+        <button class="btn btn-ghost" id="cancelSlhEditBtn" style="display:none;">Cancel edit</button>
+        <span class="status-msg" id="slhFormStatus"></span>
+      </div>
+      <div class="hint" style="margin-top:12px;">Cards display on the Side Leagues overview page in the order they appear below.</div>
+    </div>
+
+    <div class="card">
+      <h2>League cards</h2>
+      <div id="slhLoadingList">Loading side-leagues-hub.json…</div>
+      <div id="slhEmptyState" style="display:none;">No cards yet. Add one above — the first save will create side-leagues-hub.json in the repo.</div>
+      <div id="slhListEl"></div>
+    </div>
+
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Fixture Draw</h2>
 
     <div class="card">
@@ -473,6 +575,8 @@ const NEWS_PATH = "news.json";
 const ABOUT_PATH = "about.json";
 const RULEBOOK_PATH = "rulebook.json";
 const PAGE_VISIBILITY_PATH = "page-visibility.json";
+const BANNER_PATH = "site-banner.json";
+const SLH_PATH = "side-leagues-hub.json";
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
 let token = null;
@@ -589,6 +693,96 @@ function setPvFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- Site Banner ----------
+
+let bannerSha = null; // sha of site-banner.json, null if file doesn't exist yet
+
+async function loadBanner() {
+  try {
+    const res = await fetch(`${API_BASE}/contents/${BANNER_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    let data = { enabled: false, message: "", scope: "site", countdown: { enabled: false, label: "", deadline: "" } };
+    if (res.status === 404) {
+      bannerSha = null;
+    } else if (res.ok) {
+      const fileData = await res.json();
+      bannerSha = fileData.sha;
+      const decoded = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ""))));
+      data = { ...data, ...JSON.parse(decoded || "{}") };
+    } else {
+      throw new Error(`Failed to load site-banner.json (status ${res.status})`);
+    }
+
+    $("bnEnabled").checked = !!data.enabled;
+    $("bnMessage").value = data.message || "";
+    $("bnScopeSite").checked = data.scope !== "home";
+    $("bnScopeHome").checked = data.scope === "home";
+    const countdown = data.countdown || {};
+    $("bnCountdownEnabled").checked = !!countdown.enabled;
+    $("bnCountdownLabel").value = countdown.label || "";
+    $("bnCountdownDeadline").value = countdown.deadline || "";
+    updateBannerCountdownFieldsVisibility();
+  } catch (err) {
+    setBannerFormStatus("Error loading banner: " + err.message, true);
+  }
+}
+
+function updateBannerCountdownFieldsVisibility(){
+  $("bnCountdownFields").style.display = $("bnCountdownEnabled").checked ? "" : "none";
+}
+
+async function saveBanner() {
+  $("saveBannerBtn").disabled = true;
+  setBannerFormStatus("Saving…", false);
+
+  const data = {
+    enabled: $("bnEnabled").checked,
+    message: $("bnMessage").value.trim(),
+    scope: $("bnScopeHome").checked ? "home" : "site",
+    countdown: {
+      enabled: $("bnCountdownEnabled").checked,
+      label: $("bnCountdownLabel").value.trim(),
+      deadline: $("bnCountdownDeadline").value.trim()
+    }
+  };
+
+  try {
+    const jsonStr = JSON.stringify(data, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message: "Update site banner",
+      content: b64,
+      branch: BRANCH
+    };
+    if (bannerSha) body.sha = bannerSha;
+
+    const res = await fetch(`${API_BASE}/contents/${BANNER_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const resData = await res.json();
+    bannerSha = resData.content.sha;
+    setBannerFormStatus("Saved — commit " + resData.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+  } catch (err) {
+    setBannerFormStatus("Save failed: " + err.message, true);
+  } finally {
+    $("saveBannerBtn").disabled = false;
+  }
+}
+
+function setBannerFormStatus(msg, isError) {
+  const el = $("bannerFormStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
 // ---------- Auth ----------
 
 function ghHeaders(extra = {}) {
@@ -635,9 +829,11 @@ function showPanel() {
   $("panel").style.display = "block";
   $("logoutBtn").style.display = "inline-block";
   loadPageVisibility();
+  loadBanner();
   loadNews();
   loadAbout();
   loadRulebook();
+  loadSlh();
 }
 
 // ---------- Load news.json ----------
@@ -1170,6 +1366,196 @@ function setRulebookFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- Side Leagues Hub: load ----------
+
+let slhCards = [];      // in-memory array of card objects
+let slhSha = null;      // sha of side-leagues-hub.json, null if file doesn't exist yet
+let slhEditingId = null; // id of card currently being edited, null if new
+
+const SLH_STATUS_LABEL = { active: "Active", signups: "Taking signups", complete: "Complete" };
+
+async function loadSlh() {
+  $("slhLoadingList").style.display = "block";
+  $("slhEmptyState").style.display = "none";
+  $("slhListEl").innerHTML = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/contents/${SLH_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    if (res.status === 404) {
+      slhCards = [];
+      slhSha = null;
+    } else if (res.ok) {
+      const data = await res.json();
+      slhSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      slhCards = JSON.parse(decoded || "[]");
+    } else {
+      throw new Error(`Failed to load side-leagues-hub.json (status ${res.status})`);
+    }
+    renderSlhList();
+  } catch (err) {
+    $("slhLoadingList").textContent = "Error loading cards: " + err.message;
+  }
+}
+
+function renderSlhList() {
+  $("slhLoadingList").style.display = "none";
+  const list = $("slhListEl");
+  list.innerHTML = "";
+
+  if (!slhCards.length) {
+    $("slhEmptyState").style.display = "block";
+    return;
+  }
+  $("slhEmptyState").style.display = "none";
+
+  slhCards.forEach((c, i) => {
+    const item = document.createElement("div");
+    item.className = "article-item";
+    item.innerHTML = `
+      <div class="meta">
+        <div class="title">${i + 1}. ${escapeHtml(c.label || "(untitled)")}
+          <span class="badge ${c.status === "signups" ? "draft" : "pub"}" style="${c.status === "signups" ? "background:#fff4d6;color:#8a6700;" : ""}">${SLH_STATUS_LABEL[c.status] || "Active"}</span>
+        </div>
+      </div>
+      <div class="item-actions">
+        <button data-edit="${c.id}">Edit</button>
+        <button data-delete="${c.id}">Delete</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+
+  list.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => startEditSlh(btn.getAttribute("data-edit")));
+  });
+  list.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteSlhCard(btn.getAttribute("data-delete")));
+  });
+}
+
+// ---------- Side Leagues Hub: form ----------
+
+function updateSlhCodeFieldVisibility(){
+  $("slhCodeField").style.display = $("slhStatus").value === "signups" ? "" : "none";
+}
+
+function startEditSlh(id) {
+  const c = slhCards.find(x => String(x.id) === String(id));
+  if (!c) return;
+  slhEditingId = c.id;
+  $("slhLabel").value = c.label || "";
+  $("slhStatus").value = c.status || "active";
+  $("slhCode").value = c.code || "";
+  $("slhNotes").value = c.notes || "";
+  $("slhLink").value = c.link || "";
+  updateSlhCodeFieldVisibility();
+  $("slhFormTitle").textContent = "Edit league card";
+  $("cancelSlhEditBtn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEditSlh() {
+  slhEditingId = null;
+  $("slhLabel").value = "";
+  $("slhStatus").value = "active";
+  $("slhCode").value = "";
+  $("slhNotes").value = "";
+  $("slhLink").value = "";
+  updateSlhCodeFieldVisibility();
+  $("slhFormTitle").textContent = "New league card";
+  $("cancelSlhEditBtn").style.display = "none";
+  $("slhFormStatus").textContent = "";
+}
+
+function deleteSlhCard(id) {
+  const c = slhCards.find(x => String(x.id) === String(id));
+  if (!c) return;
+  if (!confirm(`Delete "${c.label || "this card"}"? This can't be undone.`)) return;
+  slhCards = slhCards.filter(x => String(x.id) !== String(id));
+  commitSlh(`Delete side league card: ${c.label || c.id}`).then(() => {
+    if (slhEditingId === c.id) cancelEditSlh();
+  });
+}
+
+async function saveSlhCard() {
+  const label = $("slhLabel").value.trim();
+  const status = $("slhStatus").value;
+  const code = $("slhCode").value.trim();
+  const notes = $("slhNotes").value.trim();
+  const link = $("slhLink").value.trim();
+
+  if (!label) {
+    setSlhFormStatus("League name is required.", true);
+    return;
+  }
+
+  if (slhEditingId) {
+    const idx = slhCards.findIndex(x => String(x.id) === String(slhEditingId));
+    if (idx !== -1) {
+      slhCards[idx] = { ...slhCards[idx], label, status, code, notes, link };
+    }
+  } else {
+    slhCards.push({
+      id: Date.now().toString(36),
+      label, status, code, notes, link
+    });
+  }
+
+  const msg = slhEditingId ? `Update side league card: ${label}` : `Add side league card: ${label}`;
+  const ok = await commitSlh(msg);
+  if (ok) {
+    cancelEditSlh();
+  }
+}
+
+// ---------- Side Leagues Hub: commit ----------
+
+async function commitSlh(message) {
+  $("saveSlhBtn").disabled = true;
+  setSlhFormStatus("Saving…", false);
+
+  try {
+    const jsonStr = JSON.stringify(slhCards, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message,
+      content: b64,
+      branch: BRANCH
+    };
+    if (slhSha) body.sha = slhSha;
+
+    const res = await fetch(`${API_BASE}/contents/${SLH_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const data = await res.json();
+    slhSha = data.content.sha;
+    setSlhFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+    renderSlhList();
+    return true;
+  } catch (err) {
+    setSlhFormStatus("Save failed: " + err.message, true);
+    return false;
+  } finally {
+    $("saveSlhBtn").disabled = false;
+  }
+}
+
+function setSlhFormStatus(msg, isError) {
+  const el = $("slhFormStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
 // ---------- Fixture Draw ----------
 // Client-side only — no GitHub API calls, nothing to commit.
 // List mode: a Fisher-Yates shuffle of the pasted team list at Start, then
@@ -1422,6 +1808,12 @@ $("drawNextBtn").addEventListener("click", drawNext);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 $("drawStyleListBtn").addEventListener("click", () => setDrawStyle("list"));
 $("drawStyleWheelBtn").addEventListener("click", () => setDrawStyle("wheel"));
+$("saveBannerBtn").addEventListener("click", saveBanner);
+$("bnCountdownEnabled").addEventListener("change", updateBannerCountdownFieldsVisibility);
+$("saveSlhBtn").addEventListener("click", saveSlhCard);
+$("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
+$("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
+updateSlhCodeFieldVisibility();
 
 // ---------- Formatting toolbar (Bold / Underline / Italic) ----------
 // Wraps the selected text in a textarea with an HTML tag. Works because the
