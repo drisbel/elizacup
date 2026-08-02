@@ -1,7 +1,7 @@
 {
   "enabled": true,
   "message": "FPL and Supercoach EPL leagues open! View Side Leagus Hub for info!",
-  "scope": "home",
+  "scope": "site",
   "countdown": {
     "enabled": false,
     "label": "Deadline",
