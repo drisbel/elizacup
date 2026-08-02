@@ -600,6 +600,10 @@
     text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;text-align:center;
   }
   .playoff-seed-row span{color:#a8a296;font-weight:400;text-transform:none;margin:0 5px;}
+  .season-fixture-date{
+    font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;color:#8a9990;
+    margin-bottom:3px;text-align:center;
+  }
 
   /* ---------- Head-to-head section ---------- */
   .h2h-card{
@@ -3297,12 +3301,19 @@ function seasonFixturesCsvUrlFor(){
 let seasonFixturesDebug = {};
 
 // B:F — Date, Home, Home Score, Away Score, Away. Header located by searching
-// for "DATE" in column B rather than a fixed row. Rounds are grouped by
-// consecutive fixtures sharing the same date (blank date on a row just
-// continues the previous round, since fixture lists usually only put the date
-// on the first row of each round). Round numbers are best-effort matched
-// against the existing round-schedule data by date; falls back to sequential
-// numbering if no match is found.
+// for "DATE" in column B rather than a fixed row. Dates are shown per-match
+// (not once per round), since column B holds a date on every fixture row.
+//
+// IMPORTANT: a round-marker row ("ROUND 1" etc in column B) is NOT assumed to
+// be a standalone row with no fixture data — if hidden rows above it get
+// dropped from the CSV export (a known quirk on this sheet), the marker can
+// end up landing on the same row as that round's first fixture instead of
+// the row before it. Previously this branch did an unconditional `continue`,
+// which silently discarded that row's C:F fixture data whenever that
+// happened — this was the cause of Round 1's first fixture(s) going missing
+// while every other round (whose marker happened to land on its own row)
+// looked fine. Now every row is checked for fixture data regardless of
+// whether it also matched the round-marker pattern.
 function parseSeasonFixtures(rows){
   const rounds = [];
   let current = null;
@@ -3313,22 +3324,24 @@ function parseSeasonFixtures(rows){
     const bCell = cell(row,1); // B
 
     if(/^ROUND\s*\d+/i.test(bCell)){
-      current = { roundLabel: bCell, date: "", fixtures: [] };
+      current = { roundLabel: bCell, fixtures: [] };
       rounds.push(current);
-      continue;
+      // deliberately no `continue` here — see note above
     }
     if(!current) continue;
 
     const home = cell(row,2), homeScore = cell(row,3), awayScore = cell(row,4), away = cell(row,5);
     if(!home && !away) continue;
 
-    const date = bCell; // fixture rows have the match date in this same column
-    if(!current.date && date) current.date = date;
+    // If this row was the round-marker row itself, its date is the marker
+    // text, not a real date — only use bCell as a date when it wasn't
+    // consumed as the round label.
+    const date = /^ROUND\s*\d+/i.test(bCell) ? "" : bCell;
     current.fixtures.push({ date, home, homeScore, awayScore, away });
     rawDump.push({ row: r+1, round: current.roundLabel, date, home, homeScore, awayScore, away });
   }
 
-  seasonFixturesDebug = { roundsFound: rounds.map(r=>({ round: r.roundLabel, date: r.date, fixtures: r.fixtures.length })), rawDump: rawDump.slice(0,40) };
+  seasonFixturesDebug = { roundsFound: rounds.map(r=>({ round: r.roundLabel, fixtures: r.fixtures.length })), rawDump: rawDump.slice(0,40) };
   return rounds;
 }
 
@@ -3337,10 +3350,15 @@ function seasonFixtureCardHtml(f){
   const played = !isNaN(homeNum) && !isNaN(awayNum);
   const draw = played && homeNum === awayNum;
   const cls = (win) => played ? (win ? "fx-win" : draw ? "fx-draw" : "fx-lose") : "";
-  return `<div class="fixture-card" style="cursor:default;">
+  const card = `<div class="fixture-card" style="cursor:default;">
     <span class="fixture-team ${cls(played && homeNum > awayNum)}">${teamLink(f.home)}</span>
     <span class="fixture-score">${played ? `<span class="${cls(homeNum>awayNum)}">${f.homeScore}</span> – <span class="${cls(awayNum>homeNum)}">${f.awayScore}</span>` : `<span class="upcoming">vs</span>`}</span>
     <span class="fixture-team right ${cls(played && awayNum > homeNum)}">${teamLink(f.away)}</span>
+  </div>`;
+  if(!f.date) return card;
+  return `<div class="fixture-card-wrap">
+    <div class="season-fixture-date">${f.date}</div>
+    ${card}
   </div>`;
 }
 
@@ -3355,7 +3373,7 @@ function renderSeasonFixtures(rounds){
   container.className = "";
   container.innerHTML = rounds.map(r => `
     <div style="margin-bottom:22px;">
-      <h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:0 0 8px;">${r.roundLabel}${r.date ? " — " + r.date : ""}</h4>
+      <h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:0 0 8px;">${r.roundLabel}</h4>
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${r.fixtures.map(seasonFixtureCardHtml).join("")}
       </div>
