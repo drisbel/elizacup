@@ -41,7 +41,10 @@
     "closeEnabled": false,
     "closeDate": "",
     "countdownEnabled": false,
-    "roundInfo": "QUARTER FINALS"
+    "roundInfo": "QUARTER FINALS",
+    "winners": [
+      "League - Zen Garden"
+    ]
   },
   {
     "id": "msbhwfxa",
