@@ -31,8 +31,11 @@
     "label": "NRL Supercoach",
     "status": "active",
     "code": "",
-    "notes": "",
-    "link": "#sideleagues=nrl"
+    "notes": "LEAGUE UNDERWAY\nView NRL page for more information.",
+    "link": "#sideleagues=nrl",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false
   },
   {
     "id": "msbhwfxa",
