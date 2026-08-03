@@ -662,6 +662,7 @@
   .slh-countdown{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--pitch);
   }
+  .slh-closing-date{font-size:11.5px;color:#8a9990;margin-top:2px;}
   .slh-link-btn{
     align-self:flex-start;margin-top:auto;
     background:var(--pitch);color:#fff;text-decoration:none;
@@ -1347,8 +1348,8 @@ function startBannerCountdown(deadlineDate){
       return;
     }
     const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000);
-    const m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
-    el.textContent = d>0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`;
+    const m = Math.floor((diff%3600000)/60000);
+    el.textContent = d>0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
   }
   tick();
   bannerCountdownInterval = setInterval(tick, 1000);
@@ -5446,9 +5447,14 @@ function slhCardHtml(c){
 
   let closingHtml = "";
   if(c.status === "signups" && c.closeEnabled && c.closeDate){
+    const deadlineDate = parseLmsDeadline(c.closeDate);
+    const formattedDate = deadlineDate ? formatAestDateTime(deadlineDate) + " AEST" : (c.closeDate + " AEST");
     closingHtml = c.countdownEnabled
-      ? `<div class="slh-closing"><span class="slh-closing-label">Signups close in</span> <span class="slh-countdown" data-deadline="${c.closeDate}"></span></div>`
-      : `<div class="slh-closing"><span class="slh-closing-label">Signups close:</span> ${c.closeDate} AEST</div>`;
+      ? `<div class="slh-closing">
+          <div><span class="slh-closing-label">Signups close in</span> <span class="slh-countdown" data-deadline="${c.closeDate}"></span></div>
+          <div class="slh-closing-date">${formattedDate}</div>
+        </div>`
+      : `<div class="slh-closing"><span class="slh-closing-label">Signups close:</span> ${formattedDate}</div>`;
   }
 
   // Supports multiple winners per league (e.g. separate winners per division
@@ -5494,8 +5500,8 @@ function startSlhCountdowns(){
       }
       anyStillCounting = true;
       const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000);
-      const m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
-      el.textContent = d>0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`;
+      const m = Math.floor((diff%3600000)/60000);
+      el.textContent = d>0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
     });
     if(!anyStillCounting) clearInterval(slhCountdownInterval);
   }
@@ -6185,6 +6191,27 @@ function parseLmsDeadline(text){
   return new Date(Date.UTC(year, month, day, hour-10, minute, second));
 }
 
+// Reformats a date parsed by parseLmsDeadline back into AEST wall-clock text,
+// always HH:MM with no seconds — used wherever a deadline displays as plain
+// text rather than a ticking countdown, so display is consistent regardless
+// of whether the original input included seconds. parseLmsDeadline encodes
+// AEST as UTC-10 (i.e. the stored Date's UTC value is 10 hours *behind* the
+// intended AEST wall-clock time), so to read the wall-clock values back out
+// correctly we shift the instant forward by 10 hours first, then use the UTC
+// getters on that shifted instant.
+function formatAestDateTime(date){
+  if(!date) return "";
+  const aest = new Date(date.getTime() + 10*3600*1000);
+  const day = String(aest.getUTCDate()).padStart(2,'0');
+  const month = String(aest.getUTCMonth()+1).padStart(2,'0');
+  const year = aest.getUTCFullYear();
+  let hour = aest.getUTCHours();
+  const minute = String(aest.getUTCMinutes()).padStart(2,'0');
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12; if(hour === 0) hour = 12;
+  return `${day}/${month}/${year} ${String(hour).padStart(2,'0')}:${minute} ${ampm}`;
+}
+
 let lmsCountdownInterval = null;
 function startLmsCountdown(deadlineDate){
   if(lmsCountdownInterval) clearInterval(lmsCountdownInterval);
@@ -6199,8 +6226,8 @@ function startLmsCountdown(deadlineDate){
       return;
     }
     const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000);
-    const m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
-    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
+    const m = Math.floor((diff%3600000)/60000);
+    el.textContent = `${d}d ${h}h ${m}m`;
   }
   tick();
   lmsCountdownInterval = setInterval(tick, 1000);
@@ -6218,7 +6245,7 @@ function renderLmsTipDeadline(data){
   box.innerHTML = `<div style="background:var(--pitch);color:#fff;border-radius:8px;padding:14px 18px;max-width:420px;margin-bottom:8px;">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.03em;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">${roundName} Deadline</div>
     <div id="lmsCountdownTimer" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;">${deadlineDate ? "" : "Awaiting Schedule Release"}</div>
-    ${deadlineDate ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;opacity:0.8;margin-top:4px;">${deadlineRaw} AEST</div>` : ""}
+    ${deadlineDate ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;opacity:0.8;margin-top:4px;">${formatAestDateTime(deadlineDate)} AEST</div>` : ""}
   </div>`;
   startLmsCountdown(deadlineDate);
 }
