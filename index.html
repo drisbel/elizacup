@@ -242,6 +242,17 @@
     padding:4px 9px;border-radius:12px;text-decoration:none;
   }
 
+  .home-card-grid-compact{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-top:14px;}
+  .home-card-compact{
+    display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line-light);border-radius:6px;
+    padding:11px 14px;text-decoration:none;transition:box-shadow 0.15s, transform 0.15s;
+  }
+  .home-card-compact:hover{box-shadow:0 4px 14px rgba(0,0,0,0.08);transform:translateY(-1px);}
+  .home-card-compact-icon{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
+  .home-card-compact-icon-svg{display:inline-flex;align-items:center;justify-content:center;}
+  .home-card-compact-title{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;margin:0;}
+  .home-card-compact-sub{font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;margin-top:1px;}
+
   .home-champ-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}
   .home-champ{border-radius:8px;padding:22px 16px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;}
   .home-champ-logo{width:64px;height:64px;object-fit:contain;flex-shrink:0;margin-bottom:12px;}
@@ -288,10 +299,16 @@
   }
 
   /* Large competition logo at the top of division / Roddy / FA Cup / ECL pages */
-  .comp-logo-hero{display:flex;justify-content:center;margin-bottom:20px;}
+  .comp-logo-hero{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:20px;}
   .comp-logo-hero img{width:110px;height:110px;object-fit:contain;}
+  .comp-logo-hero-title{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:36px;
+    color:var(--pitch);text-transform:uppercase;letter-spacing:0.02em;
+  }
   @media (max-width:600px){
+    .comp-logo-hero{gap:12px;}
     .comp-logo-hero img{width:84px;height:84px;}
+    .comp-logo-hero-title{font-size:24px;}
   }
   @media (max-width:600px){
     .team-profile-top{flex-direction:column;text-align:center;gap:14px;}
@@ -539,7 +556,7 @@
   .round-tab.active{background:var(--pitch);color:var(--chalk);border-color:var(--pitch);}
   .round-tab:hover:not(.active){border-color:var(--pitch);}
 
-  .fixture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+  .fixture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px;}
 
   /* FA Cup: fixed 2-column layout, score always centered regardless of name length */
   .facup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -878,6 +895,7 @@
 <main>
   <div class="comp-logo-hero" id="compLogoHero" style="display:none;">
     <img id="compLogoHeroImg" src="" alt="" onerror="this.style.display='none';">
+    <div class="comp-logo-hero-title" id="compLogoHeroTitle"></div>
   </div>
   <div class="comp-switcher" id="compSwitcher" style="display:none;"></div>
 
@@ -1006,7 +1024,7 @@
 
   <section id="sideLeaguesHubSection" style="display:none;">
     <div class="section-head">
-      <h2>Side Leagues</h2>
+      <h2>Side Leagues Hub</h2>
       <span class="sub">Overview of every side league — status, signup codes, and links</span>
     </div>
     <div id="sideLeaguesHubContainer" class="state-msg">Loading…</div>
@@ -1300,7 +1318,7 @@ async function loadPageVisibilityData(){
 // calls this automatically, and it's also re-run once the fetch resolves so
 // anything already on screen gets filtered retroactively.
 function applyPageVisibility(){
-  document.querySelectorAll('#divNav [data-id], .home-card[data-id]').forEach(el=>{
+  document.querySelectorAll('#divNav [data-id], .home-card[data-id], .home-card-compact[data-id]').forEach(el=>{
     const id = el.getAttribute('data-id');
     el.style.display = (pageVisibilityMap[id] === false) ? "none" : "";
   });
@@ -1458,9 +1476,11 @@ function togglePageSections(){
   const heroLogoPath = compLogoPathFor(currentDivision);
   const heroEl = document.getElementById('compLogoHero');
   const heroImg = document.getElementById('compLogoHeroImg');
+  const heroTitle = document.getElementById('compLogoHeroTitle');
   if(heroLogoPath){
     heroImg.style.display = "";
     heroImg.src = heroLogoPath;
+    heroTitle.textContent = currentDivision.label;
     heroEl.style.display = "";
   }else{
     heroEl.style.display = "none";
@@ -2453,6 +2473,18 @@ function getDivisionShortLabel(text){
   if(/\b2\b/.test(t)) return "D2";
   if(/\b3\b/.test(t)) return "D3";
   return text || "—";
+}
+// Maps a division short label (as returned by getDivisionShortLabel, e.g.
+// "D1", "2A", "3B") to the matching tier logo file. Division 2A/2B share the
+// Division 2 logo, 3A/3B share the Division 3 logo — same tier grouping as
+// compLogoPathFor uses for the division page hero. Returns null for anything
+// that isn't a real division (e.g. "Not currently in a division", "—").
+function divisionLogoForShortLabel(shortLabel){
+  const s = (shortLabel||"").toUpperCase();
+  if(s === "D1") return "logo/division-1-logo.png";
+  if(s === "2A" || s === "2B" || s === "D2") return "logo/division-2-logo.png";
+  if(s === "3A" || s === "3B" || s === "D3") return "logo/division-3-logo.png";
+  return null;
 }
 function hexToRgba(hex, alpha){
   const num = parseInt(hex.replace("#",""), 16);
@@ -4670,6 +4702,7 @@ function renderTeamProfile(data){
   const divColor = roddyEntry ? getDivisionColorByLabel(roddyEntry.division) : "#28427c";
   const divShort = roddyEntry ? getDivisionShortLabel(roddyEntry.division) : "";
   const divLabel = divShort === "D1" ? "Eliza Cup" : divShort;
+  const divLogoPath = divisionLogoForShortLabel(divShort);
   const logoSrc = `logo/${teamLogoSlug(teamName)}.png`;
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(teamName)}';}`;
 
@@ -4684,7 +4717,7 @@ function renderTeamProfile(data){
     <div class="team-profile-main">
       <div class="team-profile-heading">
         <h2 class="team-profile-name">${teamName}</h2>
-        ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">${divShort === "D1" ? divLabel : "Division " + divLabel}</span>` : `<span class="sub" style="background:#8a9990;color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Not currently in a division</span>`}
+        ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">${divLogoPath ? `<img src="${divLogoPath}" alt="" style="width:14px;height:14px;object-fit:contain;vertical-align:-2px;margin-right:5px;" onerror="this.style.display='none';">` : ""}${divShort === "D1" ? divLabel : "Division " + divLabel}</span>` : `<span class="sub" style="background:#8a9990;color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Not currently in a division</span>`}
         ${clubInfo && (clubInfo.manager || clubInfo.yearEntered) ? `<div style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">
             ${clubInfo.manager ? `Manager: <b style="color:var(--ink);">${clubInfo.manager}</b>` : ""}${clubInfo.manager && clubInfo.yearEntered ? " · " : ""}${clubInfo.yearEntered ? `Est. ${clubInfo.yearEntered}` : ""}
           </div>` : ""}
@@ -5147,16 +5180,16 @@ function renderHistorySeason(data){
     <div class="round-tabs">${divTabsHtml}</div>
     <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>`;
 
-  html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Roddy Rodriguez Cup</h2></div>`;
+  html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;display:flex;align-items:center;gap:9px;"><img src="logo/roddy-logo.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="this.style.display='none';"> Roddy Rodriguez Cup</h2></div>`;
   html += histRoddyTableHtml(data.roddy);
 
-  html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Eliza FA Cup</h2></div>`;
+  html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;display:flex;align-items:center;gap:9px;"><img src="logo/fa-cup-logo.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="this.style.display='none';"> Eliza FA Cup</h2></div>`;
   data.facup.forEach(round=>{
     html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
     html += `<div class="facup-grid">${round.fixtures.map(histFacupFixtureCardHtml).join("")}</div>`;
   });
 
-  html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Eliza Champions League</h2></div>`;
+  html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;display:flex;align-items:center;gap:9px;"><img src="logo/ecl-logo.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="this.style.display='none';"> Eliza Champions League</h2></div>`;
   html += data.eclGroups.map(histEclGroupTableHtml).join("");
   data.eclKnockout.forEach(round=>{
     html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
@@ -6545,6 +6578,25 @@ function homeCardHtml({id, title, subtitle, color, logo, icon}){
   </a>`;
 }
 
+// Smaller variant for the non-Eliza-competition pages on the home page
+// (Calendar, Hall of Fame, Teams, Statistics, Past Seasons, Side Leagues Hub,
+// News) — kept visually lighter than the four main competition cards
+// (Divisions, Roddy, FA Cup, ECL) so those stay the visual focus of the page.
+function homeCardCompactHtml({id, title, subtitle, color, logo, icon}){
+  const media = logo
+    ? `<img src="${logo}" alt="" class="home-card-compact-icon" onerror="this.style.display='none';">`
+    : icon
+      ? `<span class="home-card-compact-icon home-card-compact-icon-svg" style="color:${color};">${icon}</span>`
+      : "";
+  return `<a href="#${id}" class="home-card-compact" data-id="${id}" style="border-left:4px solid ${color};">
+    ${media}
+    <div>
+      <div class="home-card-compact-title" style="color:${color};">${title}</div>
+      ${subtitle ? `<div class="home-card-compact-sub">${subtitle}</div>` : ""}
+    </div>
+  </a>`;
+}
+
 function homeDivisionsCardHtml(){
   const divs = DIVISIONS.filter(d => d.type === "division");
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
@@ -6632,13 +6684,16 @@ function renderHome(){
       ${homeCardHtml({id:"roddy", title:"Roddy Rodriguez Cup", subtitle:"Overall leaderboard for teams in all divisions", color:"#28427c", logo:"logo/roddy-logo.png"})}
       ${homeCardHtml({id:"facup", title:"Eliza FA Cup", subtitle:"Knockout competition for teams in all divisions", color:"#0a2f85", logo:"logo/fa-cup-logo.png"})}
       ${homeCardHtml({id:"ecl", title:"Eliza Champions League", subtitle:"Group &amp; Knockout competition featuring last season's trophy winners", color:"#111111", logo:"logo/ecl-logo.png"})}
-      ${homeCardHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#28427c", icon:HOME_ICON_CALENDAR})}
-      ${homeCardHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914", icon:HOME_ICON_TROPHY})}
-      ${homeCardHtml({id:"teams", title:"Teams", subtitle:"Search any club's profile", color:"#28427c", icon:HOME_ICON_TEAMS})}
-      ${homeCardHtml({id:"stats", title:"Statistics", subtitle:"Win streaks &amp; league-wide stats", color:"#28427c", icon:HOME_ICON_STATS})}
-      ${homeCardHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#28427c", icon:HOME_ICON_HISTORY})}
-      ${homeCardHtml({id:"sideleagueshub", title:"Side Leagues", subtitle:"Fixtures and standings from all non-Eliza competitions", color:"#28427c", icon:HOME_ICON_SIDELEAGUES})}
-      ${homeCardHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#28427c", icon:HOME_ICON_NEWS})}
+    </div>
+
+    <div class="home-card-grid-compact">
+      ${homeCardCompactHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#28427c", icon:HOME_ICON_CALENDAR})}
+      ${homeCardCompactHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914", icon:HOME_ICON_TROPHY})}
+      ${homeCardCompactHtml({id:"teams", title:"Teams", subtitle:"Search any club's profile", color:"#28427c", icon:HOME_ICON_TEAMS})}
+      ${homeCardCompactHtml({id:"stats", title:"Statistics", subtitle:"Win streaks &amp; league-wide stats", color:"#28427c", icon:HOME_ICON_STATS})}
+      ${homeCardCompactHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#28427c", icon:HOME_ICON_HISTORY})}
+      ${homeCardCompactHtml({id:"sideleagueshub", title:"Side Leagues Hub", subtitle:"Fixtures and standings from all non-Eliza competitions", color:"#28427c", icon:HOME_ICON_SIDELEAGUES})}
+      ${homeCardCompactHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#28427c", icon:HOME_ICON_NEWS})}
     </div>
 
     <div id="homeLatestNewsSection" style="display:none;">
@@ -6664,6 +6719,14 @@ function renderHome(){
       ${homeReigningChampionHtml("Division 2")}
       ${homeReigningChampionHtml("Division 3")}
     </div>
+
+    <div class="section-head" style="margin-top:40px;">
+      <h2 style="font-size:22px;">Widget preview (temporary — not placed yet)</h2>
+      <span class="sub">Sitting here just so it can be seen. Tell Claude where it should actually live.</span>
+    </div>
+    <div style="max-width:640px;">
+      <iframe src="https://bilbo443.github.io/BILBBET/featured.html" width="100%" height="480" style="border:none;border-radius:8px;" title="Bilbbet — This Week's Value"></iframe>
+    </div>
   `;
   loadNewsData().then(data => {
     const newsSection = document.getElementById('homeLatestNewsSection');
@@ -6672,7 +6735,7 @@ function renderHome(){
     newsContainer.innerHTML = `<div style="max-width:640px;">${newsExcerptCardHtml(data.newsItems[0])}</div>`;
     newsSection.style.display = "";
   });
-  container.querySelectorAll('.home-card, .home-mini-pill').forEach(el=>{
+  container.querySelectorAll('.home-card, .home-card-compact, .home-mini-pill').forEach(el=>{
     el.addEventListener('click', (e)=>{
       e.preventDefault();
       e.stopPropagation();
