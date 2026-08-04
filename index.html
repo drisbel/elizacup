@@ -1077,17 +1077,24 @@
 <script>
 const SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
 
+// 25/26 season archive — moved to a separate spreadsheet so the main sheet's
+// tabs can be cleared and reused for 26/27 setup/testing without affecting
+// what's live on the site. Update SEASON_2526_SHEET_ID if that spreadsheet
+// ever moves again; individual gids below only need to change if a tab gets
+// recreated (a plain "Copy to" that keeps the same tab won't change its gid).
+const SEASON_2526_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
+
 const DIVISIONS = [
   { id: "home", label: "Home",                    pill: "Home",    gid: null,         teams: 0,  color: "#28427c", type: "home" },
   { id: "calendar", label: "Calendar",            pill: "Calendar", gid: "2066314959", teams: 0, color: "#28427c", type: "calendar" },
-  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", teams: 14, color: "#28427c", type: "division" },
-  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  teams: 12, color: "#bc3532", type: "division" },
-  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", teams: 12, color: "#990000", type: "division" },
-  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division" },
-  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482",  teams: 62, color: "#28427c", type: "roddy" },
-  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",    teams: 64, color: "#0a2f85", type: "facup" },
-  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", teams: 12, color: "#111111", type: "ecl" },
+  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1032423540", sheetId: SEASON_2526_SHEET_ID, teams: 14, color: "#28427c", type: "division" },
+  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "1011989388", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
+  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1025912239", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#990000", type: "division" },
+  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "352017161",  sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
+  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "1085366243", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#274e13", type: "division" },
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#28427c", type: "roddy" },
+  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "267705899",  sheetId: SEASON_2526_SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
+  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "2092692043", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#28427c", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
@@ -1096,7 +1103,7 @@ const DIVISIONS = [
   { id: "bilbbet", label: "Bilbbet",                 pill: "Bilbbet", gid: null, teams: 0, color: "#28427c", type: "bilbbet" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagueshub" },
-  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" }
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#28427c", type: "teams" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1154,7 +1161,8 @@ function teamLink(name){
 let currentDivision = getDivisionFromHash();
 
 function csvUrlFor(division){
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${division.gid}&cachebust=` + Date.now();
+  const sheetId = division.sheetId || SHEET_ID;
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${division.gid}&cachebust=` + Date.now();
 }
 
 const TEAM_NAME_RE = /^[A-Z0-9][A-Z0-9 .'’()\-\/]{2,}$/; // ALL CAPS-ish team names as used in the sheet
@@ -1226,7 +1234,7 @@ function renderDivNav(){
       return `<div class="div-nav-group">
         <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
         <div class="div-nav-dropdown" id="navDropdown-${item.key}">
-          <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Overview</button>
+          <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
           ${SIDE_LEAGUES.map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
         </div>
       </div>`;
@@ -1540,30 +1548,6 @@ async function load(){
   if(currentDivision.type === "home"){
     renderHome();
     document.getElementById('statusLine').innerHTML = "";
-    const homeDivisionRef = currentDivision;
-    try{
-      const d1 = DIVISIONS.find(d => d.id === "d1");
-      const res = await fetch(csvUrlFor(d1));
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
-      const rows = parsed.data;
-      // parseStandings/parseFixtures read currentDivision.teams to know the row range,
-      // so swap in D1 just for this parse, then restore Home so nav/routing stays correct.
-      currentDivision = d1;
-      parseStandings(rows);
-      parseFixtures(rows);
-      currentDivision = homeDivisionRef;
-      renderHomeSnapshot();
-    }catch(err){
-      console.error(err);
-      currentDivision = homeDivisionRef;
-      const el = document.getElementById('homeSnapshotContainer');
-      if(el){
-        el.className = "state-msg error";
-        el.innerHTML = "Couldn't load the Division 1 snapshot right now.";
-      }
-    }
     return;
   }
 
@@ -6725,11 +6709,6 @@ function renderHome(){
     </div>
 
     <div class="section-head" style="margin-top:40px;">
-      <h2 style="font-size:22px;">Latest from Division 1</h2>
-    </div>
-    <div id="homeSnapshotContainer" class="state-msg">Loading…</div>
-
-    <div class="section-head" style="margin-top:40px;">
       <h2 style="font-size:22px;">Reigning Champions</h2>
     </div>
     <div class="home-champ-grid">
@@ -6764,73 +6743,6 @@ function renderHome(){
     });
   });
   applyPageVisibility();
-}
-
-function homeSnapshotHtml(){
-  // Home page's currentDivision isn't "d1", so getTier()'s implicit lookup would use
-  // the wrong tier thresholds here — reference TIER_CONFIGS.d1 directly instead.
-  const d1Tiers = TIER_CONFIGS.d1;
-  const tierFor = (pos) => d1Tiers.find(t => pos <= t.upTo) || d1Tiers[d1Tiers.length-1];
-  const swatch = { "tier-champion":["#DCF2E3","#1F8A4C"], "tier-ecl":["#FFF6CC","#B8930A"], "tier-mid":["#E1E9F7","var(--pitch)"], "tier-relegation":["#F9E0DC","#A8443A"] };
-
-  const fullTableHtml = standings.length ? `
-    <div class="table-wrap"><table class="standings compact home-mini-table"><thead><tr>
-      <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th>
-    </tr></thead><tbody>
-      ${standings.map(s=>`<tr class="${tierFor(s.pos).class}"><td>${s.pos}</td><td>${teamLink(s.team)}</td><td class="pts">${s.pts}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td></tr>`).join("")}
-    </tbody></table></div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">
-      ${d1Tiers.map(t=>{ const [bg,border] = swatch[t.class]; return `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${bg};border:1px solid ${border};margin-right:4px;vertical-align:middle;"></i>${t.label}</span>`; }).join("")}
-    </div>` : `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No standings yet.</p>`;
-
-  const rounds = Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b);
-  let lastScoredRound = null;
-  for(let i=rounds.length-1; i>=0; i--){
-    if(fixturesByRound[rounds[i]].some(f => f.homeScore !== null && f.awayScore !== null)){ lastScoredRound = rounds[i]; break; }
-  }
-  const seasonComplete = rounds.length > 0 && rounds.every(r =>
-    fixturesByRound[r].every(f => f.homeScore !== null && f.awayScore !== null)
-  );
-  const resultsLabel = seasonComplete ? `Final Round (${lastScoredRound}) Results` : `Round ${lastScoredRound} results`;
-  const resultsHtml = lastScoredRound ? `
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;margin:14px 0 6px;">${resultsLabel}</div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      ${fixturesByRound[lastScoredRound].filter(f=>f.homeScore!==null && f.awayScore!==null).map(f=>
-        `<div style="font-family:'Barlow',sans-serif;font-size:13px;">${teamLink(f.home)} <b>${f.homeScore}</b> – <b>${f.awayScore}</b> ${teamLink(f.away)}</div>`
-      ).join("")}
-    </div>` : `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;margin-top:14px;">No results yet — season hasn't started.</p>`;
-
-  const nextRound = rounds.find(r => fixturesByRound[r].every(f => f.homeScore === null && f.awayScore === null));
-  let nextHtml = "";
-  if(nextRound){
-    nextHtml = `
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;margin:14px 0 6px;">Round ${nextRound} fixtures</div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      ${fixturesByRound[nextRound].map(f=>
-        `<div style="font-family:'Barlow',sans-serif;font-size:13px;">${teamLink(f.home)} <span style="color:#6b7c73;">vs</span> ${teamLink(f.away)}</div>`
-      ).join("")}
-    </div>`;
-  } else if(seasonComplete && standings.length){
-    const champion = standings[0].team;
-    nextHtml = `
-    <div style="margin-top:16px;padding:14px 16px;background:#F5F0DC;border:1px solid #E0D5A8;border-radius:6px;">
-      <div style="font-family:'Barlow',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#8B6914;margin-bottom:4px;">Season Complete</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;">${teamLink(champion)} win Division 1</div>
-      <a href="#honour" style="display:inline-block;margin-top:8px;font-family:'Barlow',sans-serif;font-size:12.5px;color:#28427c;font-weight:600;text-decoration:none;">See the full Hall of Fame →</a>
-    </div>`;
-  }
-
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;">
-    <div>${fullTableHtml}</div>
-    <div>${resultsHtml}${nextHtml}</div>
-  </div>`;
-}
-
-function renderHomeSnapshot(){
-  const el = document.getElementById('homeSnapshotContainer');
-  if(!el) return;
-  el.className = "";
-  el.innerHTML = homeSnapshotHtml();
 }
 
 let facupViewMode = "rounds";
