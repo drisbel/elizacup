@@ -1095,6 +1095,24 @@ const DIVISIONS = [
   { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#28427c", type: "roddy" },
   { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "267705899",  sheetId: SEASON_2526_SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
   { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "2092692043", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
+
+  // ---- 26/27 TEST PAGES ----
+  // Point at the main sheet's original gids, freed up now that D1-D3/Roddy/
+  // FA Cup/ECL above read from the 25/26 archive instead. Hidden from nav by
+  // default via page-visibility.json (toggle in admin.html when ready to
+  // preview) — NOT hidden from search engines or guessable links, so don't
+  // rely on this for anything sensitive. When the 26/27 season actually
+  // launches: swap the real D1-D3/Roddy/FA Cup/ECL entries above to these
+  // same gids (removing their sheetId override), then delete this whole
+  // test block and its NAV_LAYOUT group.
+  { id: "d1-test",  label: "Division 1 (26/27 Test)", pill: "D1 Test",  gid: "1124941542", teams: 14, color: "#28427c", type: "division", isTest: true },
+  { id: "d2a-test", label: "Division 2A (26/27 Test)", pill: "D2A Test", gid: "919912875",  teams: 12, color: "#bc3532", type: "division", isTest: true },
+  { id: "d2b-test", label: "Division 2B (26/27 Test)", pill: "D2B Test", gid: "1047201294", teams: 12, color: "#990000", type: "division", isTest: true },
+  { id: "d3a-test", label: "Division 3A (26/27 Test)", pill: "D3A Test", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division", isTest: true },
+  { id: "d3b-test", label: "Division 3B (26/27 Test)", pill: "D3B Test", gid: "2079252892", teams: 12, color: "#274e13", type: "division", isTest: true },
+  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)", pill: "Roddy Test", gid: "418105482", teams: 62, color: "#28427c", type: "roddy", isTest: true },
+  { id: "facup-test", label: "Eliza FA Cup (26/27 Test)",        pill: "FA Cup Test", gid: "2398203",   teams: 64, color: "#0a2f85", type: "facup", isTest: true },
+  { id: "ecl-test",   label: "Eliza Champions League (26/27 Test)", pill: "ECL Test", gid: "1490882074", teams: 12, color: "#111111", type: "ecl", isTest: true },
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#28427c", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
@@ -1189,7 +1207,8 @@ const NAV_LAYOUT = [
   { type: "single", id: "news" },
   { type: "single", id: "about" },
   { type: "single", id: "bilbbet" },
-  { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
+  { type: "sidegroup", key: "sideleagues", label: "Side Leagues" },
+  { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
 
 function closeAllNavDropdowns(){
@@ -6603,7 +6622,7 @@ function homeCardCompactHtml({id, title, subtitle, color, logo, icon}){
 }
 
 function homeDivisionsCardHtml(){
-  const divs = DIVISIONS.filter(d => d.type === "division");
+  const divs = DIVISIONS.filter(d => d.type === "division" && !d.isTest);
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
   return `<div class="home-card" data-id="d1" style="border-left:5px solid #28427c;cursor:pointer;">
     <div class="home-card-top">

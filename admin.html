@@ -690,7 +690,19 @@ const PAGE_VISIBILITY_PAGES = [
   { id: "about", label: "About" },
   { id: "bilbbet", label: "Bilbbet" },
   { id: "sideleagueshub", label: "Side Leagues" },
-  { id: "teams", label: "Teams" }
+  { id: "teams", label: "Teams" },
+  // 26/27 Test pages — point at the freed-up main sheet gids. Hidden by
+  // default is recommended until the new season's ready to go live; delete
+  // these rows (and the matching NAV_LAYOUT group in index.html) once the
+  // real pages are switched over and the test pages are removed.
+  { id: "d1-test", label: "Division 1 (26/27 Test)" },
+  { id: "d2a-test", label: "Division 2A (26/27 Test)" },
+  { id: "d2b-test", label: "Division 2B (26/27 Test)" },
+  { id: "d3a-test", label: "Division 3A (26/27 Test)" },
+  { id: "d3b-test", label: "Division 3B (26/27 Test)" },
+  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)" },
+  { id: "facup-test", label: "Eliza FA Cup (26/27 Test)" },
+  { id: "ecl-test", label: "Eliza Champions League (26/27 Test)" }
 ];
 
 let pvMap = {};   // { pageId: false } for hidden; absent/true = visible
