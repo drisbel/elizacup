@@ -1363,6 +1363,21 @@ function applyPageVisibility(){
     const id = el.getAttribute('data-id');
     el.style.display = (pageVisibilityMap[id] === false) ? "none" : "";
   });
+
+  // If every page inside a nav dropdown group is hidden, hide the group's
+  // own toggle button too (e.g. "26/27 Test" disappears once all of its
+  // pages are hidden), rather than leaving an empty-looking dropdown behind.
+  // Only applies to standard groups (Divisions, Cups, 26/27 Test) — the Side
+  // Leagues dropdown mixes data-id and data-side-key items and isn't
+  // included here, since most of its entries aren't page-visibility items.
+  document.querySelectorAll('#divNav .div-nav-group').forEach(group=>{
+    const toggleBtn = group.querySelector(':scope > [data-group]');
+    if(!toggleBtn) return;
+    const items = group.querySelectorAll('.div-nav-dropdown-item[data-id]');
+    if(!items.length) return;
+    const allHidden = Array.from(items).every(item => item.style.display === "none");
+    group.style.display = allHidden ? "none" : "";
+  });
 }
 
 // ---------- Site Banner ----------
@@ -2219,7 +2234,6 @@ function renderTable(){
   }
   el.className = "";
   renderLegend();
-  const tableLogoPath = compLogoPathFor(currentDivision);
   let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
     <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
@@ -2233,9 +2247,10 @@ function renderTable(){
     }).join("");
     const tierClass = getTier(s.pos).class;
     const diffClass = s.diff > 0 ? "diff-pos" : s.diff < 0 ? "diff-neg" : "";
+    const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(s.team)}';}`;
     html += `<tr class="${tierClass}">
       <td>${s.pos}</td>
-      <td>${tableLogoPath ? `<img src="${tableLogoPath}" alt="" class="table-team-logo" onerror="this.style.display='none';">` : ""}${teamLink(s.team)}</td>
+      <td><img src="logo/${teamLogoSlug(s.team)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${teamLink(s.team)}</td>
       <td class="pts">${s.pts}</td>
       <td>${s.w}</td>
       <td>${s.d}</td>
@@ -2544,7 +2559,7 @@ function renderRoddy(){
     const divColor = getDivisionColorByLabel(e.division);
     html += `<tr style="background:${hexToSolidTint(divColor,0.13)};border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
-      <td class="roddy-team">${teamLink(e.team)}</td>
+      <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${teamLink(e.team)}</td>
       <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
       <td>${e.round || "—"}</td>
       <td>${e.chip || "—"}</td>
@@ -2657,10 +2672,13 @@ function facupFixtureCardHtml(f){
       ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
       : `<span class="upcoming">vs</span>`;
   const divTag = d => d ? `<span class="roddy-div-tag" style="background:${getDivisionColorByLabel(d)};font-size:9px;margin-left:5px;flex-shrink:0;">${d}</span>` : "";
+  const teamLogo = name => name
+    ? `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(name)}';}">`
+    : "";
   return `<div class="facup-card">
-    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${f.home.name ? teamLink(f.home.name) : "TBD"}</span>${divTag(f.home.division)}</div>
+    <div class="facup-team facup-team-home ${resultClass(homeWin)}">${teamLogo(f.home.name)}<span class="facup-team-name">${f.home.name ? teamLink(f.home.name) : "TBD"}</span>${divTag(f.home.division)}</div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${divTag(f.away.division)}<span class="facup-team-name">${f.away.name ? teamLink(f.away.name) : "TBD"}</span></div>
+    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${divTag(f.away.division)}<span class="facup-team-name">${f.away.name ? teamLink(f.away.name) : "TBD"}</span>${teamLogo(f.away.name)}</div>
   </div>`;
 }
 
@@ -2895,7 +2913,7 @@ function eclQualifiersTableHtml(){
       : "";
     html += `<tr class="${rowClass}">
       <td>${q.pos}</td>
-      <td>${teamLink(q.team)}</td>
+      <td><img src="logo/${teamLogoSlug(q.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(q.team)}';}">${teamLink(q.team)}</td>
       <td>${q.groupPos || "—"}</td>
       <td class="pts">${q.pts || "—"}</td>
       <td>${q.ptsFor || "—"}</td>
@@ -2934,7 +2952,7 @@ function eclGroupTableHtml(g){
       : "";
     html += `<tr class="${rowClass}">
       <td>${t.pos}</td>
-      <td>${teamLink(t.team)}</td>
+      <td><img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}">${teamLink(t.team)}</td>
       <td class="pts">${t.pts}</td>
       <td>${t.w}</td>
       <td>${t.d}</td>
