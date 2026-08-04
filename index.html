@@ -121,9 +121,11 @@
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
   .comp-switcher{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 24px 16px;}
-  .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #6b7c73);}
+  .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #6b7c73);display:inline-flex;align-items:center;gap:6px;}
   .comp-switcher .div-tab:hover{border-color:var(--amber);color:var(--ink);}
   .comp-switcher .div-tab.active{background:var(--amber);border-color:var(--amber);color:var(--ink);}
+  .switcher-pill-logo{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
+  .table-team-logo{width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:6px;}
   .honour-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;align-items:start;}
   .honour-board-card{border:1px solid var(--line-light);border-radius:8px;padding:12px 14px;background:#fff;}
   .honour-board-card h4{font-family:'Barlow Condensed',sans-serif;font-size:16px;margin:0 0 8px;color:var(--pitch);}
@@ -1537,7 +1539,9 @@ function togglePageSections(){
   if(switcherIds){
     switcherEl.innerHTML = switcherIds.map(id=>{
       const d = DIVISIONS.find(x=>x.id===id);
-      return `<button class="div-tab${d.id===currentDivision.id?' active':''}" data-id="${d.id}">${d.pill}</button>`;
+      const logoPath = compLogoPathFor(d);
+      const label = isDivision ? d.label : d.pill;
+      return `<button class="div-tab${d.id===currentDivision.id?' active':''}" data-id="${d.id}">${logoPath ? `<img src="${logoPath}" alt="" class="switcher-pill-logo" onerror="this.style.display='none';">` : ""}${label}</button>`;
     }).join("");
     switcherEl.style.display = "";
     switcherEl.querySelectorAll('button').forEach(btn=>{
@@ -2215,6 +2219,7 @@ function renderTable(){
   }
   el.className = "";
   renderLegend();
+  const tableLogoPath = compLogoPathFor(currentDivision);
   let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
     <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
@@ -2230,7 +2235,7 @@ function renderTable(){
     const diffClass = s.diff > 0 ? "diff-pos" : s.diff < 0 ? "diff-neg" : "";
     html += `<tr class="${tierClass}">
       <td>${s.pos}</td>
-      <td>${teamLink(s.team)}</td>
+      <td>${tableLogoPath ? `<img src="${tableLogoPath}" alt="" class="table-team-logo" onerror="this.style.display='none';">` : ""}${teamLink(s.team)}</td>
       <td class="pts">${s.pts}</td>
       <td>${s.w}</td>
       <td>${s.d}</td>
