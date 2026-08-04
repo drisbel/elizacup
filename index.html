@@ -1022,6 +1022,16 @@
     <div id="aboutContainer" class="state-msg">Loading…</div>
   </section>
 
+  <section id="bilbbetSection" style="display:none;">
+    <div class="section-head">
+      <h2>Bilbbet</h2>
+      <span class="sub">Official betting partner of the Eliza Cup</span>
+    </div>
+    <div style="max-width:640px;">
+      <iframe src="https://bilbo443.github.io/BILBBET/featured.html" width="100%" height="480" style="border:none;border-radius:8px;" title="Bilbbet — This Week's Value"></iframe>
+    </div>
+  </section>
+
   <section id="sideLeaguesHubSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues Hub</h2>
@@ -1083,6 +1093,7 @@ const DIVISIONS = [
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
+  { id: "bilbbet", label: "Bilbbet",                 pill: "Bilbbet", gid: null, teams: 0, color: "#28427c", type: "bilbbet" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagueshub" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "418105482", teams: 0, color: "#28427c", type: "teams" }
@@ -1169,6 +1180,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "history" },
   { type: "single", id: "news" },
   { type: "single", id: "about" },
+  { type: "single", id: "bilbbet" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" }
 ];
 
@@ -1454,6 +1466,7 @@ function togglePageSections(){
   const isTeamProfile = type === "teamprofile";
   const isNews = type === "news";
   const isAbout = type === "about";
+  const isBilbbet = type === "bilbbet";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1471,6 +1484,7 @@ function togglePageSections(){
   document.getElementById('teamProfileSection').style.display = isTeamProfile ? "" : "none";
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
+  document.getElementById('bilbbetSection').style.display = isBilbbet ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1832,6 +1846,10 @@ async function load(){
   if(currentDivision.type === "about"){
     renderAboutPage();
     return;
+  }
+
+  if(currentDivision.type === "bilbbet"){
+    return; // static embed, nothing to fetch
   }
 
   document.getElementById('tableContainer').innerHTML = "Loading standings…";
@@ -6721,14 +6739,6 @@ function renderHome(){
       ${homeReigningChampionHtml("ECL")}
       ${homeReigningChampionHtml("Division 2")}
       ${homeReigningChampionHtml("Division 3")}
-    </div>
-
-    <div class="section-head" style="margin-top:40px;">
-      <h2 style="font-size:22px;">Bilbbet</h2>
-      <span class="sub">Official betting partner of the Eliza Cup</span>
-    </div>
-    <div style="max-width:640px;">
-      <iframe src="https://bilbo443.github.io/BILBBET/featured.html" width="100%" height="480" style="border:none;border-radius:8px;" title="Bilbbet — This Week's Value"></iframe>
     </div>
   `;
   loadNewsData().then(data => {
