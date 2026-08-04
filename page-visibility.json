@@ -1,3 +1,11 @@
 {
-  "bilbbet": false
+  "bilbbet": false,
+  "d1-test": false,
+  "d2a-test": false,
+  "d2b-test": false,
+  "d3a-test": false,
+  "d3b-test": false,
+  "roddy-test": false,
+  "facup-test": false,
+  "ecl-test": false
 }
