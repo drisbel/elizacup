@@ -197,6 +197,8 @@
   .pv-row:last-child{border-bottom:none;}
   .pv-row input{width:auto;}
   .pv-row label{margin:0;font-weight:500;font-size:14px;flex:1;cursor:pointer;}
+  .pv-link{font-family:'Barlow',sans-serif;font-size:12.5px;font-weight:600;color:var(--pitch);text-decoration:none;flex-shrink:0;}
+  .pv-link:hover{color:var(--pitch-2);text-decoration:underline;}
   .radio-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
   .radio-row input{width:auto;}
   .radio-row label{margin:0;font-weight:500;font-size:14px;}
@@ -390,7 +392,7 @@
       <div class="row">
         <div class="field">
           <label for="fDate">Date</label>
-          <input type="text" id="fDate" placeholder="YYYY-MM-DD">
+          <input type="text" id="fDate" placeholder="DD-MM-YYYY">
         </div>
         <div class="field">
           <label for="fImage">Image (repo path or full URL)</label>
@@ -729,12 +731,15 @@ async function loadPageVisibility() {
   renderPvList();
 }
 
+const SITE_BASE_URL = "https://elizacup.com/";
+
 function renderPvList() {
   const list = $("pvList");
   list.innerHTML = PAGE_VISIBILITY_PAGES.map(p => `
     <div class="pv-row">
       <input type="checkbox" id="pv-${p.id}" ${pvMap[p.id] === false ? "" : "checked"}>
       <label for="pv-${p.id}">${escapeHtml(p.label)}</label>
+      <a href="${SITE_BASE_URL}#${p.id}" target="_blank" rel="noopener" class="pv-link" title="Open this page">View ↗</a>
     </div>
   `).join("");
 }
@@ -1003,13 +1008,29 @@ function escapeHtml(str) {
   }[c]));
 }
 
+// News articles are stored with an ISO date (YYYY-MM-DD) internally — that's
+// what sorts correctly as a plain string, which is how the site orders
+// articles newest-first. The admin form shows/accepts DD-MM-YYYY instead
+// (what Dan actually wants to type), converting to/from ISO at the edges.
+function ddmmyyyyToIso(str){
+  const m = (str||"").trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(!m) return null;
+  const day = m[1].padStart(2,'0'), month = m[2].padStart(2,'0'), year = m[3];
+  return `${year}-${month}-${day}`;
+}
+function isoToDdmmyyyy(str){
+  const m = (str||"").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return str || ""; // not ISO (e.g. already DD-MM-YYYY from an old save) — show as-is
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
 // ---------- Form: add / edit ----------
 
 function startEdit(id) {
   const a = articles.find(x => String(x.id) === String(id));
   if (!a) return;
   editingId = a.id;
-  $("fDate").value = a.date || "";
+  $("fDate").value = isoToDdmmyyyy(a.date) || "";
   $("fImage").value = a.image || "";
   $("fTitle").value = a.title || "";
   $("fBody").value = a.body || "";
@@ -1042,14 +1063,20 @@ function deleteArticle(id) {
 }
 
 async function saveArticle() {
-  const date = $("fDate").value.trim();
+  const dateInput = $("fDate").value.trim();
   const title = $("fTitle").value.trim();
   const body = $("fBody").value.trim();
   const image = $("fImage").value.trim();
   const published = $("fPublished").checked;
 
-  if (!title || !date) {
+  if (!title || !dateInput) {
     setFormStatus("Title and date are required.", true);
+    return;
+  }
+
+  const date = ddmmyyyyToIso(dateInput);
+  if (!date) {
+    setFormStatus("Date must be in DD-MM-YYYY format, e.g. 05-08-2026.", true);
     return;
   }
 

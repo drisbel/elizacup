@@ -559,6 +559,9 @@
   .round-tab:hover:not(.active){border-color:var(--pitch);}
 
   .fixture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px;}
+  @media (max-width:640px){
+    .fixture-grid{grid-template-columns:1fr;}
+  }
 
   /* FA Cup: fixed 2-column layout, score always centered regardless of name length */
   .facup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -616,6 +619,20 @@
     font-family:'Barlow',sans-serif;font-weight:700;font-size:19px;
     background:var(--chalk);border:1px solid var(--line-light);border-radius:4px;
     padding:4px 10px; color:var(--pitch);white-space:nowrap;
+  }
+  .fixture-team-with-logo{
+    display:grid !important;align-items:center;gap:6px;
+    grid-template-columns:28px 1fr;
+  }
+  .fixture-team-with-logo.right{grid-template-columns:1fr 28px;}
+  .fixture-team-with-logo .fixture-team-name{text-align:center;}
+  .fixture-team-logo-wrap{display:flex;justify-content:center;}
+  .fixture-team-logo-wrap img{width:28px;height:28px;object-fit:contain;}
+  .fixture-team-name{overflow-wrap:break-word;word-break:break-word;min-width:0;}
+  @media (max-width:640px){
+    .fixture-team-with-logo{grid-template-columns:22px 1fr;}
+    .fixture-team-with-logo.right{grid-template-columns:1fr 22px;}
+    .fixture-team-logo-wrap img{width:22px;height:22px;}
   }
   .fixture-score .fx-win{color:var(--turf);}
   .fixture-score .fx-lose{color:var(--red);}
@@ -1245,6 +1262,7 @@ function goToDivision(div){
   applyDivisionTheme(div);
   renderDivNav();
   load();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function goToSideLeague(key){
@@ -1255,6 +1273,7 @@ function goToSideLeague(key){
   applyDivisionTheme(base);
   renderDivNav();
   load();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function renderDivNav(){
@@ -1489,6 +1508,7 @@ window.addEventListener('hashchange', ()=>{
   applyDivisionTheme(div);
   renderDivNav();
   load();
+  window.scrollTo({ top: 0, behavior: "auto" });
 });
 
 function setStatus(msg, ok){
@@ -2361,10 +2381,11 @@ function renderFixtures(round){
       ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
       : `<span class="upcoming">vs</span>`;
     const confPill = (conf) => conf ? `<span class="roddy-div-tag" style="background:${getDivisionColorByLabel(conf)};">${conf}</span>` : "";
+    const teamLogo = name => `<span class="fixture-team-logo-wrap">${name ? `<img src="logo/${teamLogoSlug(name)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(name)}';}">` : ""}</span>`;
     const card = `<div class="fixture-card${f.isPlayoff ? " playoff-card" : ""}">
-      <div class="fixture-team ${resultClass(homeWin)}">${f.isPlayoff ? confPill(f.homeConf) + " " : ""}${teamLink(f.home)}</div>
+      <div class="fixture-team fixture-team-with-logo ${resultClass(homeWin)}">${teamLogo(f.home)}<span class="fixture-team-name">${f.isPlayoff ? confPill(f.homeConf) + " " : ""}${teamLink(f.home)}</span></div>
       <div class="fixture-score">${scoreHtml}</div>
-      <div class="fixture-team right ${resultClass(awayWin)}">${teamLink(f.away)}${f.isPlayoff ? " " + confPill(f.awayConf) : ""}</div>
+      <div class="fixture-team right fixture-team-with-logo ${resultClass(awayWin)}"><span class="fixture-team-name">${teamLink(f.away)}${f.isPlayoff ? " " + confPill(f.awayConf) : ""}</span>${teamLogo(f.away)}</div>
     </div>`;
     // Seed row shows how each side qualified for the playoff, e.g. "2ND 2A v 3RD 2B" —
     // straight from the sheet's own seed-label columns, sitting above that fixture.
@@ -5276,12 +5297,24 @@ function renderHistorySeason(data){
 }
 
 // ---------- News ----------
+// Formats a stored ISO date (YYYY-MM-DD) as "Wednesday, August 5 2026" for
+// display on news cards — parsed as a plain calendar date (no time zone
+// conversion), since news dates are just a date, not a specific moment.
+function formatNewsDate(iso){
+  const m = (iso||"").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return iso || "";
+  const d = new Date(Date.UTC(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10)));
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  const month = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  return `${weekday}, ${month} ${d.getUTCDate()} ${d.getUTCFullYear()}`;
+}
+
 function newsCardHtml(item){
   const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
   return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
     ${item.image ? `<img src="${item.image}" alt="" style="width:100%;max-height:280px;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
     <div style="padding:16px 18px;">
-      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#8a9990;margin-bottom:4px;">${item.date}</div>
+      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#8a9990;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
       <div style="font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);">${paragraphs}</div>
     </div>
@@ -5297,7 +5330,7 @@ function newsExcerptCardHtml(item){
   return `<a href="#news" style="display:flex;gap:14px;border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;text-decoration:none;color:inherit;">
     ${item.image ? `<img src="${item.image}" alt="" style="width:120px;flex-shrink:0;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
     <div style="padding:14px 16px 14px 0;padding-left:${item.image ? '0':'16px'};min-width:0;">
-      <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#8a9990;margin-bottom:3px;">${item.date}</div>
+      <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#8a9990;margin-bottom:3px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;margin:0 0 6px;color:var(--pitch);">${item.title}</h3>
       <p style="font-family:'Barlow',sans-serif;font-size:13px;line-height:1.45;color:var(--ink);margin:0 0 6px;">${excerpt}</p>
       <span style="font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;color:var(--pitch);">Read more →</span>
@@ -6802,6 +6835,7 @@ function renderHome(){
       applyDivisionTheme(div);
       renderDivNav();
       load();
+      window.scrollTo({ top: 0, behavior: "auto" });
     });
   });
   applyPageVisibility();
