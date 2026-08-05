@@ -608,7 +608,7 @@
     </div>
 
     <div class="card">
-      <h2 id="wmdFormTitle">New team entry</h2>
+      <h2>Add new team</h2>
       <div class="field">
         <label for="wmdTeam">Team name</label>
         <input type="text" id="wmdTeam" placeholder="Team name — must match the team's logo filename convention">
@@ -639,14 +639,13 @@
         <div class="hint">Date only, no time — e.g. 22/08/2026. Optional — leave blank to hide the deadline line.</div>
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" id="saveWmdBtn">Save entry</button>
-        <button class="btn btn-ghost" id="cancelWmdEditBtn" style="display:none;">Cancel edit</button>
+        <button class="btn btn-primary" id="saveWmdBtn">Add team</button>
         <span class="status-msg" id="wmdFormStatus"></span>
       </div>
     </div>
 
     <div class="card">
-      <h2>Team entries</h2>
+      <h2>Teams — grouped by division. Use ↑/↓ to reorder within a division (that order is what shows on the site).</h2>
       <div id="wmdLoadingList">Loading whats-my-division.json…</div>
       <div id="wmdEmptyState" style="display:none;">No teams added yet. Add one above — the first save will create whats-my-division.json in the repo.</div>
       <div id="wmdListEl"></div>
@@ -1847,60 +1846,131 @@ function renderWmdList() {
   }
   $("wmdEmptyState").style.display = "none";
 
-  const sorted = [...wmdTeams].sort((a, b) => {
-    if (a.division !== b.division) return (a.division||"").localeCompare(b.division||"");
-    return (a.team||"").localeCompare(b.team||"");
-  });
-
-  list.innerHTML = sorted.map(t => `
-    <div class="article-item">
-      <div class="meta">
-        <div class="title">${escapeHtml(t.team || "(unnamed)")}
-          <span class="badge pub">${WMD_DIVISION_LABELS[t.division] || t.division || "—"}</span>
+  const WMD_DIVISION_ORDER = ["D1", "2A", "2B", "3A", "3B"];
+  list.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
+    const group = wmdTeams.filter(t => t.division === divKey);
+    if (!group.length) return "";
+    const rows = group.map((t, i) => {
+      if (String(t.id) === String(wmdEditingId)) return wmdInlineEditFormHtml(t);
+      return `
+        <div class="article-item">
+          <div class="meta">
+            <div class="title">${escapeHtml(t.team || "(unnamed)")}</div>
+            <div class="date">${t.code ? "Code: " + escapeHtml(t.code) : "No code set"}</div>
+          </div>
+          <div class="item-actions">
+            <button data-move="${t.id}:-1" ${i === 0 ? "disabled" : ""} title="Move up">↑</button>
+            <button data-move="${t.id}:1" ${i === group.length - 1 ? "disabled" : ""} title="Move down">↓</button>
+            <button data-edit="${t.id}">Edit</button>
+            <button data-delete="${t.id}">Delete</button>
+          </div>
         </div>
-        <div class="date">${t.code ? "Code: " + escapeHtml(t.code) : "No code set"}</div>
-      </div>
-      <div class="item-actions">
-        <button data-edit="${t.id}">Edit</button>
-        <button data-delete="${t.id}">Delete</button>
-      </div>
-    </div>
-  `).join("");
+      `;
+    }).join("");
+    return `<div class="wmd-admin-group">
+      <div class="hint" style="margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">${WMD_DIVISION_LABELS[divKey]}</div>
+      ${rows}
+    </div>`;
+  }).join("");
 
   list.querySelectorAll("[data-edit]").forEach(btn => {
-    btn.addEventListener("click", () => startEditWmd(btn.getAttribute("data-edit")));
+    btn.addEventListener("click", () => { wmdEditingId = btn.getAttribute("data-edit"); renderWmdList(); });
   });
   list.querySelectorAll("[data-delete]").forEach(btn => {
     btn.addEventListener("click", () => deleteWmdEntry(btn.getAttribute("data-delete")));
   });
+  list.querySelectorAll("[data-move]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const [id, dir] = btn.getAttribute("data-move").split(":");
+      moveWmdEntry(id, parseInt(dir, 10));
+    });
+  });
+  if (wmdEditingId) {
+    const saveBtn = $("wmdInlineSaveBtn");
+    const cancelBtn = $("wmdInlineCancelBtn");
+    if (saveBtn) saveBtn.addEventListener("click", saveWmdInlineEdit);
+    if (cancelBtn) cancelBtn.addEventListener("click", () => { wmdEditingId = null; renderWmdList(); });
+  }
 }
 
-// ---------- What's My Division?: form ----------
+// Reorders within the entry's own division group only — swapping its
+// absolute array position with the adjacent same-division entry, so group
+// order (what the site displays) changes even though other divisions'
+// entries may sit between them in the raw array.
+function moveWmdEntry(id, direction) {
+  const entry = wmdTeams.find(x => String(x.id) === String(id));
+  if (!entry) return;
+  const group = wmdTeams.filter(t => t.division === entry.division);
+  const posInGroup = group.indexOf(entry);
+  const swapWith = group[posInGroup + direction];
+  if (!swapWith) return;
 
-function startEditWmd(id) {
-  const t = wmdTeams.find(x => String(x.id) === String(id));
-  if (!t) return;
-  wmdEditingId = t.id;
-  $("wmdTeam").value = t.team || "";
-  $("wmdDivision").value = t.division || "D1";
-  $("wmdCode").value = t.code || "";
-  $("wmdLink").value = t.link || "";
-  $("wmdDeadline").value = t.deadline || "";
-  $("wmdFormTitle").textContent = "Edit team entry";
-  $("cancelWmdEditBtn").style.display = "inline-block";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const idxA = wmdTeams.indexOf(entry);
+  const idxB = wmdTeams.indexOf(swapWith);
+  [wmdTeams[idxA], wmdTeams[idxB]] = [wmdTeams[idxB], wmdTeams[idxA]];
+  commitWmd("Reorder 26/27 Leagues entries");
 }
 
-function cancelEditWmd() {
-  wmdEditingId = null;
-  $("wmdTeam").value = "";
-  $("wmdDivision").value = "D1";
-  $("wmdCode").value = "";
-  $("wmdLink").value = "";
-  $("wmdDeadline").value = "";
-  $("wmdFormTitle").textContent = "New team entry";
-  $("cancelWmdEditBtn").style.display = "none";
-  $("wmdFormStatus").textContent = "";
+// ---------- What's My Division?: inline edit ----------
+
+function wmdInlineEditFormHtml(t) {
+  const divOptions = ["D1", "2A", "2B", "3A", "3B"].map(d =>
+    `<option value="${d}" ${t.division === d ? "selected" : ""}>${WMD_DIVISION_LABELS[d]}</option>`
+  ).join("");
+  return `
+    <div class="article-item" style="flex-direction:column;align-items:stretch;">
+      <div class="field">
+        <label>Team name</label>
+        <input type="text" id="wmdInlineTeam" value="${escapeHtml(t.team || "")}">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Division</label>
+          <select id="wmdInlineDivision">${divOptions}</select>
+        </div>
+        <div class="field">
+          <label>League code</label>
+          <input type="text" id="wmdInlineCode" value="${escapeHtml(t.code || "")}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Join link</label>
+        <input type="text" id="wmdInlineLink" value="${escapeHtml(t.link || "")}">
+      </div>
+      <div class="field">
+        <label>Join deadline</label>
+        <input type="text" id="wmdInlineDeadline" placeholder="DD/MM/YYYY" value="${escapeHtml(t.deadline || "")}">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="wmdInlineSaveBtn">Save</button>
+        <button class="btn btn-ghost" id="wmdInlineCancelBtn">Cancel</button>
+        <span class="status-msg" id="wmdInlineStatus"></span>
+      </div>
+    </div>
+  `;
+}
+
+async function saveWmdInlineEdit() {
+  const team = $("wmdInlineTeam").value.trim();
+  if (!team) {
+    const el = $("wmdInlineStatus");
+    el.textContent = "Team name is required.";
+    el.className = "status-msg err";
+    return;
+  }
+  const idx = wmdTeams.findIndex(x => String(x.id) === String(wmdEditingId));
+  if (idx !== -1) {
+    wmdTeams[idx] = {
+      ...wmdTeams[idx],
+      team,
+      division: $("wmdInlineDivision").value,
+      code: $("wmdInlineCode").value.trim(),
+      link: $("wmdInlineLink").value.trim(),
+      deadline: $("wmdInlineDeadline").value.trim()
+    };
+  }
+  wmdEditingId = null; // clear first — commitWmd re-renders the list internally on success
+  await commitWmd(`Update 26/27 Leagues entry: ${team}`);
 }
 
 function deleteWmdEntry(id) {
@@ -1909,8 +1979,19 @@ function deleteWmdEntry(id) {
   if (!confirm(`Delete "${t.team || "this entry"}"? This can't be undone.`)) return;
   wmdTeams = wmdTeams.filter(x => String(x.id) !== String(id));
   commitWmd(`Delete 26/27 Leagues entry: ${t.team || t.id}`).then(() => {
-    if (wmdEditingId === t.id) cancelEditWmd();
+    if (wmdEditingId === t.id) wmdEditingId = null;
   });
+}
+
+// ---------- What's My Division?: add new (top form) ----------
+
+function clearWmdAddForm() {
+  $("wmdTeam").value = "";
+  $("wmdDivision").value = "D1";
+  $("wmdCode").value = "";
+  $("wmdLink").value = "";
+  $("wmdDeadline").value = "";
+  $("wmdFormStatus").textContent = "";
 }
 
 async function saveWmdEntry() {
@@ -1925,22 +2006,14 @@ async function saveWmdEntry() {
     return;
   }
 
-  if (wmdEditingId) {
-    const idx = wmdTeams.findIndex(x => String(x.id) === String(wmdEditingId));
-    if (idx !== -1) {
-      wmdTeams[idx] = { ...wmdTeams[idx], team, division, code, link, deadline };
-    }
-  } else {
-    wmdTeams.push({
-      id: Date.now().toString(36),
-      team, division, code, link, deadline
-    });
-  }
+  wmdTeams.push({
+    id: Date.now().toString(36),
+    team, division, code, link, deadline
+  });
 
-  const msg = wmdEditingId ? `Update 26/27 Leagues entry: ${team}` : `Add 26/27 Leagues entry: ${team}`;
-  const ok = await commitWmd(msg);
+  const ok = await commitWmd(`Add 26/27 Leagues entry: ${team}`);
   if (ok) {
-    cancelEditWmd();
+    clearWmdAddForm();
   }
 }
 
@@ -2336,7 +2409,6 @@ $("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
 $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
 $("saveWmdBtn").addEventListener("click", saveWmdEntry);
-$("cancelWmdEditBtn").addEventListener("click", cancelEditWmd);
 $("wmdImportBtn").addEventListener("click", importWmdFromPaste);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
 $("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);

@@ -740,24 +740,44 @@
   }
   .wmd-result-link{color:var(--pitch);text-decoration:underline;font-weight:600;}
   .wmd-no-result{margin-top:16px;font-family:'Barlow',sans-serif;font-size:13.5px;color:#6b7c73;text-align:center;}
+  .wmd-no-code{color:#8a9990;font-style:italic;}
 
   .wmd-div-section{margin-bottom:36px;}
   .wmd-div-heading{
     font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;
     margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line-light);
+    display:flex;align-items:center;gap:10px;
   }
-  .wmd-team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px;}
+  .wmd-div-heading-logo{width:30px;height:30px;object-fit:contain;}
+  .wmd-team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px;align-items:start;}
   .wmd-team-card{
     display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;
-    text-decoration:none;color:inherit;padding:12px 8px;border-radius:8px;
-    transition:background 0.15s;
+    padding:12px 8px;border-radius:8px;cursor:pointer;
+    transition:background 0.15s;border:1px solid transparent;
   }
   .wmd-team-card:hover{background:#f5f7fa;}
-  .wmd-team-card img{width:56px;height:56px;object-fit:contain;}
+  .wmd-team-card.expanded{background:#f5f7fa;border-color:var(--line-light);}
+  .wmd-team-card-top{position:relative;width:56px;}
+  .wmd-team-card-logo{width:56px;height:56px;object-fit:contain;}
+  .wmd-team-card-div-badge{
+    position:absolute;top:-4px;right:-8px;width:20px;height:20px;object-fit:contain;
+    background:#fff;border-radius:50%;padding:2px;box-shadow:0 1px 3px rgba(0,0,0,0.2);
+  }
   .wmd-team-card-name{font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;line-height:1.3;}
+  .wmd-team-card-expand{
+    display:none;width:100%;text-align:left;margin-top:6px;padding-top:10px;
+    border-top:1px solid var(--line-light);display:flex;flex-direction:column;gap:6px;
+  }
+  .wmd-team-card:not(.expanded) .wmd-team-card-expand{display:none;}
+  .wmd-team-card.expanded .wmd-team-card-expand{display:flex;}
+  .wmd-team-card .wmd-result-row{font-size:12.5px;}
+  .wmd-team-card .wmd-result-code{font-size:14px;padding:6px 10px;}
+  .wmd-team-card .wmd-result-link{word-break:break-word;}
   @media (max-width:600px){
     .wmd-team-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;}
-    .wmd-team-card img{width:44px;height:44px;}
+    .wmd-team-card-top{width:44px;}
+    .wmd-team-card-logo{width:44px;height:44px;}
+    .wmd-team-card-div-badge{width:16px;height:16px;}
     .wmd-team-card-name{font-size:11.5px;}
   }
   .slh-closing{font-family:'Barlow',sans-serif;font-size:12.5px;color:#6b7c73;}
@@ -5773,10 +5793,23 @@ async function loadWmdData(){
 
 function wmdTeamCardHtml(t){
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
-  return `<a href="#team=${encodeURIComponent(t.team)}" class="wmd-team-card">
-    <img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${logoOnError}">
+  const divLogo = divisionLogoForShortLabel(t.division);
+  const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
+  const codeHtml = t.code
+    ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>`
+    : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`;
+  return `<div class="wmd-team-card" data-team-key="${encodeURIComponent(t.team)}">
+    <div class="wmd-team-card-top">
+      <img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="wmd-team-card-logo" onerror="${logoOnError}">
+      ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-team-card-div-badge">` : ""}
+    </div>
     <div class="wmd-team-card-name">${t.team}</div>
-  </a>`;
+    <div class="wmd-team-card-expand">
+      ${codeHtml}
+      ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
+      ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
+    </div>
+  </div>`;
 }
 
 function renderWmdDivisions(teams){
@@ -5790,11 +5823,20 @@ function renderWmdDivisions(teams){
   container.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
     const divTeams = teams.filter(t => (t.division||"").toUpperCase() === divKey);
     if(!divTeams.length) return "";
+    const divLogo = divisionLogoForShortLabel(divKey);
     return `<div class="wmd-div-section">
-      <h3 class="wmd-div-heading" style="color:${getDivisionColorByLabel(divKey)};">${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
+      <h3 class="wmd-div-heading" style="color:${getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
       <div class="wmd-team-grid">${divTeams.map(wmdTeamCardHtml).join("")}</div>
     </div>`;
   }).join("");
+
+  // Click any card to expand/collapse its code/link/deadline in place —
+  // event delegation since the grid is rebuilt on every render.
+  container.querySelectorAll('.wmd-team-card').forEach(card => {
+    card.addEventListener('click', () => {
+      card.classList.toggle('expanded');
+    });
+  });
 }
 
 function wmdSearchResultHtml(t){
@@ -5810,7 +5852,7 @@ function wmdSearchResultHtml(t){
         <span class="wmd-result-div" style="background:${divColor};">${divLabel}</span>
       </div>
     </div>
-    ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : ""}
+    ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
     ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
     ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
   </div>`;
