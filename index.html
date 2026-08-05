@@ -713,6 +713,53 @@
   }
   .slh-winner .trophy{font-size:17px;}
   .slh-winners-wrap{display:flex;flex-direction:column;gap:6px;}
+
+  .wmd-search-wrap{max-width:520px;margin:0 auto 40px;}
+  .wmd-search-input{
+    width:100%;padding:14px 18px;font-size:16px;font-family:'Barlow',sans-serif;
+    border:2px solid var(--line-light);border-radius:30px;box-sizing:border-box;
+    text-align:center;
+  }
+  .wmd-search-input:focus{outline:none;border-color:var(--pitch);}
+  .wmd-result-card{
+    margin-top:16px;background:#fff;border:1px solid var(--line-light);border-radius:10px;
+    padding:20px 22px;display:flex;flex-direction:column;gap:10px;
+  }
+  .wmd-result-top{display:flex;align-items:center;gap:12px;}
+  .wmd-result-top img{width:44px;height:44px;object-fit:contain;flex-shrink:0;}
+  .wmd-result-team{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--pitch);}
+  .wmd-result-div{
+    display:inline-block;font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:20px;color:#fff;
+  }
+  .wmd-result-row{font-family:'Barlow',sans-serif;font-size:13.5px;color:#333;}
+  .wmd-result-row b{font-weight:700;}
+  .wmd-result-code{
+    font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;
+    background:#f5f7fa;border:1px dashed var(--line-light);border-radius:6px;padding:8px 12px;display:inline-block;
+  }
+  .wmd-result-link{color:var(--pitch);text-decoration:underline;font-weight:600;}
+  .wmd-no-result{margin-top:16px;font-family:'Barlow',sans-serif;font-size:13.5px;color:#6b7c73;text-align:center;}
+
+  .wmd-div-section{margin-bottom:36px;}
+  .wmd-div-heading{
+    font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;
+    margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line-light);
+  }
+  .wmd-team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px;}
+  .wmd-team-card{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;
+    text-decoration:none;color:inherit;padding:12px 8px;border-radius:8px;
+    transition:background 0.15s;
+  }
+  .wmd-team-card:hover{background:#f5f7fa;}
+  .wmd-team-card img{width:56px;height:56px;object-fit:contain;}
+  .wmd-team-card-name{font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;line-height:1.3;}
+  @media (max-width:600px){
+    .wmd-team-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;}
+    .wmd-team-card img{width:44px;height:44px;}
+    .wmd-team-card-name{font-size:11.5px;}
+  }
   .slh-closing{font-family:'Barlow',sans-serif;font-size:12.5px;color:#6b7c73;}
   .slh-closing .slh-closing-label{font-weight:600;}
   .slh-countdown{
@@ -1071,6 +1118,18 @@
     </div>
   </section>
 
+  <section id="whatsMyDivSection" style="display:none;">
+    <div class="section-head">
+      <h2>What's My Division?</h2>
+      <span class="sub">26/27 Leagues — find your division, league code, and join deadline</span>
+    </div>
+    <div class="wmd-search-wrap">
+      <input type="text" id="wmdSearchInput" class="wmd-search-input" placeholder="Search your team name…" autocomplete="off">
+      <div id="wmdSearchResult"></div>
+    </div>
+    <div id="wmdContainer" class="state-msg">Loading…</div>
+  </section>
+
   <section id="sideLeaguesHubSection" style="display:none;">
     <div class="section-head">
       <h2>Side Leagues Hub</h2>
@@ -1158,6 +1217,7 @@ const DIVISIONS = [
   { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
   { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
   { id: "bilbbet", label: "Bilbbet",                 pill: "Bilbbet", gid: null, teams: 0, color: "#28427c", type: "bilbbet" },
+  { id: "whatsmydiv", label: "26/27 Leagues",         pill: "26/27 Leagues", gid: null, teams: 0, color: "#28427c", type: "whatsmydiv" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
   { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagueshub" },
   { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#28427c", type: "teams" }
@@ -1246,6 +1306,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "news" },
   { type: "single", id: "about" },
   { type: "single", id: "bilbbet" },
+  { type: "single", id: "whatsmydiv" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" },
   { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
@@ -1551,6 +1612,7 @@ function togglePageSections(){
   const isNews = type === "news";
   const isAbout = type === "about";
   const isBilbbet = type === "bilbbet";
+  const isWhatsMyDiv = type === "whatsmydiv";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
@@ -1569,6 +1631,7 @@ function togglePageSections(){
   document.getElementById('newsSection').style.display = isNews ? "" : "none";
   document.getElementById('aboutSection').style.display = isAbout ? "" : "none";
   document.getElementById('bilbbetSection').style.display = isBilbbet ? "" : "none";
+  document.getElementById('whatsMyDivSection').style.display = isWhatsMyDiv ? "" : "none";
   document.querySelector('.ticker-wrap').style.display = isDivision ? "" : "none";
 
   const heroLogoPath = compLogoPathFor(currentDivision);
@@ -1912,6 +1975,11 @@ async function load(){
 
   if(currentDivision.type === "bilbbet"){
     return; // static embed, nothing to fetch
+  }
+
+  if(currentDivision.type === "whatsmydiv"){
+    renderWhatsMyDivPage();
+    return;
   }
 
   document.getElementById('tableContainer').innerHTML = "Loading standings…";
@@ -5656,6 +5724,114 @@ function renderSideLeaguesHub(){
     container.className = "";
     container.innerHTML = `<div class="slh-grid">${data.cards.map(slhCardHtml).join("")}</div>`;
     startSlhCountdowns();
+  });
+}
+
+// ---------- What's My Division? (26/27 Leagues) ----------
+// Managed via admin.html (whats-my-division.json) — one entry per team:
+// { team, division, code, link, deadline }. Division is a short label (D1,
+// 2A, 2B, 3A, 3B) matching the same convention used everywhere else on the
+// site. Deadline uses the same DD-MM-YYYY / AM-PM-aware parser as everything
+// else (parseLmsDeadline / formatAestDateTime).
+const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
+
+function wmdJsonUrlFor(){
+  return "whats-my-division.json?cachebust=" + Date.now();
+}
+let wmdData = { teams: [], debug: {} };
+let wmdPromise = null;
+async function loadWmdData(){
+  if(wmdPromise) return wmdPromise;
+  wmdPromise = fetch(wmdJsonUrlFor()).then(r => {
+    if(!r.ok) throw new Error("whats-my-division.json fetch failed: " + r.status);
+    return r.json();
+  }).then(raw => {
+    const teams = Array.isArray(raw) ? raw : [];
+    wmdData = { teams, debug: { teamCount: teams.length } };
+    return wmdData;
+  }).catch(err => {
+    console.error("whats-my-division.json fetch failed", err);
+    wmdData = { teams: [], debug: { error: err.message } };
+    return wmdData;
+  });
+  return wmdPromise;
+}
+
+function wmdTeamCardHtml(t){
+  const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
+  return `<a href="#team=${encodeURIComponent(t.team)}" class="wmd-team-card">
+    <img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${logoOnError}">
+    <div class="wmd-team-card-name">${t.team}</div>
+  </a>`;
+}
+
+function renderWmdDivisions(teams){
+  const container = document.getElementById('wmdContainer');
+  if(!teams.length){
+    container.className = "state-msg";
+    container.innerHTML = "26/27 division lists coming soon.";
+    return;
+  }
+  container.className = "";
+  container.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
+    const divTeams = teams.filter(t => (t.division||"").toUpperCase() === divKey);
+    if(!divTeams.length) return "";
+    return `<div class="wmd-div-section">
+      <h3 class="wmd-div-heading" style="color:${getDivisionColorByLabel(divKey)};">${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
+      <div class="wmd-team-grid">${divTeams.map(wmdTeamCardHtml).join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+function wmdSearchResultHtml(t){
+  const divColor = getDivisionColorByLabel(t.division);
+  const divLabel = WMD_DIVISION_LABELS[(t.division||"").toUpperCase()] || t.division;
+  const deadlineDate = t.deadline ? parseLmsDeadline(t.deadline) : null;
+  const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
+  return `<div class="wmd-result-card">
+    <div class="wmd-result-top">
+      <img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${logoOnError}">
+      <div>
+        <div class="wmd-result-team">${t.team}</div>
+        <span class="wmd-result-div" style="background:${divColor};">${divLabel}</span>
+      </div>
+    </div>
+    ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : ""}
+    ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
+    ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatAestDateTime(deadlineDate)} AEST</div>` : ""}
+  </div>`;
+}
+
+function wmdRunSearch(query){
+  const resultEl = document.getElementById('wmdSearchResult');
+  const q = query.trim().toLowerCase();
+  if(!q){ resultEl.innerHTML = ""; return; }
+  const match = wmdData.teams.find(t => (t.team||"").toLowerCase() === q)
+    || wmdData.teams.find(t => (t.team||"").toLowerCase().includes(q));
+  if(!match){
+    resultEl.innerHTML = `<div class="wmd-no-result">No team found matching "${query.trim()}".</div>`;
+    return;
+  }
+  resultEl.innerHTML = wmdSearchResultHtml(match);
+}
+
+let wmdWired = false;
+function renderWhatsMyDivPage(){
+  const container = document.getElementById('wmdContainer');
+  container.className = "state-msg";
+  container.innerHTML = "Loading…";
+
+  if(!wmdWired){
+    document.getElementById('wmdSearchInput').addEventListener('input', (e) => wmdRunSearch(e.target.value));
+    wmdWired = true;
+  }
+
+  loadWmdData().then(data => {
+    document.getElementById('debugOut').textContent = "What's My Division debug: " + JSON.stringify(data.debug, null, 2);
+    renderWmdDivisions(data.teams);
+    const currentQuery = document.getElementById('wmdSearchInput').value;
+    if(currentQuery) wmdRunSearch(currentQuery);
   });
 }
 

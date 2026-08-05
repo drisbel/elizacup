@@ -314,6 +314,7 @@
       <button type="button" class="admin-section-btn" data-section="about">About Page</button>
       <button type="button" class="admin-section-btn" data-section="rulebook">Rulebook</button>
       <button type="button" class="admin-section-btn" data-section="sideleagues">Side Leagues Hub</button>
+      <button type="button" class="admin-section-btn" data-section="wmd">26/27 Leagues</button>
       <button type="button" class="admin-section-btn" data-section="draw">Fixture Draw</button>
     </div>
 
@@ -591,6 +592,56 @@
 
     </div>
 
+    <div class="admin-section" id="section-wmd">
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">26/27 Leagues (What's My Division?)</h2>
+
+    <div class="card">
+      <h2 id="wmdFormTitle">New team entry</h2>
+      <div class="field">
+        <label for="wmdTeam">Team name</label>
+        <input type="text" id="wmdTeam" placeholder="Team name — must match the team's logo filename convention">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="wmdDivision">Division</label>
+          <select id="wmdDivision">
+            <option value="D1">Division 1 (Eliza Cup)</option>
+            <option value="2A">Division 2A</option>
+            <option value="2B">Division 2B</option>
+            <option value="3A">Division 3A</option>
+            <option value="3B">Division 3B</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="wmdCode">League code</label>
+          <input type="text" id="wmdCode" placeholder="e.g. ABC123">
+        </div>
+      </div>
+      <div class="field">
+        <label for="wmdLink">Join link</label>
+        <input type="text" id="wmdLink" placeholder="https://...">
+      </div>
+      <div class="field">
+        <label for="wmdDeadline">Join deadline (AEST)</label>
+        <input type="text" id="wmdDeadline" placeholder="DD/MM/YYYY HH:MM:SS AM/PM">
+        <div class="hint">Same format as the LMS deadlines and site banner — e.g. 08/08/2026 06:00:00 PM. Optional — leave blank to hide the deadline line.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveWmdBtn">Save entry</button>
+        <button class="btn btn-ghost" id="cancelWmdEditBtn" style="display:none;">Cancel edit</button>
+        <span class="status-msg" id="wmdFormStatus"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Team entries</h2>
+      <div id="wmdLoadingList">Loading whats-my-division.json…</div>
+      <div id="wmdEmptyState" style="display:none;">No teams added yet. Add one above — the first save will create whats-my-division.json in the repo.</div>
+      <div id="wmdListEl"></div>
+    </div>
+
+    </div>
+
     <div class="admin-section" id="section-draw">
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Fixture Draw</h2>
 
@@ -661,6 +712,7 @@ const RULEBOOK_PATH = "rulebook.json";
 const PAGE_VISIBILITY_PATH = "page-visibility.json";
 const BANNER_PATH = "site-banner.json";
 const SLH_PATH = "side-leagues-hub.json";
+const WMD_PATH = "whats-my-division.json";
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
 let token = null;
@@ -691,6 +743,7 @@ const PAGE_VISIBILITY_PAGES = [
   { id: "news", label: "News" },
   { id: "about", label: "About" },
   { id: "bilbbet", label: "Bilbbet" },
+  { id: "whatsmydiv", label: "26/27 Leagues (What's My Division?)" },
   { id: "sideleagueshub", label: "Side Leagues" },
   { id: "teams", label: "Teams" },
   // 26/27 Test pages — point at the freed-up main sheet gids. Hidden by
@@ -934,6 +987,7 @@ function showPanel() {
   loadAbout();
   loadRulebook();
   loadSlh();
+  loadWmd();
 }
 
 // ---------- Load news.json ----------
@@ -1738,6 +1792,193 @@ function setSlhFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- What's My Division?: load ----------
+
+let wmdTeams = [];      // in-memory array of team entries
+let wmdSha = null;      // sha of whats-my-division.json, null if file doesn't exist yet
+let wmdEditingId = null; // id of entry currently being edited, null if new
+
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
+
+async function loadWmd() {
+  $("wmdLoadingList").style.display = "block";
+  $("wmdEmptyState").style.display = "none";
+  $("wmdListEl").innerHTML = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/contents/${WMD_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
+    if (res.status === 404) {
+      wmdTeams = [];
+      wmdSha = null;
+    } else if (res.ok) {
+      const data = await res.json();
+      wmdSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      wmdTeams = JSON.parse(decoded || "[]");
+    } else {
+      throw new Error(`Failed to load whats-my-division.json (status ${res.status})`);
+    }
+    renderWmdList();
+  } catch (err) {
+    $("wmdLoadingList").textContent = "Error loading teams: " + err.message;
+  }
+}
+
+function renderWmdList() {
+  $("wmdLoadingList").style.display = "none";
+  const list = $("wmdListEl");
+  list.innerHTML = "";
+
+  if (!wmdTeams.length) {
+    $("wmdEmptyState").style.display = "block";
+    return;
+  }
+  $("wmdEmptyState").style.display = "none";
+
+  const sorted = [...wmdTeams].sort((a, b) => {
+    if (a.division !== b.division) return (a.division||"").localeCompare(b.division||"");
+    return (a.team||"").localeCompare(b.team||"");
+  });
+
+  list.innerHTML = sorted.map(t => `
+    <div class="article-item">
+      <div class="meta">
+        <div class="title">${escapeHtml(t.team || "(unnamed)")}
+          <span class="badge pub">${WMD_DIVISION_LABELS[t.division] || t.division || "—"}</span>
+        </div>
+        <div class="date">${t.code ? "Code: " + escapeHtml(t.code) : "No code set"}</div>
+      </div>
+      <div class="item-actions">
+        <button data-edit="${t.id}">Edit</button>
+        <button data-delete="${t.id}">Delete</button>
+      </div>
+    </div>
+  `).join("");
+
+  list.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => startEditWmd(btn.getAttribute("data-edit")));
+  });
+  list.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteWmdEntry(btn.getAttribute("data-delete")));
+  });
+}
+
+// ---------- What's My Division?: form ----------
+
+function startEditWmd(id) {
+  const t = wmdTeams.find(x => String(x.id) === String(id));
+  if (!t) return;
+  wmdEditingId = t.id;
+  $("wmdTeam").value = t.team || "";
+  $("wmdDivision").value = t.division || "D1";
+  $("wmdCode").value = t.code || "";
+  $("wmdLink").value = t.link || "";
+  $("wmdDeadline").value = t.deadline || "";
+  $("wmdFormTitle").textContent = "Edit team entry";
+  $("cancelWmdEditBtn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEditWmd() {
+  wmdEditingId = null;
+  $("wmdTeam").value = "";
+  $("wmdDivision").value = "D1";
+  $("wmdCode").value = "";
+  $("wmdLink").value = "";
+  $("wmdDeadline").value = "";
+  $("wmdFormTitle").textContent = "New team entry";
+  $("cancelWmdEditBtn").style.display = "none";
+  $("wmdFormStatus").textContent = "";
+}
+
+function deleteWmdEntry(id) {
+  const t = wmdTeams.find(x => String(x.id) === String(id));
+  if (!t) return;
+  if (!confirm(`Delete "${t.team || "this entry"}"? This can't be undone.`)) return;
+  wmdTeams = wmdTeams.filter(x => String(x.id) !== String(id));
+  commitWmd(`Delete 26/27 Leagues entry: ${t.team || t.id}`).then(() => {
+    if (wmdEditingId === t.id) cancelEditWmd();
+  });
+}
+
+async function saveWmdEntry() {
+  const team = $("wmdTeam").value.trim();
+  const division = $("wmdDivision").value;
+  const code = $("wmdCode").value.trim();
+  const link = $("wmdLink").value.trim();
+  const deadline = $("wmdDeadline").value.trim();
+
+  if (!team) {
+    setWmdFormStatus("Team name is required.", true);
+    return;
+  }
+
+  if (wmdEditingId) {
+    const idx = wmdTeams.findIndex(x => String(x.id) === String(wmdEditingId));
+    if (idx !== -1) {
+      wmdTeams[idx] = { ...wmdTeams[idx], team, division, code, link, deadline };
+    }
+  } else {
+    wmdTeams.push({
+      id: Date.now().toString(36),
+      team, division, code, link, deadline
+    });
+  }
+
+  const msg = wmdEditingId ? `Update 26/27 Leagues entry: ${team}` : `Add 26/27 Leagues entry: ${team}`;
+  const ok = await commitWmd(msg);
+  if (ok) {
+    cancelEditWmd();
+  }
+}
+
+// ---------- What's My Division?: commit ----------
+
+async function commitWmd(message) {
+  $("saveWmdBtn").disabled = true;
+  setWmdFormStatus("Saving…", false);
+
+  try {
+    const jsonStr = JSON.stringify(wmdTeams, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    const body = {
+      message,
+      content: b64,
+      branch: BRANCH
+    };
+    if (wmdSha) body.sha = wmdSha;
+
+    const res = await fetch(`${API_BASE}/contents/${WMD_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+
+    const data = await res.json();
+    wmdSha = data.content.sha;
+    setWmdFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+    renderWmdList();
+    return true;
+  } catch (err) {
+    setWmdFormStatus("Save failed: " + err.message, true);
+    return false;
+  } finally {
+    $("saveWmdBtn").disabled = false;
+  }
+}
+
+function setWmdFormStatus(msg, isError) {
+  const el = $("wmdFormStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
 // ---------- Fixture Draw ----------
 // Client-side only — no GitHub API calls, nothing to commit.
 // List mode: a Fisher-Yates shuffle of the pasted team list at Start, then
@@ -2006,6 +2247,8 @@ $("saveSlhBtn").addEventListener("click", saveSlhCard);
 $("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
 $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
+$("saveWmdBtn").addEventListener("click", saveWmdEntry);
+$("cancelWmdEditBtn").addEventListener("click", cancelEditWmd);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
 $("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);
 updateSlhCodeFieldVisibility();
