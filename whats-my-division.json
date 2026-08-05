@@ -1,1 +1,498 @@
-[]
+[
+  {
+    "id": "msfw9lr7ef03",
+    "team": "ALASKAN BULL WORMS",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7t30j",
+    "team": "BC UNITED ZEBRAS",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7z4oi",
+    "team": "BIG MAC FC",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr75mvo",
+    "team": "DW ABOUT IT FC",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7dv04",
+    "team": "FROGBERT FOOTBALL",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7ijz5",
+    "team": "GIVE US WANG",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7zwyd",
+    "team": "HARVEY FREKES",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7r90c",
+    "team": "JARVIS ZEBRAS",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7glqh",
+    "team": "KALLO FC",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7d7lb",
+    "team": "NANISTATE",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7z8lo",
+    "team": "SAUCE FC",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7wek6",
+    "team": "STAIRWAY TO EVANS",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7dict",
+    "team": "TOP KUOLITY",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7ctom",
+    "team": "VICTORYRULES",
+    "division": "D1",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7plmu",
+    "team": "3DOGS",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr713ke",
+    "team": "AFC BIG RED PORT",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7t1xc",
+    "team": "ALBANIAN BOARS",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7m0dv",
+    "team": "BALLERS",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7gcus",
+    "team": "BEST OF A BAD BENCH",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7vczz",
+    "team": "CARNEGIE DACHSHUNDS FC",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7ct0w",
+    "team": "INTER MILANOVIC",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7tz8i",
+    "team": "LALAS LEVEN",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7ap7z",
+    "team": "MANCHESTHAIR UTD",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7vhzc",
+    "team": "REAPERS FC",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7wl12",
+    "team": "ROTORUA UNITED",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7zns6",
+    "team": "THE WAINE TRAIN",
+    "division": "2A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7rzus",
+    "team": "CASUAL APPROACH",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr72rro",
+    "team": "DINKIN CRFC",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7b9tk",
+    "team": "HEILAN COOS",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7cbrp",
+    "team": "JERRY THE PAINTER",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7axib",
+    "team": "JUSTICEFORMOON FC",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7qc9n",
+    "team": "ROYAL KC UNITED FC",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7517l",
+    "team": "SILVERMAN'S XI",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7taxx",
+    "team": "SPOONERS FC",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr70i3a",
+    "team": "THE D GENREAU",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr7c9kv",
+    "team": "TOBY'S TROOPS",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8tq9h",
+    "team": "ZEN GARDEN C.F",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8lgpb",
+    "team": "ZEN PIJ FC",
+    "division": "2B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8k3bg",
+    "team": "AARONGURDWOODREICH",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8miev",
+    "team": "CAG'S INVESTORS",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8dm01",
+    "team": "DOG GOES WOOF, PAYNE GOES MEOW",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8f8if",
+    "team": "FREKEINTHESHEETS",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8u15e",
+    "team": "GARRY WALLAH UNITED FC",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr86s69",
+    "team": "LOAVES AND FISHES",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr88x8g",
+    "team": "MELBCITYGUY",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8ijls",
+    "team": "MONGREL GARDEN",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8g2hf",
+    "team": "PAYNE IN THE NECK",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8wif1",
+    "team": "THE 2ND JARV ADMINISTRATION",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8mj65",
+    "team": "THE MALTESE KNIGHTS",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8oy81",
+    "team": "ZOUMA KICKS TIM PAYNE",
+    "division": "3A",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8wc9p",
+    "team": "BREXIT LADS",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8pcxj",
+    "team": "DEER PARK UNITED",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8am8d",
+    "team": "FC TIKITOKA",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8aruz",
+    "team": "FOR VUCK'S SAKE FC",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr85vnp",
+    "team": "LIMSIM UNITED",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr88p5e",
+    "team": "LINDON-CHEVELLA FC",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8ll7f",
+    "team": "LOLLEY POP MAN",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8vxfs",
+    "team": "NUKEFORREST NUKES",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8nps4",
+    "team": "SHANENIGANS",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8z13i",
+    "team": "TSATAS DIP",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr8oqxo",
+    "team": "VICTORY",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  },
+  {
+    "id": "msfw9lr9565s",
+    "team": "X2 STRANGE",
+    "division": "3B",
+    "code": "",
+    "link": "",
+    "deadline": ""
+  }
+]
