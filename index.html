@@ -726,12 +726,14 @@
     padding:20px 22px;display:flex;flex-direction:column;gap:10px;
   }
   .wmd-result-top{display:flex;align-items:center;gap:12px;}
-  .wmd-result-top img{width:44px;height:44px;object-fit:contain;flex-shrink:0;}
+  .wmd-result-top > img:first-child{width:44px;height:44px;object-fit:contain;flex-shrink:0;}
+  .wmd-result-top-mid{flex:1;min-width:0;}
   .wmd-result-team{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--pitch);}
   .wmd-result-div{
-    display:inline-block;font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;
-    text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:20px;color:#fff;
+    display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.03em;padding:5px 14px;border-radius:20px;color:#fff;margin-top:4px;
   }
+  .wmd-result-div-logo{width:48px;height:48px;object-fit:contain;flex-shrink:0;}
   .wmd-result-row{font-family:'Barlow',sans-serif;font-size:13.5px;color:#333;}
   .wmd-result-row b{font-weight:700;}
   .wmd-result-code{
@@ -757,12 +759,7 @@
   }
   .wmd-team-card:hover{background:#f5f7fa;}
   .wmd-team-card.expanded{background:#f5f7fa;border-color:var(--line-light);}
-  .wmd-team-card-top{position:relative;width:56px;}
   .wmd-team-card-logo{width:56px;height:56px;object-fit:contain;}
-  .wmd-team-card-div-badge{
-    position:absolute;top:-4px;right:-8px;width:20px;height:20px;object-fit:contain;
-    background:#fff;border-radius:50%;padding:2px;box-shadow:0 1px 3px rgba(0,0,0,0.2);
-  }
   .wmd-team-card-name{font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;line-height:1.3;}
   .wmd-team-card-expand{
     display:none;width:100%;text-align:left;margin-top:6px;padding-top:10px;
@@ -775,9 +772,7 @@
   .wmd-team-card .wmd-result-link{word-break:break-word;}
   @media (max-width:600px){
     .wmd-team-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;}
-    .wmd-team-card-top{width:44px;}
     .wmd-team-card-logo{width:44px;height:44px;}
-    .wmd-team-card-div-badge{width:16px;height:16px;}
     .wmd-team-card-name{font-size:11.5px;}
   }
   .slh-closing{font-family:'Barlow',sans-serif;font-size:12.5px;color:#6b7c73;}
@@ -5793,16 +5788,12 @@ async function loadWmdData(){
 
 function wmdTeamCardHtml(t){
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
-  const divLogo = divisionLogoForShortLabel(t.division);
   const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
   const codeHtml = t.code
     ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>`
     : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`;
   return `<div class="wmd-team-card" data-team-key="${encodeURIComponent(t.team)}">
-    <div class="wmd-team-card-top">
-      <img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="wmd-team-card-logo" onerror="${logoOnError}">
-      ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-team-card-div-badge">` : ""}
-    </div>
+    <img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="wmd-team-card-logo" onerror="${logoOnError}">
     <div class="wmd-team-card-name">${t.team}</div>
     <div class="wmd-team-card-expand">
       ${codeHtml}
@@ -5842,15 +5833,17 @@ function renderWmdDivisions(teams){
 function wmdSearchResultHtml(t){
   const divColor = getDivisionColorByLabel(t.division);
   const divLabel = WMD_DIVISION_LABELS[(t.division||"").toUpperCase()] || t.division;
+  const divLogo = divisionLogoForShortLabel(t.division);
   const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
   return `<div class="wmd-result-card">
     <div class="wmd-result-top">
       <img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${logoOnError}">
-      <div>
+      <div class="wmd-result-top-mid">
         <div class="wmd-result-team">${t.team}</div>
         <span class="wmd-result-div" style="background:${divColor};">${divLabel}</span>
       </div>
+      ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-result-div-logo">` : ""}
     </div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
     ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
