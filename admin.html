@@ -596,6 +596,18 @@
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">26/27 Leagues (What's My Division?)</h2>
 
     <div class="card">
+      <h2>Bulk import from sheet</h2>
+      <div class="hint" style="margin-bottom:10px;">
+        In your sheet, select a range with columns in this order — Team | Division | Code | Link | Deadline — then copy (Ctrl+C / Cmd+C) and paste below. Code, Link, and Deadline are optional; leave those columns out if you're only importing Team + Division for now. Division should be D1, 2A, 2B, 3A, or 3B. Teams already in the list (matched by exact name) get updated rather than duplicated.
+      </div>
+      <textarea id="wmdImportText" rows="8" placeholder="Paste copied cells here…"></textarea>
+      <div class="form-actions" style="margin-top:10px;">
+        <button class="btn btn-primary" id="wmdImportBtn">Import</button>
+        <span class="status-msg" id="wmdImportStatus"></span>
+      </div>
+    </div>
+
+    <div class="card">
       <h2 id="wmdFormTitle">New team entry</h2>
       <div class="field">
         <label for="wmdTeam">Team name</label>
@@ -622,9 +634,9 @@
         <input type="text" id="wmdLink" placeholder="https://...">
       </div>
       <div class="field">
-        <label for="wmdDeadline">Join deadline (AEST)</label>
-        <input type="text" id="wmdDeadline" placeholder="DD/MM/YYYY HH:MM:SS AM/PM">
-        <div class="hint">Same format as the LMS deadlines and site banner — e.g. 08/08/2026 06:00:00 PM. Optional — leave blank to hide the deadline line.</div>
+        <label for="wmdDeadline">Join deadline</label>
+        <input type="text" id="wmdDeadline" placeholder="DD/MM/YYYY">
+        <div class="hint">Date only, no time — e.g. 22/08/2026. Optional — leave blank to hide the deadline line.</div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" id="saveWmdBtn">Save entry</button>
@@ -1979,6 +1991,82 @@ function setWmdFormStatus(msg, isError) {
   el.className = "status-msg " + (isError ? "err" : "ok");
 }
 
+// ---------- What's My Division?: bulk import ----------
+// Pasted directly from a copied Google Sheets range — tab-separated columns
+// in order Team | Division | Code | Link | Deadline. Only Team is required;
+// the rest are optional, so a paste of just Team + Division (e.g. before
+// codes/links/deadlines are decided) works fine — those fields are simply
+// left blank and can be filled in later via the normal edit form.
+
+const WMD_VALID_DIVISIONS = ["D1", "2A", "2B", "3A", "3B"];
+
+function parseWmdImportText(text) {
+  return text.split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const cols = line.split("\t").map(c => c.trim());
+      return {
+        team: cols[0] || "",
+        division: (cols[1] || "").toUpperCase(),
+        code: cols[2] || "",
+        link: cols[3] || "",
+        deadline: cols[4] || ""
+      };
+    })
+    .filter(row => row.team);
+}
+
+async function importWmdFromPaste() {
+  const rows = parseWmdImportText($("wmdImportText").value);
+  if (!rows.length) {
+    setWmdImportStatus("Nothing to import — paste some rows first.", true);
+    return;
+  }
+
+  let added = 0, updated = 0, skipped = 0;
+  rows.forEach(row => {
+    if (row.division && !WMD_VALID_DIVISIONS.includes(row.division)) {
+      skipped++;
+      return;
+    }
+    const existing = wmdTeams.find(t => (t.team || "").toLowerCase() === row.team.toLowerCase());
+    if (existing) {
+      if (row.division) existing.division = row.division;
+      if (row.code) existing.code = row.code;
+      if (row.link) existing.link = row.link;
+      if (row.deadline) existing.deadline = row.deadline;
+      updated++;
+    } else {
+      wmdTeams.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        team: row.team,
+        division: row.division || "D1",
+        code: row.code,
+        link: row.link,
+        deadline: row.deadline
+      });
+      added++;
+    }
+  });
+
+  $("wmdImportBtn").disabled = true;
+  setWmdImportStatus("Saving…", false);
+  const summary = `${added} added, ${updated} updated` + (skipped ? `, ${skipped} skipped (invalid division)` : "");
+  const ok = await commitWmd(`Bulk import 26/27 Leagues: ${summary}`);
+  $("wmdImportBtn").disabled = false;
+  if (ok) {
+    setWmdImportStatus(`Done — ${summary}.`, false);
+    $("wmdImportText").value = "";
+  }
+}
+
+function setWmdImportStatus(msg, isError) {
+  const el = $("wmdImportStatus");
+  el.textContent = msg;
+  el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
 // ---------- Fixture Draw ----------
 // Client-side only — no GitHub API calls, nothing to commit.
 // List mode: a Fisher-Yates shuffle of the pasted team list at Start, then
@@ -2249,6 +2337,7 @@ $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { 
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
 $("saveWmdBtn").addEventListener("click", saveWmdEntry);
 $("cancelWmdEditBtn").addEventListener("click", cancelEditWmd);
+$("wmdImportBtn").addEventListener("click", importWmdFromPaste);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
 $("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);
 updateSlhCodeFieldVisibility();

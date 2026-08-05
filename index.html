@@ -5736,6 +5736,19 @@ function renderSideLeaguesHub(){
 const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
 const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
 
+// Join deadlines are a date only (no time) — separate from parseLmsDeadline,
+// which requires a time + AM/PM and would reject a bare date entirely.
+function parseDateOnly(text){
+  const m = (text||"").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return null;
+  return { day: parseInt(m[1],10), month: parseInt(m[2],10), year: parseInt(m[3],10) };
+}
+const WMD_MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function formatDateOnly(d){
+  if(!d) return "";
+  return `${d.day} ${WMD_MONTH_NAMES[d.month-1]} ${d.year}`;
+}
+
 function wmdJsonUrlFor(){
   return "whats-my-division.json?cachebust=" + Date.now();
 }
@@ -5787,7 +5800,7 @@ function renderWmdDivisions(teams){
 function wmdSearchResultHtml(t){
   const divColor = getDivisionColorByLabel(t.division);
   const divLabel = WMD_DIVISION_LABELS[(t.division||"").toUpperCase()] || t.division;
-  const deadlineDate = t.deadline ? parseLmsDeadline(t.deadline) : null;
+  const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
   return `<div class="wmd-result-card">
     <div class="wmd-result-top">
@@ -5799,7 +5812,7 @@ function wmdSearchResultHtml(t){
     </div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : ""}
     ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
-    ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatAestDateTime(deadlineDate)} AEST</div>` : ""}
+    ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
   </div>`;
 }
 
