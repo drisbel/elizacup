@@ -240,8 +240,8 @@
     display:flex;align-items:stretch;
   }
   .wheel-fullscreen-left{
-    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:40px;overflow:auto;gap:16px;
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:32px 24px;overflow:auto;gap:16px;min-width:0;
   }
   .wheel-fullscreen-right{
     flex:1;background:#fff;padding:40px;overflow:auto;
@@ -301,9 +301,10 @@
     background:#fff;border:1px solid var(--line);border-radius:6px;
     padding:10px 14px;font-family:'Barlow',sans-serif;margin-bottom:8px;
   }
-  .draw-fixture-row .team{font-weight:600;font-size:13px;flex:1;}
-  .draw-fixture-row .team.away{text-align:right;}
+  .draw-fixture-row .team{font-weight:600;font-size:13px;flex:1;display:flex;align-items:center;gap:8px;}
+  .draw-fixture-row .team.away{text-align:right;justify-content:flex-end;}
   .draw-fixture-row .num{font-size:11px;color:var(--muted);flex-shrink:0;}
+  .draw-fixture-logo{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -2308,11 +2309,12 @@ function renderDrawShared(){
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
     : (drawFixtures.length ? "Draw complete." : "");
 
+  const teamLogoImg = (name) => `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="draw-fixture-logo" onerror="this.style.display='none';">`;
   $("drawFixtureList").innerHTML = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
-      <span class="team">${escapeHtml(f.home)}</span>
+      <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
       <span class="num">Fixture ${i+1}</span>
-      <span class="team away">${escapeHtml(f.away)}</span>
+      <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
     </div>`).join("");
 }
 
@@ -2412,6 +2414,21 @@ function reparentToFullscreen(el, target){
   target.appendChild(el);
 }
 
+// Sizes the wheel to whatever room is actually available in the left column
+// — fixes it being cut off / needing horizontal scroll on smaller screens or
+// shared windows, since a fixed pixel size doesn't adapt to real available
+// space the way this does. Reserves room below the wheel for the spin button
+// and the "Just drawn" box so the wheel itself never needs to move once a
+// pick is made.
+function computeFullscreenWheelSize(){
+  const left = $("wheelFullscreenLeft");
+  const rect = left.getBoundingClientRect();
+  const reservedForControls = 190; // spin button + gaps + pick box
+  const availW = rect.width - 48;
+  const availH = rect.height - reservedForControls;
+  return Math.max(220, Math.floor(Math.min(availW, availH, 800)));
+}
+
 function enterWheelFullscreen(){
   if(wheelFullscreenActive) return;
   wheelFullscreenActive = true;
@@ -2428,13 +2445,19 @@ function enterWheelFullscreen(){
   $("wheelFullscreenOverlay").style.display = "flex";
 
   wheelFsPrevSize = wheelSize;
-  setWheelSize(700);
+  setWheelSize(computeFullscreenWheelSize());
 
   const overlay = $("wheelFullscreenOverlay");
   if(overlay.requestFullscreen){
     overlay.requestFullscreen().catch(() => {}); // ignore if the browser blocks/refuses it — overlay still works
   }
 }
+
+window.addEventListener("resize", () => {
+  if(wheelFullscreenActive){
+    setWheelSize(computeFullscreenWheelSize());
+  }
+});
 
 function exitWheelFullscreen(){
   if(!wheelFullscreenActive) return;
