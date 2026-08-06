@@ -233,6 +233,35 @@
   .style-toggle button.active{background:var(--pitch);color:#fff;border-color:var(--pitch);}
   .style-toggle button:hover:not(.active){background:#eef1f5;}
   .wheel-wrap{position:relative;width:340px;max-width:100%;margin:20px auto 8px;}
+
+  .wheel-fullscreen-overlay{
+    position:fixed;top:0;left:0;width:100vw;height:100vh;
+    background:#101823;z-index:9999;
+    display:flex;align-items:stretch;
+  }
+  .wheel-fullscreen-left{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px;overflow:auto;gap:16px;
+  }
+  .wheel-fullscreen-right{
+    flex:1;background:#fff;padding:40px;overflow:auto;
+    border-left:4px solid var(--pitch);
+  }
+  .wheel-fullscreen-right h2{
+    font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);
+    text-transform:uppercase;margin:0 0 18px;
+  }
+  .wheel-fullscreen-exit{
+    position:absolute;top:20px;right:20px;z-index:10000;
+    background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);
+    padding:10px 18px;border-radius:6px;font-family:'Barlow',sans-serif;font-weight:600;
+    font-size:13px;cursor:pointer;
+  }
+  .wheel-fullscreen-exit:hover{background:rgba(255,255,255,.22);}
+  @media (max-width:900px){
+    .wheel-fullscreen-overlay{flex-direction:column;}
+    .wheel-fullscreen-right{border-left:none;border-top:4px solid var(--pitch);}
+  }
   .wheel-pointer{
     position:absolute;
     top:-6px;
@@ -712,6 +741,9 @@
           <input type="checkbox" id="wheelShowLogos">
           <label for="wheelShowLogos">Show team logos on the wheel</label>
         </div>
+        <div style="text-align:center;margin-bottom:14px;">
+          <button type="button" class="btn btn-ghost" id="wheelFullscreenBtn">⛶ Full Screen Mode</button>
+        </div>
         <div class="wheel-wrap" id="wheelWrap">
           <div class="wheel-pointer" id="wheelPointer"></div>
           <canvas id="drawWheelCanvas" width="340" height="340"></canvas>
@@ -734,6 +766,15 @@
   </div>
 
 </main>
+
+<div id="wheelFullscreenOverlay" class="wheel-fullscreen-overlay" style="display:none;">
+  <button type="button" id="wheelExitFullscreenBtn" class="wheel-fullscreen-exit">✕ Exit Full Screen</button>
+  <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
+  <div class="wheel-fullscreen-right">
+    <h2>Fixtures</h2>
+    <div id="wheelFullscreenFixtureSlot"></div>
+  </div>
+</div>
 
 <script>
 const OWNER = "drisbel";
@@ -2354,12 +2395,71 @@ function setWheelTheme(theme){
   drawRenderWheel();
 }
 
+// ---------- Wheel: full screen mode ----------
+// Reparents the actual wheel/spin/pick-box/fixture-list elements into a
+// full-viewport overlay (wheel on the left, live fixture list on the right)
+// rather than duplicating any rendering logic — there's still only one
+// canvas, one fixture list, kept in sync automatically since nothing was
+// copied. Falls back gracefully to a fixed-position overlay if the browser
+// Fullscreen API isn't available (e.g. some mobile browsers) — the button
+// and layout still work, it just won't hide the browser chrome.
+let wheelFullscreenActive = false;
+let wheelFsPrevSize = 340;
+let wheelFsOriginalPositions = [];
+
+function reparentToFullscreen(el, target){
+  wheelFsOriginalPositions.push({ el, parent: el.parentElement, nextSibling: el.nextSibling });
+  target.appendChild(el);
+}
+
+function enterWheelFullscreen(){
+  if(wheelFullscreenActive) return;
+  wheelFullscreenActive = true;
+  wheelFsOriginalPositions = [];
+
+  const left = $("wheelFullscreenLeft");
+  const rightSlot = $("wheelFullscreenFixtureSlot");
+
+  reparentToFullscreen($("wheelWrap"), left);
+  reparentToFullscreen($("drawSpinBtn").parentElement, left);
+  reparentToFullscreen($("drawWheelPick"), left);
+  reparentToFullscreen($("drawFixtureList"), rightSlot);
+
+  $("wheelFullscreenOverlay").style.display = "flex";
+
+  wheelFsPrevSize = wheelSize;
+  setWheelSize(700);
+
+  const overlay = $("wheelFullscreenOverlay");
+  if(overlay.requestFullscreen){
+    overlay.requestFullscreen().catch(() => {}); // ignore if the browser blocks/refuses it — overlay still works
+  }
+}
+
+function exitWheelFullscreen(){
+  if(!wheelFullscreenActive) return;
+  wheelFullscreenActive = false;
+
+  wheelFsOriginalPositions.forEach(({ el, parent, nextSibling }) => {
+    parent.insertBefore(el, nextSibling);
+  });
+  wheelFsOriginalPositions = [];
+
+  $("wheelFullscreenOverlay").style.display = "none";
+  setWheelSize(wheelFsPrevSize);
+}
+
 function drawRenderWheel(){
   const canvas = $("drawWheelCanvas");
   const ctx = canvas.getContext("2d");
   const size = canvas.width;
   const center = size / 2;
-  const radius = center - 4;
+  const fontScale = size / 340;
+  const logoSize = Math.max(20, 30*fontScale);
+  // When logos are on, the coloured disc shrinks slightly to leave a ring of
+  // space outside it for the logos — the disc itself stays full-size when
+  // logos are off, so slice text always gets the most room available.
+  const radius = wheelShowLogos ? (center - 4 - logoSize - 10) : (center - 4);
   ctx.clearRect(0, 0, size, size);
 
   const teams = drawPot;
@@ -2373,10 +2473,7 @@ function drawRenderWheel(){
   }
 
   const colors = WHEEL_THEMES[wheelTheme] || WHEEL_THEMES.brand;
-  const fontScale = size / 340;
   const anglePerSlice = (Math.PI*2) / n;
-  const logoRadius = radius * 0.6;
-  const logoSize = Math.max(18, 26*fontScale);
 
   teams.forEach((team, i) => {
     const startAngle = -Math.PI/2 + i*anglePerSlice; // slice 0 starts at top (12 o'clock)
@@ -2397,29 +2494,31 @@ function drawRenderWheel(){
     if(wheelShowLogos){
       const logoImg = getWheelLogoImage(team);
       if(logoImg){
+        const logoCenterRadius = radius + logoSize/2 + 6;
         ctx.save();
         ctx.translate(center, center);
         ctx.rotate(midAngle);
         ctx.beginPath();
-        ctx.arc(logoRadius, 0, logoSize/2, 0, Math.PI*2);
+        ctx.arc(logoCenterRadius, 0, logoSize/2, 0, Math.PI*2);
         ctx.closePath();
         ctx.clip();
-        ctx.drawImage(logoImg, logoRadius - logoSize/2, -logoSize/2, logoSize, logoSize);
+        ctx.drawImage(logoImg, logoCenterRadius - logoSize/2, -logoSize/2, logoSize, logoSize);
         ctx.restore();
       }
     }
 
     // Label, drawn radially outward from center along the slice's midline —
-    // sits beyond the logo (if shown) so the two don't overlap.
+    // now uses almost the full slice length, since the logo (if shown) sits
+    // outside the disc entirely rather than competing for room inside it.
     const textOuterEdge = radius - 10;
-    const textInnerLimit = wheelShowLogos ? logoRadius + logoSize/2 + 6*fontScale : 16;
+    const textInnerLimit = 16;
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate(midAngle);
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#fff";
-    ctx.font = `600 ${Math.round(12*fontScale)}px Barlow, sans-serif`;
+    ctx.font = `600 ${Math.round(13*fontScale)}px Barlow, sans-serif`;
     let label = team;
     const maxWidth = textOuterEdge - textInnerLimit;
     while(ctx.measureText(label).width > maxWidth && label.length > 3){
@@ -2510,6 +2609,16 @@ document.querySelectorAll("#wheelThemeToggle button").forEach(btn => {
 $("wheelShowLogos").addEventListener("change", (e) => {
   wheelShowLogos = e.target.checked;
   drawRenderWheel();
+});
+$("wheelFullscreenBtn").addEventListener("click", enterWheelFullscreen);
+$("wheelExitFullscreenBtn").addEventListener("click", () => {
+  if(document.fullscreenElement) document.exitFullscreen();
+  else exitWheelFullscreen();
+});
+document.addEventListener("fullscreenchange", () => {
+  if(!document.fullscreenElement && wheelFullscreenActive){
+    exitWheelFullscreen();
+  }
 });
 
 // ---------- Admin section switcher ----------
