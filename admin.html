@@ -685,14 +685,35 @@
         </div>
         <div class="draw-pick-box" id="drawCurrentPick">
           <div class="kicker">Just drawn</div>
+          <img id="drawCurrentPickLogo" alt="" style="width:52px;height:52px;object-fit:contain;display:none;margin:0 auto 8px;">
           <div class="name" id="drawCurrentPickName"></div>
         </div>
       </div>
 
       <!-- Wheel mode -->
       <div id="drawWheelMode" style="display:none;">
-        <div class="wheel-wrap">
-          <div class="wheel-pointer"></div>
+        <div class="field">
+          <label>Wheel size <span class="hint" style="display:inline;">(use Stream for screen-sharing)</span></label>
+          <div class="style-toggle" id="wheelSizeToggle">
+            <button type="button" data-size="340" class="active">Normal</button>
+            <button type="button" data-size="500">Large</button>
+            <button type="button" data-size="700">Stream (XL)</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Wheel colours</label>
+          <div class="style-toggle" id="wheelThemeToggle">
+            <button type="button" data-theme="brand" class="active">Brand</button>
+            <button type="button" data-theme="vivid">Vivid</button>
+            <button type="button" data-theme="mono">Monochrome</button>
+          </div>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="wheelShowLogos">
+          <label for="wheelShowLogos">Show team logos on the wheel</label>
+        </div>
+        <div class="wheel-wrap" id="wheelWrap">
+          <div class="wheel-pointer" id="wheelPointer"></div>
           <canvas id="drawWheelCanvas" width="340" height="340"></canvas>
         </div>
         <div style="text-align:center;margin-bottom:10px;">
@@ -700,6 +721,7 @@
         </div>
         <div class="draw-pick-box" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
           <div class="kicker">Just drawn</div>
+          <img id="drawWheelPickLogo" alt="" style="width:52px;height:52px;object-fit:contain;display:none;margin:0 auto 8px;">
           <div class="name" id="drawWheelPickName"></div>
         </div>
       </div>
@@ -2220,14 +2242,20 @@ function drawRecordPick(picked){
   }
 }
 
-// Shows a "Just drawn" box with the given name, popping it in every time —
-// including on repeat spins where it's already visible. display:none is the
-// CSS default for these boxes, so this always sets an explicit visible value
-// (never an empty string, which would just fall back to the CSS default of
-// none rather than showing anything).
-function showDrawPick(boxId, nameId, name){
+// Shows a "Just drawn" box with the given name (and logo, if available),
+// popping it in every time — including on repeat spins where it's already
+// visible. display:none is the CSS default for these boxes, so this always
+// sets an explicit visible value (never an empty string, which would just
+// fall back to the CSS default of none rather than showing anything).
+function showDrawPick(boxId, nameId, name, logoImgId){
   const box = $(boxId);
   $(nameId).textContent = name;
+  if(logoImgId){
+    const logoEl = $(logoImgId);
+    logoEl.onerror = () => { logoEl.style.display = "none"; };
+    logoEl.src = `logo/${teamLogoSlug(name)}.png`;
+    logoEl.style.display = "block";
+  }
   box.style.display = "block";
   box.classList.remove("pop");
   void box.offsetWidth; // force reflow so the animation restarts on repeat picks
@@ -2255,19 +2283,76 @@ function drawNext(){
   drawRecordPick(picked);
 
   if(drawPending !== null){
-    showDrawPick("drawCurrentPick", "drawCurrentPickName", drawPending);
+    showDrawPick("drawCurrentPick", "drawCurrentPickName", drawPending, "drawCurrentPickLogo");
   }else{
     // This pick completed a pair rather than starting a new one — still show
     // who was just drawn (the away side of the fixture that just got added).
     const lastFixture = drawFixtures[drawFixtures.length - 1];
-    showDrawPick("drawCurrentPick", "drawCurrentPickName", lastFixture.away);
+    showDrawPick("drawCurrentPick", "drawCurrentPickName", lastFixture.away, "drawCurrentPickLogo");
   }
   renderDrawShared();
 }
 
 // ---------- Draw: Wheel mode ----------
 
-const WHEEL_COLORS = ["#28427c","#3a5a9e","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"];
+// Same slug convention as the main site (logo/{slug}.png) — needed here so
+// the wheel and result boxes can show team logos consistently with the rest
+// of the site.
+function teamLogoSlug(name){
+  return (name||"").toLowerCase().trim()
+    .replace(/['\u2019.]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const WHEEL_THEMES = {
+  brand: ["#28427c","#3a5a9e","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"],
+  vivid: ["#e63946","#f4a261","#2a9d8f","#264653","#e9c46a","#8338ec","#3a86ff","#fb5607","#06d6a0","#ef476f"],
+  mono: ["#0f2a4a","#1c3d63","#294f7c","#366296","#4374af","#5087c9","#5d99e2","#6aacfb"]
+};
+let wheelSize = 340;
+let wheelTheme = "brand";
+let wheelShowLogos = false;
+
+// Canvas logo images load asynchronously — cached per team so a re-render
+// (e.g. after each spin) doesn't reload the same image repeatedly. Falls
+// back to text-only for that slice if the logo file doesn't exist; no
+// placeholder graphic on the wheel itself, since a canvas-drawn placeholder
+// would need porting the full SVG generator from the main site for a fairly
+// small visual gain here.
+const wheelLogoCache = {};
+function getWheelLogoImage(team){
+  if(wheelLogoCache[team]) return wheelLogoCache[team].loaded ? wheelLogoCache[team].img : null;
+  const entry = { img: new Image(), loaded: false };
+  entry.img.onload = () => { entry.loaded = true; drawRenderWheel(); };
+  entry.img.onerror = () => { wheelLogoCache[team] = { img: null, loaded: true, failed: true }; };
+  entry.img.src = `logo/${teamLogoSlug(team)}.png`;
+  wheelLogoCache[team] = entry;
+  return null;
+}
+
+function setWheelSize(size){
+  wheelSize = size;
+  const canvas = $("drawWheelCanvas");
+  canvas.width = size;
+  canvas.height = size;
+  $("wheelWrap").style.width = size + "px";
+  // Pointer scales proportionally so it doesn't look tiny on a big wheel
+  const scale = size / 340;
+  const pointer = $("wheelPointer");
+  pointer.style.borderLeftWidth = (14*scale) + "px";
+  pointer.style.borderRightWidth = (14*scale) + "px";
+  pointer.style.borderTopWidth = (22*scale) + "px";
+  pointer.style.top = (-6*scale) + "px";
+  document.querySelectorAll("#wheelSizeToggle button").forEach(b => b.classList.toggle("active", parseInt(b.dataset.size,10) === size));
+  drawRenderWheel();
+}
+
+function setWheelTheme(theme){
+  wheelTheme = theme;
+  document.querySelectorAll("#wheelThemeToggle button").forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
+  drawRenderWheel();
+}
 
 function drawRenderWheel(){
   const canvas = $("drawWheelCanvas");
@@ -2287,7 +2372,12 @@ function drawRenderWheel(){
     return;
   }
 
+  const colors = WHEEL_THEMES[wheelTheme] || WHEEL_THEMES.brand;
+  const fontScale = size / 340;
   const anglePerSlice = (Math.PI*2) / n;
+  const logoRadius = radius * 0.6;
+  const logoSize = Math.max(18, 26*fontScale);
+
   teams.forEach((team, i) => {
     const startAngle = -Math.PI/2 + i*anglePerSlice; // slice 0 starts at top (12 o'clock)
     const endAngle = startAngle + anglePerSlice;
@@ -2296,28 +2386,47 @@ function drawRenderWheel(){
     ctx.moveTo(center, center);
     ctx.arc(center, center, radius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Label, drawn radially outward from center along the slice's midline
     const midAngle = startAngle + anglePerSlice/2;
+
+    if(wheelShowLogos){
+      const logoImg = getWheelLogoImage(team);
+      if(logoImg){
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(midAngle);
+        ctx.beginPath();
+        ctx.arc(logoRadius, 0, logoSize/2, 0, Math.PI*2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(logoImg, logoRadius - logoSize/2, -logoSize/2, logoSize, logoSize);
+        ctx.restore();
+      }
+    }
+
+    // Label, drawn radially outward from center along the slice's midline —
+    // sits beyond the logo (if shown) so the two don't overlap.
+    const textOuterEdge = radius - 10;
+    const textInnerLimit = wheelShowLogos ? logoRadius + logoSize/2 + 6*fontScale : 16;
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate(midAngle);
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#fff";
-    ctx.font = "600 12px Barlow, sans-serif";
+    ctx.font = `600 ${Math.round(12*fontScale)}px Barlow, sans-serif`;
     let label = team;
-    const maxWidth = radius - 16;
+    const maxWidth = textOuterEdge - textInnerLimit;
     while(ctx.measureText(label).width > maxWidth && label.length > 3){
       label = label.slice(0, -1);
     }
     if(label !== team) label = label.slice(0, -1) + "…";
-    ctx.fillText(label, radius - 10, 0);
+    ctx.fillText(label, textOuterEdge, 0);
     ctx.restore();
   });
 }
@@ -2351,7 +2460,7 @@ function drawSpin(){
     drawRecordPick(picked);
 
     // Always show the result once the spin lands, every time.
-    showDrawPick("drawWheelPick", "drawWheelPickName", picked);
+    showDrawPick("drawWheelPick", "drawWheelPickName", picked, "drawWheelPickLogo");
     renderDrawShared();
 
     // Reset instantly (no transition) and redraw with the remaining, smaller pot
@@ -2392,6 +2501,16 @@ $("drawNextBtn").addEventListener("click", drawNext);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 $("drawStyleListBtn").addEventListener("click", () => setDrawStyle("list"));
 $("drawStyleWheelBtn").addEventListener("click", () => setDrawStyle("wheel"));
+document.querySelectorAll("#wheelSizeToggle button").forEach(btn => {
+  btn.addEventListener("click", () => setWheelSize(parseInt(btn.getAttribute("data-size"), 10)));
+});
+document.querySelectorAll("#wheelThemeToggle button").forEach(btn => {
+  btn.addEventListener("click", () => setWheelTheme(btn.getAttribute("data-theme")));
+});
+$("wheelShowLogos").addEventListener("change", (e) => {
+  wheelShowLogos = e.target.checked;
+  drawRenderWheel();
+});
 
 // ---------- Admin section switcher ----------
 document.querySelectorAll(".admin-section-btn").forEach(btn => {
