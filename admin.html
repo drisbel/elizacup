@@ -279,9 +279,11 @@
     letter-spacing:.05em;color:var(--muted);margin-bottom:8px;
   }
   .wheel-matchup-h2h-row{
-    display:flex;align-items:center;justify-content:space-between;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
     font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);
   }
+  .wheel-matchup-h2h-row span:first-child{flex-shrink:0;color:var(--muted);}
+  .wheel-matchup-h2h-row span:last-child{text-align:right;font-weight:600;}
   .wheel-matchup-h2h-row:last-child{border-bottom:none;}
   .wheel-matchup-h2h-empty{color:var(--muted);font-size:13px;}
   .wheel-fullscreen-right #drawFixtureList .draw-fixture-row{
@@ -291,9 +293,9 @@
   .wheel-fullscreen-right #drawFixtureList .draw-fixture-logo{width:38px;height:38px;}
   .wheel-fullscreen-right #drawFixtureList .num{font-size:13px;}
   .wheel-fullscreen-title{
-    font-family:'Barlow Condensed',sans-serif;font-size:clamp(24px,4vw,44px);
-    color:#fff;text-transform:uppercase;letter-spacing:.6px;
-    text-align:center;margin:0;
+    font-family:'Barlow Condensed',sans-serif;font-size:clamp(22px,3vw,36px);
+    color:var(--pitch);text-transform:uppercase;letter-spacing:.4px;
+    text-align:left;margin:0 0 20px;
   }
   .wheel-fullscreen-exit{
     position:absolute;top:20px;right:20px;z-index:10000;
@@ -844,10 +846,9 @@
 
 <div id="wheelFullscreenOverlay" class="wheel-fullscreen-overlay" style="display:none;">
   <button type="button" id="wheelExitFullscreenBtn" class="wheel-fullscreen-exit">✕ Exit Full Screen</button>
-  <div class="wheel-fullscreen-left" id="wheelFullscreenLeft">
-    <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
-  </div>
+  <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
   <div class="wheel-fullscreen-right">
+    <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
     <div id="wheelMatchupInfo" class="wheel-matchup-info">
       <div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>
     </div>
@@ -2433,182 +2434,260 @@ function teamLogoSlug(name){
 }
 
 // ---------- Wheel: matchup info (division / position / head-to-head) ----------
-// Pulls live standings + fixtures straight from the same 25/26 season sheet the
-// main site reads (SEASON_2526_SHEET_ID), for the 5 round-robin divisions only
-// (D1/2A/2B/3A/3B — same shared column layout as the main site's parseStandings/
-// parseFixtures). FA Cup, ECL, Roddy and past-seasons archives use different sheet
-// layouts (brackets / groups / fixed historical blocks) and aren't covered here —
-// a team not found in these 5 tabs just shows as "Division: —" rather than erroring.
-const WHEEL_MATCHUP_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
-const WHEEL_MATCHUP_DIVISIONS = [
-  { id: "d1",  label: "D1",  gid: "1032423540", teams: 14, color: "#28427c" },
-  { id: "d2a", label: "D2A", gid: "1011989388", teams: 12, color: "#bc3532" },
-  { id: "d2b", label: "D2B", gid: "1025912239", teams: 12, color: "#990000" },
-  { id: "d3a", label: "D3A", gid: "352017161",  teams: 12, color: "#6aa84f" },
-  { id: "d3b", label: "D3B", gid: "1085366243", teams: 12, color: "#274e13" }
-];
-const WHEEL_MATCHUP_HEADER_ROW = 3;
-const WHEEL_MATCHUP_DATA_START = 4;
-const WHEEL_MATCHUP_COL = { TEAM:3, PTS:8, W:9, D:10, L:11 };
-const WHEEL_MATCHUP_FIXTURE_COL_START = 33;
-const WHEEL_MATCHUP_FIXTURE_COL_END = 43;
-const WHEEL_MATCHUP_ROLE_TOKENS = new Set(["GK","DEF","MID","ATT","VC","C"]);
+// Division + position: read the same way Team Profile pages do — first look
+// the team up in the Roddy leaderboard (one tab, gives every team's current
+// division directly), then fetch just that division's own tab for ladder
+// position. Only the 5 round-robin divisions (D1/2A/2B/3A/3B) are covered.
+//
+// Head-to-head: reads the exact same sheet as the main site's Team Profile
+// "Head-to-Head vs Opponent" section (Team vs Team tab, gid 1560134779, main
+// SHEET_ID) — a pre-computed career P/W/L/D record plus a full match history
+// per opponent, so no scanning/aggregating is done here at all, just a lookup.
+const WHEEL_SEASON_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
+const WHEEL_MAIN_SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
+const WHEEL_RODDY_GID = "1751514020";
+const WHEEL_STATS_GID = "1560134779";
+const WHEEL_DIVISION_TABS = {
+  "D1":  { gid: "1032423540", teams: 14, color: "#28427c" },
+  "2A":  { gid: "1011989388", teams: 12, color: "#bc3532" },
+  "2B":  { gid: "1025912239", teams: 12, color: "#990000" },
+  "3A":  { gid: "352017161",  teams: 12, color: "#6aa84f" },
+  "3B":  { gid: "1085366243", teams: 12, color: "#274e13" }
+};
+const WHEEL_STANDINGS_DATA_START = 4;
+const WHEEL_STANDINGS_COL = { TEAM:3, PTS:8, W:9, D:10, L:11 };
+// Same layout as the main site's Team vs Team H2H tab (see index.html TVT_COL).
+const WHEEL_TVT_COL = { TEAM1:0, TEAM2:1, P:2, W:3, L:4, D:5 };
+const WHEEL_TVT_MATCH_START = 7;
+const WHEEL_TVT_MATCH_WIDTH = 6;
+const WHEEL_TVT_MAX_MATCHES = 40;
 
 function wheelCell(row, i){ return (row[i] || "").toString().trim(); }
-
-// { TEAMNAME: { division, pos, pts, w, d, l } }
-let wheelMatchupIndex = {};
-// [ { home, away, homeScore, awayScore, division } ] — played matches only
-let wheelMatchupFixtures = [];
-let wheelMatchupLoaded = false;
-let wheelMatchupLoading = false;
-
-function wheelMatchupCsvUrl(gid){
-  return `https://docs.google.com/spreadsheets/d/${WHEEL_MATCHUP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}&cachebust=` + Date.now();
+function wheelCsvUrl(sheetId, gid){
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&cachebust=` + Date.now();
 }
 
-function parseWheelDivisionRows(div, rows){
-  const knownTeams = new Set();
-  const tableEnd = WHEEL_MATCHUP_DATA_START + div.teams - 1;
-  for(let r = WHEEL_MATCHUP_DATA_START; r <= tableEnd && r < rows.length; r++){
-    const row = rows[r];
-    const team = wheelCell(row, WHEEL_MATCHUP_COL.TEAM);
-    if(!team) continue;
-    knownTeams.add(team.toUpperCase());
-  }
-  // Standings, sorted by points to derive ladder position (same as main site).
-  const standings = [];
-  for(let r = WHEEL_MATCHUP_DATA_START; r <= tableEnd && r < rows.length; r++){
-    const row = rows[r];
-    const team = wheelCell(row, WHEEL_MATCHUP_COL.TEAM);
-    if(!team) continue;
-    standings.push({
-      team,
-      pts: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.PTS),10) || 0,
-      w: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.W),10) || 0,
-      d: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.D),10) || 0,
-      l: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.L),10) || 0
-    });
-  }
-  standings.sort((a,b) => b.pts - a.pts);
-  standings.forEach((s,i) => {
-    wheelMatchupIndex[s.team.toUpperCase()] = {
-      division: div.label, pos: i+1, pts: s.pts, w: s.w, d: s.d, l: s.l
-    };
-  });
-
-  // Fixtures — same fixture-window scanning approach as the main site, minus
-  // the D2/D3 cross-conference playoff special-casing (out of scope here).
-  let currentRound = null;
-  for(let r = 0; r < rows.length; r++){
-    const row = rows[r];
-    const windowCells = row.slice(WHEEL_MATCHUP_FIXTURE_COL_START, WHEEL_MATCHUP_FIXTURE_COL_END + 1);
-    const nonEmpty = windowCells.map(c => (c||"").toString().trim()).filter(c => c !== "");
-    if(nonEmpty.length === 0) continue;
-
-    const roundCell = nonEmpty.find(c => /^ROUND\s*\d+$/i.test(c));
-    if(roundCell){ currentRound = roundCell.match(/\d+/)[0]; continue; }
-    if(currentRound === null) continue;
-    if(nonEmpty.some(c => WHEEL_MATCHUP_ROLE_TOKENS.has(c.toUpperCase()))) continue;
-
-    const teamHits = [];
-    nonEmpty.forEach((c,i) => { if(knownTeams.has(c.toUpperCase())) teamHits.push({name:c, idx:i}); });
-    if(teamHits.length < 2) continue;
-
-    const [homeHit, awayHit] = teamHits;
-    const between = nonEmpty.slice(homeHit.idx+1, awayHit.idx).filter(c => /^\d{1,4}$/.test(c));
-    const homeScore = between.length >= 1 ? parseInt(between[0],10) : null;
-    const awayScore = between.length >= 2 ? parseInt(between[between.length-1],10) : null;
-    if(homeScore === null || awayScore === null) continue; // unplayed — no result to show in H2H
-
-    wheelMatchupFixtures.push({ home: homeHit.name, away: awayHit.name, homeScore, awayScore, division: div.label });
-  }
+// Same short-label mapping as the main site's getDivisionShortLabel().
+function wheelDivisionShortLabel(text){
+  const t = (text||"").toUpperCase();
+  if(t.includes("ELIZA")) return "D1";
+  if(t.includes("2A")) return "2A";
+  if(t.includes("2B")) return "2B";
+  if(t.includes("3A")) return "3A";
+  if(t.includes("3B")) return "3B";
+  return null;
 }
 
-// Fetches and parses all 5 division tabs once per page load (cachebust keeps
-// each session fresh). Safe to call repeatedly — subsequent calls are no-ops
-// while already loaded/loading.
+let wheelRoddyEntries = [];      // [{ team, divisionShort }]
+let wheelRoddyLoaded = false;
+let wheelRoddyLoading = null;    // in-flight promise, so concurrent lookups share one fetch
+
+let wheelStandingsCache = {};    // { "D1": { TEAMUPPER: {pos,pts,w,d,l} }, ... }
+let wheelStandingsLoading = {};  // { "D1": promise }
+
+let wheelStatsRows = null;       // raw parsed rows of the Team vs Team stats tab
+let wheelStatsLoaded = false;
+let wheelStatsLoading = null;
+
+async function loadWheelRoddyData(){
+  if(wheelRoddyLoaded) return;
+  if(wheelRoddyLoading) return wheelRoddyLoading;
+  wheelRoddyLoading = (async () => {
+    try{
+      const res = await fetch(wheelCsvUrl(WHEEL_SEASON_SHEET_ID, WHEEL_RODDY_GID));
+      const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
+      const ROD_COL = { POS:5, TEAM:7, DIVISION:16 };
+      let headerRow = -1;
+      for(let r=0; r<Math.min(rows.length,30); r++){
+        if(wheelCell(rows[r], ROD_COL.POS).toUpperCase() === "POS"){ headerRow = r; break; }
+      }
+      wheelRoddyEntries = [];
+      if(headerRow !== -1){
+        for(let r=headerRow+1; r<rows.length; r++){
+          const posVal = wheelCell(rows[r], ROD_COL.POS);
+          if(!/^\d+$/.test(posVal)) break;
+          const team = wheelCell(rows[r], ROD_COL.TEAM);
+          const divShort = wheelDivisionShortLabel(wheelCell(rows[r], ROD_COL.DIVISION));
+          if(team) wheelRoddyEntries.push({ team, divisionShort: divShort });
+        }
+      }
+      wheelRoddyLoaded = true;
+    }catch(err){
+      console.error("Failed to load Roddy data for wheel matchup info:", err);
+    }
+  })();
+  return wheelRoddyLoading;
+}
+
+async function loadWheelStandings(divShort){
+  const tab = WHEEL_DIVISION_TABS[divShort];
+  if(!tab) return;
+  if(wheelStandingsCache[divShort]) return;
+  if(wheelStandingsLoading[divShort]) return wheelStandingsLoading[divShort];
+  wheelStandingsLoading[divShort] = (async () => {
+    try{
+      const res = await fetch(wheelCsvUrl(WHEEL_SEASON_SHEET_ID, tab.gid));
+      const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
+      const tableEnd = WHEEL_STANDINGS_DATA_START + tab.teams - 1;
+      const standings = [];
+      for(let r=WHEEL_STANDINGS_DATA_START; r<=tableEnd && r<rows.length; r++){
+        const team = wheelCell(rows[r], WHEEL_STANDINGS_COL.TEAM);
+        if(!team) continue;
+        standings.push({
+          team,
+          pts: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.PTS),10) || 0,
+          w: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.W),10) || 0,
+          d: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.D),10) || 0,
+          l: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.L),10) || 0
+        });
+      }
+      standings.sort((a,b) => b.pts - a.pts);
+      const index = {};
+      standings.forEach((s,i) => { index[s.team.toUpperCase()] = { pos:i+1, pts:s.pts, w:s.w, d:s.d, l:s.l }; });
+      wheelStandingsCache[divShort] = index;
+    }catch(err){
+      console.error(`Failed to load ${divShort} standings for wheel matchup info:`, err);
+    }
+  })();
+  return wheelStandingsLoading[divShort];
+}
+
+async function loadWheelStatsData(){
+  if(wheelStatsLoaded) return;
+  if(wheelStatsLoading) return wheelStatsLoading;
+  wheelStatsLoading = (async () => {
+    try{
+      const res = await fetch(wheelCsvUrl(WHEEL_MAIN_SHEET_ID, WHEEL_STATS_GID));
+      wheelStatsRows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
+      wheelStatsLoaded = true;
+    }catch(err){
+      console.error("Failed to load Team vs Team stats for wheel matchup info:", err);
+    }
+  })();
+  return wheelStatsLoading;
+}
+
+// Pre-warms everything the matchup panel needs, so it's ready before the
+// first spin rather than fetching only once a fixture is drawn.
 async function loadWheelMatchupData(){
-  if(wheelMatchupLoaded || wheelMatchupLoading) return;
-  wheelMatchupLoading = true;
-  try{
-    await Promise.all(WHEEL_MATCHUP_DIVISIONS.map(async div => {
-      const res = await fetch(wheelMatchupCsvUrl(div.gid));
-      const csvText = await res.text();
-      const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
-      parseWheelDivisionRows(div, rows);
-    }));
-    wheelMatchupLoaded = true;
-  }catch(err){
-    console.error("Failed to load wheel matchup data:", err);
-  }finally{
-    wheelMatchupLoading = false;
+  await loadWheelRoddyData();
+  await Promise.all([
+    loadWheelStatsData(),
+    ...Object.keys(WHEEL_DIVISION_TABS).map(loadWheelStandings)
+  ]);
+}
+
+// Returns { divisionShort, divisionColor, pos, pts, w, d, l } or null if the
+// team isn't found in the Roddy leaderboard / isn't in one of the 5 tracked
+// divisions.
+async function getWheelTeamMatchInfo(team){
+  await loadWheelRoddyData();
+  const upper = (team||"").trim().toUpperCase();
+  const roddyEntry = wheelRoddyEntries.find(e => e.team.toUpperCase() === upper);
+  if(!roddyEntry || !roddyEntry.divisionShort) return null;
+  await loadWheelStandings(roddyEntry.divisionShort);
+  const standingsRow = (wheelStandingsCache[roddyEntry.divisionShort] || {})[upper];
+  if(!standingsRow) return { divisionShort: roddyEntry.divisionShort, divisionColor: WHEEL_DIVISION_TABS[roddyEntry.divisionShort].color, pos: null, pts: null, w: null, d: null, l: null };
+  return { divisionShort: roddyEntry.divisionShort, divisionColor: WHEEL_DIVISION_TABS[roddyEntry.divisionShort].color, ...standingsRow };
+}
+
+// Looks up teamA's row in the Team vs Team stats sheet for the given
+// opponent — the exact same lookup Team Profile's Head-to-Head vs Opponent
+// section does. Returns { p, w, l, d, lastMatch } or null if no record row
+// exists for this pairing (e.g. the two teams have never shared a division).
+async function getWheelH2HRecord(teamA, teamB){
+  await loadWheelStatsData();
+  if(!wheelStatsRows) return null;
+  const upperA = (teamA||"").trim().toUpperCase();
+  const upperB = (teamB||"").trim().toUpperCase();
+
+  for(let r=0; r<wheelStatsRows.length; r++){
+    const row = wheelStatsRows[r];
+    const t1 = wheelCell(row, WHEEL_TVT_COL.TEAM1);
+    if(!t1 || t1.toUpperCase() !== upperA) continue;
+    const t2 = wheelCell(row, WHEEL_TVT_COL.TEAM2);
+    if(!t2 || t2.toUpperCase() !== upperB) continue;
+
+    const matches = [];
+    for(let b=0; b<WHEEL_TVT_MAX_MATCHES; b++){
+      const base = WHEEL_TVT_MATCH_START + b*WHEEL_TVT_MATCH_WIDTH;
+      const comp = wheelCell(row, base);
+      const year = wheelCell(row, base+1);
+      if(!comp && !year) break;
+      matches.push({
+        comp, year,
+        round: wheelCell(row, base+2),
+        result: wheelCell(row, base+3),
+        for: wheelCell(row, base+4),
+        against: wheelCell(row, base+5)
+      });
+    }
+
+    return {
+      p: parseInt(wheelCell(row, WHEEL_TVT_COL.P),10) || 0,
+      w: parseInt(wheelCell(row, WHEEL_TVT_COL.W),10) || 0,
+      l: parseInt(wheelCell(row, WHEEL_TVT_COL.L),10) || 0,
+      d: parseInt(wheelCell(row, WHEEL_TVT_COL.D),10) || 0,
+      lastMatch: matches.length ? matches[matches.length-1] : null
+    };
   }
+  return null;
 }
 
-function getWheelMatchupTeamInfo(team){
-  return wheelMatchupIndex[(team||"").trim().toUpperCase()] || null;
-}
-
-function getWheelMatchupH2H(teamA, teamB){
-  const a = (teamA||"").trim().toUpperCase();
-  const b = (teamB||"").trim().toUpperCase();
-  return wheelMatchupFixtures.filter(f => {
-    const h = f.home.toUpperCase(), aw = f.away.toUpperCase();
-    return (h === a && aw === b) || (h === b && aw === a);
-  });
-}
-
-function wheelMatchupTeamBlockHtml(team){
-  const info = getWheelMatchupTeamInfo(team);
-  const divColor = info ? (WHEEL_MATCHUP_DIVISIONS.find(d => d.label === info.division)||{}).color : null;
+function wheelMatchupTeamBlockHtml(team, info){
   return `
     <div class="wheel-matchup-team">
       <img src="logo/${teamLogoSlug(team)}.png" alt="" onerror="this.style.display='none';">
       <div class="wm-name">${escapeHtml(team)}</div>
-      ${info ? `<div class="wm-division" style="background:${divColor||"#8a8f98"};">${escapeHtml(info.division)}</div>
-      <div class="wm-position">Pos ${info.pos} · ${info.pts} pts (${info.w}-${info.d}-${info.l})</div>` : `<div class="wm-position">Division not found</div>`}
+      ${info ? `<div class="wm-division" style="background:${info.divisionColor||"#8a8f98"};">${escapeHtml(info.divisionShort)}</div>
+      <div class="wm-position">${info.pos ? `Pos ${info.pos} · ${info.pts} pts (${info.w}-${info.d}-${info.l})` : "Position unavailable"}</div>` : `<div class="wm-position">Division not found</div>`}
     </div>`;
 }
 
+function wheelH2HHtml(teamA, teamB, record){
+  if(!record || !record.p){
+    return `<div class="wheel-matchup-h2h-empty">No previous meetings on record between these two teams.</div>`;
+  }
+  const last = record.lastMatch;
+  const lastLine = last
+    ? `${escapeHtml(last.comp)}${last.year ? " " + escapeHtml(last.year) : ""}${last.round ? ", " + escapeHtml(last.round) : ""} — ${escapeHtml(teamA)} ${escapeHtml(last.for)} – ${escapeHtml(last.against)} ${escapeHtml(teamB)}`
+    : "Not available";
+  return `
+    <div class="wheel-matchup-h2h-row"><span>Played</span><span>${record.p}</span></div>
+    <div class="wheel-matchup-h2h-row"><span>${escapeHtml(teamA)} wins</span><span>${record.w}</span></div>
+    <div class="wheel-matchup-h2h-row"><span>${escapeHtml(teamB)} wins</span><span>${record.l}</span></div>
+    <div class="wheel-matchup-h2h-row"><span>Draws</span><span>${record.d}</span></div>
+    <div class="wheel-matchup-h2h-row"><span>Last meeting</span><span>${lastLine}</span></div>`;
+}
+
 // Renders the top matchup-info panel for the fixture that was just completed
-// (both teams now known). Fetches live matchup data on first use if it isn't
-// already loaded/loading, then re-renders once it resolves. A render token
-// guards against a slow first fetch resolving after a later pick has already
-// repainted the panel for a different pair of teams.
+// (both teams now known). A render token guards against a slow fetch from an
+// earlier pick resolving after a later pick has already repainted the panel
+// for a different pair of teams.
 let wheelMatchupRenderToken = 0;
 async function renderWheelMatchupInfo(teamA, teamB){
   const myToken = ++wheelMatchupRenderToken;
   const box = $("wheelMatchupInfo");
   box.innerHTML = `
     <div class="wheel-matchup-teams">
-      ${wheelMatchupTeamBlockHtml(teamA)}
+      ${wheelMatchupTeamBlockHtml(teamA, null)}
       <div class="wheel-matchup-vs">VS</div>
-      ${wheelMatchupTeamBlockHtml(teamB)}
+      ${wheelMatchupTeamBlockHtml(teamB, null)}
     </div>
     <div class="wheel-matchup-h2h-title">Head to Head</div>
     <div id="wheelMatchupH2H"><div class="wheel-matchup-h2h-empty">Loading…</div></div>`;
 
-  if(!wheelMatchupLoaded) await loadWheelMatchupData();
+  const [infoA, infoB, record] = await Promise.all([
+    getWheelTeamMatchInfo(teamA),
+    getWheelTeamMatchInfo(teamB),
+    getWheelH2HRecord(teamA, teamB)
+  ]);
   if(myToken !== wheelMatchupRenderToken) return; // a newer pick has already repainted this panel
 
-  const meetings = getWheelMatchupH2H(teamA, teamB);
-  const h2hEl = $("wheelMatchupH2H");
-  if(!h2hEl) return;
-  if(!meetings.length){
-    h2hEl.innerHTML = `<div class="wheel-matchup-h2h-empty">No previous meetings found this season (covers D1/2A/2B/3A/3B only).</div>`;
-  }else{
-    h2hEl.innerHTML = meetings.map(f => `
-      <div class="wheel-matchup-h2h-row">
-        <span>${escapeHtml(f.division)}</span>
-        <span>${escapeHtml(f.home)} ${f.homeScore} – ${f.awayScore} ${escapeHtml(f.away)}</span>
-      </div>`).join("");
-  }
-
-  // Re-render team blocks too, in case matchup data just finished loading
-  // and standings info wasn't available at the initial paint above.
   const teamsEl = box.querySelector(".wheel-matchup-teams");
-  if(teamsEl) teamsEl.innerHTML = wheelMatchupTeamBlockHtml(teamA) + `<div class="wheel-matchup-vs">VS</div>` + wheelMatchupTeamBlockHtml(teamB);
+  if(teamsEl) teamsEl.innerHTML = wheelMatchupTeamBlockHtml(teamA, infoA) + `<div class="wheel-matchup-vs">VS</div>` + wheelMatchupTeamBlockHtml(teamB, infoB);
+  const h2hEl = $("wheelMatchupH2H");
+  if(h2hEl) h2hEl.innerHTML = wheelH2HHtml(teamA, teamB, record);
 }
 
 const WHEEL_THEMES = {
@@ -2774,22 +2853,19 @@ function reparentToFullscreen(el, target){
 // Sizes the wheel to whatever room is actually available in the left column
 // — fixes it being cut off / needing horizontal scroll on smaller screens or
 // shared windows, since a fixed pixel size doesn't adapt to real available
-// space the way this does. Reserves room below the wheel for the title (if
-// shown), the spin button, and the "Just drawn" box — measuring their real
-// rendered heights rather than guessing, and measuring the pick box's height
-// while it's still hidden (before any team has been drawn) so the wheel is
-// already sized correctly for when it appears, instead of the box popping in
-// after the first spin and pushing the page into a scroll.
+// space the way this does. Reserves room below the wheel for the spin button
+// and the "Just drawn" box, measuring their real rendered heights rather than
+// guessing, and measuring the pick box's height while it's still hidden
+// (before any team has been drawn) so the wheel is already sized correctly
+// for when it appears, instead of the box popping in after the first spin
+// and pushing the page into a scroll. The title lives in the right column
+// now, so it plays no part in this column's budget.
 function computeFullscreenWheelSize(){
   const left = $("wheelFullscreenLeft");
   const rect = left.getBoundingClientRect();
   const leftStyle = getComputedStyle(left);
   const paddingV = parseFloat(leftStyle.paddingTop) + parseFloat(leftStyle.paddingBottom);
   const gap = parseFloat(leftStyle.rowGap || leftStyle.gap) || 0;
-
-  const titleEl = $("wheelFullscreenTitle");
-  const titleShown = titleEl.style.display !== "none";
-  const titleH = titleShown ? titleEl.getBoundingClientRect().height : 0;
 
   const spinWrap = $("drawSpinBtn").parentElement;
   const spinH = spinWrap.getBoundingClientRect().height;
@@ -2802,10 +2878,8 @@ function computeFullscreenWheelSize(){
   pickBox.style.display = prevDisplay;
   pickBox.style.visibility = "";
 
-  // Gaps between visible flex children: wheel↔spin and spin↔pick are always
-  // present; title↔wheel only counts if the title is actually shown.
-  const gapCount = 2 + (titleShown ? 1 : 0);
-  const reserved = paddingV + titleH + spinH + pickH + gap*gapCount;
+  // Gap between wheel↔spin and spin↔pick — always 2, both always visible.
+  const reserved = paddingV + spinH + pickH + gap*2;
 
   const availW = rect.width - 48;
   const availH = rect.height - reserved;
@@ -2922,23 +2996,43 @@ function drawRenderWheel(){
     }
 
     // Label, drawn radially outward from center along the slice's midline —
-    // now uses almost the full slice length, since the logo (if shown) sits
+    // uses almost the full slice length, since the logo (if shown) sits
     // outside the disc entirely rather than competing for room inside it.
+    // Font size auto-shrinks (with ellipsis truncation as a last resort) until
+    // the label fits both radially (within the slice's length) and
+    // tangentially — i.e. the text's height doesn't exceed how wide the wedge
+    // actually is at the text's innermost point, which is where a slice is at
+    // its narrowest and where long labels would otherwise spill across the
+    // white divider lines into neighbouring slices.
     const textOuterEdge = radius - 10;
     const textInnerLimit = 16;
+    const maxWidth = textOuterEdge - textInnerLimit;
+    const maxFontSize = 13*fontScale;
+    const minFontSize = Math.max(7, 8*fontScale);
+
+    let fontSize = maxFontSize;
+    let label = team;
+    while(true){
+      ctx.font = `600 ${Math.round(fontSize)}px Barlow, sans-serif`;
+      label = team;
+      while(ctx.measureText(label).width > maxWidth && label.length > 3){
+        label = label.slice(0, -1);
+      }
+      if(label !== team) label = label.slice(0, -1) + "…";
+
+      const textWidth = ctx.measureText(label).width;
+      const innerRadius = Math.max(0, textOuterEdge - textWidth);
+      const chordAtInner = 2 * innerRadius * Math.sin(anglePerSlice/2);
+      if(chordAtInner >= fontSize*0.85 + 2 || fontSize <= minFontSize) break;
+      fontSize -= 1;
+    }
+
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate(midAngle);
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#fff";
-    ctx.font = `600 ${Math.round(13*fontScale)}px Barlow, sans-serif`;
-    let label = team;
-    const maxWidth = textOuterEdge - textInnerLimit;
-    while(ctx.measureText(label).width > maxWidth && label.length > 3){
-      label = label.slice(0, -1);
-    }
-    if(label !== team) label = label.slice(0, -1) + "…";
     ctx.fillText(label, textOuterEdge, 0);
     ctx.restore();
   });
