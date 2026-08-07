@@ -238,7 +238,16 @@
   .wheel-fullscreen-overlay{
     position:fixed;top:0;left:0;width:100vw;height:100vh;
     background:#101823;z-index:9999;
-    display:flex;align-items:stretch;
+    display:flex;flex-direction:column;
+  }
+  .wheel-fullscreen-comp-logo{
+    flex-shrink:0;display:flex;justify-content:center;padding:24px 0 0;
+  }
+  .wheel-fullscreen-comp-logo img{
+    max-height:72px;max-width:220px;object-fit:contain;
+  }
+  .wheel-fullscreen-columns{
+    flex:1;display:flex;align-items:stretch;min-height:0;
   }
   .wheel-fullscreen-left{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
@@ -325,7 +334,7 @@
   .wheel-fullscreen-title{
     font-family:'Barlow Condensed',sans-serif;font-size:clamp(22px,3vw,36px);
     color:var(--pitch);text-transform:uppercase;letter-spacing:.4px;
-    text-align:left;margin:0 0 20px;
+    text-align:center;margin:0 0 20px;
   }
   .wheel-fullscreen-exit{
     position:absolute;top:20px;right:20px;z-index:10000;
@@ -335,7 +344,7 @@
   }
   .wheel-fullscreen-exit:hover{background:rgba(255,255,255,.22);}
   @media (max-width:900px){
-    .wheel-fullscreen-overlay{flex-direction:column;}
+    .wheel-fullscreen-columns{flex-direction:column;}
     .wheel-fullscreen-right{border-left:none;border-top:4px solid var(--pitch);}
   }
   .wheel-pointer{
@@ -838,13 +847,23 @@
           <div id="wheelPerTeamList"></div>
         </div>
 
-        <div class="checkbox-row">
-          <input type="checkbox" id="wheelShowLogos">
-          <label for="wheelShowLogos">Show team logos on the wheel</label>
+        <div class="field">
+          <label for="wheelTitleInput">Wheel title <span class="hint" style="display:inline;">(shown centred at the top of the right side in Full Screen Mode)</span></label>
+          <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
         </div>
         <div class="field">
-          <label for="wheelTitleInput">Wheel title <span class="hint" style="display:inline;">(shown at top of Full Screen Mode)</span></label>
-          <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
+          <label for="wheelCompLogoSelect">Competition logo <span class="hint" style="display:inline;">(shown centred at the top of the screen in Full Screen Mode)</span></label>
+          <select id="wheelCompLogoSelect">
+            <option value="">None</option>
+            <option value="logo/division-1-logo.png">Division 1</option>
+            <option value="logo/division-2-logo.png">Division 2 (2A/2B)</option>
+            <option value="logo/division-3-logo.png">Division 3 (3A/3B)</option>
+            <option value="logo/roddy-logo.png">Roddy Rodriguez Cup</option>
+            <option value="logo/fa-cup-logo.png">FA Cup</option>
+            <option value="logo/ecl-logo.png">Eliza Champions League</option>
+            <option value="__custom__">Custom path…</option>
+          </select>
+          <input type="text" id="wheelCompLogoCustom" placeholder="e.g. logo/my-logo.png" style="display:none;margin-top:8px;">
         </div>
         <div style="text-align:center;margin-bottom:14px;">
           <button type="button" class="btn btn-ghost" id="wheelFullscreenBtn">⛶ Full Screen Mode</button>
@@ -876,17 +895,22 @@
 
 <div id="wheelFullscreenOverlay" class="wheel-fullscreen-overlay" style="display:none;">
   <button type="button" id="wheelExitFullscreenBtn" class="wheel-fullscreen-exit">✕ Exit Full Screen</button>
-  <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
-  <div class="wheel-fullscreen-right">
-    <div class="wheel-fullscreen-header">
-      <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
-      <div id="wheelMatchupInfo" class="wheel-matchup-info">
-        <div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>
+  <div class="wheel-fullscreen-comp-logo" id="wheelFullscreenCompLogo" style="display:none;">
+    <img id="wheelFullscreenCompLogoImg" src="" alt="">
+  </div>
+  <div class="wheel-fullscreen-columns">
+    <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
+    <div class="wheel-fullscreen-right">
+      <div class="wheel-fullscreen-header">
+        <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
+        <div id="wheelMatchupInfo" class="wheel-matchup-info">
+          <div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>
+        </div>
       </div>
-    </div>
-    <div class="wheel-fullscreen-fixtures-pane" id="wheelFullscreenFixturesPane">
-      <h2>Fixtures</h2>
-      <div id="wheelFullscreenFixtureSlot"></div>
+      <div class="wheel-fullscreen-fixtures-pane" id="wheelFullscreenFixturesPane">
+        <h2>Fixtures</h2>
+        <div id="wheelFullscreenFixtureSlot"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2811,7 +2835,6 @@ const WHEEL_THEMES = {
 };
 let wheelSize = 340;
 let wheelTheme = "brand";
-let wheelShowLogos = false;
 let wheelTitle = "";
 
 // Wheel colour customisation — four modes:
@@ -2916,28 +2939,6 @@ function renderWheelPerTeamList(){
   });
 }
 
-// Canvas logo images load asynchronously — cached per team so a re-render
-// (e.g. after each spin) doesn't reload the same image repeatedly. Falls
-// back to the same generated initials placeholder used site-wide if the
-// team's real logo file doesn't exist.
-const wheelLogoCache = {};
-function getWheelLogoImage(team){
-  if(wheelLogoCache[team]) return wheelLogoCache[team].loaded ? wheelLogoCache[team].img : null;
-  const entry = { img: new Image(), loaded: false, triedFallback: false };
-  entry.img.onload = () => { entry.loaded = true; drawRenderWheel(); };
-  entry.img.onerror = () => {
-    if(!entry.triedFallback){
-      entry.triedFallback = true;
-      entry.img.src = teamPlaceholderLogoDataUri(team);
-    }else{
-      wheelLogoCache[team] = { img: null, loaded: true, failed: true };
-    }
-  };
-  entry.img.src = `logo/${teamLogoSlug(team)}.png`;
-  wheelLogoCache[team] = entry;
-  return null;
-}
-
 function setWheelSize(size){
   wheelSize = size;
   const canvas = $("drawWheelCanvas");
@@ -3030,6 +3031,18 @@ function enterWheelFullscreen(){
     titleEl.style.display = "none";
   }
 
+  // Competition logo bar — set before measuring the wheel size below, so its
+  // height (if shown) is already factored into how much room is left.
+  const compLogoBar = $("wheelFullscreenCompLogo");
+  const selectVal = $("wheelCompLogoSelect").value;
+  const compLogoPath = selectVal === "__custom__" ? $("wheelCompLogoCustom").value.trim() : selectVal;
+  if(compLogoPath){
+    $("wheelFullscreenCompLogoImg").src = compLogoPath;
+    compLogoBar.style.display = "flex";
+  }else{
+    compLogoBar.style.display = "none";
+  }
+
   reparentToFullscreen($("wheelWrap"), left);
   reparentToFullscreen($("drawSpinBtn").parentElement, left);
   reparentToFullscreen($("drawWheelPick"), left);
@@ -3071,11 +3084,7 @@ function drawRenderWheel(){
   const size = canvas.width;
   const center = size / 2;
   const fontScale = size / 340;
-  const logoSize = Math.max(20, 30*fontScale);
-  // When logos are on, the coloured disc shrinks slightly to leave a ring of
-  // space outside it for the logos — the disc itself stays full-size when
-  // logos are off, so slice text always gets the most room available.
-  const radius = wheelShowLogos ? (center - 4 - logoSize - 10) : (center - 4);
+  const radius = center - 4;
   ctx.clearRect(0, 0, size, size);
 
   const teams = drawPot;
@@ -3106,25 +3115,7 @@ function drawRenderWheel(){
 
     const midAngle = startAngle + anglePerSlice/2;
 
-    if(wheelShowLogos){
-      const logoImg = getWheelLogoImage(team);
-      if(logoImg){
-        const logoCenterRadius = radius + logoSize/2 + 6;
-        ctx.save();
-        ctx.translate(center, center);
-        ctx.rotate(midAngle);
-        ctx.beginPath();
-        ctx.arc(logoCenterRadius, 0, logoSize/2, 0, Math.PI*2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(logoImg, logoCenterRadius - logoSize/2, -logoSize/2, logoSize, logoSize);
-        ctx.restore();
-      }
-    }
-
-    // Label, drawn radially outward from center along the slice's midline —
-    // uses almost the full slice length, since the logo (if shown) sits
-    // outside the disc entirely rather than competing for room inside it.
+    // Label, drawn radially outward from center along the slice's midline.
     // Font size auto-shrinks (with ellipsis truncation as a last resort) until
     // the label fits both radially (within the slice's length) and
     // tangentially — i.e. the text's height doesn't exceed how wide the wedge
@@ -3260,9 +3251,8 @@ $("wheelCustomUse3").addEventListener("change", (e) => {
 $("drawTeamInput").addEventListener("input", () => {
   if(wheelColorMode === "per-team") renderWheelPerTeamList();
 });
-$("wheelShowLogos").addEventListener("change", (e) => {
-  wheelShowLogos = e.target.checked;
-  drawRenderWheel();
+$("wheelCompLogoSelect").addEventListener("change", (e) => {
+  $("wheelCompLogoCustom").style.display = e.target.value === "__custom__" ? "" : "none";
 });
 $("wheelFullscreenBtn").addEventListener("click", enterWheelFullscreen);
 $("wheelExitFullscreenBtn").addEventListener("click", () => {
