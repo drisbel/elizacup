@@ -238,16 +238,18 @@
   .wheel-fullscreen-overlay{
     position:fixed;top:0;left:0;width:100vw;height:100vh;
     background:#101823;z-index:9999;
-    display:flex;flex-direction:column;
+    display:flex;align-items:stretch;
   }
   .wheel-fullscreen-comp-logo{
-    flex-shrink:0;display:flex;justify-content:center;padding:24px 0 0;
+    position:absolute;top:16px;left:50%;transform:translateX(-50%);
+    z-index:10000;pointer-events:none;
   }
   .wheel-fullscreen-comp-logo img{
-    max-height:72px;max-width:220px;object-fit:contain;
+    max-height:56px;max-width:180px;object-fit:contain;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));
   }
   .wheel-fullscreen-columns{
-    flex:1;display:flex;align-items:stretch;min-height:0;
+    flex:1;display:flex;align-items:stretch;min-width:0;
   }
   .wheel-fullscreen-left{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
@@ -264,6 +266,22 @@
   .wheel-fullscreen-fixtures-pane{
     flex:1;overflow-y:auto;padding:24px 40px 40px;
   }
+  .wheel-fullscreen-results{
+    flex:1;background:#fff;display:flex;flex-direction:column;
+    padding:56px 60px;overflow:auto;
+  }
+  .wheel-fullscreen-results .wheel-fullscreen-title{
+    color:var(--pitch);text-align:center;margin-bottom:28px;
+  }
+  .wheel-fullscreen-results-grid{
+    columns:340px;column-gap:28px;
+  }
+  .wheel-fullscreen-results-grid .draw-fixture-row{
+    break-inside:avoid;padding:16px 20px;margin-bottom:14px;
+  }
+  .wheel-fullscreen-results-grid .team{font-size:19px;gap:10px;}
+  .wheel-fullscreen-results-grid .draw-fixture-logo{width:34px;height:34px;}
+  .wheel-fullscreen-results-grid .num{font-size:12.5px;}
   .wheel-fullscreen-right h2{
     font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);
     text-transform:uppercase;margin:0 0 18px;
@@ -874,6 +892,7 @@
         </div>
         <div style="text-align:center;margin-bottom:10px;">
           <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
+          <button class="btn btn-primary" id="wheelCompleteDrawBtn" style="display:none;">✓ Complete Draw</button>
         </div>
         <div class="draw-pick-box wheel-pick-inline" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
           <div class="kicker">Just drawn</div>
@@ -898,7 +917,7 @@
   <div class="wheel-fullscreen-comp-logo" id="wheelFullscreenCompLogo" style="display:none;">
     <img id="wheelFullscreenCompLogoImg" src="" alt="">
   </div>
-  <div class="wheel-fullscreen-columns">
+  <div class="wheel-fullscreen-columns" id="wheelFullscreenColumns">
     <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
     <div class="wheel-fullscreen-right">
       <div class="wheel-fullscreen-header">
@@ -911,6 +930,13 @@
         <h2>Fixtures</h2>
         <div id="wheelFullscreenFixtureSlot"></div>
       </div>
+    </div>
+  </div>
+  <div class="wheel-fullscreen-results" id="wheelFullscreenResultsView" style="display:none;">
+    <h1 id="wheelFullscreenResultsTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
+    <div class="wheel-fullscreen-results-grid" id="wheelFullscreenResultsGrid"></div>
+    <div style="text-align:center;margin-top:24px;">
+      <button type="button" class="btn btn-ghost" id="wheelBackToWheelBtn">← Back to Wheel</button>
     </div>
   </div>
 </div>
@@ -2380,6 +2406,8 @@ function drawStart(){
   $("drawSpinBtn").disabled = false;
   renderDrawShared();
   resetWheelMatchupInfo();
+  if(wheelFullscreenResultsActive) hideWheelResultsView();
+  updateWheelCompleteDrawButtonVisibility();
   if(drawStyle === "wheel"){
     if(wheelColorMode === "per-team") renderWheelPerTeamList();
     drawRenderWheel();
@@ -2398,6 +2426,8 @@ function drawReset(){
   $("drawWheelPick").style.display = "none";
   renderDrawShared();
   resetWheelMatchupInfo();
+  if(wheelFullscreenResultsActive) hideWheelResultsView();
+  updateWheelCompleteDrawButtonVisibility();
   if(drawStyle === "wheel") drawRenderWheel();
 }
 
@@ -2408,6 +2438,62 @@ function resetWheelMatchupInfo(){
   wheelMatchupRenderToken++;
   const box = $("wheelMatchupInfo");
   if(box) box.innerHTML = `<div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>`;
+}
+
+function isWheelDrawComplete(){
+  return drawStyle === "wheel" && !drawPot.length && drawPending === null && drawFixtures.length > 0;
+}
+
+// Shows/hides the "Complete Draw" button (only meaningful — and only
+// visible — inside Full Screen Mode) once every team's been paired off, and
+// re-sizes the wheel afterwards since the button adds a little height under
+// the spin button.
+function updateWheelCompleteDrawButtonVisibility(){
+  const btn = $("wheelCompleteDrawBtn");
+  if(!btn) return;
+  const show = isWheelDrawComplete() && wheelFullscreenActive;
+  const wasShown = btn.style.display !== "none";
+  btn.style.display = show ? "inline-block" : "none";
+  if(show !== wasShown && wheelFullscreenActive && !wheelFullscreenResultsActive){
+    setWheelSize(computeFullscreenWheelSize());
+  }
+}
+
+let wheelFullscreenResultsActive = false;
+
+// Full-screen "reveal" view: every drawn fixture at once, laid out in as
+// many columns as comfortably fit (CSS multi-column flow rather than a fixed
+// column count, so it adapts to however many fixtures there are and however
+// wide the screen is) instead of the single scrolling list used mid-draw.
+function showWheelResultsView(){
+  wheelFullscreenResultsActive = true;
+  $("wheelFullscreenColumns").style.display = "none";
+
+  const titleEl = $("wheelFullscreenResultsTitle");
+  const titleText = $("wheelTitleInput").value.trim();
+  if(titleText){
+    titleEl.textContent = titleText;
+    titleEl.style.display = "block";
+  }else{
+    titleEl.style.display = "none";
+  }
+
+  const teamLogoImg = (name) => `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(name)}">`;
+  $("wheelFullscreenResultsGrid").innerHTML = drawFixtures.map((f,i) => `
+    <div class="draw-fixture-row">
+      <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
+      <span class="num">Fixture ${i+1}</span>
+      <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
+    </div>`).join("");
+
+  $("wheelFullscreenResultsView").style.display = "flex";
+}
+
+function hideWheelResultsView(){
+  wheelFullscreenResultsActive = false;
+  $("wheelFullscreenResultsView").style.display = "none";
+  $("wheelFullscreenColumns").style.display = "flex";
+  setWheelSize(computeFullscreenWheelSize());
 }
 
 
@@ -3031,8 +3117,9 @@ function enterWheelFullscreen(){
     titleEl.style.display = "none";
   }
 
-  // Competition logo bar — set before measuring the wheel size below, so its
-  // height (if shown) is already factored into how much room is left.
+  // Competition logo — floats over the top of the screen (fixed position,
+  // out of the normal layout flow) rather than reserving space, so it never
+  // pushes the wheel/matchup panel down.
   const compLogoBar = $("wheelFullscreenCompLogo");
   const selectVal = $("wheelCompLogoSelect").value;
   const compLogoPath = selectVal === "__custom__" ? $("wheelCompLogoCustom").value.trim() : selectVal;
@@ -3049,6 +3136,7 @@ function enterWheelFullscreen(){
   reparentToFullscreen($("drawFixtureList"), rightSlot);
 
   $("wheelFullscreenOverlay").style.display = "flex";
+  updateWheelCompleteDrawButtonVisibility();
 
   wheelFsPrevSize = wheelSize;
   setWheelSize(computeFullscreenWheelSize());
@@ -3060,7 +3148,7 @@ function enterWheelFullscreen(){
 }
 
 window.addEventListener("resize", () => {
-  if(wheelFullscreenActive){
+  if(wheelFullscreenActive && !wheelFullscreenResultsActive){
     setWheelSize(computeFullscreenWheelSize());
   }
 });
@@ -3068,6 +3156,12 @@ window.addEventListener("resize", () => {
 function exitWheelFullscreen(){
   if(!wheelFullscreenActive) return;
   wheelFullscreenActive = false;
+
+  if(wheelFullscreenResultsActive){
+    wheelFullscreenResultsActive = false;
+    $("wheelFullscreenResultsView").style.display = "none";
+    $("wheelFullscreenColumns").style.display = "flex";
+  }
 
   wheelFsOriginalPositions.forEach(({ el, parent, nextSibling }) => {
     parent.insertBefore(el, nextSibling);
@@ -3203,6 +3297,7 @@ function drawSpin(){
 
     drawSpinning = false;
     if(drawPot.length) $("drawSpinBtn").disabled = false;
+    updateWheelCompleteDrawButtonVisibility();
   }, 4000);
 }
 
@@ -3255,6 +3350,8 @@ $("wheelCompLogoSelect").addEventListener("change", (e) => {
   $("wheelCompLogoCustom").style.display = e.target.value === "__custom__" ? "" : "none";
 });
 $("wheelFullscreenBtn").addEventListener("click", enterWheelFullscreen);
+$("wheelCompleteDrawBtn").addEventListener("click", showWheelResultsView);
+$("wheelBackToWheelBtn").addEventListener("click", hideWheelResultsView);
 $("wheelExitFullscreenBtn").addEventListener("click", () => {
   if(document.fullscreenElement) document.exitFullscreen();
   else exitWheelFullscreen();
