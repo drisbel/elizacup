@@ -6,6 +6,7 @@
 <title>Eliza Cup — Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
     --pitch:#28427c;
@@ -251,6 +252,49 @@
     font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);
     text-transform:uppercase;margin:0 0 18px;
   }
+  .wheel-matchup-info{
+    margin-bottom:28px;padding-bottom:24px;border-bottom:2px solid var(--line);
+  }
+  .wheel-matchup-placeholder{color:var(--muted);font-size:13.5px;}
+  .wheel-matchup-teams{
+    display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:18px;
+  }
+  .wheel-matchup-team{flex:1;max-width:200px;text-align:center;}
+  .wheel-matchup-team img{width:56px;height:56px;object-fit:contain;margin-bottom:8px;}
+  .wheel-matchup-team .wm-name{
+    font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
+    color:var(--ink);line-height:1.15;
+  }
+  .wheel-matchup-team .wm-division{
+    display:inline-block;margin-top:6px;padding:2px 10px;border-radius:20px;
+    color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  }
+  .wheel-matchup-team .wm-position{font-size:12.5px;color:var(--muted);margin-top:4px;}
+  .wheel-matchup-vs{
+    font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--muted);
+    flex-shrink:0;
+  }
+  .wheel-matchup-h2h-title{
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--muted);margin-bottom:8px;
+  }
+  .wheel-matchup-h2h-row{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);
+  }
+  .wheel-matchup-h2h-row:last-child{border-bottom:none;}
+  .wheel-matchup-h2h-empty{color:var(--muted);font-size:13px;}
+  .wheel-fullscreen-right #drawFixtureList .draw-fixture-row{
+    padding:16px 20px;margin-bottom:12px;
+  }
+  .wheel-fullscreen-right #drawFixtureList .team{font-size:20px;gap:12px;}
+  .wheel-fullscreen-right #drawFixtureList .draw-fixture-logo{width:38px;height:38px;}
+  .wheel-fullscreen-right #drawFixtureList .num{font-size:13px;}
+  .wheel-fullscreen-title{
+    font-family:'Barlow Condensed',sans-serif;font-size:clamp(24px,4vw,44px);
+    color:#fff;text-transform:uppercase;letter-spacing:.6px;
+    text-align:center;margin:0;
+  }
   .wheel-fullscreen-exit{
     position:absolute;top:20px;right:20px;z-index:10000;
     background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);
@@ -296,6 +340,8 @@
   .draw-pick-box.pop{animation:drawPop 0.45s cubic-bezier(0.34,1.56,0.64,1);}
   .draw-pick-box .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px;}
   .draw-pick-box .name{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;}
+  .wheel-pick-inline .pick-body{display:flex;align-items:center;justify-content:center;gap:12px;}
+  .wheel-pick-inline .pick-body img{width:44px;height:44px;object-fit:contain;flex-shrink:0;}
   .draw-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line);border-radius:6px;
@@ -704,7 +750,6 @@
       <div class="form-actions" style="margin-bottom:6px;">
         <button class="btn btn-primary" id="drawStartBtn">Start Draw</button>
         <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
-        <button class="btn btn-ghost" id="drawCopyBtn">Copy Results</button>
       </div>
       <div class="hint" id="drawPotCount"></div>
 
@@ -723,24 +768,51 @@
       <!-- Wheel mode -->
       <div id="drawWheelMode" style="display:none;">
         <div class="field">
-          <label>Wheel size <span class="hint" style="display:inline;">(use Stream for screen-sharing)</span></label>
-          <div class="style-toggle" id="wheelSizeToggle">
-            <button type="button" data-size="340" class="active">Normal</button>
-            <button type="button" data-size="500">Large</button>
-            <button type="button" data-size="700">Stream (XL)</button>
+          <label>Wheel colours</label>
+          <div class="style-toggle" id="wheelColorModeToggle">
+            <button type="button" data-mode="theme" class="active">Theme</button>
+            <button type="button" data-mode="custom">2–3 Colours</button>
+            <button type="button" data-mode="division">By Division</button>
+            <button type="button" data-mode="per-team">Per Team</button>
           </div>
         </div>
-        <div class="field">
-          <label>Wheel colours</label>
+
+        <div id="wheelThemeOptions" class="field">
           <div class="style-toggle" id="wheelThemeToggle">
             <button type="button" data-theme="brand" class="active">Brand</button>
             <button type="button" data-theme="vivid">Vivid</button>
             <button type="button" data-theme="mono">Monochrome</button>
           </div>
         </div>
+
+        <div id="wheelCustomOptions" class="field" style="display:none;">
+          <div class="hint" style="display:block;margin-bottom:8px;">Choose 2 or 3 colours to alternate around the wheel.</div>
+          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+            <input type="color" id="wheelCustomColor1" value="#28427c">
+            <input type="color" id="wheelCustomColor2" value="#bc3532">
+            <input type="color" id="wheelCustomColor3" value="#6aa84f" style="display:none;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+              <input type="checkbox" id="wheelCustomUse3"> Use 3rd colour
+            </label>
+          </div>
+        </div>
+
+        <div id="wheelDivisionOptions" class="field" style="display:none;">
+          <div class="hint" style="display:block;">Colours each team by its 26/27 division (matched by exact name against 26/27 Leagues). Unmatched teams use a neutral grey.</div>
+        </div>
+
+        <div id="wheelPerTeamOptions" class="field" style="display:none;">
+          <div class="hint" style="display:block;margin-bottom:8px;">Set a colour for each team, then Start Draw.</div>
+          <div id="wheelPerTeamList"></div>
+        </div>
+
         <div class="checkbox-row">
           <input type="checkbox" id="wheelShowLogos">
           <label for="wheelShowLogos">Show team logos on the wheel</label>
+        </div>
+        <div class="field">
+          <label for="wheelTitleInput">Wheel title <span class="hint" style="display:inline;">(shown at top of Full Screen Mode)</span></label>
+          <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
         </div>
         <div style="text-align:center;margin-bottom:14px;">
           <button type="button" class="btn btn-ghost" id="wheelFullscreenBtn">⛶ Full Screen Mode</button>
@@ -752,10 +824,12 @@
         <div style="text-align:center;margin-bottom:10px;">
           <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
         </div>
-        <div class="draw-pick-box" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
+        <div class="draw-pick-box wheel-pick-inline" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
           <div class="kicker">Just drawn</div>
-          <img id="drawWheelPickLogo" alt="" style="width:52px;height:52px;object-fit:contain;display:none;margin:0 auto 8px;">
-          <div class="name" id="drawWheelPickName"></div>
+          <div class="pick-body">
+            <img id="drawWheelPickLogo" alt="" style="display:none;">
+            <div class="name" id="drawWheelPickName"></div>
+          </div>
         </div>
       </div>
 
@@ -770,8 +844,13 @@
 
 <div id="wheelFullscreenOverlay" class="wheel-fullscreen-overlay" style="display:none;">
   <button type="button" id="wheelExitFullscreenBtn" class="wheel-fullscreen-exit">✕ Exit Full Screen</button>
-  <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
+  <div class="wheel-fullscreen-left" id="wheelFullscreenLeft">
+    <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
+  </div>
   <div class="wheel-fullscreen-right">
+    <div id="wheelMatchupInfo" class="wheel-matchup-info">
+      <div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>
+    </div>
     <h2>Fixtures</h2>
     <div id="wheelFullscreenFixtureSlot"></div>
   </div>
@@ -2241,7 +2320,12 @@ function drawStart(){
   $("drawNextBtn").disabled = false;
   $("drawSpinBtn").disabled = false;
   renderDrawShared();
-  if(drawStyle === "wheel") drawRenderWheel();
+  resetWheelMatchupInfo();
+  if(drawStyle === "wheel"){
+    if(wheelColorMode === "per-team") renderWheelPerTeamList();
+    drawRenderWheel();
+    loadWheelMatchupData(); // pre-warm so the first spin's matchup info appears instantly
+  }
 }
 
 function drawReset(){
@@ -2254,19 +2338,19 @@ function drawReset(){
   $("drawCurrentPick").style.display = "none";
   $("drawWheelPick").style.display = "none";
   renderDrawShared();
+  resetWheelMatchupInfo();
   if(drawStyle === "wheel") drawRenderWheel();
 }
 
-function drawCopyResults(){
-  let text = drawFixtures.map(f => `${f.home} vs ${f.away}`).join("\n");
-  if(drawPending) text += (text ? "\n" : "") + `${drawPending} vs (pending)`;
-  if(!text){ alert("No results to copy yet."); return; }
-  navigator.clipboard.writeText(text).then(()=>{
-    alert("Results copied — paste into your fixtures sheet.");
-  }).catch(()=>{
-    alert("Couldn't copy automatically. Select and copy the results manually.");
-  });
+// Reverts the fullscreen matchup-info panel to its empty placeholder and
+// invalidates any in-flight matchup fetch so it can't paint stale results
+// into a freshly-reset panel.
+function resetWheelMatchupInfo(){
+  wheelMatchupRenderToken++;
+  const box = $("wheelMatchupInfo");
+  if(box) box.innerHTML = `<div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>`;
 }
+
 
 // Records one pick (shared by both List's "Draw Next Team" and Wheel's spin
 // landing) — pairs it with a pending team, or holds it as pending if it's the
@@ -2348,6 +2432,185 @@ function teamLogoSlug(name){
     .replace(/^-+|-+$/g, "");
 }
 
+// ---------- Wheel: matchup info (division / position / head-to-head) ----------
+// Pulls live standings + fixtures straight from the same 25/26 season sheet the
+// main site reads (SEASON_2526_SHEET_ID), for the 5 round-robin divisions only
+// (D1/2A/2B/3A/3B — same shared column layout as the main site's parseStandings/
+// parseFixtures). FA Cup, ECL, Roddy and past-seasons archives use different sheet
+// layouts (brackets / groups / fixed historical blocks) and aren't covered here —
+// a team not found in these 5 tabs just shows as "Division: —" rather than erroring.
+const WHEEL_MATCHUP_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
+const WHEEL_MATCHUP_DIVISIONS = [
+  { id: "d1",  label: "D1",  gid: "1032423540", teams: 14, color: "#28427c" },
+  { id: "d2a", label: "D2A", gid: "1011989388", teams: 12, color: "#bc3532" },
+  { id: "d2b", label: "D2B", gid: "1025912239", teams: 12, color: "#990000" },
+  { id: "d3a", label: "D3A", gid: "352017161",  teams: 12, color: "#6aa84f" },
+  { id: "d3b", label: "D3B", gid: "1085366243", teams: 12, color: "#274e13" }
+];
+const WHEEL_MATCHUP_HEADER_ROW = 3;
+const WHEEL_MATCHUP_DATA_START = 4;
+const WHEEL_MATCHUP_COL = { TEAM:3, PTS:8, W:9, D:10, L:11 };
+const WHEEL_MATCHUP_FIXTURE_COL_START = 33;
+const WHEEL_MATCHUP_FIXTURE_COL_END = 43;
+const WHEEL_MATCHUP_ROLE_TOKENS = new Set(["GK","DEF","MID","ATT","VC","C"]);
+
+function wheelCell(row, i){ return (row[i] || "").toString().trim(); }
+
+// { TEAMNAME: { division, pos, pts, w, d, l } }
+let wheelMatchupIndex = {};
+// [ { home, away, homeScore, awayScore, division } ] — played matches only
+let wheelMatchupFixtures = [];
+let wheelMatchupLoaded = false;
+let wheelMatchupLoading = false;
+
+function wheelMatchupCsvUrl(gid){
+  return `https://docs.google.com/spreadsheets/d/${WHEEL_MATCHUP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}&cachebust=` + Date.now();
+}
+
+function parseWheelDivisionRows(div, rows){
+  const knownTeams = new Set();
+  const tableEnd = WHEEL_MATCHUP_DATA_START + div.teams - 1;
+  for(let r = WHEEL_MATCHUP_DATA_START; r <= tableEnd && r < rows.length; r++){
+    const row = rows[r];
+    const team = wheelCell(row, WHEEL_MATCHUP_COL.TEAM);
+    if(!team) continue;
+    knownTeams.add(team.toUpperCase());
+  }
+  // Standings, sorted by points to derive ladder position (same as main site).
+  const standings = [];
+  for(let r = WHEEL_MATCHUP_DATA_START; r <= tableEnd && r < rows.length; r++){
+    const row = rows[r];
+    const team = wheelCell(row, WHEEL_MATCHUP_COL.TEAM);
+    if(!team) continue;
+    standings.push({
+      team,
+      pts: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.PTS),10) || 0,
+      w: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.W),10) || 0,
+      d: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.D),10) || 0,
+      l: parseInt(wheelCell(row, WHEEL_MATCHUP_COL.L),10) || 0
+    });
+  }
+  standings.sort((a,b) => b.pts - a.pts);
+  standings.forEach((s,i) => {
+    wheelMatchupIndex[s.team.toUpperCase()] = {
+      division: div.label, pos: i+1, pts: s.pts, w: s.w, d: s.d, l: s.l
+    };
+  });
+
+  // Fixtures — same fixture-window scanning approach as the main site, minus
+  // the D2/D3 cross-conference playoff special-casing (out of scope here).
+  let currentRound = null;
+  for(let r = 0; r < rows.length; r++){
+    const row = rows[r];
+    const windowCells = row.slice(WHEEL_MATCHUP_FIXTURE_COL_START, WHEEL_MATCHUP_FIXTURE_COL_END + 1);
+    const nonEmpty = windowCells.map(c => (c||"").toString().trim()).filter(c => c !== "");
+    if(nonEmpty.length === 0) continue;
+
+    const roundCell = nonEmpty.find(c => /^ROUND\s*\d+$/i.test(c));
+    if(roundCell){ currentRound = roundCell.match(/\d+/)[0]; continue; }
+    if(currentRound === null) continue;
+    if(nonEmpty.some(c => WHEEL_MATCHUP_ROLE_TOKENS.has(c.toUpperCase()))) continue;
+
+    const teamHits = [];
+    nonEmpty.forEach((c,i) => { if(knownTeams.has(c.toUpperCase())) teamHits.push({name:c, idx:i}); });
+    if(teamHits.length < 2) continue;
+
+    const [homeHit, awayHit] = teamHits;
+    const between = nonEmpty.slice(homeHit.idx+1, awayHit.idx).filter(c => /^\d{1,4}$/.test(c));
+    const homeScore = between.length >= 1 ? parseInt(between[0],10) : null;
+    const awayScore = between.length >= 2 ? parseInt(between[between.length-1],10) : null;
+    if(homeScore === null || awayScore === null) continue; // unplayed — no result to show in H2H
+
+    wheelMatchupFixtures.push({ home: homeHit.name, away: awayHit.name, homeScore, awayScore, division: div.label });
+  }
+}
+
+// Fetches and parses all 5 division tabs once per page load (cachebust keeps
+// each session fresh). Safe to call repeatedly — subsequent calls are no-ops
+// while already loaded/loading.
+async function loadWheelMatchupData(){
+  if(wheelMatchupLoaded || wheelMatchupLoading) return;
+  wheelMatchupLoading = true;
+  try{
+    await Promise.all(WHEEL_MATCHUP_DIVISIONS.map(async div => {
+      const res = await fetch(wheelMatchupCsvUrl(div.gid));
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
+      parseWheelDivisionRows(div, rows);
+    }));
+    wheelMatchupLoaded = true;
+  }catch(err){
+    console.error("Failed to load wheel matchup data:", err);
+  }finally{
+    wheelMatchupLoading = false;
+  }
+}
+
+function getWheelMatchupTeamInfo(team){
+  return wheelMatchupIndex[(team||"").trim().toUpperCase()] || null;
+}
+
+function getWheelMatchupH2H(teamA, teamB){
+  const a = (teamA||"").trim().toUpperCase();
+  const b = (teamB||"").trim().toUpperCase();
+  return wheelMatchupFixtures.filter(f => {
+    const h = f.home.toUpperCase(), aw = f.away.toUpperCase();
+    return (h === a && aw === b) || (h === b && aw === a);
+  });
+}
+
+function wheelMatchupTeamBlockHtml(team){
+  const info = getWheelMatchupTeamInfo(team);
+  const divColor = info ? (WHEEL_MATCHUP_DIVISIONS.find(d => d.label === info.division)||{}).color : null;
+  return `
+    <div class="wheel-matchup-team">
+      <img src="logo/${teamLogoSlug(team)}.png" alt="" onerror="this.style.display='none';">
+      <div class="wm-name">${escapeHtml(team)}</div>
+      ${info ? `<div class="wm-division" style="background:${divColor||"#8a8f98"};">${escapeHtml(info.division)}</div>
+      <div class="wm-position">Pos ${info.pos} · ${info.pts} pts (${info.w}-${info.d}-${info.l})</div>` : `<div class="wm-position">Division not found</div>`}
+    </div>`;
+}
+
+// Renders the top matchup-info panel for the fixture that was just completed
+// (both teams now known). Fetches live matchup data on first use if it isn't
+// already loaded/loading, then re-renders once it resolves. A render token
+// guards against a slow first fetch resolving after a later pick has already
+// repainted the panel for a different pair of teams.
+let wheelMatchupRenderToken = 0;
+async function renderWheelMatchupInfo(teamA, teamB){
+  const myToken = ++wheelMatchupRenderToken;
+  const box = $("wheelMatchupInfo");
+  box.innerHTML = `
+    <div class="wheel-matchup-teams">
+      ${wheelMatchupTeamBlockHtml(teamA)}
+      <div class="wheel-matchup-vs">VS</div>
+      ${wheelMatchupTeamBlockHtml(teamB)}
+    </div>
+    <div class="wheel-matchup-h2h-title">Head to Head</div>
+    <div id="wheelMatchupH2H"><div class="wheel-matchup-h2h-empty">Loading…</div></div>`;
+
+  if(!wheelMatchupLoaded) await loadWheelMatchupData();
+  if(myToken !== wheelMatchupRenderToken) return; // a newer pick has already repainted this panel
+
+  const meetings = getWheelMatchupH2H(teamA, teamB);
+  const h2hEl = $("wheelMatchupH2H");
+  if(!h2hEl) return;
+  if(!meetings.length){
+    h2hEl.innerHTML = `<div class="wheel-matchup-h2h-empty">No previous meetings found this season (covers D1/2A/2B/3A/3B only).</div>`;
+  }else{
+    h2hEl.innerHTML = meetings.map(f => `
+      <div class="wheel-matchup-h2h-row">
+        <span>${escapeHtml(f.division)}</span>
+        <span>${escapeHtml(f.home)} ${f.homeScore} – ${f.awayScore} ${escapeHtml(f.away)}</span>
+      </div>`).join("");
+  }
+
+  // Re-render team blocks too, in case matchup data just finished loading
+  // and standings info wasn't available at the initial paint above.
+  const teamsEl = box.querySelector(".wheel-matchup-teams");
+  if(teamsEl) teamsEl.innerHTML = wheelMatchupTeamBlockHtml(teamA) + `<div class="wheel-matchup-vs">VS</div>` + wheelMatchupTeamBlockHtml(teamB);
+}
+
 const WHEEL_THEMES = {
   brand: ["#28427c","#3a5a9e","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"],
   vivid: ["#e63946","#f4a261","#2a9d8f","#264653","#e9c46a","#8338ec","#3a86ff","#fb5607","#06d6a0","#ef476f"],
@@ -2356,6 +2619,101 @@ const WHEEL_THEMES = {
 let wheelSize = 340;
 let wheelTheme = "brand";
 let wheelShowLogos = false;
+let wheelTitle = "";
+
+// Wheel colour customisation — four modes:
+//  "theme"    — one of the WHEEL_THEMES palettes above, cycled by slice index
+//  "custom"   — 2 or 3 admin-picked colours, alternated around the wheel
+//  "division" — coloured by each team's 26/27 division (matched against
+//               wmdTeams by exact, case-insensitive name), falling back to a
+//               neutral grey for any team not found in whats-my-division.json
+//  "per-team" — an individual colour chosen per team, kept in wheelPerTeamColors
+let wheelColorMode = "theme";
+let wheelCustomColors = ["#28427c", "#bc3532", "#6aa84f"];
+let wheelCustomUse3 = false;
+let wheelPerTeamColors = {}; // { teamName: "#hex" }
+
+// Same division brand colours used elsewhere on the site (D1/2A/2B/3A/3B).
+const WHEEL_DIVISION_COLORS = {
+  "D1": "#28427c",
+  "2A": "#bc3532",
+  "2B": "#990000",
+  "3A": "#6aa84f",
+  "3B": "#274e13"
+};
+const WHEEL_DIVISION_FALLBACK = "#8a8f98";
+
+function getTeamDivision(team){
+  const norm = (team||"").trim().toLowerCase();
+  const match = wmdTeams.find(t => (t.team||"").trim().toLowerCase() === norm);
+  return match ? match.division : null;
+}
+
+// Resolves the fill colour for one wheel slice according to the current
+// colour mode. Always falls back to the brand theme so the wheel never ends
+// up blank if a mode-specific colour is missing (e.g. a team with no
+// per-team colour set yet, or no division match).
+function getWheelSliceColor(team, index){
+  if(wheelColorMode === "custom"){
+    const palette = wheelCustomUse3 ? wheelCustomColors.slice(0,3) : wheelCustomColors.slice(0,2);
+    return palette[index % palette.length];
+  }
+  if(wheelColorMode === "division"){
+    const div = getTeamDivision(team);
+    return (div && WHEEL_DIVISION_COLORS[div]) || WHEEL_DIVISION_FALLBACK;
+  }
+  if(wheelColorMode === "per-team"){
+    return wheelPerTeamColors[team] || WHEEL_THEMES.brand[index % WHEEL_THEMES.brand.length];
+  }
+  const colors = WHEEL_THEMES[wheelTheme] || WHEEL_THEMES.brand;
+  return colors[index % colors.length];
+}
+
+function setWheelColorMode(mode){
+  wheelColorMode = mode;
+  document.querySelectorAll("#wheelColorModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+  $("wheelThemeOptions").style.display = mode === "theme" ? "" : "none";
+  $("wheelCustomOptions").style.display = mode === "custom" ? "" : "none";
+  $("wheelDivisionOptions").style.display = mode === "division" ? "" : "none";
+  $("wheelPerTeamOptions").style.display = mode === "per-team" ? "" : "none";
+  if(mode === "per-team") renderWheelPerTeamList();
+  drawRenderWheel();
+}
+
+function setWheelCustomColors(){
+  wheelCustomColors[0] = $("wheelCustomColor1").value;
+  wheelCustomColors[1] = $("wheelCustomColor2").value;
+  wheelCustomColors[2] = $("wheelCustomColor3").value;
+  wheelCustomUse3 = $("wheelCustomUse3").checked;
+  drawRenderWheel();
+}
+
+// Builds the per-team colour-picker list from the currently entered team
+// list (not just whatever remains in drawPot), so colours can be set before
+// Start Draw is clicked and stay assigned to the right team throughout.
+function renderWheelPerTeamList(){
+  const teams = $("drawTeamInput").value.split("\n").map(t=>t.trim()).filter(Boolean);
+  const container = $("wheelPerTeamList");
+  if(!teams.length){
+    container.innerHTML = `<div class="hint" style="display:block;">Enter your team list above first.</div>`;
+    return;
+  }
+  container.innerHTML = teams.map((team, i) => {
+    const color = wheelPerTeamColors[team] || WHEEL_THEMES.brand[i % WHEEL_THEMES.brand.length];
+    wheelPerTeamColors[team] = color; // seed with a default so every team always has one
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+        <input type="color" data-per-team-color="${escapeHtml(team)}" value="${color}">
+        <span>${escapeHtml(team)}</span>
+      </div>`;
+  }).join("");
+  container.querySelectorAll("[data-per-team-color]").forEach(input => {
+    input.addEventListener("input", (e) => {
+      wheelPerTeamColors[e.target.getAttribute("data-per-team-color")] = e.target.value;
+      drawRenderWheel();
+    });
+  });
+}
 
 // Canvas logo images load asynchronously — cached per team so a re-render
 // (e.g. after each spin) doesn't reload the same image repeatedly. Falls
@@ -2387,7 +2745,6 @@ function setWheelSize(size){
   pointer.style.borderRightWidth = (14*scale) + "px";
   pointer.style.borderTopWidth = (22*scale) + "px";
   pointer.style.top = (-6*scale) + "px";
-  document.querySelectorAll("#wheelSizeToggle button").forEach(b => b.classList.toggle("active", parseInt(b.dataset.size,10) === size));
   drawRenderWheel();
 }
 
@@ -2417,15 +2774,41 @@ function reparentToFullscreen(el, target){
 // Sizes the wheel to whatever room is actually available in the left column
 // — fixes it being cut off / needing horizontal scroll on smaller screens or
 // shared windows, since a fixed pixel size doesn't adapt to real available
-// space the way this does. Reserves room below the wheel for the spin button
-// and the "Just drawn" box so the wheel itself never needs to move once a
-// pick is made.
+// space the way this does. Reserves room below the wheel for the title (if
+// shown), the spin button, and the "Just drawn" box — measuring their real
+// rendered heights rather than guessing, and measuring the pick box's height
+// while it's still hidden (before any team has been drawn) so the wheel is
+// already sized correctly for when it appears, instead of the box popping in
+// after the first spin and pushing the page into a scroll.
 function computeFullscreenWheelSize(){
   const left = $("wheelFullscreenLeft");
   const rect = left.getBoundingClientRect();
-  const reservedForControls = 190; // spin button + gaps + pick box
+  const leftStyle = getComputedStyle(left);
+  const paddingV = parseFloat(leftStyle.paddingTop) + parseFloat(leftStyle.paddingBottom);
+  const gap = parseFloat(leftStyle.rowGap || leftStyle.gap) || 0;
+
+  const titleEl = $("wheelFullscreenTitle");
+  const titleShown = titleEl.style.display !== "none";
+  const titleH = titleShown ? titleEl.getBoundingClientRect().height : 0;
+
+  const spinWrap = $("drawSpinBtn").parentElement;
+  const spinH = spinWrap.getBoundingClientRect().height;
+
+  const pickBox = $("drawWheelPick");
+  const prevDisplay = pickBox.style.display;
+  pickBox.style.visibility = "hidden";
+  pickBox.style.display = "block";
+  const pickH = pickBox.getBoundingClientRect().height;
+  pickBox.style.display = prevDisplay;
+  pickBox.style.visibility = "";
+
+  // Gaps between visible flex children: wheel↔spin and spin↔pick are always
+  // present; title↔wheel only counts if the title is actually shown.
+  const gapCount = 2 + (titleShown ? 1 : 0);
+  const reserved = paddingV + titleH + spinH + pickH + gap*gapCount;
+
   const availW = rect.width - 48;
-  const availH = rect.height - reservedForControls;
+  const availH = rect.height - reserved;
   return Math.max(220, Math.floor(Math.min(availW, availH, 800)));
 }
 
@@ -2436,6 +2819,15 @@ function enterWheelFullscreen(){
 
   const left = $("wheelFullscreenLeft");
   const rightSlot = $("wheelFullscreenFixtureSlot");
+
+  const titleEl = $("wheelFullscreenTitle");
+  const titleText = $("wheelTitleInput").value.trim();
+  if(titleText){
+    titleEl.textContent = titleText;
+    titleEl.style.display = "block";
+  }else{
+    titleEl.style.display = "none";
+  }
 
   reparentToFullscreen($("wheelWrap"), left);
   reparentToFullscreen($("drawSpinBtn").parentElement, left);
@@ -2495,7 +2887,6 @@ function drawRenderWheel(){
     return;
   }
 
-  const colors = WHEEL_THEMES[wheelTheme] || WHEEL_THEMES.brand;
   const anglePerSlice = (Math.PI*2) / n;
 
   teams.forEach((team, i) => {
@@ -2506,7 +2897,7 @@ function drawRenderWheel(){
     ctx.moveTo(center, center);
     ctx.arc(center, center, radius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillStyle = getWheelSliceColor(team, i);
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
@@ -2579,11 +2970,19 @@ function drawSpin(){
 
   setTimeout(() => {
     const picked = drawPot.splice(winningIndex, 1)[0];
+    const pendingBefore = drawPending;
     drawRecordPick(picked);
 
     // Always show the result once the spin lands, every time.
     showDrawPick("drawWheelPick", "drawWheelPickName", picked, "drawWheelPickLogo");
     renderDrawShared();
+
+    // This pick completed a fixture pair (pendingBefore had a team waiting,
+    // and drawRecordPick just cleared it) — show matchup info for that pair.
+    if(pendingBefore !== null && drawPending === null){
+      const justCompleted = drawFixtures[drawFixtures.length - 1];
+      renderWheelMatchupInfo(justCompleted.home, justCompleted.away);
+    }
 
     // Reset instantly (no transition) and redraw with the remaining, smaller pot
     canvas.style.transition = "none";
@@ -2601,7 +3000,10 @@ function setDrawStyle(style){
   $("drawStyleWheelBtn").classList.toggle("active", style === "wheel");
   $("drawListMode").style.display = style === "list" ? "" : "none";
   $("drawWheelMode").style.display = style === "wheel" ? "" : "none";
-  if(style === "wheel") drawRenderWheel();
+  if(style === "wheel"){
+    drawRenderWheel();
+    loadWheelMatchupData();
+  }
 }
 
 // ---------- Wire up ----------
@@ -2618,16 +3020,24 @@ $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
 $("savePvBtn").addEventListener("click", savePageVisibility);
 $("drawStartBtn").addEventListener("click", drawStart);
 $("drawResetBtn").addEventListener("click", drawReset);
-$("drawCopyBtn").addEventListener("click", drawCopyResults);
 $("drawNextBtn").addEventListener("click", drawNext);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 $("drawStyleListBtn").addEventListener("click", () => setDrawStyle("list"));
 $("drawStyleWheelBtn").addEventListener("click", () => setDrawStyle("wheel"));
-document.querySelectorAll("#wheelSizeToggle button").forEach(btn => {
-  btn.addEventListener("click", () => setWheelSize(parseInt(btn.getAttribute("data-size"), 10)));
-});
 document.querySelectorAll("#wheelThemeToggle button").forEach(btn => {
   btn.addEventListener("click", () => setWheelTheme(btn.getAttribute("data-theme")));
+});
+document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
+  btn.addEventListener("click", () => setWheelColorMode(btn.getAttribute("data-mode")));
+});
+["wheelCustomColor1","wheelCustomColor2","wheelCustomColor3","wheelCustomUse3"].forEach(id => {
+  $(id).addEventListener("input", setWheelCustomColors);
+});
+$("wheelCustomUse3").addEventListener("change", (e) => {
+  $("wheelCustomColor3").style.display = e.target.checked ? "" : "none";
+});
+$("drawTeamInput").addEventListener("input", () => {
+  if(wheelColorMode === "per-team") renderWheelPerTeamList();
 });
 $("wheelShowLogos").addEventListener("change", (e) => {
   wheelShowLogos = e.target.checked;
