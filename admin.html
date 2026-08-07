@@ -245,8 +245,15 @@
     padding:32px 24px;overflow:auto;gap:16px;min-width:0;
   }
   .wheel-fullscreen-right{
-    flex:1;background:#fff;padding:40px;overflow:auto;
+    flex:1;background:#fff;
     border-left:4px solid var(--pitch);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .wheel-fullscreen-header{
+    flex-shrink:0;padding:40px 40px 0;
+  }
+  .wheel-fullscreen-fixtures-pane{
+    flex:1;overflow-y:auto;padding:24px 40px 40px;
   }
   .wheel-fullscreen-right h2{
     font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);
@@ -273,6 +280,29 @@
   .wheel-matchup-vs{
     font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--muted);
     flex-shrink:0;
+  }
+  .wheel-matchup-stats{
+    display:flex;align-items:stretch;justify-content:center;gap:20px;margin-bottom:16px;
+  }
+  .wheel-stat-card{
+    flex:1;max-width:200px;position:relative;
+    background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:10px 14px;text-align:center;
+  }
+  .wheel-stat-card.narrow{flex:0 0 auto;min-width:74px;max-width:90px;}
+  .wheel-stat-card.highlight{border-color:#1e7e34;background:#eaf7ee;}
+  .wheel-stat-card .wsc-label{
+    font-family:'Barlow',sans-serif;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;
+  }
+  .wheel-stat-card .wsc-value{
+    font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--ink);
+  }
+  .wheel-stat-card.highlight .wsc-value{color:#1e7e34;}
+  .wheel-stat-card .wsc-streak{
+    position:absolute;top:-10px;right:-8px;
+    background:#ffdd00;color:#111;font-size:11px;font-weight:700;
+    padding:2px 6px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.18);
   }
   .wheel-matchup-h2h-title{
     font-family:'Barlow Condensed',sans-serif;font-size:14px;text-transform:uppercase;
@@ -800,7 +830,7 @@
         </div>
 
         <div id="wheelDivisionOptions" class="field" style="display:none;">
-          <div class="hint" style="display:block;">Colours each team by its 26/27 division (matched by exact name against 26/27 Leagues). Unmatched teams use a neutral grey.</div>
+          <div class="hint" style="display:block;">Colours each team by its current division, read from the Roddy leaderboard — the same source as the matchup info panel. This follows whichever season the site is currently pointed at, so it'll pick up 26/27 automatically once that transition happens. Unmatched teams use a neutral grey.</div>
         </div>
 
         <div id="wheelPerTeamOptions" class="field" style="display:none;">
@@ -848,12 +878,16 @@
   <button type="button" id="wheelExitFullscreenBtn" class="wheel-fullscreen-exit">✕ Exit Full Screen</button>
   <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
   <div class="wheel-fullscreen-right">
-    <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
-    <div id="wheelMatchupInfo" class="wheel-matchup-info">
-      <div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>
+    <div class="wheel-fullscreen-header">
+      <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
+      <div id="wheelMatchupInfo" class="wheel-matchup-info">
+        <div class="wheel-matchup-placeholder">Matchup details will appear here once a fixture is drawn.</div>
+      </div>
     </div>
-    <h2>Fixtures</h2>
-    <div id="wheelFullscreenFixtureSlot"></div>
+    <div class="wheel-fullscreen-fixtures-pane" id="wheelFullscreenFixturesPane">
+      <h2>Fixtures</h2>
+      <div id="wheelFullscreenFixtureSlot"></div>
+    </div>
   </div>
 </div>
 
@@ -2379,7 +2413,15 @@ function showDrawPick(boxId, nameId, name, logoImgId){
   $(nameId).textContent = name;
   if(logoImgId){
     const logoEl = $(logoImgId);
-    logoEl.onerror = () => { logoEl.style.display = "none"; };
+    logoEl.dataset.fallback = "";
+    logoEl.onerror = () => {
+      if(!logoEl.dataset.fallback){
+        logoEl.dataset.fallback = "1";
+        logoEl.src = teamPlaceholderLogoDataUri(name);
+      }else{
+        logoEl.style.display = "none";
+      }
+    };
     logoEl.src = `logo/${teamLogoSlug(name)}.png`;
     logoEl.style.display = "block";
   }
@@ -2394,13 +2436,22 @@ function renderDrawShared(){
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
     : (drawFixtures.length ? "Draw complete." : "");
 
-  const teamLogoImg = (name) => `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="draw-fixture-logo" onerror="this.style.display='none';">`;
+  const teamLogoImg = (name) => `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(name)}">`;
   $("drawFixtureList").innerHTML = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
       <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
       <span class="num">Fixture ${i+1}</span>
       <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
     </div>`).join("");
+
+  // The matchup info panel is pinned at the top of the right column in Full
+  // Screen Mode, so the fixtures pane below it keeps its own scroll — always
+  // jump that pane to the bottom so the fixture just drawn stays in view
+  // rather than requiring a manual scroll.
+  if(wheelFullscreenActive){
+    const pane = $("wheelFullscreenFixturesPane");
+    if(pane) pane.scrollTop = pane.scrollHeight;
+  }
 }
 
 // ---------- Draw: List mode ----------
@@ -2433,6 +2484,35 @@ function teamLogoSlug(name){
     .replace(/^-+|-+$/g, "");
 }
 
+// Same generated-initials fallback used site-wide (index.html's
+// teamPlaceholderLogoDataUri) — ported here so the wheel, matchup panel,
+// pick box, and fixture list all fall back to it too instead of a broken
+// image or blank space when a team has no logo file yet.
+function teamInitials(name){
+  const words = (name||"").trim().split(/\s+/).filter(Boolean);
+  if(words.length === 0) return "?";
+  if(words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+const PLACEHOLDER_LOGO_COLORS = ["#28427c", "#bc3532", "#990000", "#6aa84f", "#274e13", "#0a2f85"];
+function placeholderColorForTeam(name){
+  let hash = 0;
+  for(let i=0; i<(name||"").length; i++){ hash = (hash * 31 + name.charCodeAt(i)) >>> 0; }
+  return PLACEHOLDER_LOGO_COLORS[hash % PLACEHOLDER_LOGO_COLORS.length];
+}
+function teamPlaceholderLogoDataUri(name){
+  const initials = teamInitials(name);
+  const bg = placeholderColorForTeam(name);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
+    `<rect width="100" height="100" rx="16" fill="${bg}"/>` +
+    `<text x="50" y="54" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#ffffff">${initials}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+function teamLogoOnErrorAttr(name){
+  return `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(name)}';}`;
+}
+
 // ---------- Wheel: matchup info (division / position / head-to-head) ----------
 // Division + position: read the same way Team Profile pages do — first look
 // the team up in the Roddy leaderboard (one tab, gives every team's current
@@ -2457,7 +2537,7 @@ const WHEEL_DIVISION_TABS = {
 const WHEEL_STANDINGS_DATA_START = 4;
 const WHEEL_STANDINGS_COL = { TEAM:3, PTS:8, W:9, D:10, L:11 };
 // Same layout as the main site's Team vs Team H2H tab (see index.html TVT_COL).
-const WHEEL_TVT_COL = { TEAM1:0, TEAM2:1, P:2, W:3, L:4, D:5 };
+const WHEEL_TVT_COL = { TEAM1:0, TEAM2:1, P:2, W:3, L:4, D:5, STREAK:6 };
 const WHEEL_TVT_MATCH_START = 7;
 const WHEEL_TVT_MATCH_WIDTH = 6;
 const WHEEL_TVT_MAX_MATCHES = 40;
@@ -2601,46 +2681,75 @@ async function getWheelH2HRecord(teamA, teamB){
   const upperA = (teamA||"").trim().toUpperCase();
   const upperB = (teamB||"").trim().toUpperCase();
 
-  for(let r=0; r<wheelStatsRows.length; r++){
-    const row = wheelStatsRows[r];
-    const t1 = wheelCell(row, WHEEL_TVT_COL.TEAM1);
-    if(!t1 || t1.toUpperCase() !== upperA) continue;
-    const t2 = wheelCell(row, WHEEL_TVT_COL.TEAM2);
-    if(!t2 || t2.toUpperCase() !== upperB) continue;
-
-    const matches = [];
-    for(let b=0; b<WHEEL_TVT_MAX_MATCHES; b++){
-      const base = WHEEL_TVT_MATCH_START + b*WHEEL_TVT_MATCH_WIDTH;
-      const comp = wheelCell(row, base);
-      const year = wheelCell(row, base+1);
-      if(!comp && !year) break;
-      matches.push({
-        comp, year,
-        round: wheelCell(row, base+2),
-        result: wheelCell(row, base+3),
-        for: wheelCell(row, base+4),
-        against: wheelCell(row, base+5)
-      });
+  // Finds the row for a given (team1, team2) pairing — used both for the main
+  // record (teamA's row) and, separately, just to check teamB's own STREAK
+  // flag against teamA, since a streak is directional (it lives on whichever
+  // team's row is currently on the run) and either team could be the one on it.
+  const findRow = (t1Upper, t2Upper) => {
+    for(let r=0; r<wheelStatsRows.length; r++){
+      const row = wheelStatsRows[r];
+      if(wheelCell(row, WHEEL_TVT_COL.TEAM1).toUpperCase() !== t1Upper) continue;
+      if(wheelCell(row, WHEEL_TVT_COL.TEAM2).toUpperCase() !== t2Upper) continue;
+      return row;
     }
+    return null;
+  };
 
-    return {
-      p: parseInt(wheelCell(row, WHEEL_TVT_COL.P),10) || 0,
-      w: parseInt(wheelCell(row, WHEEL_TVT_COL.W),10) || 0,
-      l: parseInt(wheelCell(row, WHEEL_TVT_COL.L),10) || 0,
-      d: parseInt(wheelCell(row, WHEEL_TVT_COL.D),10) || 0,
-      lastMatch: matches.length ? matches[matches.length-1] : null
-    };
+  const row = findRow(upperA, upperB);
+  if(!row) return null;
+
+  const matches = [];
+  for(let b=0; b<WHEEL_TVT_MAX_MATCHES; b++){
+    const base = WHEEL_TVT_MATCH_START + b*WHEEL_TVT_MATCH_WIDTH;
+    const comp = wheelCell(row, base);
+    const year = wheelCell(row, base+1);
+    if(!comp && !year) break;
+    matches.push({
+      comp, year,
+      round: wheelCell(row, base+2),
+      result: wheelCell(row, base+3),
+      for: wheelCell(row, base+4),
+      against: wheelCell(row, base+5)
+    });
   }
-  return null;
+
+  const reverseRow = findRow(upperB, upperA);
+
+  return {
+    p: parseInt(wheelCell(row, WHEEL_TVT_COL.P),10) || 0,
+    w: parseInt(wheelCell(row, WHEEL_TVT_COL.W),10) || 0,
+    l: parseInt(wheelCell(row, WHEEL_TVT_COL.L),10) || 0,
+    d: parseInt(wheelCell(row, WHEEL_TVT_COL.D),10) || 0,
+    lastMatch: matches.length ? matches[matches.length-1] : null,
+    streakA: !!wheelCell(row, WHEEL_TVT_COL.STREAK),
+    streakB: reverseRow ? !!wheelCell(reverseRow, WHEEL_TVT_COL.STREAK) : false
+  };
 }
 
 function wheelMatchupTeamBlockHtml(team, info){
   return `
     <div class="wheel-matchup-team">
-      <img src="logo/${teamLogoSlug(team)}.png" alt="" onerror="this.style.display='none';">
+      <img src="logo/${teamLogoSlug(team)}.png" alt="" onerror="${teamLogoOnErrorAttr(team)}">
       <div class="wm-name">${escapeHtml(team)}</div>
       ${info ? `<div class="wm-division" style="background:${info.divisionColor||"#8a8f98"};">${escapeHtml(info.divisionShort)}</div>
       <div class="wm-position">${info.pos ? `Pos ${info.pos} · ${info.pts} pts (${info.w}-${info.d}-${info.l})` : "Position unavailable"}</div>` : `<div class="wm-position">Division not found</div>`}
+    </div>`;
+}
+
+// Same card visual language as tvtStatBox on Team Profile pages (white card,
+// small uppercase label, bold Barlow Condensed value) — arranged here as
+// wins/draws/wins under the two team blocks instead of a generic P/W/L/D row,
+// per how the wheel matchup panel uses them. The leading team's win card is
+// highlighted green, and the same 🔥 streak badge used on Team Profile's
+// Head-to-Head vs Opponent section appears on whichever team currently has
+// an active head-to-head win streak against the other.
+function wheelStatCardHtml(value, label, opts){
+  opts = opts || {};
+  return `
+    <div class="wheel-stat-card${opts.highlight ? " highlight" : ""}${opts.narrow ? " narrow" : ""}">
+      ${opts.streak ? `<span class="wsc-streak">🔥</span>` : ""}
+      <div class="wsc-label">${label}</div>
+      <div class="wsc-value">${value}</div>
     </div>`;
 }
 
@@ -2648,15 +2757,20 @@ function wheelH2HHtml(teamA, teamB, record){
   if(!record || !record.p){
     return `<div class="wheel-matchup-h2h-empty">No previous meetings on record between these two teams.</div>`;
   }
+  const aLeads = record.w > record.l;
+  const bLeads = record.l > record.w;
   const last = record.lastMatch;
   const lastLine = last
     ? `${escapeHtml(last.comp)}${last.year ? " " + escapeHtml(last.year) : ""}${last.round ? ", " + escapeHtml(last.round) : ""} — ${escapeHtml(teamA)} ${escapeHtml(last.for)} – ${escapeHtml(last.against)} ${escapeHtml(teamB)}`
     : "Not available";
+
   return `
+    <div class="wheel-matchup-stats">
+      ${wheelStatCardHtml(record.w, "Wins", { highlight: aLeads, streak: record.streakA })}
+      ${wheelStatCardHtml(record.d, "Draws", { narrow: true })}
+      ${wheelStatCardHtml(record.l, "Wins", { highlight: bLeads, streak: record.streakB })}
+    </div>
     <div class="wheel-matchup-h2h-row"><span>Played</span><span>${record.p}</span></div>
-    <div class="wheel-matchup-h2h-row"><span>${escapeHtml(teamA)} wins</span><span>${record.w}</span></div>
-    <div class="wheel-matchup-h2h-row"><span>${escapeHtml(teamB)} wins</span><span>${record.l}</span></div>
-    <div class="wheel-matchup-h2h-row"><span>Draws</span><span>${record.d}</span></div>
     <div class="wheel-matchup-h2h-row"><span>Last meeting</span><span>${lastLine}</span></div>`;
 }
 
@@ -2703,9 +2817,11 @@ let wheelTitle = "";
 // Wheel colour customisation — four modes:
 //  "theme"    — one of the WHEEL_THEMES palettes above, cycled by slice index
 //  "custom"   — 2 or 3 admin-picked colours, alternated around the wheel
-//  "division" — coloured by each team's 26/27 division (matched against
-//               wmdTeams by exact, case-insensitive name), falling back to a
-//               neutral grey for any team not found in whats-my-division.json
+//  "division" — coloured by each team's current division, read from the
+//               Roddy leaderboard (same source as the matchup info panel).
+//               This tracks whichever season the main site is currently
+//               pointed at — no separate update needed when the season
+//               transitions, since it'll just start reading the new gid.
 //  "per-team" — an individual colour chosen per team, kept in wheelPerTeamColors
 let wheelColorMode = "theme";
 let wheelCustomColors = ["#28427c", "#bc3532", "#6aa84f"];
@@ -2722,10 +2838,13 @@ const WHEEL_DIVISION_COLORS = {
 };
 const WHEEL_DIVISION_FALLBACK = "#8a8f98";
 
+// Reads from wheelRoddyEntries (loaded by loadWheelRoddyData, same source
+// the matchup info panel uses) rather than the 26/27 Leagues data, so wheel
+// colours and matchup info always agree on which division a team is in.
 function getTeamDivision(team){
-  const norm = (team||"").trim().toLowerCase();
-  const match = wmdTeams.find(t => (t.team||"").trim().toLowerCase() === norm);
-  return match ? match.division : null;
+  const norm = (team||"").trim().toUpperCase();
+  const match = wheelRoddyEntries.find(e => e.team.toUpperCase() === norm);
+  return match ? match.divisionShort : null;
 }
 
 // Resolves the fill colour for one wheel slice according to the current
@@ -2756,6 +2875,9 @@ function setWheelColorMode(mode){
   $("wheelDivisionOptions").style.display = mode === "division" ? "" : "none";
   $("wheelPerTeamOptions").style.display = mode === "per-team" ? "" : "none";
   if(mode === "per-team") renderWheelPerTeamList();
+  if(mode === "division"){
+    loadWheelRoddyData().then(() => { if(wheelColorMode === "division") drawRenderWheel(); });
+  }
   drawRenderWheel();
 }
 
@@ -2796,16 +2918,21 @@ function renderWheelPerTeamList(){
 
 // Canvas logo images load asynchronously — cached per team so a re-render
 // (e.g. after each spin) doesn't reload the same image repeatedly. Falls
-// back to text-only for that slice if the logo file doesn't exist; no
-// placeholder graphic on the wheel itself, since a canvas-drawn placeholder
-// would need porting the full SVG generator from the main site for a fairly
-// small visual gain here.
+// back to the same generated initials placeholder used site-wide if the
+// team's real logo file doesn't exist.
 const wheelLogoCache = {};
 function getWheelLogoImage(team){
   if(wheelLogoCache[team]) return wheelLogoCache[team].loaded ? wheelLogoCache[team].img : null;
-  const entry = { img: new Image(), loaded: false };
+  const entry = { img: new Image(), loaded: false, triedFallback: false };
   entry.img.onload = () => { entry.loaded = true; drawRenderWheel(); };
-  entry.img.onerror = () => { wheelLogoCache[team] = { img: null, loaded: true, failed: true }; };
+  entry.img.onerror = () => {
+    if(!entry.triedFallback){
+      entry.triedFallback = true;
+      entry.img.src = teamPlaceholderLogoDataUri(team);
+    }else{
+      wheelLogoCache[team] = { img: null, loaded: true, failed: true };
+    }
+  };
   entry.img.src = `logo/${teamLogoSlug(team)}.png`;
   wheelLogoCache[team] = entry;
   return null;
