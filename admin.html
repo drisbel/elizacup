@@ -88,6 +88,10 @@
     color:var(--ink);
   }
   textarea{resize:vertical;min-height:140px;line-height:1.5;}
+  .wheel-hex-input{
+    width:90px;padding:8px 10px;font-family:'Courier New',monospace;
+    font-size:13px;text-transform:lowercase;
+  }
   input:focus,textarea:focus,select:focus{outline:2px solid var(--pitch-2);outline-offset:1px;}
   .field{margin-bottom:16px;}
   .btn{
@@ -400,8 +404,11 @@
   .draw-pick-box.pop{animation:drawPop 0.45s cubic-bezier(0.34,1.56,0.64,1);}
   .draw-pick-box .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px;}
   .draw-pick-box .name{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;}
-  .wheel-pick-inline .pick-body{display:flex;align-items:center;justify-content:center;gap:12px;}
+  .wheel-pick-inline .pick-body{display:flex;align-items:center;justify-content:center;gap:12px;max-width:100%;}
   .wheel-pick-inline .pick-body img{width:44px;height:44px;object-fit:contain;flex-shrink:0;}
+  .wheel-pick-inline .pick-body .name{
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+  }
   .draw-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line);border-radius:6px;
@@ -799,34 +806,14 @@
         <textarea id="drawTeamInput" rows="8" placeholder="Team A&#10;Team B&#10;Team C&#10;..."></textarea>
       </div>
 
-      <div class="field">
-        <label>Reveal style</label>
-        <div class="style-toggle">
-          <button type="button" id="drawStyleListBtn" class="active">List — draw one at a time</button>
-          <button type="button" id="drawStyleWheelBtn">Wheel spinner</button>
-        </div>
-      </div>
-
       <div class="form-actions" style="margin-bottom:6px;">
         <button class="btn btn-primary" id="drawStartBtn">Start Draw</button>
         <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
       </div>
       <div class="hint" id="drawPotCount"></div>
 
-      <!-- List mode -->
-      <div id="drawListMode">
-        <div class="form-actions" style="margin-top:14px;">
-          <button class="btn btn-primary" id="drawNextBtn" disabled>Draw Next Team</button>
-        </div>
-        <div class="draw-pick-box" id="drawCurrentPick">
-          <div class="kicker">Just drawn</div>
-          <img id="drawCurrentPickLogo" alt="" style="width:52px;height:52px;object-fit:contain;display:none;margin:0 auto 8px;">
-          <div class="name" id="drawCurrentPickName"></div>
-        </div>
-      </div>
-
       <!-- Wheel mode -->
-      <div id="drawWheelMode" style="display:none;">
+      <div id="drawWheelMode">
         <div class="checkbox-row">
           <input type="checkbox" id="wheelSideLeagueMode">
           <label for="wheelSideLeagueMode">Side League mode <span class="hint" style="display:inline;">(team names below are side-league team names, not Eliza Cup team names)</span></label>
@@ -845,27 +832,27 @@
         <div class="field">
           <label>Wheel colours</label>
           <div class="style-toggle" id="wheelColorModeToggle">
-            <button type="button" data-mode="theme" class="active">Theme</button>
-            <button type="button" data-mode="custom">2–3 Colours</button>
+            <button type="button" data-mode="custom" class="active">2–3 Colours</button>
             <button type="button" data-mode="division">By Division</button>
             <button type="button" data-mode="per-team">Per Team</button>
           </div>
         </div>
 
-        <div id="wheelThemeOptions" class="field">
-          <div class="style-toggle" id="wheelThemeToggle">
-            <button type="button" data-theme="brand" class="active">Brand</button>
-            <button type="button" data-theme="vivid">Vivid</button>
-            <button type="button" data-theme="mono">Monochrome</button>
-          </div>
-        </div>
-
-        <div id="wheelCustomOptions" class="field" style="display:none;">
-          <div class="hint" style="display:block;margin-bottom:8px;">Choose 2 or 3 colours to alternate around the wheel.</div>
+        <div id="wheelCustomOptions" class="field">
+          <div class="hint" style="display:block;margin-bottom:8px;">Choose 2 or 3 colours to alternate around the wheel. Use the swatch or type a hex code directly.</div>
           <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-            <input type="color" id="wheelCustomColor1" value="#28427c">
-            <input type="color" id="wheelCustomColor2" value="#bc3532">
-            <input type="color" id="wheelCustomColor3" value="#6aa84f" style="display:none;">
+            <span style="display:flex;align-items:center;gap:6px;">
+              <input type="color" id="wheelCustomColor1" value="#28427c">
+              <input type="text" id="wheelCustomColor1Hex" class="wheel-hex-input" value="#28427c" maxlength="7" placeholder="#28427c">
+            </span>
+            <span style="display:flex;align-items:center;gap:6px;">
+              <input type="color" id="wheelCustomColor2" value="#ffdd00">
+              <input type="text" id="wheelCustomColor2Hex" class="wheel-hex-input" value="#ffdd00" maxlength="7" placeholder="#ffdd00">
+            </span>
+            <span id="wheelCustomColor3Wrap" style="display:none;align-items:center;gap:6px;">
+              <input type="color" id="wheelCustomColor3" value="#6aa84f">
+              <input type="text" id="wheelCustomColor3Hex" class="wheel-hex-input" value="#6aa84f" maxlength="7" placeholder="#6aa84f">
+            </span>
             <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
               <input type="checkbox" id="wheelCustomUse3"> Use 3rd colour
             </label>
@@ -898,6 +885,10 @@
             <option value="__custom__">Custom path…</option>
           </select>
           <input type="text" id="wheelCompLogoCustom" placeholder="e.g. logo/my-logo.png" style="display:none;margin-top:8px;">
+          <div class="checkbox-row" style="margin-top:10px;">
+            <input type="checkbox" id="wheelCenterLogoToggle">
+            <label for="wheelCenterLogoToggle">Also show this logo in the centre of the wheel</label>
+          </div>
         </div>
         <div style="text-align:center;margin-bottom:14px;">
           <button type="button" class="btn btn-ghost" id="wheelFullscreenBtn">⛶ Full Screen Mode</button>
@@ -2399,7 +2390,6 @@ function setWmdImportStatus(msg, isError) {
 let drawPot = [];
 let drawPending = null; // a team drawn but waiting to be paired
 let drawFixtures = [];
-let drawStyle = "list"; // "list" | "wheel"
 let drawSpinning = false;
 
 function shuffleArray(arr){
@@ -2420,17 +2410,14 @@ function drawStart(){
   drawPot = shuffleArray(teams);
   drawPending = null;
   drawFixtures = [];
-  $("drawNextBtn").disabled = false;
   $("drawSpinBtn").disabled = false;
   renderDrawShared();
   resetWheelMatchupInfo();
   if(wheelFullscreenResultsActive) hideWheelResultsView();
   updateWheelCompleteDrawButtonVisibility();
-  if(drawStyle === "wheel"){
-    if(wheelColorMode === "per-team") renderWheelPerTeamList();
-    drawRenderWheel();
-    loadWheelMatchupData(); // pre-warm so the first spin's matchup info appears instantly
-  }
+  if(wheelColorMode === "per-team") renderWheelPerTeamList();
+  drawRenderWheel();
+  loadWheelMatchupData(); // pre-warm so the first spin's matchup info appears instantly
 }
 
 function drawReset(){
@@ -2438,15 +2425,13 @@ function drawReset(){
   drawPending = null;
   drawFixtures = [];
   drawSpinning = false;
-  $("drawNextBtn").disabled = true;
   $("drawSpinBtn").disabled = true;
-  $("drawCurrentPick").style.display = "none";
   $("drawWheelPick").style.display = "none";
   renderDrawShared();
   resetWheelMatchupInfo();
   if(wheelFullscreenResultsActive) hideWheelResultsView();
   updateWheelCompleteDrawButtonVisibility();
-  if(drawStyle === "wheel") drawRenderWheel();
+  drawRenderWheel();
 }
 
 // Reverts the fullscreen matchup-info panel to its empty placeholder and
@@ -2459,7 +2444,7 @@ function resetWheelMatchupInfo(){
 }
 
 function isWheelDrawComplete(){
-  return drawStyle === "wheel" && !drawPot.length && drawPending === null && drawFixtures.length > 0;
+  return !drawPot.length && drawPending === null && drawFixtures.length > 0;
 }
 
 // Shows/hides the "Complete Draw" button (only meaningful — and only
@@ -2518,9 +2503,8 @@ function hideWheelResultsView(){
 }
 
 
-// Records one pick (shared by both List's "Draw Next Team" and Wheel's spin
-// landing) — pairs it with a pending team, or holds it as pending if it's the
-// first of a pair.
+// Records one pick (the wheel's spin landing) — pairs it with a pending
+// team, or holds it as pending if it's the first of a pair.
 function drawRecordPick(picked){
   if(drawPending === null){
     drawPending = picked;
@@ -2529,7 +2513,6 @@ function drawRecordPick(picked){
     drawPending = null;
   }
   if(!drawPot.length){
-    $("drawNextBtn").disabled = true;
     $("drawSpinBtn").disabled = true;
   }
 }
@@ -2587,24 +2570,6 @@ function renderDrawShared(){
     const pane = $("wheelFullscreenFixturesPane");
     if(pane) pane.scrollTop = pane.scrollHeight;
   }
-}
-
-// ---------- Draw: List mode ----------
-
-function drawNext(){
-  if(!drawPot.length || drawStyle !== "list") return;
-  const picked = drawPot.shift();
-  drawRecordPick(picked);
-
-  if(drawPending !== null){
-    showDrawPick("drawCurrentPick", "drawCurrentPickName", drawPending, "drawCurrentPickLogo");
-  }else{
-    // This pick completed a pair rather than starting a new one — still show
-    // who was just drawn (the away side of the fixture that just got added).
-    const lastFixture = drawFixtures[drawFixtures.length - 1];
-    showDrawPick("drawCurrentPick", "drawCurrentPickName", lastFixture.away, "drawCurrentPickLogo");
-  }
-  renderDrawShared();
 }
 
 // ---------- Draw: Wheel mode ----------
@@ -2939,18 +2904,49 @@ async function renderWheelMatchupInfo(teamA, teamB){
   if(h2hEl) h2hEl.innerHTML = wheelH2HHtml(teamA, teamB, record);
 }
 
-const WHEEL_THEMES = {
-  brand: ["#28427c","#3a5a9e","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"],
-  vivid: ["#e63946","#f4a261","#2a9d8f","#264653","#e9c46a","#8338ec","#3a86ff","#fb5607","#06d6a0","#ef476f"],
-  mono: ["#0f2a4a","#1c3d63","#294f7c","#366296","#4374af","#5087c9","#5d99e2","#6aacfb"]
-};
+// Fallback palette used only to seed default colours in Per Team mode (and
+// as a last-resort fallback there) — the old Theme mode's "Brand" palette,
+// kept since Theme mode itself was removed but this is still handy internally.
+const WHEEL_DEFAULT_PALETTE = ["#28427c","#ffdd00","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"];
 let wheelSize = 340;
-let wheelTheme = "brand";
 let wheelTitle = "";
 let wheelPlainMode = false;
 
-// Wheel colour customisation — four modes:
-//  "theme"    — one of the WHEEL_THEMES palettes above, cycled by slice index
+// ---------- Wheel: centre logo ----------
+// Reuses whichever logo is picked in the "Competition logo" field above —
+// no separate selector — just an optional extra place to show it.
+let wheelCenterLogoEnabled = false;
+let wheelCenterLogoImg = null;   // loaded Image once ready, else null
+let wheelCenterLogoSrc = null;   // path currently loaded/loading, to avoid redundant reloads
+
+function getSelectedCompLogoPath(){
+  const selectVal = $("wheelCompLogoSelect").value;
+  return selectVal === "__custom__" ? $("wheelCompLogoCustom").value.trim() : selectVal;
+}
+
+function updateWheelCenterLogo(){
+  const path = wheelCenterLogoEnabled ? getSelectedCompLogoPath() : "";
+  if(!path){
+    wheelCenterLogoImg = null;
+    wheelCenterLogoSrc = null;
+    drawRenderWheel();
+    return;
+  }
+  if(path === wheelCenterLogoSrc) return; // already loaded (or loading) this exact logo
+  wheelCenterLogoSrc = path;
+  wheelCenterLogoImg = null;
+  const img = new Image();
+  img.onload = () => {
+    if(wheelCenterLogoSrc === path){ wheelCenterLogoImg = img; drawRenderWheel(); }
+  };
+  img.onerror = () => {
+    if(wheelCenterLogoSrc === path){ wheelCenterLogoImg = null; drawRenderWheel(); }
+  };
+  img.src = path;
+}
+
+
+// Wheel colour customisation — three modes:
 //  "custom"   — 2 or 3 admin-picked colours, alternated around the wheel
 //  "division" — coloured by each team's current division, read from the
 //               Roddy leaderboard (same source as the matchup info panel).
@@ -2958,8 +2954,8 @@ let wheelPlainMode = false;
 //               pointed at — no separate update needed when the season
 //               transitions, since it'll just start reading the new gid.
 //  "per-team" — an individual colour chosen per team, kept in wheelPerTeamColors
-let wheelColorMode = "theme";
-let wheelCustomColors = ["#28427c", "#bc3532", "#6aa84f"];
+let wheelColorMode = "custom";
+let wheelCustomColors = ["#28427c", "#ffdd00", "#6aa84f"];
 let wheelCustomUse3 = false;
 let wheelPerTeamColors = {}; // { teamName: "#hex" }
 
@@ -3047,7 +3043,7 @@ function populateWheelSideLeagueSelect(){
     : `<option value="">No leagues found in the mapping sheet</option>`;
   if(previous && wheelSideLeagueColumns.some(c => c.label === previous)) select.value = previous;
   wheelSideLeagueKey = select.value || null;
-  if(drawStyle === "wheel") drawRenderWheel();
+  drawRenderWheel();
 }
 
 // The single point every team-name-based Eliza lookup (logos, division
@@ -3066,25 +3062,21 @@ function resolveElizaTeamName(name){
 // up blank if a mode-specific colour is missing (e.g. a team with no
 // per-team colour set yet, or no division match).
 function getWheelSliceColor(team, index){
-  if(wheelColorMode === "custom"){
-    const palette = wheelCustomUse3 ? wheelCustomColors.slice(0,3) : wheelCustomColors.slice(0,2);
-    return palette[index % palette.length];
-  }
   if(wheelColorMode === "division"){
     const div = getTeamDivision(resolveElizaTeamName(team));
     return (div && WHEEL_DIVISION_COLORS[div]) || WHEEL_DIVISION_FALLBACK;
   }
   if(wheelColorMode === "per-team"){
-    return wheelPerTeamColors[team] || WHEEL_THEMES.brand[index % WHEEL_THEMES.brand.length];
+    return wheelPerTeamColors[team] || WHEEL_DEFAULT_PALETTE[index % WHEEL_DEFAULT_PALETTE.length];
   }
-  const colors = WHEEL_THEMES[wheelTheme] || WHEEL_THEMES.brand;
-  return colors[index % colors.length];
+  // "custom" — 2 or 3 admin-picked colours, alternated around the wheel
+  const palette = wheelCustomUse3 ? wheelCustomColors.slice(0,3) : wheelCustomColors.slice(0,2);
+  return palette[index % palette.length];
 }
 
 function setWheelColorMode(mode){
   wheelColorMode = mode;
   document.querySelectorAll("#wheelColorModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
-  $("wheelThemeOptions").style.display = mode === "theme" ? "" : "none";
   $("wheelCustomOptions").style.display = mode === "custom" ? "" : "none";
   $("wheelDivisionOptions").style.display = mode === "division" ? "" : "none";
   $("wheelPerTeamOptions").style.display = mode === "per-team" ? "" : "none";
@@ -3114,7 +3106,7 @@ function renderWheelPerTeamList(){
     return;
   }
   container.innerHTML = teams.map((team, i) => {
-    const color = wheelPerTeamColors[team] || WHEEL_THEMES.brand[i % WHEEL_THEMES.brand.length];
+    const color = wheelPerTeamColors[team] || WHEEL_DEFAULT_PALETTE[i % WHEEL_DEFAULT_PALETTE.length];
     wheelPerTeamColors[team] = color; // seed with a default so every team always has one
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
@@ -3143,12 +3135,6 @@ function setWheelSize(size){
   pointer.style.borderRightWidth = (14*scale) + "px";
   pointer.style.borderTopWidth = (22*scale) + "px";
   pointer.style.top = (-6*scale) + "px";
-  drawRenderWheel();
-}
-
-function setWheelTheme(theme){
-  wheelTheme = theme;
-  document.querySelectorAll("#wheelThemeToggle button").forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
   drawRenderWheel();
 }
 
@@ -3320,6 +3306,9 @@ function drawRenderWheel(){
   const radius = center - 4;
   ctx.clearRect(0, 0, size, size);
 
+  const showCenterLogo = wheelCenterLogoEnabled && wheelCenterLogoImg;
+  const hubRadius = Math.max(20, radius * 0.16);
+
   const teams = drawPot;
   const n = teams.length;
   if(!n){
@@ -3327,6 +3316,7 @@ function drawRenderWheel(){
     ctx.arc(center, center, radius, 0, Math.PI*2);
     ctx.fillStyle = "#eef1f5";
     ctx.fill();
+    drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo);
     return;
   }
 
@@ -3354,9 +3344,10 @@ function drawRenderWheel(){
     // tangentially — i.e. the text's height doesn't exceed how wide the wedge
     // actually is at the text's innermost point, which is where a slice is at
     // its narrowest and where long labels would otherwise spill across the
-    // white divider lines into neighbouring slices.
+    // white divider lines into neighbouring slices. The inner boundary backs
+    // off further when a centre logo is showing, so text never runs under it.
     const textOuterEdge = radius - 10;
-    const textInnerLimit = 16;
+    const textInnerLimit = showCenterLogo ? hubRadius + 8 : 16;
     const maxWidth = textOuterEdge - textInnerLimit;
     const maxFontSize = 13*fontScale;
     const minFontSize = Math.max(7, 8*fontScale);
@@ -3387,10 +3378,35 @@ function drawRenderWheel(){
     ctx.fillText(label, textOuterEdge, 0);
     ctx.restore();
   });
+
+  drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo);
+}
+
+// Draws the optional centre-hub logo on top of the slices — a white backing
+// disc (so the logo reads clearly regardless of which colours land behind
+// it) clipped to a circle, with a thin white ring to neaten the edge.
+function drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo){
+  if(!showCenterLogo) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center, center, hubRadius, 0, Math.PI*2);
+  ctx.closePath();
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  ctx.clip();
+  const pad = hubRadius * 0.18;
+  ctx.drawImage(wheelCenterLogoImg, center - hubRadius + pad, center - hubRadius + pad, (hubRadius - pad)*2, (hubRadius - pad)*2);
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(center, center, hubRadius, 0, Math.PI*2);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
 function drawSpin(){
-  if(drawSpinning || !drawPot.length || drawStyle !== "wheel") return;
+  if(drawSpinning || !drawPot.length) return;
   drawSpinning = true;
   $("drawSpinBtn").disabled = true;
   $("drawWheelPick").style.display = "none";
@@ -3442,18 +3458,6 @@ function drawSpin(){
   }, 4000);
 }
 
-function setDrawStyle(style){
-  drawStyle = style;
-  $("drawStyleListBtn").classList.toggle("active", style === "list");
-  $("drawStyleWheelBtn").classList.toggle("active", style === "wheel");
-  $("drawListMode").style.display = style === "list" ? "" : "none";
-  $("drawWheelMode").style.display = style === "wheel" ? "" : "none";
-  if(style === "wheel"){
-    drawRenderWheel();
-    loadWheelMatchupData();
-  }
-}
-
 // ---------- Wire up ----------
 
 $("loginBtn").addEventListener("click", tryLogin);
@@ -3468,13 +3472,7 @@ $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
 $("savePvBtn").addEventListener("click", savePageVisibility);
 $("drawStartBtn").addEventListener("click", drawStart);
 $("drawResetBtn").addEventListener("click", drawReset);
-$("drawNextBtn").addEventListener("click", drawNext);
 $("drawSpinBtn").addEventListener("click", drawSpin);
-$("drawStyleListBtn").addEventListener("click", () => setDrawStyle("list"));
-$("drawStyleWheelBtn").addEventListener("click", () => setDrawStyle("wheel"));
-document.querySelectorAll("#wheelThemeToggle button").forEach(btn => {
-  btn.addEventListener("click", () => setWheelTheme(btn.getAttribute("data-theme")));
-});
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
   btn.addEventListener("click", () => setWheelColorMode(btn.getAttribute("data-mode")));
 });
@@ -3482,25 +3480,46 @@ document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
   $(id).addEventListener("input", setWheelCustomColors);
 });
 $("wheelCustomUse3").addEventListener("change", (e) => {
-  $("wheelCustomColor3").style.display = e.target.checked ? "" : "none";
+  $("wheelCustomColor3Wrap").style.display = e.target.checked ? "inline-flex" : "none";
+});
+// Keeps each colour swatch and its paired hex text field in sync both ways —
+// picking a swatch colour updates the hex text, and typing a valid 6-digit
+// hex code (with or without the leading #) updates the swatch and re-renders.
+["wheelCustomColor1","wheelCustomColor2","wheelCustomColor3"].forEach(colorId => {
+  const hexId = colorId + "Hex";
+  $(colorId).addEventListener("input", () => { $(hexId).value = $(colorId).value; });
+  $(hexId).addEventListener("input", () => {
+    let v = $(hexId).value.trim();
+    if(v && !v.startsWith("#")) v = "#" + v;
+    if(/^#[0-9a-fA-F]{6}$/.test(v)){
+      $(colorId).value = v.toLowerCase();
+      setWheelCustomColors();
+    }
+  });
 });
 $("drawTeamInput").addEventListener("input", () => {
   if(wheelColorMode === "per-team") renderWheelPerTeamList();
 });
 $("wheelCompLogoSelect").addEventListener("change", (e) => {
   $("wheelCompLogoCustom").style.display = e.target.value === "__custom__" ? "" : "none";
+  updateWheelCenterLogo();
+});
+$("wheelCompLogoCustom").addEventListener("input", updateWheelCenterLogo);
+$("wheelCenterLogoToggle").addEventListener("change", (e) => {
+  wheelCenterLogoEnabled = e.target.checked;
+  updateWheelCenterLogo();
 });
 $("wheelSideLeagueMode").addEventListener("change", (e) => {
   wheelSideLeagueMode = e.target.checked;
   $("wheelSideLeagueSelectWrap").style.display = wheelSideLeagueMode ? "" : "none";
   if(wheelSideLeagueMode) loadWheelSideLeagueMap();
   renderDrawShared();
-  if(drawStyle === "wheel") drawRenderWheel();
+  drawRenderWheel();
 });
 $("wheelSideLeagueSelect").addEventListener("change", (e) => {
   wheelSideLeagueKey = e.target.value || null;
   renderDrawShared();
-  if(drawStyle === "wheel") drawRenderWheel();
+  drawRenderWheel();
 });
 $("wheelPlainMode").addEventListener("change", (e) => {
   wheelPlainMode = e.target.checked;
@@ -3517,6 +3536,7 @@ document.addEventListener("fullscreenchange", () => {
     exitWheelFullscreen();
   }
 });
+drawRenderWheel(); // wheel is the only draw mode now, so render its empty-state immediately
 
 // ---------- Admin section switcher ----------
 document.querySelectorAll(".admin-section-btn").forEach(btn => {
