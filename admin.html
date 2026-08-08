@@ -244,14 +244,6 @@
     background:#101823;z-index:9999;
     display:flex;align-items:stretch;
   }
-  .wheel-fullscreen-comp-logo{
-    position:absolute;top:16px;left:50%;transform:translateX(-50%);
-    z-index:10000;pointer-events:none;
-  }
-  .wheel-fullscreen-comp-logo img{
-    max-height:56px;max-width:180px;object-fit:contain;
-    filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));
-  }
   .wheel-fullscreen-columns{
     flex:1;display:flex;align-items:stretch;min-width:0;
   }
@@ -873,7 +865,7 @@
           <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
         </div>
         <div class="field">
-          <label for="wheelCompLogoSelect">Competition logo <span class="hint" style="display:inline;">(shown centred at the top of the screen in Full Screen Mode)</span></label>
+          <label for="wheelCompLogoSelect">Wheel centre logo <span class="hint" style="display:inline;">(shown in the middle of the wheel)</span></label>
           <select id="wheelCompLogoSelect">
             <option value="">None</option>
             <option value="logo/division-1-logo.png">Division 1</option>
@@ -887,7 +879,7 @@
           <input type="text" id="wheelCompLogoCustom" placeholder="e.g. logo/my-logo.png" style="display:none;margin-top:8px;">
           <div class="checkbox-row" style="margin-top:10px;">
             <input type="checkbox" id="wheelCenterLogoToggle">
-            <label for="wheelCenterLogoToggle">Also show this logo in the centre of the wheel</label>
+            <label for="wheelCenterLogoToggle">Show this logo in the centre of the wheel</label>
           </div>
         </div>
         <div style="text-align:center;margin-bottom:14px;">
@@ -921,9 +913,6 @@
 
 <div id="wheelFullscreenOverlay" class="wheel-fullscreen-overlay" style="display:none;">
   <button type="button" id="wheelExitFullscreenBtn" class="wheel-fullscreen-exit">✕ Exit Full Screen</button>
-  <div class="wheel-fullscreen-comp-logo" id="wheelFullscreenCompLogo" style="display:none;">
-    <img id="wheelFullscreenCompLogoImg" src="" alt="">
-  </div>
   <div class="wheel-fullscreen-columns" id="wheelFullscreenColumns">
     <div class="wheel-fullscreen-left" id="wheelFullscreenLeft">
       <h1 id="wheelPlainTitle" class="wheel-fullscreen-title on-dark" style="display:none;"></h1>
@@ -2913,8 +2902,8 @@ let wheelTitle = "";
 let wheelPlainMode = false;
 
 // ---------- Wheel: centre logo ----------
-// Reuses whichever logo is picked in the "Competition logo" field above —
-// no separate selector — just an optional extra place to show it.
+// Uses the logo picked in the "Wheel centre logo" field above, drawn in the
+// hub of the wheel when the checkbox below it is enabled.
 let wheelCenterLogoEnabled = false;
 let wheelCenterLogoImg = null;   // loaded Image once ready, else null
 let wheelCenterLogoSrc = null;   // path currently loaded/loading, to avoid redundant reloads
@@ -3240,20 +3229,6 @@ function enterWheelFullscreen(){
   // which doesn't apply to side-league team names) — hide the box entirely
   // so the fixtures pane below gets the full column instead of empty space.
   $("wheelMatchupInfo").style.display = wheelSideLeagueMode ? "none" : "";
-
-  // Competition logo — floats over the top of the screen (fixed position,
-  // out of the normal layout flow) rather than reserving space, so it never
-  // pushes the wheel/matchup panel down. Suppressed entirely in Plain Wheel
-  // mode, which shows only the title, wheel and drawn team.
-  const compLogoBar = $("wheelFullscreenCompLogo");
-  const selectVal = $("wheelCompLogoSelect").value;
-  const compLogoPath = selectVal === "__custom__" ? $("wheelCompLogoCustom").value.trim() : selectVal;
-  if(compLogoPath && !wheelPlainMode){
-    $("wheelFullscreenCompLogoImg").src = compLogoPath;
-    compLogoBar.style.display = "flex";
-  }else{
-    compLogoBar.style.display = "none";
-  }
 
   reparentToFullscreen($("wheelWrap"), left);
   reparentToFullscreen($("drawSpinBtn").parentElement, left);
