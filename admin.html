@@ -792,6 +792,13 @@
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:28px 0 10px;">Fixture Draw</h2>
 
     <div class="card">
+      <div class="field" style="margin-bottom:0;">
+        <label for="wheelTitleInput">Wheel title <span class="hint" style="display:inline;">(shown centred at the top of the right side in Full Screen Mode)</span></label>
+        <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Team list</h2>
       <div class="field">
         <label for="drawTeamInput">Teams (one per line)</label>
@@ -799,28 +806,13 @@
       </div>
 
       <div class="form-actions" style="margin-bottom:6px;">
-        <button class="btn btn-primary" id="drawStartBtn">Start Draw</button>
+        <button class="btn btn-primary" id="drawStartBtn">⛶ Start Draw (Full Screen)</button>
         <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
       </div>
       <div class="hint" id="drawPotCount"></div>
 
       <!-- Wheel mode -->
       <div id="drawWheelMode">
-        <div class="checkbox-row">
-          <input type="checkbox" id="wheelSideLeagueMode">
-          <label for="wheelSideLeagueMode">Side League mode <span class="hint" style="display:inline;">(team names below are side-league team names, not Eliza Cup team names)</span></label>
-        </div>
-        <div class="field" id="wheelSideLeagueSelectWrap" style="display:none;">
-          <label for="wheelSideLeagueSelect">Side league</label>
-          <select id="wheelSideLeagueSelect"><option value="">Loading leagues…</option></select>
-          <div class="hint" style="display:block;margin-top:6px;">Logos are matched via the Eliza Side Leagues mapping sheet, using the selected league's column. Full Screen Mode skips the matchup info panel in this mode — just the fixtures list.</div>
-        </div>
-
-        <div class="checkbox-row">
-          <input type="checkbox" id="wheelPlainMode">
-          <label for="wheelPlainMode">Plain Wheel mode <span class="hint" style="display:inline;">(Full Screen Mode shows just the title, wheel and drawn team — no matchup info or fixtures list)</span></label>
-        </div>
-
         <div class="field">
           <label>Wheel colours</label>
           <div class="style-toggle" id="wheelColorModeToggle">
@@ -861,10 +853,6 @@
         </div>
 
         <div class="field">
-          <label for="wheelTitleInput">Wheel title <span class="hint" style="display:inline;">(shown centred at the top of the right side in Full Screen Mode)</span></label>
-          <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
-        </div>
-        <div class="field">
           <label for="wheelCompLogoSelect">Wheel centre logo <span class="hint" style="display:inline;">(shown in the middle of the wheel)</span></label>
           <select id="wheelCompLogoSelect">
             <option value="">None</option>
@@ -877,14 +865,23 @@
             <option value="__custom__">Custom path…</option>
           </select>
           <input type="text" id="wheelCompLogoCustom" placeholder="e.g. logo/my-logo.png" style="display:none;margin-top:8px;">
-          <div class="checkbox-row" style="margin-top:10px;">
-            <input type="checkbox" id="wheelCenterLogoToggle">
-            <label for="wheelCenterLogoToggle">Show this logo in the centre of the wheel</label>
-          </div>
         </div>
-        <div style="text-align:center;margin-bottom:14px;">
-          <button type="button" class="btn btn-ghost" id="wheelFullscreenBtn">⛶ Full Screen Mode</button>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="wheelSideLeagueMode">
+          <label for="wheelSideLeagueMode">Side League mode <span class="hint" style="display:inline;">(team names below are side-league team names, not Eliza Cup team names)</span></label>
         </div>
+        <div class="field" id="wheelSideLeagueSelectWrap" style="display:none;">
+          <label for="wheelSideLeagueSelect">Side league</label>
+          <select id="wheelSideLeagueSelect"><option value="">Loading leagues…</option></select>
+          <div class="hint" style="display:block;margin-top:6px;">Logos are matched via the Eliza Side Leagues mapping sheet, using the selected league's column. Full Screen Mode skips the matchup info panel in this mode — just the fixtures list.</div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="wheelPlainMode">
+          <label for="wheelPlainMode">Plain Wheel mode <span class="hint" style="display:inline;">(Full Screen Mode shows just the title, wheel and drawn team — no matchup info or fixtures list)</span></label>
+        </div>
+
         <div class="wheel-wrap" id="wheelWrap">
           <div class="wheel-pointer" id="wheelPointer"></div>
           <canvas id="drawWheelCanvas" width="340" height="340"></canvas>
@@ -2377,6 +2374,12 @@ function setWmdImportStatus(msg, isError) {
 // the wheel has exactly the same 1-in-n chance on every single spin — the
 // landing slice is never predetermined or biased toward any position.
 let drawPot = [];
+// What the wheel canvas actually renders. This deliberately lags drawPot by
+// one pick: a just-picked team is removed from drawPot immediately (for
+// pairing/completion logic), but stays in drawWheelDisplayPot — and so stays
+// visible on the wheel — until the next spin begins, at which point the two
+// are re-synced right before that spin's targeting is calculated.
+let drawWheelDisplayPot = [];
 let drawPending = null; // a team drawn but waiting to be paired
 let drawFixtures = [];
 let drawSpinning = false;
@@ -2397,6 +2400,7 @@ function drawStart(){
     return;
   }
   drawPot = shuffleArray(teams);
+  drawWheelDisplayPot = drawPot.slice();
   drawPending = null;
   drawFixtures = [];
   $("drawSpinBtn").disabled = false;
@@ -2407,10 +2411,12 @@ function drawStart(){
   if(wheelColorMode === "per-team") renderWheelPerTeamList();
   drawRenderWheel();
   loadWheelMatchupData(); // pre-warm so the first spin's matchup info appears instantly
+  enterWheelFullscreen();
 }
 
 function drawReset(){
   drawPot = [];
+  drawWheelDisplayPot = [];
   drawPending = null;
   drawFixtures = [];
   drawSpinning = false;
@@ -2902,9 +2908,9 @@ let wheelTitle = "";
 let wheelPlainMode = false;
 
 // ---------- Wheel: centre logo ----------
-// Uses the logo picked in the "Wheel centre logo" field above, drawn in the
-// hub of the wheel when the checkbox below it is enabled.
-let wheelCenterLogoEnabled = false;
+// Uses whichever logo is picked in the "Wheel centre logo" field above,
+// drawn in the hub of the wheel — shows automatically once a logo is
+// selected, no separate toggle needed.
 let wheelCenterLogoImg = null;   // loaded Image once ready, else null
 let wheelCenterLogoSrc = null;   // path currently loaded/loading, to avoid redundant reloads
 
@@ -2914,7 +2920,7 @@ function getSelectedCompLogoPath(){
 }
 
 function updateWheelCenterLogo(){
-  const path = wheelCenterLogoEnabled ? getSelectedCompLogoPath() : "";
+  const path = getSelectedCompLogoPath();
   if(!path){
     wheelCenterLogoImg = null;
     wheelCenterLogoSrc = null;
@@ -3181,14 +3187,19 @@ function computeFullscreenWheelSize(){
   // Gaps between visible flex children: wheel↔spin and spin↔pick are always
   // present; title↔wheel only counts if the plain-mode title is shown.
   const gapCount = 2 + (plainTitleShown ? 1 : 0);
-  const reserved = paddingV + plainTitleH + spinH + pickH + gap*gapCount;
+  // Small fixed safety margin on top of the real measurements above, as
+  // insurance against sub-pixel rounding or any other tiny discrepancy —
+  // cheap, and the only thing it costs is a few px of otherwise-unused wheel
+  // size, versus the alternative of the page needing to scroll.
+  const safetyMargin = 20;
+  const reserved = paddingV + plainTitleH + spinH + pickH + gap*gapCount + safetyMargin;
 
   const availW = rect.width - 48;
   const availH = rect.height - reserved;
   return Math.max(220, Math.floor(Math.min(availW, availH, 800)));
 }
 
-function enterWheelFullscreen(){
+async function enterWheelFullscreen(){
   if(wheelFullscreenActive) return;
   wheelFullscreenActive = true;
   wheelFsOriginalPositions = [];
@@ -3239,11 +3250,27 @@ function enterWheelFullscreen(){
   updateWheelCompleteDrawButtonVisibility();
 
   wheelFsPrevSize = wheelSize;
+
+  // Wait for web fonts to finish loading before measuring anything — Barlow
+  // Condensed swapping in after a fallback-font measurement would change the
+  // pick box's real height, silently invalidating the size we just reserved
+  // room for and reintroducing the exact scrolling problem this is meant to
+  // prevent. document.fonts may be unavailable in very old browsers, so this
+  // is skipped gracefully rather than blocking entry on unsupported ones.
+  if(document.fonts && document.fonts.ready){
+    try{ await document.fonts.ready; }catch(e){ /* ignore — proceed with whatever's loaded */ }
+  }
   setWheelSize(computeFullscreenWheelSize());
 
   const overlay = $("wheelFullscreenOverlay");
   if(overlay.requestFullscreen){
-    overlay.requestFullscreen().catch(() => {}); // ignore if the browser blocks/refuses it — overlay still works
+    // The true fullscreen transition can itself change the viewport size
+    // (browser chrome/address bar disappearing) after our measurement above
+    // — re-measure once that transition has actually finished so the final
+    // size matches the real fullscreen viewport, not the pre-transition one.
+    overlay.requestFullscreen()
+      .then(() => setWheelSize(computeFullscreenWheelSize()))
+      .catch(() => {}); // ignore if the browser blocks/refuses it — overlay still works
   }
 }
 
@@ -3281,10 +3308,10 @@ function drawRenderWheel(){
   const radius = center - 4;
   ctx.clearRect(0, 0, size, size);
 
-  const showCenterLogo = wheelCenterLogoEnabled && wheelCenterLogoImg;
+  const showCenterLogo = !!wheelCenterLogoImg;
   const hubRadius = Math.max(20, radius * 0.16);
 
-  const teams = drawPot;
+  const teams = drawWheelDisplayPot;
   const n = teams.length;
   if(!n){
     ctx.beginPath();
@@ -3386,6 +3413,14 @@ function drawSpin(){
   $("drawSpinBtn").disabled = true;
   $("drawWheelPick").style.display = "none";
 
+  // Bring the wheel's display in sync with reality right as this spin
+  // begins — this is the point where a previous pick's segment (kept visible
+  // since it landed) finally disappears, per how the wheel should read: the
+  // just-drawn team stays on the wheel until the next spin, not the instant
+  // it's picked.
+  drawWheelDisplayPot = drawPot.slice();
+  drawRenderWheel();
+
   const n = drawPot.length;
   const anglePerSliceDeg = 360 / n;
 
@@ -3422,10 +3457,12 @@ function drawSpin(){
       renderWheelMatchupInfo(justCompleted.home, justCompleted.away);
     }
 
-    // Reset instantly (no transition) and redraw with the remaining, smaller pot
+    // Reset instantly (no transition). The wheel's bitmap hasn't changed
+    // during the spin (only its CSS rotation did), and drawWheelDisplayPot
+    // still includes the just-picked team — so this snaps back to the exact
+    // same image that was showing before the spin, segment intact.
     canvas.style.transition = "none";
     canvas.style.transform = "rotate(0deg)";
-    drawRenderWheel();
 
     drawSpinning = false;
     if(drawPot.length) $("drawSpinBtn").disabled = false;
@@ -3480,10 +3517,6 @@ $("wheelCompLogoSelect").addEventListener("change", (e) => {
   updateWheelCenterLogo();
 });
 $("wheelCompLogoCustom").addEventListener("input", updateWheelCenterLogo);
-$("wheelCenterLogoToggle").addEventListener("change", (e) => {
-  wheelCenterLogoEnabled = e.target.checked;
-  updateWheelCenterLogo();
-});
 $("wheelSideLeagueMode").addEventListener("change", (e) => {
   wheelSideLeagueMode = e.target.checked;
   $("wheelSideLeagueSelectWrap").style.display = wheelSideLeagueMode ? "" : "none";
@@ -3499,7 +3532,6 @@ $("wheelSideLeagueSelect").addEventListener("change", (e) => {
 $("wheelPlainMode").addEventListener("change", (e) => {
   wheelPlainMode = e.target.checked;
 });
-$("wheelFullscreenBtn").addEventListener("click", enterWheelFullscreen);
 $("wheelCompleteDrawBtn").addEventListener("click", showWheelResultsView);
 $("wheelBackToWheelBtn").addEventListener("click", hideWheelResultsView);
 $("wheelExitFullscreenBtn").addEventListener("click", () => {
