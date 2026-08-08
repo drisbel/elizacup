@@ -354,6 +354,7 @@
     color:var(--pitch);text-transform:uppercase;letter-spacing:.4px;
     text-align:center;margin:0 0 20px;
   }
+  .wheel-fullscreen-title.on-dark{color:#fff;}
   .wheel-fullscreen-exit{
     position:absolute;top:20px;right:20px;z-index:10000;
     background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);
@@ -826,6 +827,21 @@
 
       <!-- Wheel mode -->
       <div id="drawWheelMode" style="display:none;">
+        <div class="checkbox-row">
+          <input type="checkbox" id="wheelSideLeagueMode">
+          <label for="wheelSideLeagueMode">Side League mode <span class="hint" style="display:inline;">(team names below are side-league team names, not Eliza Cup team names)</span></label>
+        </div>
+        <div class="field" id="wheelSideLeagueSelectWrap" style="display:none;">
+          <label for="wheelSideLeagueSelect">Side league</label>
+          <select id="wheelSideLeagueSelect"><option value="">Loading leagues…</option></select>
+          <div class="hint" style="display:block;margin-top:6px;">Logos are matched via the Eliza Side Leagues mapping sheet, using the selected league's column. Full Screen Mode skips the matchup info panel in this mode — just the fixtures list.</div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="wheelPlainMode">
+          <label for="wheelPlainMode">Plain Wheel mode <span class="hint" style="display:inline;">(Full Screen Mode shows just the title, wheel and drawn team — no matchup info or fixtures list)</span></label>
+        </div>
+
         <div class="field">
           <label>Wheel colours</label>
           <div class="style-toggle" id="wheelColorModeToggle">
@@ -918,8 +934,10 @@
     <img id="wheelFullscreenCompLogoImg" src="" alt="">
   </div>
   <div class="wheel-fullscreen-columns" id="wheelFullscreenColumns">
-    <div class="wheel-fullscreen-left" id="wheelFullscreenLeft"></div>
-    <div class="wheel-fullscreen-right">
+    <div class="wheel-fullscreen-left" id="wheelFullscreenLeft">
+      <h1 id="wheelPlainTitle" class="wheel-fullscreen-title on-dark" style="display:none;"></h1>
+    </div>
+    <div class="wheel-fullscreen-right" id="wheelFullscreenRight">
       <div class="wheel-fullscreen-header">
         <h1 id="wheelFullscreenTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
         <div id="wheelMatchupInfo" class="wheel-matchup-info">
@@ -2451,7 +2469,7 @@ function isWheelDrawComplete(){
 function updateWheelCompleteDrawButtonVisibility(){
   const btn = $("wheelCompleteDrawBtn");
   if(!btn) return;
-  const show = isWheelDrawComplete() && wheelFullscreenActive;
+  const show = isWheelDrawComplete() && wheelFullscreenActive && !wheelPlainMode;
   const wasShown = btn.style.display !== "none";
   btn.style.display = show ? "inline-block" : "none";
   if(show !== wasShown && wheelFullscreenActive && !wheelFullscreenResultsActive){
@@ -2478,7 +2496,10 @@ function showWheelResultsView(){
     titleEl.style.display = "none";
   }
 
-  const teamLogoImg = (name) => `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(name)}">`;
+  const teamLogoImg = (name) => {
+    const logoName = resolveElizaTeamName(name);
+    return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
+  };
   $("wheelFullscreenResultsGrid").innerHTML = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
       <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
@@ -2523,16 +2544,17 @@ function showDrawPick(boxId, nameId, name, logoImgId){
   $(nameId).textContent = name;
   if(logoImgId){
     const logoEl = $(logoImgId);
+    const logoName = resolveElizaTeamName(name);
     logoEl.dataset.fallback = "";
     logoEl.onerror = () => {
       if(!logoEl.dataset.fallback){
         logoEl.dataset.fallback = "1";
-        logoEl.src = teamPlaceholderLogoDataUri(name);
+        logoEl.src = teamPlaceholderLogoDataUri(logoName);
       }else{
         logoEl.style.display = "none";
       }
     };
-    logoEl.src = `logo/${teamLogoSlug(name)}.png`;
+    logoEl.src = `logo/${teamLogoSlug(logoName)}.png`;
     logoEl.style.display = "block";
   }
   box.style.display = "block";
@@ -2546,7 +2568,10 @@ function renderDrawShared(){
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
     : (drawFixtures.length ? "Draw complete." : "");
 
-  const teamLogoImg = (name) => `<img src="logo/${teamLogoSlug(name)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(name)}">`;
+  const teamLogoImg = (name) => {
+    const logoName = resolveElizaTeamName(name);
+    return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
+  };
   $("drawFixtureList").innerHTML = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
       <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
@@ -2922,6 +2947,7 @@ const WHEEL_THEMES = {
 let wheelSize = 340;
 let wheelTheme = "brand";
 let wheelTitle = "";
+let wheelPlainMode = false;
 
 // Wheel colour customisation — four modes:
 //  "theme"    — one of the WHEEL_THEMES palettes above, cycled by slice index
@@ -2956,6 +2982,85 @@ function getTeamDivision(team){
   return match ? match.divisionShort : null;
 }
 
+// ---------- Wheel: Side League mode ----------
+// Reads Dan's own mapping sheet — Eliza team name in column A, one column
+// per side league from C onward (header row names the league) — so wheel
+// team-name lookups (logos, and "By Division" colours) can resolve a typed
+// side-league team name back to the real Eliza team, and use that team's own
+// logo/division. New leagues added as new columns to the right are picked up
+// automatically, since the column list is read from the header row rather
+// than hardcoded.
+const WHEEL_SIDE_LEAGUE_MAP_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
+const WHEEL_SIDE_LEAGUE_MAP_GID = "1831804785";
+const WHEEL_SIDE_LEAGUE_NAME_COL = 0; // column A: Eliza Cup team name
+const WHEEL_SIDE_LEAGUE_FIRST_LEAGUE_COL = 2; // column C onward: one league per column
+
+let wheelSideLeagueMode = false;
+let wheelSideLeagueKey = null;   // currently selected league label, e.g. "FPL"
+let wheelSideLeagueColumns = []; // [{ label, colIndex }] — read from the header row
+let wheelSideLeagueMap = {};     // { "FPL": { "SIDE LEAGUE NAME": "ELIZA TEAM NAME" }, ... }
+let wheelSideLeagueMapLoaded = false;
+let wheelSideLeagueMapLoading = null;
+
+async function loadWheelSideLeagueMap(){
+  if(wheelSideLeagueMapLoaded) return;
+  if(wheelSideLeagueMapLoading) return wheelSideLeagueMapLoading;
+  wheelSideLeagueMapLoading = (async () => {
+    try{
+      const res = await fetch(wheelCsvUrl(WHEEL_SIDE_LEAGUE_MAP_SHEET_ID, WHEEL_SIDE_LEAGUE_MAP_GID));
+      const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
+      if(!rows.length) return;
+
+      wheelSideLeagueColumns = [];
+      const headerRow = rows[0];
+      for(let c = WHEEL_SIDE_LEAGUE_FIRST_LEAGUE_COL; c < headerRow.length; c++){
+        const label = wheelCell(headerRow, c);
+        if(label) wheelSideLeagueColumns.push({ label, colIndex: c });
+      }
+
+      wheelSideLeagueMap = {};
+      wheelSideLeagueColumns.forEach(col => { wheelSideLeagueMap[col.label] = {}; });
+      for(let r = 1; r < rows.length; r++){
+        const elizaTeam = wheelCell(rows[r], WHEEL_SIDE_LEAGUE_NAME_COL);
+        if(!elizaTeam) continue;
+        wheelSideLeagueColumns.forEach(col => {
+          const sideLeagueName = wheelCell(rows[r], col.colIndex);
+          if(sideLeagueName) wheelSideLeagueMap[col.label][sideLeagueName.toUpperCase()] = elizaTeam;
+        });
+      }
+
+      wheelSideLeagueMapLoaded = true;
+      populateWheelSideLeagueSelect();
+    }catch(err){
+      console.error("Failed to load side league team map for wheel:", err);
+    }
+  })();
+  return wheelSideLeagueMapLoading;
+}
+
+function populateWheelSideLeagueSelect(){
+  const select = $("wheelSideLeagueSelect");
+  if(!select) return;
+  const previous = select.value;
+  select.innerHTML = wheelSideLeagueColumns.length
+    ? wheelSideLeagueColumns.map(col => `<option value="${escapeHtml(col.label)}">${escapeHtml(col.label)}</option>`).join("")
+    : `<option value="">No leagues found in the mapping sheet</option>`;
+  if(previous && wheelSideLeagueColumns.some(c => c.label === previous)) select.value = previous;
+  wheelSideLeagueKey = select.value || null;
+  if(drawStyle === "wheel") drawRenderWheel();
+}
+
+// The single point every team-name-based Eliza lookup (logos, division
+// colour) should go through — returns the team name unchanged unless Side
+// League mode is on and a mapping is found for the current league.
+function resolveElizaTeamName(name){
+  if(!wheelSideLeagueMode || !wheelSideLeagueKey) return name;
+  const map = wheelSideLeagueMap[wheelSideLeagueKey];
+  if(!map) return name;
+  const upper = (name||"").trim().toUpperCase();
+  return map[upper] || name;
+}
+
 // Resolves the fill colour for one wheel slice according to the current
 // colour mode. Always falls back to the brand theme so the wheel never ends
 // up blank if a mode-specific colour is missing (e.g. a team with no
@@ -2966,7 +3071,7 @@ function getWheelSliceColor(team, index){
     return palette[index % palette.length];
   }
   if(wheelColorMode === "division"){
-    const div = getTeamDivision(team);
+    const div = getTeamDivision(resolveElizaTeamName(team));
     return (div && WHEEL_DIVISION_COLORS[div]) || WHEEL_DIVISION_FALLBACK;
   }
   if(wheelColorMode === "per-team"){
@@ -3072,14 +3177,20 @@ function reparentToFullscreen(el, target){
 // guessing, and measuring the pick box's height while it's still hidden
 // (before any team has been drawn) so the wheel is already sized correctly
 // for when it appears, instead of the box popping in after the first spin
-// and pushing the page into a scroll. The title lives in the right column
-// now, so it plays no part in this column's budget.
+// and pushing the page into a scroll. The title normally lives in the right
+// column and plays no part here — except in Plain Wheel mode, where the
+// right column is hidden entirely and a separate title element lives in
+// this column instead, so its height (when shown) is reserved for too.
 function computeFullscreenWheelSize(){
   const left = $("wheelFullscreenLeft");
   const rect = left.getBoundingClientRect();
   const leftStyle = getComputedStyle(left);
   const paddingV = parseFloat(leftStyle.paddingTop) + parseFloat(leftStyle.paddingBottom);
   const gap = parseFloat(leftStyle.rowGap || leftStyle.gap) || 0;
+
+  const plainTitleEl = $("wheelPlainTitle");
+  const plainTitleShown = plainTitleEl.style.display !== "none";
+  const plainTitleH = plainTitleShown ? plainTitleEl.getBoundingClientRect().height : 0;
 
   const spinWrap = $("drawSpinBtn").parentElement;
   const spinH = spinWrap.getBoundingClientRect().height;
@@ -3092,8 +3203,10 @@ function computeFullscreenWheelSize(){
   pickBox.style.display = prevDisplay;
   pickBox.style.visibility = "";
 
-  // Gap between wheel↔spin and spin↔pick — always 2, both always visible.
-  const reserved = paddingV + spinH + pickH + gap*2;
+  // Gaps between visible flex children: wheel↔spin and spin↔pick are always
+  // present; title↔wheel only counts if the plain-mode title is shown.
+  const gapCount = 2 + (plainTitleShown ? 1 : 0);
+  const reserved = paddingV + plainTitleH + spinH + pickH + gap*gapCount;
 
   const availW = rect.width - 48;
   const availH = rect.height - reserved;
@@ -3108,22 +3221,48 @@ function enterWheelFullscreen(){
   const left = $("wheelFullscreenLeft");
   const rightSlot = $("wheelFullscreenFixtureSlot");
 
-  const titleEl = $("wheelFullscreenTitle");
+  const rightCol = $("wheelFullscreenRight");
+
+  // Plain Wheel mode: no matchup info, no fixtures list — just title, wheel,
+  // and the drawn team. The title normally lives in the right column, so in
+  // this mode it moves to a separate element that lives in the left column
+  // instead (the right column is hidden entirely, not just emptied).
   const titleText = $("wheelTitleInput").value.trim();
-  if(titleText){
-    titleEl.textContent = titleText;
-    titleEl.style.display = "block";
+  const normalTitleEl = $("wheelFullscreenTitle");
+  const plainTitleEl = $("wheelPlainTitle");
+  if(wheelPlainMode){
+    rightCol.style.display = "none";
+    normalTitleEl.style.display = "none";
+    if(titleText){
+      plainTitleEl.textContent = titleText;
+      plainTitleEl.style.display = "block";
+    }else{
+      plainTitleEl.style.display = "none";
+    }
   }else{
-    titleEl.style.display = "none";
+    rightCol.style.display = "flex";
+    plainTitleEl.style.display = "none";
+    if(titleText){
+      normalTitleEl.textContent = titleText;
+      normalTitleEl.style.display = "block";
+    }else{
+      normalTitleEl.style.display = "none";
+    }
   }
+
+  // Side League mode has no matchup info (it's Eliza Cup division/H2H data,
+  // which doesn't apply to side-league team names) — hide the box entirely
+  // so the fixtures pane below gets the full column instead of empty space.
+  $("wheelMatchupInfo").style.display = wheelSideLeagueMode ? "none" : "";
 
   // Competition logo — floats over the top of the screen (fixed position,
   // out of the normal layout flow) rather than reserving space, so it never
-  // pushes the wheel/matchup panel down.
+  // pushes the wheel/matchup panel down. Suppressed entirely in Plain Wheel
+  // mode, which shows only the title, wheel and drawn team.
   const compLogoBar = $("wheelFullscreenCompLogo");
   const selectVal = $("wheelCompLogoSelect").value;
   const compLogoPath = selectVal === "__custom__" ? $("wheelCompLogoCustom").value.trim() : selectVal;
-  if(compLogoPath){
+  if(compLogoPath && !wheelPlainMode){
     $("wheelFullscreenCompLogoImg").src = compLogoPath;
     compLogoBar.style.display = "flex";
   }else{
@@ -3285,7 +3424,9 @@ function drawSpin(){
 
     // This pick completed a fixture pair (pendingBefore had a team waiting,
     // and drawRecordPick just cleared it) — show matchup info for that pair.
-    if(pendingBefore !== null && drawPending === null){
+    // Side League mode skips this entirely — division/H2H stats are Eliza
+    // Cup data and don't apply to side-league team names.
+    if(pendingBefore !== null && drawPending === null && !wheelSideLeagueMode){
       const justCompleted = drawFixtures[drawFixtures.length - 1];
       renderWheelMatchupInfo(justCompleted.home, justCompleted.away);
     }
@@ -3348,6 +3489,21 @@ $("drawTeamInput").addEventListener("input", () => {
 });
 $("wheelCompLogoSelect").addEventListener("change", (e) => {
   $("wheelCompLogoCustom").style.display = e.target.value === "__custom__" ? "" : "none";
+});
+$("wheelSideLeagueMode").addEventListener("change", (e) => {
+  wheelSideLeagueMode = e.target.checked;
+  $("wheelSideLeagueSelectWrap").style.display = wheelSideLeagueMode ? "" : "none";
+  if(wheelSideLeagueMode) loadWheelSideLeagueMap();
+  renderDrawShared();
+  if(drawStyle === "wheel") drawRenderWheel();
+});
+$("wheelSideLeagueSelect").addEventListener("change", (e) => {
+  wheelSideLeagueKey = e.target.value || null;
+  renderDrawShared();
+  if(drawStyle === "wheel") drawRenderWheel();
+});
+$("wheelPlainMode").addEventListener("change", (e) => {
+  wheelPlainMode = e.target.checked;
 });
 $("wheelFullscreenBtn").addEventListener("click", enterWheelFullscreen);
 $("wheelCompleteDrawBtn").addEventListener("click", showWheelResultsView);
