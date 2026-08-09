@@ -5688,6 +5688,26 @@ function resolveSideLeagueTeamName(name){
   return map[upper] || name;
 }
 
+// Same as teamLink(), but links to the *resolved* Eliza team's profile page
+// while still displaying the side-league name as the link text — e.g. "Le
+// Fee & Foo" reads as itself but takes you to Harvey Frekes' Team Profile.
+// Leagues with no mapping column at all (e.g. Australia Cup LMS) use the
+// name as-is, since those names are already Eliza Cup team names — but for
+// leagues that DO have a mapping column, a name with no match in it doesn't
+// get linked, since it'd otherwise point at a Team Profile that doesn't exist.
+function sideLeagueTeamLink(name){
+  if(!name) return "—";
+  const leagueKey = currentDivision && currentDivision.sideLeagueKey;
+  const colLabel = SIDE_LEAGUE_MAP_COLUMN_LABEL[leagueKey];
+  if(!colLabel){
+    return `<a href="#team=${encodeURIComponent(name)}" class="team-link">${name}</a>`;
+  }
+  const map = sideLeagueTeamMap[colLabel];
+  const elizaName = map && map[name.trim().toUpperCase()];
+  if(!elizaName) return name;
+  return `<a href="#team=${encodeURIComponent(elizaName)}" class="team-link">${name}</a>`;
+}
+
 // ---------- Side Leagues Hub ----------
 // The landing/overview page for Side Leagues — reached via "Overview" at the
 // top of the Side Leagues dropdown. Managed via admin.html
@@ -6061,7 +6081,7 @@ function sideLeagueTableHtml(table){
         const logoName = resolveSideLeagueTeamName(t.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr style="${histDivStatusStyle(t.status)}">
-        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${t.team}</td><td style="text-align:left;">${t.name || "—"}</td><td class="pts">${t.pts}</td>
+        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td style="text-align:left;">${t.name || "—"}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         <td class="next-opp">${t.next || "—"}</td>
       </tr>`;
@@ -6085,9 +6105,9 @@ function fplFixtureCardHtml(f){
     return `<span class="fixture-team-logo-wrap">${name ? `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}">` : ""}</span>`;
   };
   return `<div class="fixture-card">
-    <div class="fixture-team fixture-team-with-logo ${resultClass(homeWin)}">${teamLogo(f.home)}<span class="fixture-team-name">${f.home}</span></div>
+    <div class="fixture-team fixture-team-with-logo ${resultClass(homeWin)}">${teamLogo(f.home)}<span class="fixture-team-name">${sideLeagueTeamLink(f.home)}</span></div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="fixture-team right fixture-team-with-logo ${resultClass(awayWin)}"><span class="fixture-team-name">${f.away}</span>${teamLogo(f.away)}</div>
+    <div class="fixture-team right fixture-team-with-logo ${resultClass(awayWin)}"><span class="fixture-team-name">${sideLeagueTeamLink(f.away)}</span>${teamLogo(f.away)}</div>
   </div>`;
 }
 
@@ -6179,7 +6199,7 @@ function fplRoddyTableHtml(data){
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
-        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${e.team}</td><td style="text-align:left;">${e.player || "—"}</td>
+        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td style="text-align:left;">${e.player || "—"}</td>
         <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td><td>${e.ovrRank || "—"}</td>
         ${e.chips.map(c=>`<td>${c ? "✓" : "—"}</td>`).join("")}
       </tr>`;
@@ -6850,8 +6870,10 @@ function renderLmsCup(data){
     const pickIcon = isAwaiting ? '⚠ ' : isEntered ? '✓ ' : '';
     const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
     const resultBg = e.result === "WIN" ? "#dcfce7" : e.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
+    const logoName = resolveSideLeagueTeamName(e.name);
+    const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
     return `<div class="lms-pick-row">
-      <span class="lms-participant">${e.name}</span>
+      <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
       <span class="lms-pick-col">
         <span class="lms-pick${pickClass}">${pickIcon}${e.pick || "—"}</span>
         ${e.opponent && !isEliminated ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
