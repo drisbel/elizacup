@@ -5619,6 +5619,75 @@ const SIDE_LEAGUES = [
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
+// Side-league team names (e.g. "Le Fee & Foo") aren't the same as Eliza Cup
+// team names, so they don't have their own logo files — this sheet (managed
+// by Dan directly, not via admin.html) maps each Eliza team's name in column
+// A to that manager's side-league team name for each league in the columns
+// from C onward (header row names the league; new leagues added as new
+// columns are picked up automatically). Used only to resolve which real
+// team logo to show — the side-league name itself is still what's displayed.
+const SIDE_LEAGUE_TEAM_MAP_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
+const SIDE_LEAGUE_TEAM_MAP_GID = "1831804785";
+const SIDE_LEAGUE_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
+const SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL = 2; // column C onward: one league per column
+// Maps each SIDE_LEAGUES key to that column's header text on the mapping sheet.
+const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH" };
+
+let sideLeagueTeamMap = {};       // { "FPL": { "SIDE LEAGUE NAME": "Eliza Team Name" }, ... }
+let sideLeagueTeamMapLoaded = false;
+let sideLeagueTeamMapPromise = null;
+
+function sideLeagueTeamMapCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${SIDE_LEAGUE_TEAM_MAP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SIDE_LEAGUE_TEAM_MAP_GID}&cachebust=` + Date.now();
+}
+
+function loadSideLeagueTeamMap(){
+  if(sideLeagueTeamMapLoaded) return Promise.resolve(sideLeagueTeamMap);
+  if(sideLeagueTeamMapPromise) return sideLeagueTeamMapPromise;
+  sideLeagueTeamMapPromise = fetch(sideLeagueTeamMapCsvUrlFor()).then(r => r.text()).then(text => {
+    const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+    if(!rows.length){ sideLeagueTeamMapLoaded = true; return sideLeagueTeamMap; }
+
+    const headerRow = rows[0];
+    const leagueCols = [];
+    for(let c = SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL; c < headerRow.length; c++){
+      const label = cell(headerRow, c);
+      if(label) leagueCols.push({ label, colIndex: c });
+    }
+    leagueCols.forEach(col => { sideLeagueTeamMap[col.label] = {}; });
+
+    for(let r = 1; r < rows.length; r++){
+      const elizaTeam = cell(rows[r], SIDE_LEAGUE_TEAM_MAP_NAME_COL);
+      if(!elizaTeam) continue;
+      leagueCols.forEach(col => {
+        const name = cell(rows[r], col.colIndex);
+        if(name) sideLeagueTeamMap[col.label][name.toUpperCase()] = elizaTeam;
+      });
+    }
+    sideLeagueTeamMapLoaded = true;
+    return sideLeagueTeamMap;
+  }).catch(err => {
+    console.error("Side league team map fetch failed:", err);
+    sideLeagueTeamMapLoaded = true; // don't retry forever — logos just fall back to the placeholder
+    return sideLeagueTeamMap;
+  });
+  return sideLeagueTeamMapPromise;
+}
+
+// Resolves a side-league team name to its real Eliza team name (for logo
+// lookup only — the side-league name is still what's displayed) using
+// whichever league is currently active. Falls back to the name as given if
+// no mapping is found, so an unmapped team just shows the placeholder badge
+// rather than a broken image.
+function resolveSideLeagueTeamName(name){
+  const leagueKey = currentDivision && currentDivision.sideLeagueKey;
+  const colLabel = SIDE_LEAGUE_MAP_COLUMN_LABEL[leagueKey];
+  const map = colLabel && sideLeagueTeamMap[colLabel];
+  if(!map) return name;
+  const upper = (name || "").trim().toUpperCase();
+  return map[upper] || name;
+}
+
 // ---------- Side Leagues Hub ----------
 // The landing/overview page for Side Leagues — reached via "Overview" at the
 // top of the Side Leagues dropdown. Managed via admin.html
@@ -5989,8 +6058,10 @@ function sideLeagueTableHtml(table){
       <th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Next</th>
     </tr></thead><tbody>
       ${table.teams.map(t=>{
+        const logoName = resolveSideLeagueTeamName(t.team);
+        const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr style="${histDivStatusStyle(t.status)}">
-        <td>${t.pos}</td><td style="text-align:left;">${t.team}</td><td style="text-align:left;">${t.name || "—"}</td><td class="pts">${t.pts}</td>
+        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${t.team}</td><td style="text-align:left;">${t.name || "—"}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         <td class="next-opp">${t.next || "—"}</td>
       </tr>`;
@@ -6009,10 +6080,14 @@ function fplFixtureCardHtml(f){
   const scoreHtml = hasScore
     ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
     : `<span class="upcoming">vs</span>`;
+  const teamLogo = name => {
+    const logoName = resolveSideLeagueTeamName(name);
+    return `<span class="fixture-team-logo-wrap">${name ? `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}">` : ""}</span>`;
+  };
   return `<div class="fixture-card">
-    <div class="fixture-team ${resultClass(homeWin)}">${f.home}</div>
+    <div class="fixture-team fixture-team-with-logo ${resultClass(homeWin)}">${teamLogo(f.home)}<span class="fixture-team-name">${f.home}</span></div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="fixture-team right ${resultClass(awayWin)}">${f.away}</div>
+    <div class="fixture-team right fixture-team-with-logo ${resultClass(awayWin)}"><span class="fixture-team-name">${f.away}</span>${teamLogo(f.away)}</div>
   </div>`;
 }
 
@@ -6100,11 +6175,15 @@ function fplRoddyTableHtml(data){
       <th>GW</th><th>Chip</th><th>Pts</th><th>Ovr Rank</th>
       ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
     </tr></thead><tbody>
-      ${data.entries.map(e=>`<tr>
-        <td>${e.pos}</td><td style="text-align:left;">${e.team}</td><td style="text-align:left;">${e.player || "—"}</td>
+      ${data.entries.map(e=>{
+        const logoName = resolveSideLeagueTeamName(e.team);
+        const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+        return `<tr>
+        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${e.team}</td><td style="text-align:left;">${e.player || "—"}</td>
         <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td><td>${e.ovrRank || "—"}</td>
         ${e.chips.map(c=>`<td>${c ? "✓" : "—"}</td>`).join("")}
-      </tr>`).join("")}
+      </tr>`;
+      }).join("")}
     </tbody></table></div>`;
 }
 
@@ -6145,7 +6224,7 @@ function renderSideLeagueContent(){
         renderSideLeagueContent();
       });
     });
-    loadFplRoddyData().then(data => {
+    Promise.all([loadFplRoddyData(), loadSideLeagueTeamMap()]).then(([data]) => {
       const container = document.getElementById('fplRoddyContainer');
       if(!container) return; // user navigated away before this resolved
       container.className = "";
@@ -6839,7 +6918,10 @@ async function loadSideLeague(leagueKey){
   }
 
   try{
-    const res = await fetch(sideLeagueCsvUrlFor(league));
+    const [res] = await Promise.all([
+      fetch(sideLeagueCsvUrlFor(league)),
+      loadSideLeagueTeamMap()
+    ]);
     if(!res.ok) throw new Error("HTTP " + res.status);
     const csvText = await res.text();
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;

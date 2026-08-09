@@ -816,6 +816,16 @@
           </div>
         </div>
 
+        <div class="field">
+          <label>Team name text colour</label>
+          <div class="style-toggle" id="wheelTextColorModeToggle">
+            <button type="button" data-textmode="auto" class="active">Auto (best contrast)</button>
+            <button type="button" data-textmode="white">Always white</button>
+            <button type="button" data-textmode="dark">Always dark</button>
+          </div>
+          <div class="hint" style="display:block;margin-top:6px;">Auto picks white or dark text per slice based on how light or dark that slice's colour is — e.g. white on blue, dark on gold.</div>
+        </div>
+
         <div id="wheelCustomOptions" class="field">
           <div class="hint" style="display:block;margin-bottom:8px;">Choose 2 or 3 colours to alternate around the wheel. Use the swatch or type a hex code directly.</div>
           <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
@@ -3076,6 +3086,36 @@ function getWheelSliceColor(team, index){
   return palette[index % palette.length];
 }
 
+// Team name text colour on the wheel — "auto" (default) picks white or dark
+// per slice based on that slice's own background colour, so light colours
+// like gold/yellow get dark text and darker colours like blue keep white,
+// without needing separate manual configuration per colour or per mode.
+// "white"/"dark" force one or the other regardless of background.
+let wheelTextColorMode = "auto";
+
+function getContrastTextColor(bgHex){
+  const hex = (bgHex || "#28427c").replace("#", "");
+  const r = parseInt(hex.substring(0,2), 16) || 0;
+  const g = parseInt(hex.substring(2,4), 16) || 0;
+  const b = parseInt(hex.substring(4,6), 16) || 0;
+  // Standard perceived-brightness (YIQ) formula — cheap and good enough for
+  // picking a legible text colour, no need for full WCAG contrast maths here.
+  const brightness = (r*299 + g*587 + b*114) / 1000;
+  return brightness >= 150 ? "#1c2733" : "#ffffff";
+}
+
+function getWheelSliceTextColor(bgColor){
+  if(wheelTextColorMode === "white") return "#ffffff";
+  if(wheelTextColorMode === "dark") return "#1c2733";
+  return getContrastTextColor(bgColor);
+}
+
+function setWheelTextColorMode(mode){
+  wheelTextColorMode = mode;
+  document.querySelectorAll("#wheelTextColorModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.textmode === mode));
+  drawRenderWheel();
+}
+
 function setWheelColorMode(mode){
   wheelColorMode = mode;
   document.querySelectorAll("#wheelColorModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
@@ -3339,7 +3379,8 @@ function drawRenderWheel(){
     ctx.moveTo(center, center);
     ctx.arc(center, center, radius, startAngle, endAngle);
     ctx.closePath();
-    ctx.fillStyle = getWheelSliceColor(team, i);
+    const sliceColor = getWheelSliceColor(team, i);
+    ctx.fillStyle = sliceColor;
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
@@ -3383,7 +3424,7 @@ function drawRenderWheel(){
     ctx.rotate(midAngle);
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = getWheelSliceTextColor(sliceColor);
     ctx.fillText(label, textOuterEdge, 0);
     ctx.restore();
   });
@@ -3494,6 +3535,9 @@ $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
   btn.addEventListener("click", () => setWheelColorMode(btn.getAttribute("data-mode")));
+});
+document.querySelectorAll("#wheelTextColorModeToggle button").forEach(btn => {
+  btn.addEventListener("click", () => setWheelTextColorMode(btn.getAttribute("data-textmode")));
 });
 ["wheelCustomColor1","wheelCustomColor2","wheelCustomColor3","wheelCustomUse3"].forEach(id => {
   $(id).addEventListener("input", setWheelCustomColors);
