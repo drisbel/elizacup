@@ -6040,27 +6040,45 @@ function parseFplTable(rows, titleText){
   return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, colsAsLetters, rawHeaderRow, rawDataRows, firstParsedTeam, ptsCalcCheck } };
 }
 
-// "Overall" table — a separate, simpler standings on the same tab (POS in
-// column AO, Team in AQ, Pts in AR). Finds the header row by searching for
-// "POS" in column AO rather than assuming a fixed row number, same reasoning
-// as parseFplTable: hidden rows elsewhere on the tab would silently shift a
-// hardcoded row index but not a text search.
-const OVERALL_COL = { pos: 40, team: 42, pts: 43 }; // AO, AQ, AR
+// "Overall" table — a separate, simpler standings on the same tab as the
+// main table and fixtures (POS/Team/Pts only, no Player/W/D/L). Column
+// letters (AO/AQ/AR) as seen in the Sheets UI don't reliably match the
+// gviz CSV export's actual column indices, since hidden columns are dropped
+// from that export entirely — a known recurring pitfall on this site. So
+// rather than trust a fixed index, this searches every row for "POS"
+// followed by "TEAM" followed by "PTS", left to right, wherever they
+// actually land. That alone would also match the MAIN table's header
+// (POS/TEAM/PLAYER/PTS/W/D/L/...), so it additionally requires nothing
+// meaningful sits between TEAM and PTS — the Overall table's header has
+// nothing there, the main table's has PLAYER.
 function parseSideLeagueOverallTable(rows){
-  let headerRow = -1;
+  let headerRow = -1, posCol = -1, teamCol = -1, ptsCol = -1;
+  const candidatesTried = [];
   for(let r=0; r<rows.length; r++){
-    if(cell(rows[r]||[], OVERALL_COL.pos).toUpperCase() === "POS"){ headerRow = r; break; }
+    const row = rows[r]||[];
+    const upper = row.map(v => (v||"").toString().trim().toUpperCase());
+    const pIdx = upper.indexOf("POS");
+    if(pIdx === -1) continue;
+    const tIdx = upper.indexOf("TEAM", pIdx+1);
+    if(tIdx === -1) continue;
+    const ptsIdx = upper.indexOf("PTS", tIdx+1);
+    if(ptsIdx === -1) continue;
+    const between = row.slice(tIdx+1, ptsIdx).map(v=>(v||"").toString().trim()).filter(Boolean);
+    candidatesTried.push({ row: r+1, posCol: colIndexToLetter(pIdx), teamCol: colIndexToLetter(tIdx), ptsCol: colIndexToLetter(ptsIdx), betweenTeamAndPts: between });
+    if(between.length > 0) continue; // something else (e.g. PLAYER) between TEAM and PTS — that's the main table's header, not this one
+    headerRow = r; posCol = pIdx; teamCol = tIdx; ptsCol = ptsIdx;
+    break;
   }
-  if(headerRow === -1) return { entries: [], debug: { headerFound: false } };
+  if(headerRow === -1) return { entries: [], debug: { headerFound: false, candidatesTried } };
 
   const entries = [];
   for(let dr=headerRow+1; dr<rows.length; dr++){
-    const pos = cell(rows[dr]||[], OVERALL_COL.pos);
+    const pos = cell(rows[dr]||[], posCol);
     if(!pos) break;
     entries.push({
       pos,
-      team: cell(rows[dr]||[], OVERALL_COL.team),
-      pts: cell(rows[dr]||[], OVERALL_COL.pts)
+      team: cell(rows[dr]||[], teamCol),
+      pts: cell(rows[dr]||[], ptsCol)
     });
   }
   const hRow = rows[headerRow]||[];
@@ -6068,7 +6086,14 @@ function parseSideLeagueOverallTable(rows){
   const rawDataRows = rows.slice(headerRow+1, headerRow+4).map((row,i)=>
     "row " + (headerRow+2+i) + ": " + (row||[]).map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")
   );
-  return { entries, debug: { headerFound: true, headerRow: headerRow+1, rawHeaderRow, rawDataRows, firstParsedEntry: entries[0]||null } };
+  return {
+    entries,
+    debug: {
+      headerFound: true, headerRow: headerRow+1,
+      posCol: colIndexToLetter(posCol), teamCol: colIndexToLetter(teamCol), ptsCol: colIndexToLetter(ptsCol),
+      rawHeaderRow, rawDataRows, firstParsedEntry: entries[0]||null
+    }
+  };
 }
 
 // Gameweek fixtures — now isolated column blocks (Team1/Score1/Score2/Team2), one
