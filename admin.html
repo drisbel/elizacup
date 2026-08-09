@@ -805,12 +805,6 @@
         <textarea id="drawTeamInput" rows="8" placeholder="Team A&#10;Team B&#10;Team C&#10;..."></textarea>
       </div>
 
-      <div class="form-actions" style="margin-bottom:6px;">
-        <button class="btn btn-primary" id="drawStartBtn">⛶ Start Draw (Full Screen)</button>
-        <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
-      </div>
-      <div class="hint" id="drawPotCount"></div>
-
       <!-- Wheel mode -->
       <div id="drawWheelMode">
         <div class="field">
@@ -856,6 +850,8 @@
           <label for="wheelCompLogoSelect">Wheel centre logo <span class="hint" style="display:inline;">(shown in the middle of the wheel)</span></label>
           <select id="wheelCompLogoSelect">
             <option value="">None</option>
+            <option value="logo/eliza-elephant.png">Eliza Elephant</option>
+            <option value="logo/eliza-logo.png">Eliza Logo</option>
             <option value="logo/division-1-logo.png">Division 1</option>
             <option value="logo/division-2-logo.png">Division 2 (2A/2B)</option>
             <option value="logo/division-3-logo.png">Division 3 (3A/3B)</option>
@@ -882,19 +878,30 @@
           <label for="wheelPlainMode">Plain Wheel mode <span class="hint" style="display:inline;">(Full Screen Mode shows just the title, wheel and drawn team — no matchup info or fixtures list)</span></label>
         </div>
 
-        <div class="wheel-wrap" id="wheelWrap">
-          <div class="wheel-pointer" id="wheelPointer"></div>
-          <canvas id="drawWheelCanvas" width="340" height="340"></canvas>
+        <div class="form-actions" style="margin-top:18px;margin-bottom:6px;">
+          <button class="btn btn-primary" id="drawStartBtn">⛶ Start Draw (Full Screen)</button>
+          <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
         </div>
-        <div style="text-align:center;margin-bottom:10px;">
-          <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
-          <button class="btn btn-primary" id="wheelCompleteDrawBtn" style="display:none;">✓ Complete Draw</button>
-        </div>
-        <div class="draw-pick-box wheel-pick-inline" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
-          <div class="kicker">Just drawn</div>
-          <div class="pick-body">
-            <img id="drawWheelPickLogo" alt="" style="display:none;">
-            <div class="name" id="drawWheelPickName"></div>
+        <div class="hint" id="drawPotCount"></div>
+
+        <!-- No small inline preview any more — the wheel only ever appears in
+             Full Screen Mode. These elements stay in the DOM (hidden here) so
+             Start Draw can reparent them into the fullscreen overlay. -->
+        <div style="display:none;">
+          <div class="wheel-wrap" id="wheelWrap">
+            <div class="wheel-pointer" id="wheelPointer"></div>
+            <canvas id="drawWheelCanvas" width="340" height="340"></canvas>
+          </div>
+          <div style="text-align:center;margin-bottom:10px;">
+            <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
+            <button class="btn btn-primary" id="wheelCompleteDrawBtn" style="display:none;">✓ Complete Draw</button>
+          </div>
+          <div class="draw-pick-box wheel-pick-inline" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
+            <div class="kicker">Just drawn</div>
+            <div class="pick-body">
+              <img id="drawWheelPickLogo" alt="" style="display:none;">
+              <div class="name" id="drawWheelPickName"></div>
+            </div>
           </div>
         </div>
       </div>
