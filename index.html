@@ -6042,14 +6042,17 @@ function parseFplTable(rows, titleText){
 
 // "Overall" table — a separate, simpler standings on the same tab as the
 // main table and fixtures. Anchored on a unique marker cell
-// (OVERALL_TABLE_START, placed by Dan one row above and one column left of
-// the POS header) rather than trusting fixed column letters or a bare
-// "POS"/"TEAM"/"PTS" text search — those turned out to be unreliable here.
-// Critically, the POS/TEAM/PTS search on the header row starts from the
-// marker's own column onward, not from the start of the row — the main
-// ladder's header can share the same row, and without that constraint the
-// search would grab ITS earlier POS/TEAM/PTS instead of this table's.
+// (OVERALL_TABLE_START), found by searching every row rather than trusting
+// a fixed row number — hidden rows above it shift the sheet's row 20 to row
+// 15 in the actual export. Once the marker's row+column are found, POS/
+// Team/Pts are read via FIXED offsets from the marker's own column
+// (confirmed directly from a raw CSV dump: POS is marker+1, Team is
+// marker+3, Pts is marker+4) rather than by searching for "POS"/"PTS" as
+// header text — they turned out not to exist as header text at all, only
+// "TEAM" is actually typed in that row, which is why the earlier text-search
+// approach could never find them no matter how it was adjusted.
 const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
+const OVERALL_COL_OFFSET = { pos: 1, team: 3, pts: 4 }; // relative to the marker's own column
 function parseSideLeagueOverallTable(rows){
   let markerRow = -1, markerCol = -1;
   for(let r=0; r<rows.length; r++){
@@ -6067,37 +6070,21 @@ function parseSideLeagueOverallTable(rows){
   }
 
   const headerRow = markerRow + 1;
-  const hRow = rows[headerRow]||[];
-  const upper = hRow.map(v => (v||"").toString().trim().toUpperCase());
-  // Search from the marker's column onward, not from column 0 — this is the
-  // fix: without it, an earlier "POS"/"TEAM"/"PTS" elsewhere on this same
-  // row (e.g. the main ladder's own header, if it happens to share the row)
-  // would get matched instead of this table's.
-  const posCol = upper.indexOf("POS", markerCol);
-  const teamCol = posCol === -1 ? -1 : upper.indexOf("TEAM", posCol+1);
-  const ptsCol = teamCol === -1 ? -1 : upper.indexOf("PTS", teamCol+1);
-  const rawHeaderRow = hRow.map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
+  const posCol = markerCol + OVERALL_COL_OFFSET.pos;
+  const teamCol = markerCol + OVERALL_COL_OFFSET.team;
+  const ptsCol = markerCol + OVERALL_COL_OFFSET.pts;
 
-  if(posCol === -1 || teamCol === -1 || ptsCol === -1){
-    return {
-      entries: [],
-      debug: {
-        markerFound: true, markerRow: markerRow+1, markerCol: colIndexToLetter(markerCol), headerRow: headerRow+1, headerFound: false,
-        posCol: posCol===-1 ? "not found" : colIndexToLetter(posCol),
-        teamCol: teamCol===-1 ? "not found" : colIndexToLetter(teamCol),
-        ptsCol: ptsCol===-1 ? "not found" : colIndexToLetter(ptsCol),
-        rawHeaderRow
-      }
-    };
-  }
+  const hRow = rows[headerRow]||[];
+  const teamHeaderText = cell(hRow, teamCol).toUpperCase(); // sanity-check only, not required to match
+  const rawHeaderRow = hRow.map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
 
   const entries = [];
   for(let dr=headerRow+1; dr<rows.length; dr++){
-    const pos = cell(rows[dr]||[], posCol);
-    if(!pos) break;
+    const team = cell(rows[dr]||[], teamCol);
+    if(!team) break;
     entries.push({
-      pos,
-      team: cell(rows[dr]||[], teamCol),
+      pos: cell(rows[dr]||[], posCol),
+      team,
       pts: cell(rows[dr]||[], ptsCol)
     });
   }
@@ -6107,8 +6094,8 @@ function parseSideLeagueOverallTable(rows){
   return {
     entries,
     debug: {
-      markerFound: true, markerRow: markerRow+1, markerCol: colIndexToLetter(markerCol), headerRow: headerRow+1, headerFound: true,
-      posCol: colIndexToLetter(posCol), teamCol: colIndexToLetter(teamCol), ptsCol: colIndexToLetter(ptsCol),
+      markerFound: true, markerRow: markerRow+1, markerCol: colIndexToLetter(markerCol), headerRow: headerRow+1,
+      teamHeaderText, posCol: colIndexToLetter(posCol), teamCol: colIndexToLetter(teamCol), ptsCol: colIndexToLetter(ptsCol),
       entriesFound: entries.length,
       rawHeaderRow, rawDataRows, firstParsedEntry: entries[0]||null, lastParsedEntry: entries[entries.length-1]||null
     }
