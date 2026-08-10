@@ -7034,9 +7034,10 @@ async function loadSideLeague(leagueKey){
       // score, AJ=Team2 score, AK=Team2 — 20 rounds followed by Quarter/Semi/
       // Preliminary/Final, not the GW-labelled two-block layout FPL uses.
       const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
-      // "Overall" table — AFL only for now, same tab, separate POS/Team/Pts
-      // columns (AO/AQ/AR). Shown underneath the Fixtures section.
-      const overall = league.key === "afl" ? parseSideLeagueOverallTable(rows) : null;
+      // "Overall" table — same marker-anchored convention (OVERALL_TABLE_START
+      // in column AN, POS/Team/Pts at fixed offsets from it) now used across
+      // AFL, NRL and EPL Supercoach. Shown underneath the Fixtures section.
+      const overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
 
       sideLeagueData = { singleTable: true, table, fx, overall, label: league.label };
       sideLeagueActiveRound = {};
