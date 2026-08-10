@@ -59,11 +59,12 @@
     "label": "Australia Cup LMS",
     "status": "active",
     "code": "",
-    "notes": "",
+    "notes": "12 of 14 still alive",
     "link": "#sideleagues=auscup",
     "closeEnabled": false,
     "closeDate": "",
     "countdownEnabled": false,
-    "roundInfo": "ROUND OF 16"
+    "roundInfo": "ROUND OF 16",
+    "winners": []
   }
 ]
