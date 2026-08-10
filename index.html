@@ -6044,19 +6044,18 @@ function parseFplTable(rows, titleText){
 // main table and fixtures. Anchored on a unique marker cell
 // (OVERALL_TABLE_START, placed by Dan one row above and one column left of
 // the POS header) rather than trusting fixed column letters or a bare
-// "POS"/"TEAM"/"PTS" text search — those turned out to be unreliable here
-// (an empty search everywhere on the sheet, even where the main table's own
-// header should have matched, pointed at something more fundamental than
-// hidden columns). The marker is unique enough that once it's found, POS/
-// TEAM/PTS are read from whatever columns they actually occupy on the row
-// directly below it — still tolerant of shifted columns, just anchored to
-// an unambiguous starting point instead of a global search.
+// "POS"/"TEAM"/"PTS" text search — those turned out to be unreliable here.
+// Critically, the POS/TEAM/PTS search on the header row starts from the
+// marker's own column onward, not from the start of the row — the main
+// ladder's header can share the same row, and without that constraint the
+// search would grab ITS earlier POS/TEAM/PTS instead of this table's.
 const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
 function parseSideLeagueOverallTable(rows){
-  let markerRow = -1;
+  let markerRow = -1, markerCol = -1;
   for(let r=0; r<rows.length; r++){
     const row = rows[r]||[];
-    if(row.some(v => (v||"").toString().trim().toUpperCase() === OVERALL_TABLE_MARKER)){ markerRow = r; break; }
+    const idx = row.findIndex(v => (v||"").toString().trim().toUpperCase() === OVERALL_TABLE_MARKER);
+    if(idx !== -1){ markerRow = r; markerCol = idx; break; }
   }
   if(markerRow === -1){
     const totalRows = rows.length;
@@ -6070,16 +6069,20 @@ function parseSideLeagueOverallTable(rows){
   const headerRow = markerRow + 1;
   const hRow = rows[headerRow]||[];
   const upper = hRow.map(v => (v||"").toString().trim().toUpperCase());
-  const posCol = upper.indexOf("POS");
-  const teamCol = upper.indexOf("TEAM");
-  const ptsCol = upper.indexOf("PTS");
+  // Search from the marker's column onward, not from column 0 — this is the
+  // fix: without it, an earlier "POS"/"TEAM"/"PTS" elsewhere on this same
+  // row (e.g. the main ladder's own header, if it happens to share the row)
+  // would get matched instead of this table's.
+  const posCol = upper.indexOf("POS", markerCol);
+  const teamCol = posCol === -1 ? -1 : upper.indexOf("TEAM", posCol+1);
+  const ptsCol = teamCol === -1 ? -1 : upper.indexOf("PTS", teamCol+1);
   const rawHeaderRow = hRow.map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
 
   if(posCol === -1 || teamCol === -1 || ptsCol === -1){
     return {
       entries: [],
       debug: {
-        markerFound: true, markerRow: markerRow+1, headerRow: headerRow+1, headerFound: false,
+        markerFound: true, markerRow: markerRow+1, markerCol: colIndexToLetter(markerCol), headerRow: headerRow+1, headerFound: false,
         posCol: posCol===-1 ? "not found" : colIndexToLetter(posCol),
         teamCol: teamCol===-1 ? "not found" : colIndexToLetter(teamCol),
         ptsCol: ptsCol===-1 ? "not found" : colIndexToLetter(ptsCol),
@@ -6104,7 +6107,7 @@ function parseSideLeagueOverallTable(rows){
   return {
     entries,
     debug: {
-      markerFound: true, markerRow: markerRow+1, headerRow: headerRow+1, headerFound: true,
+      markerFound: true, markerRow: markerRow+1, markerCol: colIndexToLetter(markerCol), headerRow: headerRow+1, headerFound: true,
       posCol: colIndexToLetter(posCol), teamCol: colIndexToLetter(teamCol), ptsCol: colIndexToLetter(ptsCol),
       entriesFound: entries.length,
       rawHeaderRow, rawDataRows, firstParsedEntry: entries[0]||null, lastParsedEntry: entries[entries.length-1]||null
