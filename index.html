@@ -6041,35 +6041,52 @@ function parseFplTable(rows, titleText){
 }
 
 // "Overall" table — a separate, simpler standings on the same tab as the
-// main table and fixtures (POS/Team/Pts only, no Player/W/D/L). Column
-// letters (AO/AQ/AR) as seen in the Sheets UI don't reliably match the
-// gviz CSV export's actual column indices, since hidden columns are dropped
-// from that export entirely — a known recurring pitfall on this site. So
-// rather than trust a fixed index, this searches every row for "POS"
-// followed by "TEAM" followed by "PTS", left to right, wherever they
-// actually land. That alone would also match the MAIN table's header
-// (POS/TEAM/PLAYER/PTS/W/D/L/...), so it additionally requires nothing
-// meaningful sits between TEAM and PTS — the Overall table's header has
-// nothing there, the main table's has PLAYER.
+// main table and fixtures. Anchored on a unique marker cell
+// (OVERALL_TABLE_START, placed by Dan one row above and one column left of
+// the POS header) rather than trusting fixed column letters or a bare
+// "POS"/"TEAM"/"PTS" text search — those turned out to be unreliable here
+// (an empty search everywhere on the sheet, even where the main table's own
+// header should have matched, pointed at something more fundamental than
+// hidden columns). The marker is unique enough that once it's found, POS/
+// TEAM/PTS are read from whatever columns they actually occupy on the row
+// directly below it — still tolerant of shifted columns, just anchored to
+// an unambiguous starting point instead of a global search.
+const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
 function parseSideLeagueOverallTable(rows){
-  let headerRow = -1, posCol = -1, teamCol = -1, ptsCol = -1;
-  const candidatesTried = [];
+  let markerRow = -1;
   for(let r=0; r<rows.length; r++){
     const row = rows[r]||[];
-    const upper = row.map(v => (v||"").toString().trim().toUpperCase());
-    const pIdx = upper.indexOf("POS");
-    if(pIdx === -1) continue;
-    const tIdx = upper.indexOf("TEAM", pIdx+1);
-    if(tIdx === -1) continue;
-    const ptsIdx = upper.indexOf("PTS", tIdx+1);
-    if(ptsIdx === -1) continue;
-    const between = row.slice(tIdx+1, ptsIdx).map(v=>(v||"").toString().trim()).filter(Boolean);
-    candidatesTried.push({ row: r+1, posCol: colIndexToLetter(pIdx), teamCol: colIndexToLetter(tIdx), ptsCol: colIndexToLetter(ptsIdx), betweenTeamAndPts: between });
-    if(between.length > 0) continue; // something else (e.g. PLAYER) between TEAM and PTS — that's the main table's header, not this one
-    headerRow = r; posCol = pIdx; teamCol = tIdx; ptsCol = ptsIdx;
-    break;
+    if(row.some(v => (v||"").toString().trim().toUpperCase() === OVERALL_TABLE_MARKER)){ markerRow = r; break; }
   }
-  if(headerRow === -1) return { entries: [], debug: { headerFound: false, candidatesTried } };
+  if(markerRow === -1){
+    const totalRows = rows.length;
+    const totalCols = rows.reduce((max,row)=>Math.max(max,(row||[]).length), 0);
+    const first15Rows = rows.slice(0,15).map((row,i) =>
+      "row " + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")
+    );
+    return { entries: [], debug: { markerFound: false, totalRows, totalCols, first15Rows } };
+  }
+
+  const headerRow = markerRow + 1;
+  const hRow = rows[headerRow]||[];
+  const upper = hRow.map(v => (v||"").toString().trim().toUpperCase());
+  const posCol = upper.indexOf("POS");
+  const teamCol = upper.indexOf("TEAM");
+  const ptsCol = upper.indexOf("PTS");
+  const rawHeaderRow = hRow.map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
+
+  if(posCol === -1 || teamCol === -1 || ptsCol === -1){
+    return {
+      entries: [],
+      debug: {
+        markerFound: true, markerRow: markerRow+1, headerRow: headerRow+1, headerFound: false,
+        posCol: posCol===-1 ? "not found" : colIndexToLetter(posCol),
+        teamCol: teamCol===-1 ? "not found" : colIndexToLetter(teamCol),
+        ptsCol: ptsCol===-1 ? "not found" : colIndexToLetter(ptsCol),
+        rawHeaderRow
+      }
+    };
+  }
 
   const entries = [];
   for(let dr=headerRow+1; dr<rows.length; dr++){
@@ -6081,17 +6098,16 @@ function parseSideLeagueOverallTable(rows){
       pts: cell(rows[dr]||[], ptsCol)
     });
   }
-  const hRow = rows[headerRow]||[];
-  const rawHeaderRow = hRow.map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ");
   const rawDataRows = rows.slice(headerRow+1, headerRow+4).map((row,i)=>
     "row " + (headerRow+2+i) + ": " + (row||[]).map((c,ci)=> c ? `[${colIndexToLetter(ci)}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")
   );
   return {
     entries,
     debug: {
-      headerFound: true, headerRow: headerRow+1,
+      markerFound: true, markerRow: markerRow+1, headerRow: headerRow+1, headerFound: true,
       posCol: colIndexToLetter(posCol), teamCol: colIndexToLetter(teamCol), ptsCol: colIndexToLetter(ptsCol),
-      rawHeaderRow, rawDataRows, firstParsedEntry: entries[0]||null
+      entriesFound: entries.length,
+      rawHeaderRow, rawDataRows, firstParsedEntry: entries[0]||null, lastParsedEntry: entries[entries.length-1]||null
     }
   };
 }
