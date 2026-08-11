@@ -5187,24 +5187,24 @@ function parseHistoricalSeason(rows){
 }
 
 // Bracket status computed purely from ladder position (not a sheet column)
-// — used for the FPL Cup table: top 8 = Upper Bracket, 9-16 = Lower Bracket.
+// — used for the FPL Cup table: top 8 = Winners Bracket, 9-16 = Losers Bracket.
 function bracketPositionStatus(pos){
   const p = parseInt(pos,10);
   if(!p) return null;
-  if(p <= 8) return "Upper Bracket";
-  if(p <= 16) return "Lower Bracket";
+  if(p <= 8) return "Winners Bracket";
+  if(p <= 16) return "Losers Bracket";
   return null;
 }
 function bracketPositionStyle(pos){
   const status = bracketPositionStatus(pos);
-  if(status === "Upper Bracket") return "background:rgba(37,99,235,0.16);border-left:4px solid #2563EB;";
-  if(status === "Lower Bracket") return "background:rgba(234,179,8,0.18);border-left:4px solid #EAB308;";
+  if(status === "Winners Bracket") return "background:rgba(37,99,235,0.16);border-left:4px solid #2563EB;";
+  if(status === "Losers Bracket") return "background:rgba(234,179,8,0.18);border-left:4px solid #EAB308;";
   return "";
 }
 function bracketPositionLegendHtml(){
   return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">
-    <span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:4px;"></span>Upper Bracket (Pos 1–8)</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#EAB308;border-radius:2px;margin-right:4px;"></span>Lower Bracket (Pos 9–16)</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:4px;"></span>Winners Bracket (Pos 1–8)</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#EAB308;border-radius:2px;margin-right:4px;"></span>Losers Bracket (Pos 9–16)</span>
   </div>`;
 }
 
@@ -6537,8 +6537,20 @@ function knockoutAwareFixtureGridHtml(fixtures){
     if(!group){ group = { key, fixtures: [] }; groups.push(group); }
     group.fixtures.push(f);
   });
-  return groups.map(g => `
-    <div class="playoff-banner">${g.key || "Bracket"}</div>
+  // Colour-match the same Winners (blue) / Losers (amber) treatment used on
+  // the table, matched by keyword since the heading text comes straight from
+  // whatever's actually in the sheet's Bracket column rather than an exact
+  // string we control.
+  const bannerColor = (key) => {
+    const upper = (key||"").toUpperCase();
+    if(upper.includes("WIN")) return "#2563EB";
+    if(upper.includes("LOS")) return "#EAB308";
+    return "var(--pitch)";
+  };
+  return groups.map((g,i) => {
+    const style = `background:${bannerColor(g.key)};${i>0 ? "margin-top:28px;" : ""}`;
+    return `
+    <div class="playoff-banner" style="${style}">${g.key || "Bracket"}</div>
     <div class="fixture-grid">
       ${g.fixtures.map(f => {
         const card = fplFixtureCardHtml(f);
@@ -6550,7 +6562,8 @@ function knockoutAwareFixtureGridHtml(fixtures){
         }
         return card;
       }).join("")}
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function renderSideLeagueTabs(activeKey){
