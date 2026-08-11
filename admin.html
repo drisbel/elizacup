@@ -2854,7 +2854,7 @@ function wheelMatchupTeamBlockHtml(team, info){
       <div class="wm-division-text" style="color:${info.divisionColor||"#8a8f98"};">${escapeHtml(wheelDivisionFullLabel(info.divisionShort))}</div>
       <div class="wm-pos-cards">
         ${wheelStatCardHtml(info.roddyPos ? "#"+info.roddyPos : "—", "Roddy Pos", { compact: true })}
-        ${wheelStatCardHtml(info.divisionPos ? "#"+info.divisionPos : "—", "Eliza Cup Pos", { compact: true })}
+        ${wheelStatCardHtml(info.divisionPos ? "#"+info.divisionPos : "—", `${escapeHtml(info.divisionShort)} Pos`, { compact: true })}
       </div>` : `<div class="wm-division-text">Division not found</div>`}
     </div>`;
 }
