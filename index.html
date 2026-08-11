@@ -6255,6 +6255,42 @@ function parseFplRoddy(rows){
 
 let fplRoddyData = null;
 let fplRoddyPromise = null;
+
+// FPL Cup: a new tab Dan built by duplicating the NRL Supercoach page, so it
+// uses the exact same column layout — parseFplTable + parseFplFixtures with
+// AFL_ROUND_RE, same as the singleTable leagues below. Lazily loaded only
+// when the "FPL Cup" tab is clicked, same as Roddy, rather than fetched
+// eagerly with the main FPL page.
+const FPL_CUP_GID = "154493860";
+// Best guess at the title text parseFplTable anchors on — the one thing
+// that couldn't be confirmed without seeing the actual sheet. If the Debug
+// panel shows "titleFound: false" this needs to become the exact text from
+// the sheet instead.
+const FPL_CUP_TITLE_TEXT = "ELIZA FPL CUP";
+let fplCupData = null;
+let fplCupPromise = null;
+
+function fplCupCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk/gviz/tq?tqx=out:csv&gid=${FPL_CUP_GID}&cachebust=` + Date.now();
+}
+
+async function loadFplCupData(){
+  if(fplCupData) return fplCupData;
+  if(fplCupPromise) return fplCupPromise;
+  fplCupPromise = fetch(fplCupCsvUrlFor()).then(r => r.text()).then(text => {
+    const rows = Papa.parse(text, {skipEmptyLines:false}).data;
+    const table = parseFplTable(rows, FPL_CUP_TITLE_TEXT);
+    const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH, same base/round-test as NRL
+    fplCupData = { table, fx };
+    return fplCupData;
+  }).catch(err => {
+    console.error("FPL Cup fetch failed", err);
+    fplCupData = { table: { teams: [], debug: { error: String(err) } }, fx: { gameweeks: [], rawDump: "" } };
+    return fplCupData;
+  });
+  return fplCupPromise;
+}
+
 async function loadFplRoddyData(){
   if(fplRoddyData) return fplRoddyData;
   if(fplRoddyPromise) return fplRoddyPromise;
@@ -6310,13 +6346,15 @@ function renderSideLeagueContent(){
   }
 
   const label = sideLeagueActiveDiv === "premier" ? "Eliza Premier League"
-    : sideLeagueActiveDiv === "championship" ? "Eliza Championship" : "Eliza FPL Roddy";
+    : sideLeagueActiveDiv === "championship" ? "Eliza Championship"
+    : sideLeagueActiveDiv === "roddy" ? "Eliza FPL Roddy" : "Eliza FPL Cup";
 
   const toggleHtml = `
     <div class="round-tabs" id="sideLeagueDivToggle">
       <button class="round-tab${sideLeagueActiveDiv==='premier'?' active':''}" data-div="premier">Premier League</button>
       <button class="round-tab${sideLeagueActiveDiv==='championship'?' active':''}" data-div="championship">Championship</button>
       <button class="round-tab${sideLeagueActiveDiv==='roddy'?' active':''}" data-div="roddy">Roddy</button>
+      <button class="round-tab${sideLeagueActiveDiv==='cup'?' active':''}" data-div="cup">FPL Cup</button>
     </div>`;
 
   if(sideLeagueActiveDiv === "roddy"){
@@ -6336,6 +6374,36 @@ function renderSideLeagueContent(){
       container.className = "";
       container.innerHTML = fplRoddyTableHtml(data);
       sideLeagueDebug = Object.assign({}, sideLeagueDebug, { fplRoddy: data.debug });
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    });
+    return;
+  }
+
+  if(sideLeagueActiveDiv === "cup"){
+    el.innerHTML = `${toggleHtml}
+      <div id="fplCupContainer" class="state-msg" style="margin-top:20px;">Loading FPL Cup…</div>`;
+    el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(sideLeagueActiveDiv === btn.dataset.div) return;
+        sideLeagueActiveDiv = btn.dataset.div;
+        renderSideLeagueContent();
+      });
+    });
+    Promise.all([loadFplCupData(), loadSideLeagueTeamMap()]).then(([data]) => {
+      const container = document.getElementById('fplCupContainer');
+      if(!container) return; // user navigated away before this resolved
+      container.className = "";
+      container.innerHTML = `
+        <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
+        ${sideLeagueTableHtml(data.table)}
+        <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
+        <div class="round-tabs" id="sideLeagueRoundTabs"></div>
+        <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
+      wireSideLeagueRoundTabs(data.fx, "cup");
+      sideLeagueDebug = Object.assign({}, sideLeagueDebug, {
+        fplCup: data.table.debug,
+        fplCupFixtures: { gameweeksFound: data.fx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: data.fx.rawDump }
+      });
       document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
     });
     return;
