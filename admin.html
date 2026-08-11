@@ -295,11 +295,10 @@
     font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
     color:var(--ink);line-height:1.15;
   }
-  .wheel-matchup-team .wm-division{
-    display:inline-block;margin-top:6px;padding:2px 10px;border-radius:20px;
-    color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  .wheel-matchup-team .wm-division-text{
+    margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.02em;
   }
-  .wheel-matchup-team .wm-position{font-size:12.5px;color:var(--muted);margin-top:4px;}
+  .wm-pos-cards{display:flex;gap:8px;margin-top:10px;}
   .wheel-matchup-vs{
     font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--muted);
     flex-shrink:0;
@@ -313,14 +312,17 @@
     padding:10px 14px;text-align:center;
   }
   .wheel-stat-card.narrow{flex:0 0 auto;min-width:74px;max-width:90px;}
+  .wheel-stat-card.compact{padding:6px 8px;}
   .wheel-stat-card.highlight{border-color:#1e7e34;background:#eaf7ee;}
   .wheel-stat-card .wsc-label{
     font-family:'Barlow',sans-serif;font-size:11px;color:var(--muted);
     text-transform:uppercase;letter-spacing:.05em;
   }
+  .wheel-stat-card.compact .wsc-label{font-size:9px;}
   .wheel-stat-card .wsc-value{
     font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--ink);
   }
+  .wheel-stat-card.compact .wsc-value{font-size:18px;}
   .wheel-stat-card.highlight .wsc-value{color:#1e7e34;}
   .wheel-stat-card .wsc-streak{
     position:absolute;top:-10px;right:-8px;
@@ -329,16 +331,13 @@
   }
   .wheel-matchup-h2h-title{
     font-family:'Barlow Condensed',sans-serif;font-size:14px;text-transform:uppercase;
-    letter-spacing:.05em;color:var(--muted);margin-bottom:8px;
+    letter-spacing:.05em;color:var(--muted);margin-bottom:8px;text-align:center;
   }
-  .wheel-matchup-h2h-row{
-    display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
-    font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);
+  .wheel-matchup-last-meeting{
+    font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
+    color:var(--ink);text-align:center;line-height:1.4;
   }
-  .wheel-matchup-h2h-row span:first-child{flex-shrink:0;color:var(--muted);}
-  .wheel-matchup-h2h-row span:last-child{text-align:right;font-weight:600;}
-  .wheel-matchup-h2h-row:last-child{border-bottom:none;}
-  .wheel-matchup-h2h-empty{color:var(--muted);font-size:13px;}
+  .wheel-matchup-h2h-empty{color:var(--muted);font-size:13px;text-align:center;}
   .wheel-fullscreen-right #drawFixtureList .draw-fixture-row{
     padding:16px 20px;margin-bottom:12px;
   }
@@ -2700,7 +2699,7 @@ async function loadWheelRoddyData(){
           if(!/^\d+$/.test(posVal)) break;
           const team = wheelCell(rows[r], ROD_COL.TEAM);
           const divShort = wheelDivisionShortLabel(wheelCell(rows[r], ROD_COL.DIVISION));
-          if(team) wheelRoddyEntries.push({ team, divisionShort: divShort });
+          if(team) wheelRoddyEntries.push({ team, divisionShort: divShort, roddyPos: posVal });
         }
       }
       wheelRoddyLoaded = true;
@@ -2779,8 +2778,9 @@ async function getWheelTeamMatchInfo(team){
   if(!roddyEntry || !roddyEntry.divisionShort) return null;
   await loadWheelStandings(roddyEntry.divisionShort);
   const standingsRow = (wheelStandingsCache[roddyEntry.divisionShort] || {})[upper];
-  if(!standingsRow) return { divisionShort: roddyEntry.divisionShort, divisionColor: WHEEL_DIVISION_TABS[roddyEntry.divisionShort].color, pos: null, pts: null, w: null, d: null, l: null };
-  return { divisionShort: roddyEntry.divisionShort, divisionColor: WHEEL_DIVISION_TABS[roddyEntry.divisionShort].color, ...standingsRow };
+  const base = { divisionShort: roddyEntry.divisionShort, divisionColor: WHEEL_DIVISION_TABS[roddyEntry.divisionShort].color, roddyPos: roddyEntry.roddyPos };
+  if(!standingsRow) return { ...base, divisionPos: null, pts: null, w: null, d: null, l: null };
+  return { ...base, divisionPos: standingsRow.pos, pts: standingsRow.pts, w: standingsRow.w, d: standingsRow.d, l: standingsRow.l };
 }
 
 // Looks up teamA's row in the Team vs Team stats sheet for the given
@@ -2838,13 +2838,24 @@ async function getWheelH2HRecord(teamA, teamB){
   };
 }
 
+// "D1" reads oddly next to "Eliza Cup" — everything else already reads
+// naturally as "2A"/"3B" etc, so only D1 needs special-casing to "Division 1".
+function wheelDivisionFullLabel(divShort){
+  if(!divShort) return "";
+  return divShort === "D1" ? "Eliza Cup, Division 1" : `Eliza Cup, Division ${divShort}`;
+}
+
 function wheelMatchupTeamBlockHtml(team, info){
   return `
     <div class="wheel-matchup-team">
       <img src="logo/${teamLogoSlug(team)}.png" alt="" onerror="${teamLogoOnErrorAttr(team)}">
       <div class="wm-name">${escapeHtml(team)}</div>
-      ${info ? `<div class="wm-division" style="background:${info.divisionColor||"#8a8f98"};">${escapeHtml(info.divisionShort)}</div>
-      <div class="wm-position">${info.pos ? `Pos ${info.pos} · ${info.pts} pts (${info.w}-${info.d}-${info.l})` : "Position unavailable"}</div>` : `<div class="wm-position">Division not found</div>`}
+      ${info ? `
+      <div class="wm-division-text" style="color:${info.divisionColor||"#8a8f98"};">${escapeHtml(wheelDivisionFullLabel(info.divisionShort))}</div>
+      <div class="wm-pos-cards">
+        ${wheelStatCardHtml(info.roddyPos ? "#"+info.roddyPos : "—", "Roddy Pos", { compact: true })}
+        ${wheelStatCardHtml(info.divisionPos ? "#"+info.divisionPos : "—", "Eliza Cup Pos", { compact: true })}
+      </div>` : `<div class="wm-division-text">Division not found</div>`}
     </div>`;
 }
 
@@ -2854,11 +2865,13 @@ function wheelMatchupTeamBlockHtml(team, info){
 // per how the wheel matchup panel uses them. The leading team's win card is
 // highlighted green, and the same 🔥 streak badge used on Team Profile's
 // Head-to-Head vs Opponent section appears on whichever team currently has
-// an active head-to-head win streak against the other.
+// an active head-to-head win streak against the other. "compact" is a
+// smaller variant used for the two position cards under each team's name,
+// where two cards need to fit side by side in a narrow column.
 function wheelStatCardHtml(value, label, opts){
   opts = opts || {};
   return `
-    <div class="wheel-stat-card${opts.highlight ? " highlight" : ""}${opts.narrow ? " narrow" : ""}">
+    <div class="wheel-stat-card${opts.highlight ? " highlight" : ""}${opts.narrow ? " narrow" : ""}${opts.compact ? " compact" : ""}">
       ${opts.streak ? `<span class="wsc-streak">🔥</span>` : ""}
       <div class="wsc-label">${label}</div>
       <div class="wsc-value">${value}</div>
@@ -2873,7 +2886,7 @@ function wheelH2HHtml(teamA, teamB, record){
   const bLeads = record.l > record.w;
   const last = record.lastMatch;
   const lastLine = last
-    ? `${escapeHtml(last.comp)}${last.year ? " " + escapeHtml(last.year) : ""}${last.round ? ", " + escapeHtml(last.round) : ""} — ${escapeHtml(teamA)} ${escapeHtml(last.for)} – ${escapeHtml(last.against)} ${escapeHtml(teamB)}`
+    ? `${escapeHtml(last.comp)}${last.year ? " " + escapeHtml(last.year) : ""}${last.round ? ", " + escapeHtml(last.round) : ""}<br>${escapeHtml(teamA)} ${escapeHtml(last.for)} – ${escapeHtml(last.against)} ${escapeHtml(teamB)}`
     : "Not available";
 
   return `
@@ -2882,8 +2895,8 @@ function wheelH2HHtml(teamA, teamB, record){
       ${wheelStatCardHtml(record.d, "Draws", { narrow: true })}
       ${wheelStatCardHtml(record.l, "Wins", { highlight: bLeads, streak: record.streakB })}
     </div>
-    <div class="wheel-matchup-h2h-row"><span>Played</span><span>${record.p}</span></div>
-    <div class="wheel-matchup-h2h-row"><span>Last meeting</span><span>${lastLine}</span></div>`;
+    <div class="wheel-matchup-h2h-title">Last Meeting</div>
+    <div class="wheel-matchup-last-meeting">${lastLine}</div>`;
 }
 
 // Renders the top matchup-info panel for the fixture that was just completed
