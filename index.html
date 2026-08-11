@@ -6150,9 +6150,21 @@ function parseFplFixtures(rows, base, labelTest){
     const homeScore = cell(rows[r]||[], base+1);
     const awayScore = cell(rows[r]||[], base+2);
     const away = cell(rows[r]||[], base+3);
+    // Knockout-round extras (FPL Cup rounds 7-13 only — Match Number/Bracket/
+    // Description in columns AD/AE/AF). Absolute columns, not relative to
+    // base, since they're the same for every round regardless of which
+    // league's fixture block this is. Harmless to check unconditionally —
+    // leagues without this data just won't have anything there.
+    const matchNumber = cell(rows[r]||[], 29); // AD
+    const bracket = cell(rows[r]||[], 30);     // AE
+    const description = cell(rows[r]||[], 31); // AF
     if(home && away){
-      rawDump.push({ row: r+1, home, homeScore, awayScore, away });
-      current.fixtures.push({ home, homeScore, awayScore, away });
+      const fixture = { home, homeScore, awayScore, away };
+      if(matchNumber) fixture.matchNumber = matchNumber;
+      if(bracket) fixture.bracket = bracket;
+      if(description) fixture.description = description;
+      rawDump.push({ row: r+1, home, homeScore, awayScore, away, matchNumber, bracket, description });
+      current.fixtures.push(fixture);
     }
   }
   return { gameweeks, rawDump };
@@ -6504,8 +6516,41 @@ function renderSideLeagueFixtures(gw){
     container.innerHTML = "No fixtures found for this gameweek.";
     return;
   }
-  container.className = "fixture-grid";
-  container.innerHTML = gw.fixtures.map(fplFixtureCardHtml).join("");
+  container.className = "";
+  container.innerHTML = knockoutAwareFixtureGridHtml(gw.fixtures);
+}
+
+// Renders a flat fixture-grid normally, but if the fixtures carry bracket
+// info (FPL Cup knockout rounds 7-13 — Match Number/Bracket/Description in
+// columns AD/AE/AF) splits them into their own labelled sections per
+// bracket value, with each match's description shown above its card — same
+// pattern as the cross-conference playoff seed row already used elsewhere.
+function knockoutAwareFixtureGridHtml(fixtures){
+  const hasBracket = fixtures.some(f => f.bracket);
+  if(!hasBracket){
+    return `<div class="fixture-grid">${fixtures.map(fplFixtureCardHtml).join("")}</div>`;
+  }
+  const groups = [];
+  fixtures.forEach(f => {
+    const key = f.bracket || "";
+    let group = groups.find(g => g.key === key);
+    if(!group){ group = { key, fixtures: [] }; groups.push(group); }
+    group.fixtures.push(f);
+  });
+  return groups.map(g => `
+    <div class="playoff-banner">${g.key || "Bracket"}</div>
+    <div class="fixture-grid">
+      ${g.fixtures.map(f => {
+        const card = fplFixtureCardHtml(f);
+        if(f.description){
+          return `<div class="fixture-card-wrap">
+            <div class="playoff-seed-row">${f.description}</div>
+            ${card}
+          </div>`;
+        }
+        return card;
+      }).join("")}
+    </div>`).join("");
 }
 
 function renderSideLeagueTabs(activeKey){
@@ -7051,7 +7096,8 @@ function renderLmsCup(data){
     // be redundant clutter at that point.
     const pickIcon = isAwaiting ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
     const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
-    const cardStyle = e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
+    const cardStyle = isEliminated ? "background:#f3f4f6;border-color:#9ca3af;"
+      : e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
       : e.result === "LOSS" ? "background:#fee2e2;border-color:#991b1b;" : "";
     const logoName = resolveSideLeagueTeamName(e.name);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
