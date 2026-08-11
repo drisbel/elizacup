@@ -5186,6 +5186,28 @@ function parseHistoricalSeason(rows){
   return { divisions, roddy, facup, eclGroups, eclKnockout };
 }
 
+// Bracket status computed purely from ladder position (not a sheet column)
+// — used for the FPL Cup table: top 8 = Upper Bracket, 9-16 = Lower Bracket.
+function bracketPositionStatus(pos){
+  const p = parseInt(pos,10);
+  if(!p) return null;
+  if(p <= 8) return "Upper Bracket";
+  if(p <= 16) return "Lower Bracket";
+  return null;
+}
+function bracketPositionStyle(pos){
+  const status = bracketPositionStatus(pos);
+  if(status === "Upper Bracket") return "background:rgba(37,99,235,0.16);border-left:4px solid #2563EB;";
+  if(status === "Lower Bracket") return "background:rgba(234,179,8,0.18);border-left:4px solid #EAB308;";
+  return "";
+}
+function bracketPositionLegendHtml(){
+  return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">
+    <span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:4px;"></span>Upper Bracket (Pos 1–8)</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#EAB308;border-radius:2px;margin-right:4px;"></span>Lower Bracket (Pos 9–16)</span>
+  </div>`;
+}
+
 function histDivStatusStyle(status){
   const s = (status||"").toUpperCase();
   if(s.includes("WINNER")) return "background:rgba(20,83,45,0.20);border-left:4px solid #14532D;";
@@ -6140,22 +6162,24 @@ function parseFplFixtures(rows, base, labelTest){
 // which use the "GW" prefix the FPL blocks use.
 const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
 
-function sideLeagueTableHtml(table){
+function sideLeagueTableHtml(table, opts){
+  opts = opts || {};
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Next</th>
+      <th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
-        return `<tr style="${histDivStatusStyle(t.status)}">
+        const rowStyle = opts.bracketByPosition ? bracketPositionStyle(t.pos) : histDivStatusStyle(t.status);
+        return `<tr style="${rowStyle}">
         <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td style="text-align:left;">${t.name || "—"}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
-        <td class="next-opp">${t.next || "—"}</td>
+        <td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
       }).join("")}
     </tbody></table></div>
-    ${table.teams.some(t=>t.status) ? histStatusLegendHtml() : ""}`;
+    ${opts.bracketByPosition ? bracketPositionLegendHtml() : (table.teams.some(t=>t.status) ? histStatusLegendHtml() : "")}`;
 }
 
 function sideLeagueOverallTableHtml(overall){
@@ -6395,7 +6419,7 @@ function renderSideLeagueContent(){
       container.className = "";
       container.innerHTML = `
         <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
-        ${sideLeagueTableHtml(data.table)}
+        ${sideLeagueTableHtml(data.table, { bracketByPosition: true })}
         <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
         <div class="round-tabs" id="sideLeagueRoundTabs"></div>
         <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
@@ -7020,19 +7044,24 @@ function renderLmsCup(data){
     const isEliminated = /^ELIMINATED/i.test(e.pick);
     const isAwaiting = /AWAITING TIP/i.test(e.pick);
     const isEntered = e.pick && !isEliminated && !isAwaiting;
+    const hasResult = e.result === "WIN" || e.result === "LOSS";
     const pickClass = isEliminated ? ' eliminated' : isAwaiting ? ' awaiting' : isEntered ? ' entered' : '';
-    const pickIcon = isAwaiting ? '⚠ ' : isEntered ? '✓ ' : '';
+    // Tick means "tip entered, result not in yet" — once WIN/LOSS is known the
+    // whole card's colour already shows the outcome, so the tick would just
+    // be redundant clutter at that point.
+    const pickIcon = isAwaiting ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
     const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
-    const resultBg = e.result === "WIN" ? "#dcfce7" : e.result === "LOSS" ? "#fee2e2" : "#f3f4f6";
+    const cardStyle = e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
+      : e.result === "LOSS" ? "background:#fee2e2;border-color:#991b1b;" : "";
     const logoName = resolveSideLeagueTeamName(e.name);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
-    return `<div class="lms-pick-row">
+    return `<div class="lms-pick-row" style="${cardStyle}">
       <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
       <span class="lms-pick-col">
         <span class="lms-pick${pickClass}">${pickIcon}${e.pick || "—"}</span>
         ${e.opponent && !isEliminated ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
       </span>
-      <span class="lms-result" style="background:${resultBg};color:${resultColor};">${e.result || "—"}</span>
+      <span class="lms-result" style="color:${resultColor};">${e.result || "—"}</span>
     </div>`;
   }).join("");
 
