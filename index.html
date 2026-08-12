@@ -927,6 +927,18 @@
   }
   footer a{color:var(--amber);text-decoration:none;}
   footer a.footer-admin-link{color:inherit;text-decoration:none;padding:0 2px;}
+  .footer-social{
+    display:flex;justify-content:center;gap:20px;margin-bottom:16px;
+  }
+  .footer-social-link{
+    display:inline-flex;align-items:center;gap:7px;
+    color:var(--chalk)!important;font-size:12.5px;font-weight:600;
+    padding:7px 14px;border-radius:20px;border:1px solid rgba(246,242,232,0.3);
+    transition:border-color .15s,background .15s;
+  }
+  .footer-social-link:hover{border-color:var(--amber);background:rgba(255,221,0,0.08);}
+  .footer-social-link svg{width:16px;height:16px;flex-shrink:0;fill:currentColor;}
+  .footer-social-link img{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
 
   details.debug{max-width:1080px;margin:0 auto 40px;padding:0 24px;}
   details.debug summary{font-family:'Barlow',sans-serif;font-size:11px;color:#8a9a92;cursor:pointer;}
@@ -1236,6 +1248,18 @@
 </main>
 
 <footer>
+  <div class="footer-social">
+    <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener" class="footer-social-link" aria-label="Join us on Discord">
+      <img src="logo/discord-logo.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+      <svg viewBox="0 0 24 24" aria-hidden="true" style="display:none;"><path d="M12 2C6.48 2 2 6.05 2 11c0 2.61 1.24 4.95 3.24 6.61-.06.53-.36 1.71-1.14 3.22a.4.4 0 0 0 .5.55c1.9-.63 3.13-1.28 3.7-1.63.85.24 1.75.4 2.7.44V22l2.6-1.5c.13 0 .26.01.4.01 5.52 0 10-4.05 10-9S17.52 2 12 2Zm-3.2 10.4c-.77 0-1.4-.72-1.4-1.6s.63-1.6 1.4-1.6 1.4.72 1.4 1.6-.63 1.6-1.4 1.6Zm6.4 0c-.77 0-1.4-.72-1.4-1.6s.63-1.6 1.4-1.6 1.4.72 1.4 1.6-.63 1.6-1.4 1.6Z"/></svg>
+      Discord
+    </a>
+    <a href="https://www.youtube.com/@ElizaCup" target="_blank" rel="noopener" class="footer-social-link" aria-label="Watch us on YouTube">
+      <img src="logo/youtube-logo.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+      <svg viewBox="0 0 24 24" aria-hidden="true" style="display:none;"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 8.5v7l6-3.5-6-3.5Z" fill="var(--pitch)"/></svg>
+      YouTube
+    </a>
+  </div>
   Data pulled live from the Eliza Cup Google Sheet · built for the league, not affiliated with any official competition <a href="admin.html" class="footer-admin-link" aria-label="Admin">·</a>
 </footer>
 
@@ -7241,6 +7265,15 @@ function renderLmsCup(data){
       renderLmsCup(data);
     });
   });
+
+  // Scrolls the active round tab into view within the horizontally-scrolling
+  // tab strip, so landing on (or switching back to) the current round doesn't
+  // leave it hidden off to the side — same pattern as the Division fixtures
+  // and Side League fixtures round tabs.
+  const activeRoundBtn = el.querySelector('.round-tab.active');
+  if(activeRoundBtn){
+    try{ activeRoundBtn.scrollIntoView({inline:'center', block:'nearest'}); }catch(e){}
+  }
 
   wireLmsTipsForm(data);
 }
