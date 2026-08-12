@@ -6178,14 +6178,14 @@ function sideLeagueTableHtml(table, opts){
   opts = opts || {};
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         const rowStyle = opts.bracketByPosition ? bracketPositionStyle(t.pos) : histDivStatusStyle(t.status);
         return `<tr style="${rowStyle}">
-        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td style="text-align:left;">${t.name || "—"}</td><td class="pts">${t.pts}</td>
+        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         <td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
@@ -6346,7 +6346,7 @@ function fplRoddyTableHtml(data){
   if(!data.entries.length) return `<p class="state-msg">No Roddy data found. Check the Debug panel below.</p>`;
   const chipLabels = data.chipHeaders.map((h,i) => h || ("Chip " + (i+1)));
   return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th>
+      <th>Pos</th><th style="text-align:left;">Team</th>
       <th>GW</th><th>Chip</th><th>Pts</th><th>Ovr Rank</th>
       ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
     </tr></thead><tbody>
@@ -6354,7 +6354,7 @@ function fplRoddyTableHtml(data){
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
-        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td style="text-align:left;">${e.player || "—"}</td>
+        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
         <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td><td>${e.ovrRank || "—"}</td>
         ${e.chips.map(c=>`<td>${c ? "✓" : "—"}</td>`).join("")}
       </tr>`;
@@ -7109,7 +7109,7 @@ function renderLmsCup(data){
     // be redundant clutter at that point.
     const pickIcon = isAwaiting ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
     const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
-    const cardStyle = isEliminated ? "background:#f3f4f6;border-color:#9ca3af;"
+    const cardStyle = isEliminated ? "background:#d1d5db;border-color:#6b7280;"
       : e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
       : e.result === "LOSS" ? "background:#fee2e2;border-color:#991b1b;" : "";
     const logoName = resolveSideLeagueTeamName(e.name);
