@@ -564,6 +564,42 @@
   .round-tab.active{background:var(--pitch);color:var(--chalk);border-color:var(--pitch);}
   .round-tab:hover:not(.active){border-color:var(--pitch);}
 
+  /* ---------- Side league Rules button + modal ---------- */
+  .rules-btn-row{display:flex;justify-content:flex-end;margin:-8px 0 16px;}
+  .rules-btn{
+    font-family:'Barlow',sans-serif;font-size:12.5px;font-weight:600;
+    padding:7px 14px;border-radius:20px;border:1px solid var(--pitch);
+    background:#fff;color:var(--pitch);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .rules-btn:hover{background:var(--pitch);color:var(--chalk);}
+  .modal-overlay{
+    display:none;position:fixed;inset:0;z-index:200;
+    background:rgba(14,31,25,0.55);
+    align-items:center;justify-content:center;padding:24px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:#fff;max-width:640px;width:100%;max-height:82vh;
+    border-radius:10px;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  }
+  .modal-box-head{
+    background:var(--pitch);color:var(--chalk);
+    padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;
+  }
+  .modal-box-head h3{margin:0;font-size:20px;}
+  .modal-close-btn{
+    background:none;border:none;color:var(--chalk);font-size:22px;line-height:1;
+    cursor:pointer;padding:2px 6px;
+  }
+  .modal-box-body{
+    padding:20px 22px;overflow-y:auto;font-family:'Barlow',sans-serif;
+    font-size:14.5px;line-height:1.6;color:var(--ink);
+  }
+  .modal-box-body p{margin:0 0 10px;}
+  .modal-box-body p:last-child{margin-bottom:0;}
+
   .fixture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px;}
   @media (max-width:640px){
     .fixture-grid{grid-template-columns:1fr;}
@@ -693,6 +729,8 @@
   }
   .slh-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
   .slh-card-label{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--pitch);}
+  .slh-card-label-link{text-decoration:none;}
+  .slh-card-label-link:hover .slh-card-label{text-decoration:underline;}
   .slh-status{
     font-family:'Barlow',sans-serif;font-size:10.5px;font-weight:700;text-transform:uppercase;
     letter-spacing:.04em;padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;
@@ -1165,8 +1203,21 @@
       <span class="sub">Fantasy &amp; non-Eliza competitions run alongside the main league</span>
     </div>
     <div id="sideLeaguesTabs" class="round-tabs"></div>
+    <div class="rules-btn-row" id="sideLeagueRulesRow" style="display:none;">
+      <button type="button" class="rules-btn" id="sideLeagueRulesBtn">📋 Rules</button>
+    </div>
     <div id="sideLeaguesContainer" class="state-msg">Loading…</div>
   </section>
+
+  <div class="modal-overlay" id="rulesModalOverlay">
+    <div class="modal-box">
+      <div class="modal-box-head">
+        <h3 id="rulesModalTitle">Rules</h3>
+        <button type="button" class="modal-close-btn" id="rulesModalCloseBtn" aria-label="Close">×</button>
+      </div>
+      <div class="modal-box-body" id="rulesModalBody"></div>
+    </div>
+  </div>
 
   <section id="teamsSection" style="display:none;">
     <div class="section-head">
@@ -1937,6 +1988,8 @@ async function load(){
     const initialKey = (currentDivision.sideLeagueKey && SIDE_LEAGUES.some(s=>s.key===currentDivision.sideLeagueKey))
       ? currentDivision.sideLeagueKey : SIDE_LEAGUES[0].key;
     renderSideLeagueTabs(initialKey);
+    refreshSideLeagueRulesButton(initialKey); // shows immediately if already cached, else hidden until the fetch below resolves
+    loadSideLeaguesHubData().then(() => refreshSideLeagueRulesButton(initialKey));
     await loadSideLeague(initialKey);
     return;
   }
@@ -5800,7 +5853,9 @@ function slhCardHtml(c){
 
   return `<div class="slh-card">
     <div class="slh-card-top">
-      <div class="slh-card-label">${c.label||""}</div>
+      ${c.link
+        ? `<a class="slh-card-label-link" href="${c.link}"><div class="slh-card-label">${c.label||""}</div></a>`
+        : `<div class="slh-card-label">${c.label||""}</div>`}
       <span class="slh-status ${statusClass}">${statusLabel}</span>
     </div>
     ${c.status === "active" && c.roundInfo ? `<div class="slh-round-info">${c.roundInfo}</div>` : ""}
@@ -5858,6 +5913,57 @@ function renderSideLeaguesHub(){
     startSlhCountdowns();
   });
 }
+
+// ---------- Side League Rules ----------
+// Rules text lives on the matching card above (side-leagues-hub.json,
+// managed via admin.html — same "Rules" field as each card's Status/Code/
+// Link etc.) rather than its own file. A card is matched to a league page
+// by its Link field being exactly "#sideleagues=<key>". Not shown on the
+// page by default — surfaced via a "Rules" button next to the league tabs
+// that pops up a modal. Uses the same newline-per-paragraph + inline-HTML
+// convention as the Rulebook/About pages.
+function findSideLeagueRulesCard(leagueKey){
+  const cards = (sideLeaguesHubData && sideLeaguesHubData.cards) || [];
+  return cards.find(c => c.link === ("#sideleagues=" + leagueKey)) || null;
+}
+
+// Shows/hides the Rules button for the given league key, using whatever's
+// currently cached in sideLeaguesHubData — call refreshSideLeagueRulesButton()
+// again once loadSideLeaguesHubData() resolves in case it wasn't cached yet
+// on first paint.
+function refreshSideLeagueRulesButton(leagueKey){
+  const row = document.getElementById('sideLeagueRulesRow');
+  const card = findSideLeagueRulesCard(leagueKey);
+  const hasRules = !!(card && card.rules && card.rules.trim());
+  row.style.display = hasRules ? "flex" : "none";
+  row.dataset.leagueKey = leagueKey;
+}
+
+function openSideLeagueRulesModal(leagueKey){
+  const league = SIDE_LEAGUES.find(s => s.key === leagueKey);
+  const card = findSideLeagueRulesCard(leagueKey);
+  const text = (card && card.rules) || "";
+  const paragraphs = text.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p>${p}</p>`).join("");
+  document.getElementById('rulesModalTitle').textContent = (league ? league.label : "League") + " Rules";
+  document.getElementById('rulesModalBody').innerHTML = paragraphs || "<p>No rules added yet.</p>";
+  document.getElementById('rulesModalOverlay').classList.add('open');
+}
+
+function closeSideLeagueRulesModal(){
+  document.getElementById('rulesModalOverlay').classList.remove('open');
+}
+
+document.getElementById('sideLeagueRulesBtn').addEventListener('click', () => {
+  const key = document.getElementById('sideLeagueRulesRow').dataset.leagueKey;
+  if(key) openSideLeagueRulesModal(key);
+});
+document.getElementById('rulesModalCloseBtn').addEventListener('click', closeSideLeagueRulesModal);
+document.getElementById('rulesModalOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'rulesModalOverlay') closeSideLeagueRulesModal();
+});
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') closeSideLeagueRulesModal();
+});
 
 // ---------- What's My Division? (26/27 Leagues) ----------
 // Managed via admin.html (whats-my-division.json) — one entry per team:
