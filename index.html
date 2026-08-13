@@ -82,21 +82,28 @@
     padding:10px 0 22px;
   }
   .dot{width:7px;height:7px;border-radius:50%;background:var(--turf);display:inline-block;box-shadow:0 0 0 3px rgba(79,174,126,0.25);}
-  .refresh-btn{
+
+  /* ---------- Header icon actions (search + refresh) ---------- */
+  /* Pinned to the top-right corner of the header content, independent of the
+     wordmark/nav/status rows below — so they don't compete for space in the
+     status line and stay put regardless of how tall the header gets. */
+  .header-icon-actions{
+    position:absolute;top:0;right:0;z-index:10;
+    display:flex;gap:8px;
+  }
+  @media (max-width:600px){
+    .header-icon-actions{position:static;justify-content:flex-end;margin-bottom:10px;}
+  }
+  .icon-btn{
     background:none;border:1px solid var(--line);color:var(--chalk);
-    font-family:'Barlow',sans-serif;font-size:12px;letter-spacing:0.04em;
-    padding:5px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
+    width:34px;height:34px;padding:0;border-radius:6px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;flex-shrink:0;
   }
   .refresh-btn:hover{border-color:var(--turf);color:var(--turf);}
 
   /* ---------- Site-wide team search ---------- */
-  .site-search{position:relative;margin-left:auto;}
-  .search-toggle-btn{
-    background:none;border:1px solid var(--line);color:var(--chalk);
-    font-family:'Barlow',sans-serif;font-size:12px;letter-spacing:0.04em;
-    padding:5px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
-    display:inline-flex;align-items:center;gap:6px;
-  }
+  .site-search{position:relative;}
   .search-toggle-btn:hover{border-color:var(--amber);color:var(--amber);}
   .search-panel{
     display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:40;
@@ -1058,6 +1065,16 @@
 
 <header class="top">
   <div class="top-inner">
+    <div class="header-icon-actions" id="headerIconActions">
+      <div class="site-search" id="siteSearch">
+        <button class="icon-btn search-toggle-btn" id="searchToggleBtn" type="button" aria-label="Search teams">🔍</button>
+        <div class="search-panel" id="searchPanel">
+          <input type="text" id="searchInput" placeholder="Search for a team…" autocomplete="off">
+          <div id="searchResults" class="search-results"></div>
+        </div>
+      </div>
+      <button class="icon-btn refresh-btn" id="refreshBtn" type="button" aria-label="Refresh">↻</button>
+    </div>
     <div class="wordmark-row">
       <img src="logo/eliza-logo.png" alt="" class="site-logo" onerror="this.style.display='none';">
       <h1 class="wordmark">Eliza Cup <span class="pill" id="divPill">Div. 1</span></h1>
@@ -1065,14 +1082,6 @@
     <nav class="div-nav" id="divNav"></nav>
     <div class="status-line" id="statusLine">
       <span id="statusLineText"><span class="dot"></span> Connecting to live sheet…</span>
-      <div class="site-search" id="siteSearch">
-        <button class="search-toggle-btn" id="searchToggleBtn" type="button">🔍 Search teams</button>
-        <div class="search-panel" id="searchPanel">
-          <input type="text" id="searchInput" placeholder="Search for a team…" autocomplete="off">
-          <div id="searchResults" class="search-results"></div>
-        </div>
-      </div>
-      <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
     </div>
   </div>
 </header>
