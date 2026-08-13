@@ -46,27 +46,55 @@
   .top-nav-bar{display:none;}
   @media (min-width:901px){
     body.nav-topbar-trial .top-nav-bar{
-      display:block;background:var(--pitch);border-bottom:1px solid rgba(255,255,255,0.14);
+      display:block;
+      /* Deliberately a fixed hex, NOT var(--pitch) — that variable gets
+         overridden per-division (applyDivisionTheme), which would otherwise
+         make this bar change colour depending what page you're on. This bar
+         stays the one constant brand colour everywhere. */
+      background:#28427c;
+      border-bottom:1px solid rgba(255,255,255,0.14);
+      position:sticky;top:0;z-index:50;
     }
     body.nav-topbar-trial header.top .div-nav{display:none;}
   }
   .top-nav-bar-inner{
-    max-width:1200px;margin:0 auto;padding:0 24px;height:60px;
+    width:100%;padding:0 28px;height:60px;box-sizing:border-box;
     display:flex;align-items:center;gap:28px;
   }
   .top-nav-bar-brand{
-    display:flex;align-items:center;gap:10px;flex-shrink:0;text-decoration:none;
+    display:flex;align-items:center;gap:10px;flex-shrink:0;text-decoration:none;white-space:nowrap;
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:21px;color:var(--chalk);
   }
   .top-nav-bar-brand img{height:30px;width:auto;object-fit:contain;}
-  .top-nav-bar-links{display:flex;align-items:center;gap:2px;flex-wrap:wrap;flex:1;}
+  .top-nav-bar-links{
+    display:flex;align-items:center;gap:2px;flex-wrap:nowrap;flex:1;
+    min-width:0;overflow-x:auto;scrollbar-width:none;
+  }
+  .top-nav-bar-links::-webkit-scrollbar{display:none;}
+  .top-nav-bar-links .div-nav-group{flex-shrink:0;}
   .top-nav-bar-links .div-tab{
     border:none;background:transparent;color:rgba(246,242,232,0.82);
     padding:9px 14px;border-radius:6px;font-size:13.5px;
+    white-space:nowrap;flex-shrink:0;
   }
   .top-nav-bar-links .div-tab:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .top-nav-bar-links .div-tab.active{background:var(--amber);color:var(--ink);}
   .top-nav-bar-links .div-nav-dropdown{top:calc(100% + 4px);}
+  /* Search + refresh, when reparented into the top bar (see
+     placeHeaderIconActions in the main script) — overrides the classic
+     header's absolute-positioned version back to a normal flex child sitting
+     at the far right of the bar, since .top-nav-bar-inner isn't the same
+     kind of positioning context as .top-inner. */
+  .top-nav-bar-inner .header-icon-actions{position:static;margin-left:auto;flex-shrink:0;}
+
+  /* ---------- Header removal trial ---------- */
+  /* See REMOVE_BIG_HEADER in the main script. Desktop only — mobile keeps
+     the classic header (with its wordmark, status line, and search/refresh
+     icons) regardless of this flag, since it never gets the top nav bar
+     either. */
+  @media (min-width:901px){
+    body.header-removed-trial header.top{display:none;}
+  }
 
   /* ---------- Header ---------- */
   header.top{
@@ -1527,6 +1555,43 @@ if(NAV_TOP_BAR_ENABLED){
   document.body.classList.add('nav-topbar-trial');
 }
 
+// ---------- Header removal trial ----------
+// Removes the big gradient hero header entirely on desktop, leaving just the
+// sticky top nav bar + each page's own title (see GENERIC_LOGO_PAGE_TYPES
+// above — every page now gets a colored logo title, not just Divisions/
+// Roddy/FA Cup/ECL, so removing the header doesn't lose that page's colour
+// identity). Only takes effect when NAV_TOP_BAR_ENABLED is also true —
+// without the top bar there'd be no nav left on desktop at all.
+// TO REVERT: set this to false. Nothing else needs to change.
+const REMOVE_BIG_HEADER = true;
+if(REMOVE_BIG_HEADER && NAV_TOP_BAR_ENABLED){
+  document.body.classList.add('header-removed-trial');
+}
+
+// The search + refresh icon buttons (#headerIconActions) physically move
+// between the classic header and the new top bar depending on viewport width
+// — CSS alone can't relocate an element into a different parent, only
+// reposition it within the same one. Their IDs/click listeners never change,
+// so this is safe to do at any point; only their location in the DOM moves.
+// Reruns whenever the breakpoint is crossed (window resized past 901px),
+// not just once on load.
+const NAV_TOPBAR_MEDIA = window.matchMedia("(min-width:901px)");
+function placeHeaderIconActions(){
+  if(!NAV_TOP_BAR_ENABLED) return;
+  const actions = document.getElementById('headerIconActions');
+  const topBarInner = document.querySelector('#topNavBar .top-nav-bar-inner');
+  const classicSlot = document.querySelector('header.top .top-inner');
+  if(!actions || !topBarInner || !classicSlot) return;
+
+  if(NAV_TOPBAR_MEDIA.matches){
+    if(actions.parentElement !== topBarInner) topBarInner.appendChild(actions);
+  }else{
+    if(actions.parentElement !== classicSlot) classicSlot.insertBefore(actions, classicSlot.firstChild);
+  }
+}
+placeHeaderIconActions();
+NAV_TOPBAR_MEDIA.addEventListener("change", placeHeaderIconActions);
+
 function closeAllNavDropdowns(){
   document.querySelectorAll('.div-nav-dropdown.open').forEach(dd=>dd.classList.remove('open'));
 }
@@ -1945,8 +2010,17 @@ function compLogoPathFor(division){
   if(division.type === "roddy") return "logo/roddy-logo.png";
   if(division.type === "facup") return "logo/fa-cup-logo.png";
   if(division.type === "ecl") return "logo/ecl-logo.png";
+  // Pages without their own crest use the same generic Eliza Cup mark shown
+  // in the header/top nav bar, so they still get a colored title treatment
+  // (color: var(--pitch) on .comp-logo-hero-title, same as Divisions/Roddy/
+  // FA Cup/ECL) rather than staying a plain black heading.
+  if(GENERIC_LOGO_PAGE_TYPES.has(division.type)) return "logo/eliza-logo.png";
   return null;
 }
+const GENERIC_LOGO_PAGE_TYPES = new Set([
+  "calendar","honour","stats","history","news","about","bilbbet",
+  "whatsmydiv","sideleagueshub","sideleagues","teams"
+]);
 
 function togglePageSections(){
   const type = currentDivision.type;
