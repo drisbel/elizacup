@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --pitch:#28427c;
@@ -265,18 +266,27 @@
   .wheel-fullscreen-results{
     flex:1;background:#fff;display:flex;flex-direction:column;
     padding:56px 60px;overflow:auto;
+    /* justify-content is toggled between center/flex-start in JS depending on
+       whether the results fit the available height — see
+       updateWheelResultsCentering() — so a full grid never gets its top edge
+       clipped by "safe centering" quirks. */
   }
   .wheel-fullscreen-results .wheel-fullscreen-title{
     color:var(--pitch);text-align:center;margin-bottom:28px;
   }
   .wheel-fullscreen-results-grid{
-    columns:340px;column-gap:28px;
+    display:grid;
+    grid-template-columns:repeat(var(--wc-cols,3),minmax(0,1fr));
+    gap:var(--wc-gap,26px);
+    width:100%;
+    max-width:var(--wc-maxwidth,1000px);
+    margin:0 auto;
   }
   .wheel-fullscreen-results-grid .draw-fixture-row{
-    break-inside:avoid;padding:16px 20px;margin-bottom:14px;
+    padding:var(--wc-pad,16px 20px);margin-bottom:0;
   }
-  .wheel-fullscreen-results-grid .team{font-size:19px;gap:10px;}
-  .wheel-fullscreen-results-grid .draw-fixture-logo{width:34px;height:34px;}
+  .wheel-fullscreen-results-grid .team{font-size:var(--wc-font,19px);gap:10px;}
+  .wheel-fullscreen-results-grid .draw-fixture-logo{width:var(--wc-logo,34px);height:var(--wc-logo,34px);}
   .wheel-fullscreen-results-grid .num{font-size:12.5px;}
   .wheel-fullscreen-right h2{
     font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);
@@ -955,10 +965,13 @@
     </div>
   </div>
   <div class="wheel-fullscreen-results" id="wheelFullscreenResultsView" style="display:none;">
-    <h1 id="wheelFullscreenResultsTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
-    <div class="wheel-fullscreen-results-grid" id="wheelFullscreenResultsGrid"></div>
-    <div style="text-align:center;margin-top:24px;">
+    <div id="wheelResultsExportTarget" style="display:flex;flex-direction:column;align-items:center;width:100%;">
+      <h1 id="wheelFullscreenResultsTitle" class="wheel-fullscreen-title" style="display:none;"></h1>
+      <div class="wheel-fullscreen-results-grid" id="wheelFullscreenResultsGrid"></div>
+    </div>
+    <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;">
       <button type="button" class="btn btn-ghost" id="wheelBackToWheelBtn">← Back to Wheel</button>
+      <button type="button" class="btn btn-primary" id="wheelExportImageBtn">⬇ Export as Image</button>
     </div>
   </div>
 </div>
@@ -2489,10 +2502,42 @@ function updateWheelCompleteDrawButtonVisibility(){
 
 let wheelFullscreenResultsActive = false;
 
-// Full-screen "reveal" view: every drawn fixture at once, laid out in as
-// many columns as comfortably fit (CSS multi-column flow rather than a fixed
-// column count, so it adapts to however many fixtures there are and however
-// wide the screen is) instead of the single scrolling list used mid-draw.
+// Card sizing tiers for the Complete Draw results grid — fewer fixtures get
+// fewer columns and noticeably larger cards/logos/text instead of the same
+// small card size just floating at the top of a mostly-empty screen. Tuned
+// by eye against common draw sizes (a 2-3 game side league cup through to a
+// full 16-team division).
+function wheelResultsGridScaleFor(n){
+  if(n <= 2)  return { cols:1, font:34, logo:56, pad:"32px 38px", gap:22, maxWidth:600 };
+  if(n <= 4)  return { cols:2, font:28, logo:50, pad:"26px 32px", gap:24, maxWidth:820 };
+  if(n <= 6)  return { cols:2, font:24, logo:44, pad:"22px 28px", gap:24, maxWidth:820 };
+  if(n <= 9)  return { cols:3, font:21, logo:38, pad:"19px 24px", gap:26, maxWidth:1020 };
+  if(n <= 12) return { cols:3, font:19, logo:34, pad:"16px 20px", gap:24, maxWidth:1020 };
+  if(n <= 18) return { cols:4, font:16, logo:28, pad:"14px 17px", gap:20, maxWidth:1180 };
+  return          { cols:4, font:14, logo:24, pad:"12px 14px", gap:16, maxWidth:1280 };
+}
+
+// After the grid's rendered at its natural size, decides whether it (plus
+// the title and buttons) actually fits the available height. If it does,
+// centers the whole block vertically; if not, leaves it flush to the top so
+// nothing above the fold gets clipped by scrolling into a "centered" block
+// that's taller than the viewport.
+function updateWheelResultsCentering(){
+  const container = $("wheelFullscreenResultsView");
+  if(!container) return;
+  container.style.justifyContent = "flex-start";
+  requestAnimationFrame(()=>{
+    const fits = container.scrollHeight <= container.clientHeight + 1;
+    container.style.justifyContent = fits ? "center" : "flex-start";
+  });
+}
+
+// Full-screen "reveal" view: every drawn fixture at once, laid out in a grid
+// that's rescaled — column count, card padding, font and logo size — to suit
+// how many fixtures there are, then centred on the screen if there's room to
+// spare (see wheelResultsGridScaleFor / updateWheelResultsCentering) instead
+// of a fixed card size that leaves a handful of fixtures stranded at the top
+// of a mostly-empty screen.
 function showWheelResultsView(){
   wheelFullscreenResultsActive = true;
   $("wheelFullscreenColumns").style.display = "none";
@@ -2510,14 +2555,24 @@ function showWheelResultsView(){
     const logoName = resolveElizaTeamName(name);
     return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
   };
-  $("wheelFullscreenResultsGrid").innerHTML = drawFixtures.map((f,i) => `
+  const grid = $("wheelFullscreenResultsGrid");
+  grid.innerHTML = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
       <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
       <span class="num">Fixture ${i+1}</span>
       <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
     </div>`).join("");
 
+  const scale = wheelResultsGridScaleFor(drawFixtures.length);
+  grid.style.setProperty("--wc-cols", scale.cols);
+  grid.style.setProperty("--wc-gap", scale.gap + "px");
+  grid.style.setProperty("--wc-pad", scale.pad);
+  grid.style.setProperty("--wc-font", scale.font + "px");
+  grid.style.setProperty("--wc-logo", scale.logo + "px");
+  grid.style.setProperty("--wc-maxwidth", scale.maxWidth + "px");
+
   $("wheelFullscreenResultsView").style.display = "flex";
+  updateWheelResultsCentering();
 }
 
 function hideWheelResultsView(){
@@ -2525,6 +2580,43 @@ function hideWheelResultsView(){
   $("wheelFullscreenResultsView").style.display = "none";
   $("wheelFullscreenColumns").style.display = "flex";
   setWheelSize(computeFullscreenWheelSize());
+}
+
+// Re-checks centering if the window is resized while the results screen is
+// showing (e.g. a browser window get resized, or a phone rotates), same
+// adaptive intent as the initial sizing.
+window.addEventListener("resize", () => {
+  if(wheelFullscreenResultsActive) updateWheelResultsCentering();
+});
+
+// Renders the title + results grid (buttons excluded) to a PNG and triggers
+// a download — for posting the final draw to socials or the News page
+// without a manual screenshot.
+function exportWheelResultsImage(){
+  const btn = $("wheelExportImageBtn");
+  const target = $("wheelResultsExportTarget");
+  if(!btn || !target || typeof html2canvas !== "function") return;
+
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Exporting…";
+
+  html2canvas(target, { backgroundColor: "#ffffff", scale: 2, useCORS: true }).then(canvas => {
+    const titleText = $("wheelTitleInput").value.trim();
+    const slug = titleText
+      ? titleText.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "")
+      : "";
+    const link = document.createElement("a");
+    link.download = (slug || "wheel-draw-results") + ".png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }).catch(err => {
+    console.error("Wheel results export failed", err);
+    alert("Couldn't export the image: " + err.message);
+  }).finally(() => {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  });
 }
 
 
@@ -3612,6 +3704,7 @@ $("wheelPlainMode").addEventListener("change", (e) => {
 });
 $("wheelCompleteDrawBtn").addEventListener("click", showWheelResultsView);
 $("wheelBackToWheelBtn").addEventListener("click", hideWheelResultsView);
+$("wheelExportImageBtn").addEventListener("click", exportWheelResultsImage);
 $("wheelExitFullscreenBtn").addEventListener("click", () => {
   if(document.fullscreenElement) document.exitFullscreen();
   else exitWheelFullscreen();
