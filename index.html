@@ -88,6 +88,36 @@
     padding:5px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
   }
   .refresh-btn:hover{border-color:var(--turf);color:var(--turf);}
+
+  /* ---------- Site-wide team search ---------- */
+  .site-search{position:relative;margin-left:auto;}
+  .search-toggle-btn{
+    background:none;border:1px solid var(--line);color:var(--chalk);
+    font-family:'Barlow',sans-serif;font-size:12px;letter-spacing:0.04em;
+    padding:5px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .search-toggle-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .search-panel{
+    display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:40;
+    background:var(--pitch-2);border:1px solid var(--line);border-radius:10px;
+    padding:12px;width:min(340px,88vw);box-shadow:0 10px 24px rgba(0,0,0,0.3);
+  }
+  .search-panel.open{display:block;}
+  .search-panel input{
+    width:100%;font-family:'Barlow',sans-serif;font-size:14px;
+    padding:9px 11px;border-radius:6px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);margin-bottom:8px;
+  }
+  .search-results{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .search-hint{font-family:'Barlow',sans-serif;font-size:12.5px;color:var(--muted);padding:6px 2px;}
+  .search-result-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fff;border:1px solid var(--line-light);border-left:4px solid transparent;
+    border-radius:5px;padding:8px 10px;text-decoration:none;color:var(--ink);
+    font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
+  }
+  .search-result-item:hover{border-color:var(--amber);}
   .lms-submit-btn{
     background:var(--pitch);border:1px solid var(--pitch);color:#fff;
     font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
@@ -1035,6 +1065,13 @@
     <nav class="div-nav" id="divNav"></nav>
     <div class="status-line" id="statusLine">
       <span><span class="dot"></span> Connecting to live sheet…</span>
+      <div class="site-search" id="siteSearch">
+        <button class="search-toggle-btn" id="searchToggleBtn" type="button">🔍 Search teams</button>
+        <div class="search-panel" id="searchPanel">
+          <input type="text" id="searchInput" placeholder="Search for a team…" autocomplete="off">
+          <div id="searchResults" class="search-results"></div>
+        </div>
+      </div>
       <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
     </div>
   </div>
@@ -1411,6 +1448,94 @@ function closeAllNavDropdowns(){
   document.querySelectorAll('.div-nav-dropdown.open').forEach(dd=>dd.classList.remove('open'));
 }
 document.addEventListener('click', closeAllNavDropdowns);
+
+// ---------- Site-wide team search ----------
+// Reuses roddyEntries (team + division for every team across all divisions) —
+// the same dataset already powering the Teams browse page and each team's
+// division pill. If nobody's visited a page that populates it yet, fetch it
+// in the background the first time the search panel opens (same CSV/gid as
+// the Roddy Rodriguez Cup page) so search works from anywhere on the site.
+let teamSearchFetchPromise = null;
+async function ensureTeamSearchData(){
+  if(roddyEntries.length > 0) return roddyEntries;
+  if(teamSearchFetchPromise) return teamSearchFetchPromise;
+  const roddyDiv = DIVISIONS.find(d=>d.id==="roddy");
+  teamSearchFetchPromise = fetch(csvUrlFor(roddyDiv))
+    .then(res=>{ if(!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
+    .then(csvText=>{
+      const parsed = Papa.parse(csvText, {skipEmptyLines:false});
+      parseRoddy(parsed.data);
+      return roddyEntries;
+    })
+    .catch(err=>{
+      console.error("Team search: failed to load team list", err);
+      return [];
+    })
+    .finally(()=>{ teamSearchFetchPromise = null; });
+  return teamSearchFetchPromise;
+}
+
+function renderSearchResults(query){
+  const resultsEl = document.getElementById('searchResults');
+  const q = query.trim().toUpperCase();
+  if(roddyEntries.length === 0){
+    resultsEl.innerHTML = `<div class="search-hint">Loading teams…</div>`;
+    return;
+  }
+  if(!q){
+    resultsEl.innerHTML = `<div class="search-hint">Start typing a team name…</div>`;
+    return;
+  }
+  const matches = roddyEntries.filter(e => e.team.toUpperCase().includes(q)).slice(0, 8);
+  if(matches.length === 0){
+    resultsEl.innerHTML = `<div class="search-hint">No teams match "${query}".</div>`;
+    return;
+  }
+  resultsEl.innerHTML = matches.map(e=>{
+    const color = getDivisionColorByLabel(e.division);
+    const shortLabel = getDivisionShortLabel(e.division);
+    const label = shortLabel === "D1" ? "Eliza Cup" : shortLabel;
+    return `<a href="#team=${encodeURIComponent(e.team)}" class="search-result-item" style="border-left-color:${color};">
+      <span>${e.team}</span>
+      <span class="roddy-div-tag" style="background:${color};">${label}</span>
+    </a>`;
+  }).join("");
+}
+
+function openSearchPanel(){
+  document.getElementById('searchPanel').classList.add('open');
+  const input = document.getElementById('searchInput');
+  input.value = "";
+  renderSearchResults("");
+  ensureTeamSearchData().then(()=>{
+    // Only refresh if the panel's still open and the person hasn't typed yet —
+    // avoids clobbering an in-progress search once the fetch resolves.
+    if(document.getElementById('searchPanel').classList.contains('open') && !input.value){
+      renderSearchResults("");
+    }
+  });
+  setTimeout(()=>input.focus(), 0);
+}
+function closeSearchPanel(){
+  document.getElementById('searchPanel').classList.remove('open');
+}
+
+document.getElementById('searchToggleBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const panel = document.getElementById('searchPanel');
+  if(panel.classList.contains('open')){
+    closeSearchPanel();
+  } else {
+    closeAllNavDropdowns();
+    openSearchPanel();
+  }
+});
+document.getElementById('searchInput').addEventListener('click', (e)=> e.stopPropagation());
+document.getElementById('searchInput').addEventListener('input', (e)=> renderSearchResults(e.target.value));
+document.getElementById('searchInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closeSearchPanel();
+});
+document.addEventListener('click', closeSearchPanel);
 
 function goToDivision(div){
   currentDivision = div;
