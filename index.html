@@ -37,6 +37,37 @@
   }
   a{color:inherit;}
 
+  /* ---------- Top nav bar (desktop layout trial) ---------- */
+  /* See the HTML comment above #topNavBar for how this ties to the classic
+     nav. Hidden by default (and always on mobile); only shown when
+     NAV_TOP_BAR_ENABLED adds body.nav-topbar-trial, and even then only at
+     desktop widths — the classic in-header nav (.div-nav) is what mobile
+     always uses regardless of the flag. */
+  .top-nav-bar{display:none;}
+  @media (min-width:901px){
+    body.nav-topbar-trial .top-nav-bar{
+      display:block;background:var(--pitch);border-bottom:1px solid rgba(255,255,255,0.14);
+    }
+    body.nav-topbar-trial header.top .div-nav{display:none;}
+  }
+  .top-nav-bar-inner{
+    max-width:1200px;margin:0 auto;padding:0 24px;height:60px;
+    display:flex;align-items:center;gap:28px;
+  }
+  .top-nav-bar-brand{
+    display:flex;align-items:center;gap:10px;flex-shrink:0;text-decoration:none;
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:21px;color:var(--chalk);
+  }
+  .top-nav-bar-brand img{height:30px;width:auto;object-fit:contain;}
+  .top-nav-bar-links{display:flex;align-items:center;gap:2px;flex-wrap:wrap;flex:1;}
+  .top-nav-bar-links .div-tab{
+    border:none;background:transparent;color:rgba(246,242,232,0.82);
+    padding:9px 14px;border-radius:6px;font-size:13.5px;
+  }
+  .top-nav-bar-links .div-tab:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
+  .top-nav-bar-links .div-tab.active{background:var(--amber);color:var(--ink);}
+  .top-nav-bar-links .div-nav-dropdown{top:calc(100% + 4px);}
+
   /* ---------- Header ---------- */
   header.top{
     background:radial-gradient(120% 160% at 15% 0%, var(--pitch-2) 0%, var(--pitch) 55%, #0c2019 100%);
@@ -125,6 +156,16 @@
     font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
   }
   .search-result-item:hover{border-color:var(--amber);}
+  .search-group-label{
+    font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);margin:2px 2px 0;
+  }
+  .search-group-label:not(:first-child){margin-top:10px;}
+  .search-result-tag{
+    font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.04em;padding:3px 8px;border-radius:20px;flex-shrink:0;
+    background:var(--pitch-2);color:#fff;
+  }
   .lms-submit-btn{
     background:var(--pitch);border:1px solid var(--pitch);color:#fff;
     font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
@@ -1063,13 +1104,32 @@
 </head>
 <body>
 
+<!-- ---------- Top nav bar (desktop layout trial) ----------
+     Alternate desktop nav placement — a slim full-width bar right at the top
+     of the page, like a typical site header, instead of the pill-style row
+     under the big wordmark below. Reuses the exact same nav data/click
+     wiring as the classic nav (see renderDivNav/buildNavItemHtml), so the
+     two are always in sync. Desktop only — hidden entirely below 901px, so
+     mobile is untouched. To fully revert to the classic layout everywhere,
+     set NAV_TOP_BAR_ENABLED = false near the top of the main script — no
+     other change needed, this block just won't render into. -->
+<div id="topNavBar" class="top-nav-bar">
+  <div class="top-nav-bar-inner">
+    <a href="#home" class="top-nav-bar-brand">
+      <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+      <span>Eliza Cup</span>
+    </a>
+    <nav class="top-nav-bar-links" id="topNavBarLinks"></nav>
+  </div>
+</div>
+
 <header class="top">
   <div class="top-inner">
     <div class="header-icon-actions" id="headerIconActions">
       <div class="site-search" id="siteSearch">
-        <button class="icon-btn search-toggle-btn" id="searchToggleBtn" type="button" aria-label="Search teams">🔍</button>
+        <button class="icon-btn search-toggle-btn" id="searchToggleBtn" type="button" aria-label="Search teams and pages">🔍</button>
         <div class="search-panel" id="searchPanel">
-          <input type="text" id="searchInput" placeholder="Search for a team…" autocomplete="off">
+          <input type="text" id="searchInput" placeholder="Search teams or pages…" autocomplete="off">
           <div id="searchResults" class="search-results"></div>
         </div>
       </div>
@@ -1083,6 +1143,7 @@
     <div class="status-line" id="statusLine">
       <span id="statusLineText"><span class="dot"></span> Connecting to live sheet…</span>
     </div>
+
   </div>
 </header>
 
@@ -1453,17 +1514,46 @@ const NAV_LAYOUT = [
   { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
 
+// ---------- Nav layout trial: top bar ----------
+// Trialing an alternate desktop nav placement — a slim full-width bar right
+// at the top of the page (see #topNavBar) instead of the pill-style row
+// under the big wordmark. Desktop only (≥901px) — mobile always keeps the
+// classic layout no matter what this is set to.
+// TO REVERT to the classic layout everywhere: set this to false. Nothing
+// else needs to change — #topNavBar simply stops rendering/showing and
+// .div-nav goes back to being visible on desktop too.
+const NAV_TOP_BAR_ENABLED = true;
+if(NAV_TOP_BAR_ENABLED){
+  document.body.classList.add('nav-topbar-trial');
+}
+
 function closeAllNavDropdowns(){
   document.querySelectorAll('.div-nav-dropdown.open').forEach(dd=>dd.classList.remove('open'));
 }
 document.addEventListener('click', closeAllNavDropdowns);
 
-// ---------- Site-wide team search ----------
-// Reuses roddyEntries (team + division for every team across all divisions) —
-// the same dataset already powering the Teams browse page and each team's
-// division pill. If nobody's visited a page that populates it yet, fetch it
-// in the background the first time the search panel opens (same CSV/gid as
-// the Roddy Rodriguez Cup page) so search works from anywhere on the site.
+// ---------- Site-wide search (pages + teams) ----------
+// Two sources, combined into one result list:
+//  - Pages: every entry in DIVISIONS (divisions, cups, Calendar, About, etc.)
+//    plus every entry in SIDE_LEAGUES (FPL, AFL Supercoach, etc.) — built
+//    once, lazily, straight off those two arrays so this never drifts out of
+//    sync with the actual nav; nothing to hand-maintain when a page's added
+//    or renamed. Test pages are excluded.
+//  - Teams: roddyEntries, same as before — lazily fetched on first use.
+let searchablePagesCache = null;
+function getSearchablePages(){
+  if(searchablePagesCache) return searchablePagesCache;
+  // Matches the label shown in the nav dropdown (NAV_LAYOUT) where it
+  // differs from the page's own internal DIVISIONS label.
+  const labelOverrides = { teams: "Team Profiles" };
+  const pages = DIVISIONS
+    .filter(d => !d.isTest && d.id !== "sideleagues") // "sideleagues" (no key) isn't its own distinct destination — sideleagueshub and the per-league entries below cover it
+    .map(d => ({ label: labelOverrides[d.id] || d.label, hash: d.id }));
+  SIDE_LEAGUES.forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key }));
+  searchablePagesCache = pages;
+  return pages;
+}
+
 let teamSearchFetchPromise = null;
 async function ensureTeamSearchData(){
   if(roddyEntries.length > 0) return roddyEntries;
@@ -1487,28 +1577,37 @@ async function ensureTeamSearchData(){
 function renderSearchResults(query){
   const resultsEl = document.getElementById('searchResults');
   const q = query.trim().toUpperCase();
-  if(roddyEntries.length === 0){
-    resultsEl.innerHTML = `<div class="search-hint">Loading teams…</div>`;
-    return;
-  }
   if(!q){
-    resultsEl.innerHTML = `<div class="search-hint">Start typing a team name…</div>`;
+    resultsEl.innerHTML = `<div class="search-hint">Start typing a team or page name…</div>`;
     return;
   }
-  const matches = roddyEntries.filter(e => e.team.toUpperCase().includes(q)).slice(0, 8);
-  if(matches.length === 0){
-    resultsEl.innerHTML = `<div class="search-hint">No teams match "${query}".</div>`;
-    return;
+
+  const pageMatches = getSearchablePages().filter(p => p.label.toUpperCase().includes(q)).slice(0, 5);
+  const teamMatches = roddyEntries.length ? roddyEntries.filter(e => e.team.toUpperCase().includes(q)).slice(0, 8) : [];
+
+  let html = "";
+  if(pageMatches.length){
+    html += `<div class="search-group-label">Pages</div>` + pageMatches.map(p => `
+      <a href="#${p.hash}" class="search-result-item">
+        <span>${p.label}</span>
+        <span class="search-result-tag">Page</span>
+      </a>`).join("");
   }
-  resultsEl.innerHTML = matches.map(e=>{
-    const color = getDivisionColorByLabel(e.division);
-    const shortLabel = getDivisionShortLabel(e.division);
-    const label = shortLabel === "D1" ? "Eliza Cup" : shortLabel;
-    return `<a href="#team=${encodeURIComponent(e.team)}" class="search-result-item" style="border-left-color:${color};">
-      <span>${e.team}</span>
-      <span class="roddy-div-tag" style="background:${color};">${label}</span>
-    </a>`;
-  }).join("");
+  if(roddyEntries.length === 0){
+    html += `<div class="search-group-label">Teams</div><div class="search-hint">Loading teams…</div>`;
+  }else if(teamMatches.length){
+    html += `<div class="search-group-label">Teams</div>` + teamMatches.map(e=>{
+      const color = getDivisionColorByLabel(e.division);
+      const shortLabel = getDivisionShortLabel(e.division);
+      const label = shortLabel === "D1" ? "Eliza Cup" : shortLabel;
+      return `<a href="#team=${encodeURIComponent(e.team)}" class="search-result-item" style="border-left-color:${color};">
+        <span>${e.team}</span>
+        <span class="roddy-div-tag" style="background:${color};">${label}</span>
+      </a>`;
+    }).join("");
+  }
+
+  resultsEl.innerHTML = html || `<div class="search-hint">No matches for "${query}".</div>`;
 }
 
 function openSearchPanel(){
@@ -1567,39 +1666,44 @@ function goToSideLeague(key){
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
-function renderDivNav(){
-  const nav = document.getElementById('divNav');
-  const isTeamProfile = currentDivision.type === "teamprofile";
-
-  nav.innerHTML = NAV_LAYOUT.map(item=>{
-    if(item.type === "single"){
-      const d = DIVISIONS.find(x=>x.id===item.id);
-      const isActive = d.id===currentDivision.id || (d.id==="teams" && isTeamProfile);
-      return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
-    }
-    if(item.type === "sidegroup"){
-      const isActive = currentDivision.type === "sideleagues" || currentDivision.type === "sideleagueshub";
-      const isHub = currentDivision.type === "sideleagueshub";
-      const activeKey = (isActive && !isHub) ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
-      const activeLeague = activeKey ? SIDE_LEAGUES.find(s=>s.key===activeKey) : null;
-      return `<div class="div-nav-group">
-        <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
-        <div class="div-nav-dropdown" id="navDropdown-${item.key}">
-          <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-          ${SIDE_LEAGUES.map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
-        </div>
-      </div>`;
-    }
-    const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
-    const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
+// Builds the HTML for one NAV_LAYOUT entry. idPrefix keeps dropdown element
+// IDs unique between the classic in-header nav and the top-bar nav trial
+// (see NAV_TOP_BAR_ENABLED below) — both render from the exact same
+// NAV_LAYOUT/DIVISIONS/SIDE_LEAGUES data, so they can never drift out of
+// sync with each other.
+function buildNavItemHtml(item, idPrefix){
+  if(item.type === "single"){
+    const d = DIVISIONS.find(x=>x.id===item.id);
+    const isActive = d.id===currentDivision.id || (d.id==="teams" && currentDivision.type==="teamprofile");
+    return `<button class="div-tab${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
+  }
+  if(item.type === "sidegroup"){
+    const isActive = currentDivision.type === "sideleagues" || currentDivision.type === "sideleagueshub";
+    const isHub = currentDivision.type === "sideleagueshub";
+    const activeKey = (isActive && !isHub) ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
+    const activeLeague = activeKey ? SIDE_LEAGUES.find(s=>s.key===activeKey) : null;
     return `<div class="div-nav-group">
-      <button class="div-tab${activeChild?' active':''}" data-group="${item.key}" type="button">${activeChild ? activeChild.pill : item.label}<span class="div-tab-caret">▾</span></button>
-      <div class="div-nav-dropdown" id="navDropdown-${item.key}">
-        ${groupDivisions.map(d=>`<button class="div-nav-dropdown-item${d.id===currentDivision.id?' active':''}" data-id="${d.id}" type="button">${d.label}</button>`).join("")}
+      <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
+      <div class="div-nav-dropdown" id="navDropdown-${idPrefix}${item.key}">
+        <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
+        ${SIDE_LEAGUES.map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
       </div>
     </div>`;
-  }).join("");
+  }
+  const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
+  const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
+  return `<div class="div-nav-group">
+    <button class="div-tab${activeChild?' active':''}" data-group="${item.key}" type="button">${activeChild ? activeChild.pill : item.label}<span class="div-tab-caret">▾</span></button>
+    <div class="div-nav-dropdown" id="navDropdown-${idPrefix}${item.key}">
+      ${groupDivisions.map(d=>`<button class="div-nav-dropdown-item${d.id===currentDivision.id?' active':''}" data-id="${d.id}" type="button">${d.label}</button>`).join("")}
+    </div>
+  </div>`;
+}
 
+// Wires click handlers for one rendered nav container. idPrefix must match
+// whatever was passed to buildNavItemHtml() for this container, so dropdown
+// toggles look up the right element.
+function wireNavContainer(nav, idPrefix){
   nav.querySelectorAll('.div-tab[data-id]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const div = DIVISIONS.find(d=>d.id===btn.dataset.id);
@@ -1632,7 +1736,7 @@ function renderDivNav(){
   nav.querySelectorAll('.div-tab[data-group]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      const dd = document.getElementById('navDropdown-' + btn.dataset.group);
+      const dd = document.getElementById('navDropdown-' + idPrefix + btn.dataset.group);
       const isOpen = dd.classList.contains('open');
       closeAllNavDropdowns();
       if(!isOpen) dd.classList.add('open');
@@ -1642,12 +1746,29 @@ function renderDivNav(){
   nav.querySelectorAll('.div-tab[data-sidegroup]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      const dd = document.getElementById('navDropdown-' + btn.dataset.sidegroup);
+      const dd = document.getElementById('navDropdown-' + idPrefix + btn.dataset.sidegroup);
       const isOpen = dd.classList.contains('open');
       closeAllNavDropdowns();
       if(!isOpen) dd.classList.add('open');
     });
   });
+}
+
+function renderDivNav(){
+  const nav = document.getElementById('divNav');
+  nav.innerHTML = NAV_LAYOUT.map(item => buildNavItemHtml(item, "")).join("");
+  wireNavContainer(nav, "");
+
+  // Top-bar nav trial (desktop only — see NAV_TOP_BAR_ENABLED) renders from
+  // the exact same NAV_LAYOUT data into a second container, so it's always
+  // in sync with the classic nav above with nothing to maintain twice.
+  if(NAV_TOP_BAR_ENABLED){
+    const topNav = document.getElementById('topNavBarLinks');
+    if(topNav){
+      topNav.innerHTML = NAV_LAYOUT.map(item => buildNavItemHtml(item, "top-")).join("");
+      wireNavContainer(topNav, "top-");
+    }
+  }
 
   applyPageVisibility();
 }
@@ -1689,7 +1810,7 @@ async function loadPageVisibilityData(){
 // calls this automatically, and it's also re-run once the fetch resolves so
 // anything already on screen gets filtered retroactively.
 function applyPageVisibility(){
-  document.querySelectorAll('#divNav [data-id], .home-card[data-id], .home-card-compact[data-id]').forEach(el=>{
+  document.querySelectorAll('#divNav [data-id], #topNavBarLinks [data-id], .home-card[data-id], .home-card-compact[data-id]').forEach(el=>{
     const id = el.getAttribute('data-id');
     el.style.display = (pageVisibilityMap[id] === false) ? "none" : "";
   });
@@ -1700,7 +1821,9 @@ function applyPageVisibility(){
   // Only applies to standard groups (Divisions, Cups, 26/27 Test) — the Side
   // Leagues dropdown mixes data-id and data-side-key items and isn't
   // included here, since most of its entries aren't page-visibility items.
-  document.querySelectorAll('#divNav .div-nav-group').forEach(group=>{
+  // Covers both the classic in-header nav and the top-bar nav trial, since
+  // they render the exact same groups from the same NAV_LAYOUT data.
+  document.querySelectorAll('#divNav .div-nav-group, #topNavBarLinks .div-nav-group').forEach(group=>{
     const toggleBtn = group.querySelector(':scope > [data-group]');
     if(!toggleBtn) return;
     const items = group.querySelectorAll('.div-nav-dropdown-item[data-id]');
