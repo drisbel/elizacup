@@ -285,9 +285,9 @@
   .wheel-fullscreen-results-grid .draw-fixture-row{
     padding:var(--wc-pad,16px 20px);margin-bottom:0;
   }
-  .wheel-fullscreen-results-grid .team{font-size:var(--wc-font,19px);gap:10px;}
+  .wheel-fullscreen-results-grid .team{font-size:var(--wc-font,19px);gap:10px;white-space:nowrap;min-width:0;}
   .wheel-fullscreen-results-grid .draw-fixture-logo{width:var(--wc-logo,34px);height:var(--wc-logo,34px);}
-  .wheel-fullscreen-results-grid .num{font-size:12.5px;}
+  .wheel-fullscreen-results-grid .num{font-size:12.5px;flex-shrink:0;}
   .wheel-fullscreen-right h2{
     font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);
     text-transform:uppercase;margin:0 0 18px;
@@ -308,6 +308,14 @@
   .wheel-matchup-team .wm-division-text{
     margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.02em;
   }
+  /* Placeholder second-team slot shown while a pair's still waiting on its
+     opponent to be drawn — see wheelMatchupEmptySlotHtml(). */
+  .wheel-matchup-team-empty .wm-empty-icon{
+    width:56px;height:56px;border-radius:50%;border:2px dashed var(--muted);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 8px;
+    font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--muted);
+  }
+  .wheel-matchup-team-empty .wm-name{color:var(--muted);font-weight:600;font-style:italic;font-size:15px;}
   .wm-pos-cards{display:flex;gap:8px;margin-top:10px;}
   .wheel-matchup-vs{
     font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--muted);
@@ -405,6 +413,15 @@
   .draw-pick-box.pop{animation:drawPop 0.45s cubic-bezier(0.34,1.56,0.64,1);}
   .draw-pick-box .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px;}
   .draw-pick-box .name{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;}
+  /* Sits over the wheel itself (reparented into #wheelWrap, which is
+     position:relative) instead of taking up flex space below the spin
+     button — so a team being drawn never pushes the wheel/page layout
+     around or forces a scroll, regardless of team name length. */
+  .wheel-pick-floating{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    z-index:5;width:max-content;max-width:92%;margin:0;
+    box-shadow:0 14px 34px rgba(0,0,0,0.4);
+  }
   .wheel-pick-inline .pick-body{display:flex;align-items:center;justify-content:center;gap:12px;max-width:100%;}
   .wheel-pick-inline .pick-body img{width:44px;height:44px;object-fit:contain;flex-shrink:0;}
   .wheel-pick-inline .pick-body .name{
@@ -417,6 +434,12 @@
   }
   .draw-fixture-row .team{font-weight:600;font-size:13px;flex:1;display:flex;align-items:center;gap:8px;}
   .draw-fixture-row .team.away{text-align:right;justify-content:flex-end;}
+  /* A team's been drawn but is still waiting on its opponent — shown as its
+     own dashed, slightly muted row instead of only appearing once the pair's
+     complete, so the fixture list fills in pick by pick rather than jumping
+     two teams at a time. */
+  .draw-fixture-row-pending{border-style:dashed;border-color:var(--muted);background:#fafbfc;}
+  .draw-fixture-pending-slot{color:var(--muted);font-style:italic;font-weight:600;}
   .draw-fixture-row .num{font-size:11px;color:var(--muted);flex-shrink:0;}
   .draw-fixture-logo{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
 </style>
@@ -926,7 +949,7 @@
             <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
             <button class="btn btn-primary" id="wheelCompleteDrawBtn" style="display:none;">✓ Complete Draw</button>
           </div>
-          <div class="draw-pick-box wheel-pick-inline" id="drawWheelPick" style="margin-left:auto;margin-right:auto;">
+          <div class="draw-pick-box wheel-pick-inline wheel-pick-floating" id="drawWheelPick">
             <div class="kicker">Just drawn</div>
             <div class="pick-body">
               <img id="drawWheelPickLogo" alt="" style="display:none;">
@@ -2502,19 +2525,77 @@ function updateWheelCompleteDrawButtonVisibility(){
 
 let wheelFullscreenResultsActive = false;
 
-// Card sizing tiers for the Complete Draw results grid — fewer fixtures get
-// fewer columns and noticeably larger cards/logos/text instead of the same
-// small card size just floating at the top of a mostly-empty screen. Tuned
-// by eye against common draw sizes (a 2-3 game side league cup through to a
-// full 16-team division).
-function wheelResultsGridScaleFor(n){
-  if(n <= 2)  return { cols:1, font:34, logo:56, pad:"32px 38px", gap:22, maxWidth:600 };
-  if(n <= 4)  return { cols:2, font:28, logo:50, pad:"26px 32px", gap:24, maxWidth:820 };
-  if(n <= 6)  return { cols:2, font:24, logo:44, pad:"22px 28px", gap:24, maxWidth:820 };
-  if(n <= 9)  return { cols:3, font:21, logo:38, pad:"19px 24px", gap:26, maxWidth:1020 };
-  if(n <= 12) return { cols:3, font:19, logo:34, pad:"16px 20px", gap:24, maxWidth:1020 };
-  if(n <= 18) return { cols:4, font:16, logo:28, pad:"14px 17px", gap:20, maxWidth:1180 };
-  return          { cols:4, font:14, logo:24, pad:"12px 14px", gap:16, maxWidth:1280 };
+// Shared canvas 2D context used only for measuring text width at a given
+// font size — lets computeWheelResultsLayout() find the largest font that
+// still fits the longest team name on one line, without a DOM measure/reflow
+// loop.
+const wheelResultsMeasureCtx = document.createElement("canvas").getContext("2d");
+function measureTextWidthPx(text, fontSizePx, weight){
+  wheelResultsMeasureCtx.font = `${weight || 700} ${fontSizePx}px 'Barlow Condensed', sans-serif`;
+  return wheelResultsMeasureCtx.measureText(text).width;
+}
+
+// Works out column count, gaps, padding, logo size and font size for the
+// Complete Draw results grid from the ACTUAL available space in the results
+// view (not a fixed pixel cap) — so it fills the screen it's shown on rather
+// than sitting at a fixed size regardless of how much room there is. Column
+// count still scales down for fewer fixtures (so a 2-3 game draw isn't
+// spread across 4 skinny columns), but everything else — including the max
+// width — is sized off the real container. The font size is then explicitly
+// checked against the longest team name actually being drawn and shrunk
+// just enough to guarantee it fits on one line: never wrapped, never cut off.
+function computeWheelResultsLayout(fixtures){
+  const n = fixtures.length;
+  const container = $("wheelFullscreenResultsView");
+  const rect = container.getBoundingClientRect();
+  const cStyle = getComputedStyle(container);
+  const availWidth = rect.width - parseFloat(cStyle.paddingLeft) - parseFloat(cStyle.paddingRight);
+
+  let cols;
+  if(n <= 2) cols = 1;
+  else if(n <= 6) cols = 2;
+  else if(n <= 12) cols = 3;
+  else if(n <= 20) cols = 4;
+  else cols = 5;
+
+  const gap = Math.max(16, Math.min(34, Math.round(availWidth * 0.02)));
+  // Use almost all of the available width — capped generously so cards on an
+  // ultrawide/shared-screen setup don't stretch into an unreadably long
+  // single line, but otherwise this is what actually fills the screen.
+  const maxWidth = Math.min(availWidth * 0.97, 2000);
+  const colWidth = (maxWidth - gap * (cols - 1)) / cols;
+
+  const logo = Math.max(24, Math.min(60, Math.round(colWidth * 0.14)));
+  const padX = Math.max(14, Math.min(42, Math.round(colWidth * 0.09)));
+  const padY = Math.max(12, Math.min(36, Math.round(padX * 0.82)));
+  const pad = `${padY}px ${padX}px`;
+
+  // A card's content width (colWidth minus its own left/right padding) is
+  // shared three ways — home-team span, the "Fixture N" label, and
+  // away-team span, each separated by the row's 10px flex gap — with the two
+  // team spans (flex:1) splitting whatever's left over equally. Model that
+  // properly rather than assuming a team name gets the whole column, or the
+  // font would be sized too generously and wrap/overflow in practice.
+  const rowGap = 10;
+  const numLabel = "Fixture " + n;
+  const numWidth = measureTextWidthPx(numLabel, 12.5, 600);
+  const contentWidth = colWidth - padX * 2;
+  const perTeamWidth = (contentWidth - numWidth - rowGap * 2) / 2;
+
+  // Starting point scaled to the per-team width, then shrunk (never grown
+  // past this) until the longest name on the wheel actually fits.
+  let font = Math.max(14, Math.min(42, Math.round(perTeamWidth * 0.11)));
+  const longestName = fixtures.reduce((longest, f) => {
+    [f.home, f.away].forEach(name => { if(name.length > longest.length) longest = name; });
+    return longest;
+  }, "");
+  const reservedWidth = logo + 10 /* gap between logo and name */ + 12 /* safety buffer */;
+  const availTextWidth = perTeamWidth - reservedWidth;
+  while(font > 11 && measureTextWidthPx(longestName, font) > availTextWidth){
+    font -= 1;
+  }
+
+  return { cols, gap, pad, font, logo, maxWidth };
 }
 
 // After the grid's rendered at its natural size, decides whether it (plus
@@ -2533,11 +2614,13 @@ function updateWheelResultsCentering(){
 }
 
 // Full-screen "reveal" view: every drawn fixture at once, laid out in a grid
-// that's rescaled — column count, card padding, font and logo size — to suit
-// how many fixtures there are, then centred on the screen if there's room to
-// spare (see wheelResultsGridScaleFor / updateWheelResultsCentering) instead
-// of a fixed card size that leaves a handful of fixtures stranded at the top
-// of a mostly-empty screen.
+// that's sized to actually fill the available screen — column count, card
+// padding, font and logo size all computed from the real container width
+// (see computeWheelResultsLayout) rather than a fixed card size that leaves
+// a handful of fixtures stranded small at the top of a mostly-empty screen,
+// or team names wrapping/getting cut off because a column was assumed to be
+// narrower than it really is. Centred on the screen if there's room to
+// spare (see updateWheelResultsCentering).
 function showWheelResultsView(){
   wheelFullscreenResultsActive = true;
   $("wheelFullscreenColumns").style.display = "none";
@@ -2563,13 +2646,13 @@ function showWheelResultsView(){
       <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
     </div>`).join("");
 
-  const scale = wheelResultsGridScaleFor(drawFixtures.length);
-  grid.style.setProperty("--wc-cols", scale.cols);
-  grid.style.setProperty("--wc-gap", scale.gap + "px");
-  grid.style.setProperty("--wc-pad", scale.pad);
-  grid.style.setProperty("--wc-font", scale.font + "px");
-  grid.style.setProperty("--wc-logo", scale.logo + "px");
-  grid.style.setProperty("--wc-maxwidth", scale.maxWidth + "px");
+  const layout = computeWheelResultsLayout(drawFixtures);
+  grid.style.setProperty("--wc-cols", layout.cols);
+  grid.style.setProperty("--wc-gap", layout.gap + "px");
+  grid.style.setProperty("--wc-pad", layout.pad);
+  grid.style.setProperty("--wc-font", layout.font + "px");
+  grid.style.setProperty("--wc-logo", layout.logo + "px");
+  grid.style.setProperty("--wc-maxwidth", layout.maxWidth + "px");
 
   $("wheelFullscreenResultsView").style.display = "flex";
   updateWheelResultsCentering();
@@ -2672,12 +2755,25 @@ function renderDrawShared(){
     const logoName = resolveElizaTeamName(name);
     return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
   };
-  $("drawFixtureList").innerHTML = drawFixtures.map((f,i) => `
+  let fixturesHtml = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
       <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
       <span class="num">Fixture ${i+1}</span>
       <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
     </div>`).join("");
+
+  // A team's been drawn but is still waiting on its opponent — show it as
+  // its own in-progress row straight away instead of only appearing once the
+  // pair's complete, so the list fills in pick by pick.
+  if(drawPending !== null){
+    fixturesHtml += `
+      <div class="draw-fixture-row draw-fixture-row-pending">
+        <span class="team">${teamLogoImg(drawPending)}${escapeHtml(drawPending)}</span>
+        <span class="num">Fixture ${drawFixtures.length+1}</span>
+        <span class="team away draw-fixture-pending-slot">Awaiting opponent…</span>
+      </div>`;
+  }
+  $("drawFixtureList").innerHTML = fixturesHtml;
 
   // The matchup info panel is pinned at the top of the right column in Full
   // Screen Mode, so the fixtures pane below it keeps its own scroll — always
@@ -2965,6 +3061,16 @@ function wheelMatchupTeamBlockHtml(team, info){
     </div>`;
 }
 
+// Placeholder shown in the second team slot while a pair's still waiting on
+// its opponent to be drawn — see renderWheelMatchupInfo(teamA, null).
+function wheelMatchupEmptySlotHtml(){
+  return `
+    <div class="wheel-matchup-team wheel-matchup-team-empty">
+      <div class="wm-empty-icon">?</div>
+      <div class="wm-name">Awaiting opponent…</div>
+    </div>`;
+}
+
 // Same card visual language as tvtStatBox on Team Profile pages (white card,
 // small uppercase label, bold Barlow Condensed value) — arranged here as
 // wins/draws/wins under the two team blocks instead of a generic P/W/L/D row,
@@ -3005,22 +3111,29 @@ function wheelH2HHtml(teamA, teamB, record){
     <div class="wheel-matchup-last-meeting">${lastLine}</div>`;
 }
 
-// Renders the top matchup-info panel for the fixture that was just completed
-// (both teams now known). A render token guards against a slow fetch from an
+// Renders the top matchup-info panel for the current pair. Called twice per
+// fixture: once the moment the first team lands (teamB is null — shows that
+// team immediately alongside a placeholder "Awaiting opponent…" slot, no H2H
+// fetch yet), then again once the second team's drawn (full team info + H2H
+// fetched and rendered). A render token guards against a slow fetch from an
 // earlier pick resolving after a later pick has already repainted the panel
 // for a different pair of teams.
 let wheelMatchupRenderToken = 0;
 async function renderWheelMatchupInfo(teamA, teamB){
   const myToken = ++wheelMatchupRenderToken;
   const box = $("wheelMatchupInfo");
+  const pending = !teamB;
+
   box.innerHTML = `
     <div class="wheel-matchup-teams">
       ${wheelMatchupTeamBlockHtml(teamA, null)}
       <div class="wheel-matchup-vs">VS</div>
-      ${wheelMatchupTeamBlockHtml(teamB, null)}
+      ${pending ? wheelMatchupEmptySlotHtml() : wheelMatchupTeamBlockHtml(teamB, null)}
     </div>
     <div class="wheel-matchup-h2h-title">Head to Head</div>
-    <div id="wheelMatchupH2H"><div class="wheel-matchup-h2h-empty">Loading…</div></div>`;
+    <div id="wheelMatchupH2H"><div class="wheel-matchup-h2h-empty">${pending ? "Waiting for the second team to be drawn…" : "Loading…"}</div></div>`;
+
+  if(pending) return; // nothing to fetch yet — this pair isn't complete
 
   const [infoA, infoB, record] = await Promise.all([
     getWheelTeamMatchInfo(teamA),
@@ -3319,15 +3432,16 @@ function reparentToFullscreen(el, target){
 // Sizes the wheel to whatever room is actually available in the left column
 // — fixes it being cut off / needing horizontal scroll on smaller screens or
 // shared windows, since a fixed pixel size doesn't adapt to real available
-// space the way this does. Reserves room below the wheel for the spin button
-// and the "Just drawn" box, measuring their real rendered heights rather than
-// guessing, and measuring the pick box's height while it's still hidden
-// (before any team has been drawn) so the wheel is already sized correctly
-// for when it appears, instead of the box popping in after the first spin
-// and pushing the page into a scroll. The title normally lives in the right
-// column and plays no part here — except in Plain Wheel mode, where the
-// right column is hidden entirely and a separate title element lives in
-// this column instead, so its height (when shown) is reserved for too.
+// space the way this does. Reserves room below the wheel for the spin
+// button, measuring its real rendered height rather than guessing. The
+// "Just drawn" pick box does NOT need reserving — it's an absolutely
+// positioned overlay on top of the wheel (.wheel-pick-floating, reparented
+// into #wheelWrap) rather than a flex sibling, so it never affects this
+// layout or forces a scroll when a team's drawn. The title normally lives in
+// the right column and plays no part here — except in Plain Wheel mode,
+// where the right column is hidden entirely and a separate title element
+// lives in this column instead, so its height (when shown) is reserved for
+// too.
 function computeFullscreenWheelSize(){
   const left = $("wheelFullscreenLeft");
   const rect = left.getBoundingClientRect();
@@ -3342,23 +3456,15 @@ function computeFullscreenWheelSize(){
   const spinWrap = $("drawSpinBtn").parentElement;
   const spinH = spinWrap.getBoundingClientRect().height;
 
-  const pickBox = $("drawWheelPick");
-  const prevDisplay = pickBox.style.display;
-  pickBox.style.visibility = "hidden";
-  pickBox.style.display = "block";
-  const pickH = pickBox.getBoundingClientRect().height;
-  pickBox.style.display = prevDisplay;
-  pickBox.style.visibility = "";
-
-  // Gaps between visible flex children: wheel↔spin and spin↔pick are always
-  // present; title↔wheel only counts if the plain-mode title is shown.
-  const gapCount = 2 + (plainTitleShown ? 1 : 0);
+  // Gap between visible flex children: wheel↔spin is always present;
+  // title↔wheel only counts if the plain-mode title is shown.
+  const gapCount = 1 + (plainTitleShown ? 1 : 0);
   // Small fixed safety margin on top of the real measurements above, as
   // insurance against sub-pixel rounding or any other tiny discrepancy —
   // cheap, and the only thing it costs is a few px of otherwise-unused wheel
   // size, versus the alternative of the page needing to scroll.
   const safetyMargin = 20;
-  const reserved = paddingV + plainTitleH + spinH + pickH + gap*gapCount + safetyMargin;
+  const reserved = paddingV + plainTitleH + spinH + gap*gapCount + safetyMargin;
 
   const availW = rect.width - 48;
   const availH = rect.height - reserved;
@@ -3409,7 +3515,7 @@ async function enterWheelFullscreen(){
 
   reparentToFullscreen($("wheelWrap"), left);
   reparentToFullscreen($("drawSpinBtn").parentElement, left);
-  reparentToFullscreen($("drawWheelPick"), left);
+  reparentToFullscreen($("drawWheelPick"), $("wheelWrap")); // overlay lives inside the wheel's own positioned wrapper, not the flex column
   reparentToFullscreen($("drawFixtureList"), rightSlot);
 
   $("wheelFullscreenOverlay").style.display = "flex";
@@ -3615,13 +3721,19 @@ function drawSpin(){
     showDrawPick("drawWheelPick", "drawWheelPickName", picked, "drawWheelPickLogo");
     renderDrawShared();
 
-    // This pick completed a fixture pair (pendingBefore had a team waiting,
-    // and drawRecordPick just cleared it) — show matchup info for that pair.
+    // This pick started a new pair (was nothing pending before, now there
+    // is) — show that team in the matchup panel immediately rather than
+    // waiting for its opponent. This pick completed a pair instead (was
+    // pending, now cleared) — show the full matchup info for that pair.
     // Side League mode skips this entirely — division/H2H stats are Eliza
     // Cup data and don't apply to side-league team names.
-    if(pendingBefore !== null && drawPending === null && !wheelSideLeagueMode){
-      const justCompleted = drawFixtures[drawFixtures.length - 1];
-      renderWheelMatchupInfo(justCompleted.home, justCompleted.away);
+    if(!wheelSideLeagueMode){
+      if(pendingBefore === null && drawPending !== null){
+        renderWheelMatchupInfo(picked, null);
+      }else if(pendingBefore !== null && drawPending === null){
+        const justCompleted = drawFixtures[drawFixtures.length - 1];
+        renderWheelMatchupInfo(justCompleted.home, justCompleted.away);
+      }
     }
 
     // Reset instantly (no transition). The wheel's bitmap hasn't changed

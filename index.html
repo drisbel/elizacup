@@ -1064,7 +1064,7 @@
     </div>
     <nav class="div-nav" id="divNav"></nav>
     <div class="status-line" id="statusLine">
-      <span><span class="dot"></span> Connecting to live sheet…</span>
+      <span id="statusLineText"><span class="dot"></span> Connecting to live sheet…</span>
       <div class="site-search" id="siteSearch">
         <button class="search-toggle-btn" id="searchToggleBtn" type="button">🔍 Search teams</button>
         <div class="search-panel" id="searchPanel">
@@ -1793,11 +1793,13 @@ window.addEventListener('hashchange', ()=>{
   window.scrollTo({ top: 0, behavior: "auto" });
 });
 
+// Only updates the status dot/message span, not the whole #statusLine —
+// this used to overwrite the entire container (search widget included)
+// every time the connection status changed, which silently deleted the
+// site-wide team search from the page on every single load.
 function setStatus(msg, ok){
-  document.getElementById('statusLine').innerHTML =
-    `<span><span class="dot" style="background:${ok===false ? '#B95C50' : '#4FAE7E'}"></span> ${msg}</span>` +
-    `<button class="refresh-btn" id="refreshBtn">↻ Refresh</button>`;
-  document.getElementById('refreshBtn').addEventListener('click', load);
+  document.getElementById('statusLineText').innerHTML =
+    `<span class="dot" style="background:${ok===false ? '#B95C50' : '#4FAE7E'}"></span> ${msg}`;
 }
 
 // Large hero logo shown at the top of division / Roddy / FA Cup / ECL pages.
@@ -1909,7 +1911,11 @@ async function load(){
 
   if(currentDivision.type === "home"){
     renderHome();
-    document.getElementById('statusLine').innerHTML = "";
+    // Home doesn't pull from a single sheet, so the "Connecting…"/"Live" copy
+    // doesn't apply here — clear just the status text, not the whole
+    // #statusLine, which would also wipe out the search widget and refresh
+    // button sitting alongside it.
+    document.getElementById('statusLineText').innerHTML = "";
     return;
   }
 
