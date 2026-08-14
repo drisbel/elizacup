@@ -82,24 +82,45 @@
      kind of positioning context as .top-inner. */
   .top-nav-bar-inner .header-icon-actions{position:static;margin-left:auto;flex-shrink:0;}
 
-  /* ---------- Header removal (desktop) ---------- */
-  /* The big gradient hero header is fully retired on desktop — the sticky
-     top nav bar plus each page's own colored title (see .comp-logo-hero)
-     replace it. Mobile keeps the classic header, since that's where the
-     hamburger toggle and status line live on small screens. */
-  @media (min-width:901px){
-    header.top{display:none;}
+  /* ---------- Header removal (all screen sizes) ---------- */
+  /* The big gradient hero header is fully retired everywhere — the sticky
+     top nav bar (desktop) / mobile top bar (mobile) plus each page's own
+     colored title (see .comp-logo-hero) replace it. header.top itself stays
+     in the DOM (see the HTML comment above it) purely so #divPill/
+     #statusLineText keep existing for the script to write to; it's never
+     actually shown. */
+  header.top{display:none;}
+
+  /* ---------- Mobile top bar ---------- */
+  /* The mobile equivalent of the desktop .top-nav-bar — sticky, single row:
+     hamburger toggle, compact brand, then search/refresh
+     (#headerIconActions reparents in here — see placeHeaderIconActions). */
+  .mobile-top-bar{display:none;}
+  @media (max-width:900px){
+    .mobile-top-bar{
+      display:flex;align-items:center;gap:12px;padding:0 14px;height:52px;
+      background:#28427c; /* same fixed brand colour as the desktop bar — never changes per-page */
+      border-bottom:1px solid rgba(255,255,255,0.14);
+      position:sticky;top:0;z-index:50;
+    }
   }
+  .mobile-top-bar-brand{
+    display:flex;align-items:center;gap:8px;flex:1;min-width:0;text-decoration:none;
+    color:var(--chalk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;
+  }
+  .mobile-top-bar-brand img{height:24px;width:auto;object-fit:contain;flex-shrink:0;}
+  .mobile-top-bar .header-icon-actions{position:static;flex-shrink:0;}
 
   /* ---------- Mobile nav drawer (hamburger menu) ---------- */
   .mobile-nav-toggle{
     display:none; /* shown only below 901px */
     background:none;border:1px solid var(--line);color:var(--chalk);
-    width:38px;height:38px;padding:0;border-radius:6px;cursor:pointer;
+    width:34px;height:34px;padding:0;border-radius:6px;cursor:pointer;
     align-items:center;justify-content:center;flex-direction:column;gap:4px;
-    flex-shrink:0;margin-left:auto;
+    flex-shrink:0;
   }
-  .mobile-nav-toggle span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;}
+  .mobile-nav-toggle span{display:block;width:16px;height:2px;background:currentColor;border-radius:2px;}
   @media (max-width:900px){
     .mobile-nav-toggle{display:flex;}
   }
@@ -192,16 +213,11 @@
   .dot{width:7px;height:7px;border-radius:50%;background:var(--turf);display:inline-block;box-shadow:0 0 0 3px rgba(79,174,126,0.25);}
 
   /* ---------- Header icon actions (search + refresh) ---------- */
-  /* Pinned to the top-right corner of the header content, independent of the
-     wordmark/nav/status rows below — so they don't compete for space in the
-     status line and stay put regardless of how tall the header gets. */
-  .header-icon-actions{
-    position:absolute;top:0;right:0;z-index:10;
-    display:flex;gap:8px;
-  }
-  @media (max-width:600px){
-    .header-icon-actions{position:static;justify-content:flex-end;margin-bottom:10px;}
-  }
+  /* Lives in whichever top bar is active — #topNavBar on desktop,
+     #mobileTopBar on mobile (see placeHeaderIconActions in the main
+     script, and the position:static overrides on each bar above). This
+     base rule is just the shared button-row layout. */
+  .header-icon-actions{display:flex;gap:8px;}
   .icon-btn{
     background:none;border:1px solid var(--line);color:var(--chalk);
     width:34px;height:34px;padding:0;border-radius:6px;cursor:pointer;
@@ -1203,14 +1219,29 @@
   </div>
 </div>
 
+<!-- ---------- Mobile top bar ----------
+     The mobile equivalent of #topNavBar — sticky, one line: hamburger toggle,
+     compact brand, then search/refresh (#headerIconActions reparents in here
+     on mobile — see placeHeaderIconActions). No inline nav links here, since
+     that's what the hamburger drawer below is for. -->
+<div id="mobileTopBar" class="mobile-top-bar">
+  <button id="mobileNavToggle" class="mobile-nav-toggle" type="button" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+  <a href="#home" class="mobile-top-bar-brand">
+    <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+    <span>Eliza Cup</span>
+  </a>
+</div>
+
 <!-- ---------- Mobile nav drawer ----------
      The hamburger-triggered off-canvas menu used below 901px, in place of
-     the desktop top bar. #mobileNavToggle (placed in the classic header's
-     wordmark row) opens it; renders from the same NAV_LAYOUT data as the
-     desktop bar (see renderMobileNav/buildMobileNavItemHtml). Dropdown
-     groups (Divisions, Cups, Side Leagues) become expand-in-place
-     accordions here rather than popover dropdowns, since a narrow drawer
-     doesn't have room for a popover. -->
+     the desktop top bar. #mobileNavToggle (in #mobileTopBar above) opens it;
+     renders from the same NAV_LAYOUT data as the desktop bar (see
+     renderMobileNav/buildMobileNavItemHtml). Dropdown groups (Divisions,
+     Cups, Side Leagues) become expand-in-place accordions here rather than
+     popover dropdowns, since a narrow drawer doesn't have room for a
+     popover. -->
 <div id="mobileNavOverlay" class="mobile-nav-overlay"></div>
 <div id="mobileNavDrawer" class="mobile-nav-drawer">
   <div class="mobile-nav-drawer-head">
@@ -1223,6 +1254,13 @@
   <nav id="mobileNavLinks" class="mobile-nav-links"></nav>
 </div>
 
+<!-- The classic header is permanently hidden now (see header.top{display:none}
+     — both desktop and mobile use the compact bars above instead), but it's
+     kept in the DOM rather than deleted: #divPill and #statusLineText are
+     still written to throughout the script (division pill text, "Live —
+     updated…" status messages on every data fetch), and removing the
+     elements entirely would turn every one of those into a null-reference
+     error. Harmless to leave sitting here invisible. -->
 <header class="top">
   <div class="top-inner">
     <div class="header-icon-actions" id="headerIconActions">
@@ -1238,9 +1276,6 @@
     <div class="wordmark-row">
       <img src="logo/eliza-logo.png" alt="" class="site-logo" onerror="this.style.display='none';">
       <h1 class="wordmark">Eliza Cup <span class="pill" id="divPill">Div. 1</span></h1>
-      <button id="mobileNavToggle" class="mobile-nav-toggle" type="button" aria-label="Open menu">
-        <span></span><span></span><span></span>
-      </button>
     </div>
     <div class="status-line" id="statusLine">
       <span id="statusLineText"><span class="dot"></span> Connecting to live sheet…</span>
@@ -1598,13 +1633,15 @@ const NAV_LAYOUT = [
 ];
 
 // ---------- Desktop top nav bar ----------
+// ---------- Desktop top nav bar ----------
 // The permanent desktop nav — a slim sticky bar at the top of the page (see
 // #topNavBar) in place of the old pill-row under the big wordmark. Mobile
-// uses the hamburger drawer instead (see "Mobile nav drawer" further down).
+// uses its own compact sticky bar (#mobileTopBar) plus the hamburger drawer
+// instead (see "Mobile top bar" / "Mobile nav drawer" further down).
 
 // The search + refresh icon buttons (#headerIconActions) physically move
-// between the classic header and the new top bar depending on viewport width
-// — CSS alone can't relocate an element into a different parent, only
+// between the desktop top bar and the mobile top bar depending on viewport
+// width — CSS alone can't relocate an element into a different parent, only
 // reposition it within the same one. Their IDs/click listeners never change,
 // so this is safe to do at any point; only their location in the DOM moves.
 // Reruns whenever the breakpoint is crossed (window resized past 901px),
@@ -1612,14 +1649,14 @@ const NAV_LAYOUT = [
 const NAV_TOPBAR_MEDIA = window.matchMedia("(min-width:901px)");
 function placeHeaderIconActions(){
   const actions = document.getElementById('headerIconActions');
-  const topBarInner = document.querySelector('#topNavBar .top-nav-bar-inner');
-  const classicSlot = document.querySelector('header.top .top-inner');
-  if(!actions || !topBarInner || !classicSlot) return;
+  const desktopSlot = document.querySelector('#topNavBar .top-nav-bar-inner');
+  const mobileSlot = document.getElementById('mobileTopBar');
+  if(!actions || !desktopSlot || !mobileSlot) return;
 
   if(NAV_TOPBAR_MEDIA.matches){
-    if(actions.parentElement !== topBarInner) topBarInner.appendChild(actions);
+    if(actions.parentElement !== desktopSlot) desktopSlot.appendChild(actions);
   }else{
-    if(actions.parentElement !== classicSlot) classicSlot.insertBefore(actions, classicSlot.firstChild);
+    if(actions.parentElement !== mobileSlot) mobileSlot.appendChild(actions);
   }
 }
 placeHeaderIconActions();
