@@ -37,15 +37,13 @@
   }
   a{color:inherit;}
 
-  /* ---------- Top nav bar (desktop layout trial) ---------- */
-  /* See the HTML comment above #topNavBar for how this ties to the classic
-     nav. Hidden by default (and always on mobile); only shown when
-     NAV_TOP_BAR_ENABLED adds body.nav-topbar-trial, and even then only at
-     desktop widths — the classic in-header nav (.div-nav) is what mobile
-     always uses regardless of the flag. */
+  /* ---------- Top nav bar (desktop) ---------- */
+  /* The permanent desktop nav — a slim sticky bar at the very top of the
+     page. Mobile gets the hamburger drawer instead (see "Mobile nav drawer"
+     below); the old pill-row nav (.div-nav) has been fully retired. */
   .top-nav-bar{display:none;}
   @media (min-width:901px){
-    body.nav-topbar-trial .top-nav-bar{
+    .top-nav-bar{
       display:block;
       /* Deliberately a fixed hex, NOT var(--pitch) — that variable gets
          overridden per-division (applyDivisionTheme), which would otherwise
@@ -55,7 +53,6 @@
       border-bottom:1px solid rgba(255,255,255,0.14);
       position:sticky;top:0;z-index:50;
     }
-    body.nav-topbar-trial header.top .div-nav{display:none;}
   }
   .top-nav-bar-inner{
     width:100%;padding:0 28px;height:60px;box-sizing:border-box;
@@ -85,14 +82,68 @@
      kind of positioning context as .top-inner. */
   .top-nav-bar-inner .header-icon-actions{position:static;margin-left:auto;flex-shrink:0;}
 
-  /* ---------- Header removal trial ---------- */
-  /* See REMOVE_BIG_HEADER in the main script. Desktop only — mobile keeps
-     the classic header (with its wordmark, status line, and search/refresh
-     icons) regardless of this flag, since it never gets the top nav bar
-     either. */
+  /* ---------- Header removal (desktop) ---------- */
+  /* The big gradient hero header is fully retired on desktop — the sticky
+     top nav bar plus each page's own colored title (see .comp-logo-hero)
+     replace it. Mobile keeps the classic header, since that's where the
+     hamburger toggle and status line live on small screens. */
   @media (min-width:901px){
-    body.header-removed-trial header.top{display:none;}
+    header.top{display:none;}
   }
+
+  /* ---------- Mobile nav drawer (hamburger menu) ---------- */
+  .mobile-nav-toggle{
+    display:none; /* shown only below 901px */
+    background:none;border:1px solid var(--line);color:var(--chalk);
+    width:38px;height:38px;padding:0;border-radius:6px;cursor:pointer;
+    align-items:center;justify-content:center;flex-direction:column;gap:4px;
+    flex-shrink:0;margin-left:auto;
+  }
+  .mobile-nav-toggle span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;}
+  @media (max-width:900px){
+    .mobile-nav-toggle{display:flex;}
+  }
+  .mobile-nav-overlay{
+    display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.5);
+  }
+  .mobile-nav-overlay.open{display:block;}
+  .mobile-nav-drawer{
+    position:fixed;top:0;left:0;bottom:0;z-index:160;
+    width:min(300px,84vw);background:#0b1220;color:var(--chalk);
+    transform:translateX(-100%);transition:transform .25s ease;
+    display:flex;flex-direction:column;box-shadow:6px 0 24px rgba(0,0,0,0.3);
+  }
+  .mobile-nav-drawer.open{transform:translateX(0);}
+  .mobile-nav-drawer-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;
+  }
+  .mobile-nav-drawer-brand{
+    display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--chalk);
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;
+  }
+  .mobile-nav-drawer-brand img{height:28px;width:auto;object-fit:contain;}
+  .mobile-nav-close-btn{background:none;border:none;color:var(--chalk);font-size:24px;line-height:1;cursor:pointer;padding:2px 6px;}
+  .mobile-nav-links{flex:1;overflow-y:auto;padding:10px 0;}
+  .mobile-nav-link, .mobile-nav-group-toggle{
+    display:flex;align-items:center;justify-content:space-between;width:100%;
+    text-align:left;background:none;border:none;
+    color:rgba(246,242,232,0.88);font-family:'Barlow',sans-serif;font-size:15px;font-weight:600;
+    padding:14px 22px;cursor:pointer;
+  }
+  .mobile-nav-link:hover, .mobile-nav-group-toggle:hover{background:rgba(255,255,255,0.06);}
+  .mobile-nav-link.active, .mobile-nav-group-toggle.active{color:var(--amber);}
+  .mobile-nav-group-caret{transition:transform .2s;font-size:12px;}
+  .mobile-nav-group.expanded .mobile-nav-group-caret{transform:rotate(180deg);}
+  .mobile-nav-submenu{display:none;flex-direction:column;background:rgba(0,0,0,0.2);}
+  .mobile-nav-group.expanded .mobile-nav-submenu{display:flex;}
+  .mobile-nav-sublink{
+    display:block;width:100%;text-align:left;background:none;border:none;
+    color:rgba(246,242,232,0.75);font-family:'Barlow',sans-serif;font-size:14px;
+    padding:12px 22px 12px 40px;cursor:pointer;
+  }
+  .mobile-nav-sublink:hover{background:rgba(255,255,255,0.06);}
+  .mobile-nav-sublink.active{color:var(--amber);}
 
   /* ---------- Header ---------- */
   header.top{
@@ -199,9 +250,6 @@
   }
   .lms-submit-btn:hover{background:var(--pitch-2);border-color:var(--pitch-2);}
 
-  .div-nav{
-    display:flex;gap:6px;flex-wrap:wrap;padding-bottom:12px;
-  }
   .div-tab{
     font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
     padding:7px 14px;border-radius:20px;border:1px solid var(--line);
@@ -1139,15 +1187,12 @@
 </head>
 <body>
 
-<!-- ---------- Top nav bar (desktop layout trial) ----------
-     Alternate desktop nav placement — a slim full-width bar right at the top
-     of the page, like a typical site header, instead of the pill-style row
-     under the big wordmark below. Reuses the exact same nav data/click
-     wiring as the classic nav (see renderDivNav/buildNavItemHtml), so the
-     two are always in sync. Desktop only — hidden entirely below 901px, so
-     mobile is untouched. To fully revert to the classic layout everywhere,
-     set NAV_TOP_BAR_ENABLED = false near the top of the main script — no
-     other change needed, this block just won't render into. -->
+<!-- ---------- Top nav bar (desktop) ----------
+     The permanent desktop nav — a slim full-width sticky bar at the top of
+     the page. Reuses the exact same nav data/click wiring as the mobile
+     drawer nav (see renderDivNav/buildNavItemHtml), so the two are always in
+     sync. Desktop only — hidden entirely below 901px, where the hamburger
+     drawer (further down) is used instead. -->
 <div id="topNavBar" class="top-nav-bar">
   <div class="top-nav-bar-inner">
     <a href="#home" class="top-nav-bar-brand">
@@ -1156,6 +1201,26 @@
     </a>
     <nav class="top-nav-bar-links" id="topNavBarLinks"></nav>
   </div>
+</div>
+
+<!-- ---------- Mobile nav drawer ----------
+     The hamburger-triggered off-canvas menu used below 901px, in place of
+     the desktop top bar. #mobileNavToggle (placed in the classic header's
+     wordmark row) opens it; renders from the same NAV_LAYOUT data as the
+     desktop bar (see renderMobileNav/buildMobileNavItemHtml). Dropdown
+     groups (Divisions, Cups, Side Leagues) become expand-in-place
+     accordions here rather than popover dropdowns, since a narrow drawer
+     doesn't have room for a popover. -->
+<div id="mobileNavOverlay" class="mobile-nav-overlay"></div>
+<div id="mobileNavDrawer" class="mobile-nav-drawer">
+  <div class="mobile-nav-drawer-head">
+    <a href="#home" class="mobile-nav-drawer-brand">
+      <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+      <span>Eliza Cup</span>
+    </a>
+    <button id="mobileNavCloseBtn" class="mobile-nav-close-btn" type="button" aria-label="Close menu">×</button>
+  </div>
+  <nav id="mobileNavLinks" class="mobile-nav-links"></nav>
 </div>
 
 <header class="top">
@@ -1173,8 +1238,10 @@
     <div class="wordmark-row">
       <img src="logo/eliza-logo.png" alt="" class="site-logo" onerror="this.style.display='none';">
       <h1 class="wordmark">Eliza Cup <span class="pill" id="divPill">Div. 1</span></h1>
+      <button id="mobileNavToggle" class="mobile-nav-toggle" type="button" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
-    <nav class="div-nav" id="divNav"></nav>
     <div class="status-line" id="statusLine">
       <span id="statusLineText"><span class="dot"></span> Connecting to live sheet…</span>
     </div>
@@ -1530,31 +1597,10 @@ const NAV_LAYOUT = [
   { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
 
-// ---------- Nav layout trial: top bar ----------
-// Trialing an alternate desktop nav placement — a slim full-width bar right
-// at the top of the page (see #topNavBar) instead of the pill-style row
-// under the big wordmark. Desktop only (≥901px) — mobile always keeps the
-// classic layout no matter what this is set to.
-// TO REVERT to the classic layout everywhere: set this to false. Nothing
-// else needs to change — #topNavBar simply stops rendering/showing and
-// .div-nav goes back to being visible on desktop too.
-const NAV_TOP_BAR_ENABLED = true;
-if(NAV_TOP_BAR_ENABLED){
-  document.body.classList.add('nav-topbar-trial');
-}
-
-// ---------- Header removal trial ----------
-// Removes the big gradient hero header entirely on desktop, leaving just the
-// sticky top nav bar + each page's own title (see GENERIC_LOGO_PAGE_TYPES
-// above — every page now gets a colored logo title, not just Divisions/
-// Roddy/FA Cup/ECL, so removing the header doesn't lose that page's colour
-// identity). Only takes effect when NAV_TOP_BAR_ENABLED is also true —
-// without the top bar there'd be no nav left on desktop at all.
-// TO REVERT: set this to false. Nothing else needs to change.
-const REMOVE_BIG_HEADER = true;
-if(REMOVE_BIG_HEADER && NAV_TOP_BAR_ENABLED){
-  document.body.classList.add('header-removed-trial');
-}
+// ---------- Desktop top nav bar ----------
+// The permanent desktop nav — a slim sticky bar at the top of the page (see
+// #topNavBar) in place of the old pill-row under the big wordmark. Mobile
+// uses the hamburger drawer instead (see "Mobile nav drawer" further down).
 
 // The search + refresh icon buttons (#headerIconActions) physically move
 // between the classic header and the new top bar depending on viewport width
@@ -1565,7 +1611,6 @@ if(REMOVE_BIG_HEADER && NAV_TOP_BAR_ENABLED){
 // not just once on load.
 const NAV_TOPBAR_MEDIA = window.matchMedia("(min-width:901px)");
 function placeHeaderIconActions(){
-  if(!NAV_TOP_BAR_ENABLED) return;
   const actions = document.getElementById('headerIconActions');
   const topBarInner = document.querySelector('#topNavBar .top-nav-bar-inner');
   const classicSlot = document.querySelector('header.top .top-inner');
@@ -1719,9 +1764,10 @@ function goToSideLeague(key){
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
-// Builds the HTML for one NAV_LAYOUT entry. idPrefix keeps dropdown element
-// IDs unique between the classic in-header nav and the top-bar nav trial
-// (see NAV_TOP_BAR_ENABLED below) — both render from the exact same
+// Builds the HTML for one NAV_LAYOUT entry, for the desktop top bar. idPrefix
+// keeps dropdown element IDs unique/predictable; the mobile drawer uses its
+// own buildMobileNavItemHtml instead (different interaction — expand-in-place
+// accordions rather than popovers), but both read from the exact same
 // NAV_LAYOUT/DIVISIONS/SIDE_LEAGUES data, so they can never drift out of
 // sync with each other.
 function buildNavItemHtml(item, idPrefix){
@@ -1807,21 +1853,93 @@ function wireNavContainer(nav, idPrefix){
   });
 }
 
-function renderDivNav(){
-  const nav = document.getElementById('divNav');
-  nav.innerHTML = NAV_LAYOUT.map(item => buildNavItemHtml(item, "")).join("");
-  wireNavContainer(nav, "");
-
-  // Top-bar nav trial (desktop only — see NAV_TOP_BAR_ENABLED) renders from
-  // the exact same NAV_LAYOUT data into a second container, so it's always
-  // in sync with the classic nav above with nothing to maintain twice.
-  if(NAV_TOP_BAR_ENABLED){
-    const topNav = document.getElementById('topNavBarLinks');
-    if(topNav){
-      topNav.innerHTML = NAV_LAYOUT.map(item => buildNavItemHtml(item, "top-")).join("");
-      wireNavContainer(topNav, "top-");
-    }
+// Builds the HTML for one NAV_LAYOUT entry, for the mobile hamburger drawer.
+// Dropdown groups become expand-in-place accordions here (.mobile-nav-group
+// + .expanded) rather than popovers, since a narrow drawer has no room for
+// one — everything else (data sourced from NAV_LAYOUT/DIVISIONS/
+// SIDE_LEAGUES, active-state logic) matches buildNavItemHtml exactly.
+function buildMobileNavItemHtml(item){
+  if(item.type === "single"){
+    const d = DIVISIONS.find(x=>x.id===item.id);
+    const isActive = d.id===currentDivision.id || (d.id==="teams" && currentDivision.type==="teamprofile");
+    return `<button class="mobile-nav-link${isActive?' active':''}" data-id="${d.id}">${item.label || d.label}</button>`;
   }
+  if(item.type === "sidegroup"){
+    const isActive = currentDivision.type === "sideleagues" || currentDivision.type === "sideleagueshub";
+    const isHub = currentDivision.type === "sideleagueshub";
+    const activeKey = (isActive && !isHub) ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
+    return `<div class="mobile-nav-group${isActive?' expanded':''}">
+      <button class="mobile-nav-group-toggle${isActive?' active':''}" data-toggle-group type="button">${item.label}<span class="mobile-nav-group-caret">▾</span></button>
+      <div class="mobile-nav-submenu">
+        <button class="mobile-nav-sublink${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
+        ${SIDE_LEAGUES.map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
+      </div>
+    </div>`;
+  }
+  const groupDivisions = item.ids.map(id=>DIVISIONS.find(x=>x.id===id));
+  const activeChild = groupDivisions.find(d=>d.id===currentDivision.id);
+  return `<div class="mobile-nav-group${activeChild?' expanded':''}">
+    <button class="mobile-nav-group-toggle${activeChild?' active':''}" data-toggle-group type="button">${item.label}<span class="mobile-nav-group-caret">▾</span></button>
+    <div class="mobile-nav-submenu">
+      ${groupDivisions.map(d=>`<button class="mobile-nav-sublink${d.id===currentDivision.id?' active':''}" data-id="${d.id}" type="button">${d.label}</button>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderMobileNav(){
+  const nav = document.getElementById('mobileNavLinks');
+  if(!nav) return;
+  nav.innerHTML = NAV_LAYOUT.map(item => buildMobileNavItemHtml(item)).join("");
+
+  nav.querySelectorAll('.mobile-nav-link[data-id], .mobile-nav-sublink[data-id]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const div = DIVISIONS.find(d=>d.id===btn.dataset.id);
+      closeMobileNav();
+      if(div.id === currentDivision.id) return;
+      goToDivision(div);
+    });
+  });
+  nav.querySelectorAll('.mobile-nav-sublink[data-side-key]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.dataset.sideKey;
+      const currentKey = currentDivision.type === "sideleagues" ? (currentDivision.sideLeagueKey || SIDE_LEAGUES[0].key) : null;
+      closeMobileNav();
+      if(currentKey === key) return;
+      goToSideLeague(key);
+    });
+  });
+  nav.querySelectorAll('.mobile-nav-group-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      btn.closest('.mobile-nav-group').classList.toggle('expanded');
+    });
+  });
+}
+
+function openMobileNav(){
+  document.getElementById('mobileNavOverlay').classList.add('open');
+  document.getElementById('mobileNavDrawer').classList.add('open');
+  document.body.style.overflow = "hidden";
+}
+function closeMobileNav(){
+  document.getElementById('mobileNavOverlay').classList.remove('open');
+  document.getElementById('mobileNavDrawer').classList.remove('open');
+  document.body.style.overflow = "";
+}
+document.getElementById('mobileNavToggle').addEventListener('click', openMobileNav);
+document.getElementById('mobileNavCloseBtn').addEventListener('click', closeMobileNav);
+document.getElementById('mobileNavOverlay').addEventListener('click', closeMobileNav);
+document.addEventListener('keydown', (e)=>{ if(e.key === "Escape") closeMobileNav(); });
+// If the window's resized past the desktop breakpoint while the drawer
+// happens to be open, close it — the desktop top bar takes over and the
+// drawer has no reason to still be sitting open underneath it.
+NAV_TOPBAR_MEDIA.addEventListener("change", (e)=>{ if(e.matches) closeMobileNav(); });
+
+function renderDivNav(){
+  const topNav = document.getElementById('topNavBarLinks');
+  topNav.innerHTML = NAV_LAYOUT.map(item => buildNavItemHtml(item, "top-")).join("");
+  wireNavContainer(topNav, "top-");
+
+  renderMobileNav();
 
   applyPageVisibility();
 }
@@ -1863,7 +1981,7 @@ async function loadPageVisibilityData(){
 // calls this automatically, and it's also re-run once the fetch resolves so
 // anything already on screen gets filtered retroactively.
 function applyPageVisibility(){
-  document.querySelectorAll('#divNav [data-id], #topNavBarLinks [data-id], .home-card[data-id], .home-card-compact[data-id]').forEach(el=>{
+  document.querySelectorAll('#topNavBarLinks [data-id], #mobileNavLinks [data-id], .home-card[data-id], .home-card-compact[data-id]').forEach(el=>{
     const id = el.getAttribute('data-id');
     el.style.display = (pageVisibilityMap[id] === false) ? "none" : "";
   });
@@ -1874,12 +1992,22 @@ function applyPageVisibility(){
   // Only applies to standard groups (Divisions, Cups, 26/27 Test) — the Side
   // Leagues dropdown mixes data-id and data-side-key items and isn't
   // included here, since most of its entries aren't page-visibility items.
-  // Covers both the classic in-header nav and the top-bar nav trial, since
-  // they render the exact same groups from the same NAV_LAYOUT data.
-  document.querySelectorAll('#divNav .div-nav-group, #topNavBarLinks .div-nav-group').forEach(group=>{
+  // Covers both the desktop top bar and the mobile drawer, since they render
+  // the exact same groups from the same NAV_LAYOUT data (just under
+  // different class names — .div-nav-group/[data-group] on desktop,
+  // .mobile-nav-group/[data-toggle-group] in the drawer).
+  document.querySelectorAll('#topNavBarLinks .div-nav-group').forEach(group=>{
     const toggleBtn = group.querySelector(':scope > [data-group]');
     if(!toggleBtn) return;
     const items = group.querySelectorAll('.div-nav-dropdown-item[data-id]');
+    if(!items.length) return;
+    const allHidden = Array.from(items).every(item => item.style.display === "none");
+    group.style.display = allHidden ? "none" : "";
+  });
+  document.querySelectorAll('#mobileNavLinks .mobile-nav-group').forEach(group=>{
+    const toggleBtn = group.querySelector(':scope > [data-toggle-group]');
+    if(!toggleBtn) return;
+    const items = group.querySelectorAll('.mobile-nav-sublink[data-id]');
     if(!items.length) return;
     const allHidden = Array.from(items).every(item => item.style.display === "none");
     group.style.display = allHidden ? "none" : "";
