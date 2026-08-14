@@ -45,11 +45,11 @@
   @media (min-width:901px){
     .top-nav-bar{
       display:block;
-      /* Deliberately a fixed hex, NOT var(--pitch) — that variable gets
-         overridden per-division (applyDivisionTheme), which would otherwise
-         make this bar change colour depending what page you're on. This bar
-         stays the one constant brand colour everywhere. */
-      background:#28427c;
+      /* Trying var(--pitch) here — changes per-division/page (see
+         applyDivisionTheme), same variable that already drives the
+         search/refresh button outlines. Was a fixed #28427c; swap back to
+         that if the colour-changing look isn't wanted after all. */
+      background:var(--pitch);
       border-bottom:1px solid rgba(255,255,255,0.14);
       position:sticky;top:0;z-index:50;
     }
@@ -99,7 +99,7 @@
   @media (max-width:900px){
     .mobile-top-bar{
       display:flex;align-items:center;gap:12px;padding:0 14px;height:52px;
-      background:#28427c; /* same fixed brand colour as the desktop bar — never changes per-page */
+      background:var(--pitch); /* trying colour-per-page here too, matching the desktop bar — was a fixed #28427c */
       border-bottom:1px solid rgba(255,255,255,0.14);
       position:sticky;top:0;z-index:50;
     }
