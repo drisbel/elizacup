@@ -71,6 +71,7 @@
     border:none;background:transparent;color:rgba(246,242,232,0.82);
     padding:9px 14px;border-radius:6px;font-size:13.5px;
     white-space:nowrap;flex-shrink:0;
+    display:inline-flex;align-items:center;
   }
   .top-nav-bar-links .div-tab:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .top-nav-bar-links .div-tab.active{background:var(--amber);color:var(--ink);}
@@ -273,7 +274,7 @@
   }
   .div-tab:hover{border-color:var(--amber);color:var(--chalk);}
   .div-tab.active{background:var(--amber);border-color:var(--amber);color:var(--ink);}
-  .div-nav-group{position:relative;}
+  .div-nav-group{position:relative;display:inline-flex;align-items:center;}
   .div-tab-caret{font-size:9px;margin-left:3px;opacity:0.8;}
   .div-nav-dropdown{
     display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:30;
@@ -1578,9 +1579,15 @@ function getDivisionFromHash(){
     return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#28427c", gid: null };
   }
   if(raw.startsWith("sideleagues=")){
-    const leagueKey = decodeURIComponent(raw.slice("sideleagues=".length));
+    const value = decodeURIComponent(raw.slice("sideleagues=".length));
+    // Optional ":<subtab>" suffix deep-links straight into one of FPL's 4
+    // toggle views (premier/championship/roddy/cup) — see loadSideLeague's
+    // FPL branch and getSearchablePages, which is what generates these.
+    // Meaningless for every other side league (they're single-view pages),
+    // so it's just ignored there.
+    const [leagueKey, subTab] = value.split(":");
     const base = DIVISIONS.find(d => d.id === "sideleagues");
-    return { ...base, sideLeagueKey: leagueKey };
+    return { ...base, sideLeagueKey: leagueKey, sideLeagueSubTab: subTab || null };
   }
   return DIVISIONS.find(d => d.id === raw) || DIVISIONS[0];
 }
@@ -1685,6 +1692,16 @@ function getSearchablePages(){
     .filter(d => !d.isTest && d.id !== "sideleagues") // "sideleagues" (no key) isn't its own distinct destination — sideleagueshub and the per-league entries below cover it
     .map(d => ({ label: labelOverrides[d.id] || d.label, hash: d.id }));
   SIDE_LEAGUES.forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key }));
+  // FPL is the only side league with sub-tabs (Premier League/Championship/
+  // Roddy/FPL Cup — everything else is a single-view page), so these are
+  // hand-added rather than derived. Deep-links via the ":<subtab>" hash
+  // suffix — see getDivisionFromHash/goToSideLeague/loadSideLeague.
+  if(SIDE_LEAGUES.some(l => l.key === "fpl")){
+    pages.push({ label: "FPL Premier League", hash: "sideleagues=fpl:premier" });
+    pages.push({ label: "FPL Championship", hash: "sideleagues=fpl:championship" });
+    pages.push({ label: "FPL Roddy", hash: "sideleagues=fpl:roddy" });
+    pages.push({ label: "FPL Cup", hash: "sideleagues=fpl:cup" });
+  }
   searchablePagesCache = pages;
   return pages;
 }
@@ -1790,10 +1807,10 @@ function goToDivision(div){
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
-function goToSideLeague(key){
+function goToSideLeague(key, subTab){
   const base = DIVISIONS.find(d=>d.id==="sideleagues");
-  currentDivision = { ...base, sideLeagueKey: key };
-  location.hash = "sideleagues=" + encodeURIComponent(key);
+  currentDivision = { ...base, sideLeagueKey: key, sideLeagueSubTab: subTab || null };
+  location.hash = "sideleagues=" + encodeURIComponent(key) + (subTab ? ":" + encodeURIComponent(subTab) : "");
   document.getElementById('divPill').textContent = base.pill;
   applyDivisionTheme(base);
   renderDivNav();
@@ -2134,7 +2151,15 @@ function applySiteBanner(){
 
 window.addEventListener('hashchange', ()=>{
   const div = getDivisionFromHash();
-  if(div.id === currentDivision.id) return;
+  // Every side league page shares the same base id ("sideleagues"), so a
+  // plain id comparison can't tell FPL apart from AFL Supercoach, or FPL's
+  // own Premier League tab from its Cup tab — compare league key + subtab
+  // for those instead, or a link from one side league straight to another
+  // (e.g. clicking a search result) would silently no-op.
+  const isSamePage = div.type === "sideleagues"
+    ? (currentDivision.type === "sideleagues" && div.sideLeagueKey === currentDivision.sideLeagueKey && div.sideLeagueSubTab === currentDivision.sideLeagueSubTab)
+    : (div.id === currentDivision.id);
+  if(isSamePage) return;
   currentDivision = div;
   document.getElementById('divPill').textContent = div.pill;
   applyDivisionTheme(div);
@@ -2522,6 +2547,10 @@ async function load(){
   if(currentDivision.type === "sideleagues"){
     const initialKey = (currentDivision.sideLeagueKey && SIDE_LEAGUES.some(s=>s.key===currentDivision.sideLeagueKey))
       ? currentDivision.sideLeagueKey : SIDE_LEAGUES[0].key;
+    // Only meaningful for FPL (its 4-way Premier/Championship/Roddy/Cup
+    // toggle) — read by loadSideLeague's FPL branch, then cleared. Ignored
+    // for every other league.
+    if(currentDivision.sideLeagueSubTab) pendingSideLeagueSubTab = currentDivision.sideLeagueSubTab;
     renderSideLeagueTabs(initialKey);
     refreshSideLeagueRulesButton(initialKey); // shows immediately if already cached, else hidden until the fetch below resolves
     loadSideLeaguesHubData().then(() => refreshSideLeagueRulesButton(initialKey));
@@ -6873,6 +6902,12 @@ function fplFixtureCardHtml(f){
 
 let sideLeagueData = null;
 let sideLeagueActiveDiv = "premier";
+// Set by the load() routing (from an optional ":<subtab>" hash suffix — see
+// getDivisionFromHash/goToSideLeague) right before loadSideLeague() runs, so
+// a deep link like #sideleagues=fpl:cup lands straight on that tab instead
+// of always defaulting to Premier League. Consumed once by loadSideLeague's
+// FPL branch, then cleared.
+let pendingSideLeagueSubTab = null;
 let sideLeagueActiveRound = {};
 
 // FPL Roddy leaderboard: separate gid on the Side Leagues sheet. Title row 5,
@@ -7870,7 +7905,9 @@ async function loadSideLeague(leagueKey){
     const champFx = parseFplFixtures(rows, 40);   // AO
 
     sideLeagueData = { singleTable: false, premier, champ, premierFx, champFx };
-    sideLeagueActiveDiv = "premier";
+    const validFplSubTabs = new Set(["premier","championship","roddy","cup"]);
+    sideLeagueActiveDiv = (pendingSideLeagueSubTab && validFplSubTabs.has(pendingSideLeagueSubTab)) ? pendingSideLeagueSubTab : "premier";
+    pendingSideLeagueSubTab = null;
     sideLeagueActiveRound = {};
     renderSideLeagueContent();
 
