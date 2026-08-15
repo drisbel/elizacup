@@ -250,6 +250,17 @@
     font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
   }
   .search-result-item:hover{border-color:var(--amber);}
+  .search-result-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Page icon (crest <img> or inline SVG line-icon — see compLogoHtmlFor) or
+     team logo <img> shown before each result's name. Sizing/fit is the same
+     either way; the colour on the wrapper only visibly affects the SVG-icon
+     case (currentColor), harmless to set for the <img> cases too. */
+  .search-result-icon{
+    width:22px;height:22px;flex-shrink:0;object-fit:contain;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .search-result-icon svg{width:100%;height:100%;}
+  .search-result-icon img{width:100%;height:100%;object-fit:contain;}
   .search-group-label{
     font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;
     letter-spacing:.06em;color:var(--muted);margin:2px 2px 0;
@@ -1688,19 +1699,28 @@ function getSearchablePages(){
   // Matches the label shown in the nav dropdown (NAV_LAYOUT) where it
   // differs from the page's own internal DIVISIONS label.
   const labelOverrides = { teams: "Team Profiles" };
+  // Same crest-or-icon + colour every page already shows in its own
+  // .comp-logo-hero title (see compLogoHtmlFor) — reused here so search
+  // results carry the same visual identity rather than being plain text.
   const pages = DIVISIONS
     .filter(d => !d.isTest && d.id !== "sideleagues") // "sideleagues" (no key) isn't its own distinct destination — sideleagueshub and the per-league entries below cover it
-    .map(d => ({ label: labelOverrides[d.id] || d.label, hash: d.id }));
-  SIDE_LEAGUES.forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key }));
+    .map(d => ({ label: labelOverrides[d.id] || d.label, hash: d.id, logoHtml: compLogoHtmlFor(d), color: d.color }));
+  // Side leagues (and FPL's sub-tabs below) aren't DIVISIONS entries, so
+  // there's no per-entry crest/colour to read — they all use the same
+  // generic side-leagues icon and the Side Leagues Hub's own colour, which
+  // is exactly what those pages themselves render.
+  const sideLeagueHub = DIVISIONS.find(d => d.id === "sideleagueshub");
+  const sideLeagueLogoHtml = compLogoHtmlFor({ type: "sideleagues" });
+  SIDE_LEAGUES.forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key, logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color }));
   // FPL is the only side league with sub-tabs (Premier League/Championship/
   // Roddy/FPL Cup — everything else is a single-view page), so these are
   // hand-added rather than derived. Deep-links via the ":<subtab>" hash
   // suffix — see getDivisionFromHash/goToSideLeague/loadSideLeague.
   if(SIDE_LEAGUES.some(l => l.key === "fpl")){
-    pages.push({ label: "FPL Premier League", hash: "sideleagues=fpl:premier" });
-    pages.push({ label: "FPL Championship", hash: "sideleagues=fpl:championship" });
-    pages.push({ label: "FPL Roddy", hash: "sideleagues=fpl:roddy" });
-    pages.push({ label: "FPL Cup", hash: "sideleagues=fpl:cup" });
+    pages.push({ label: "FPL Premier League", hash: "sideleagues=fpl:premier", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+    pages.push({ label: "FPL Championship", hash: "sideleagues=fpl:championship", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+    pages.push({ label: "FPL Roddy", hash: "sideleagues=fpl:roddy", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+    pages.push({ label: "FPL Cup", hash: "sideleagues=fpl:cup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
   }
   searchablePagesCache = pages;
   return pages;
@@ -1741,7 +1761,8 @@ function renderSearchResults(query){
   if(pageMatches.length){
     html += `<div class="search-group-label">Pages</div>` + pageMatches.map(p => `
       <a href="#${p.hash}" class="search-result-item">
-        <span>${p.label}</span>
+        <span class="search-result-icon" style="color:${p.color};">${p.logoHtml || ""}</span>
+        <span class="search-result-label">${p.label}</span>
         <span class="search-result-tag">Page</span>
       </a>`).join("");
   }
@@ -1752,8 +1773,10 @@ function renderSearchResults(query){
       const color = getDivisionColorByLabel(e.division);
       const shortLabel = getDivisionShortLabel(e.division);
       const label = shortLabel === "D1" ? "Eliza Cup" : shortLabel;
+      const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}`;
       return `<a href="#team=${encodeURIComponent(e.team)}" class="search-result-item" style="border-left-color:${color};">
-        <span>${e.team}</span>
+        <img class="search-result-icon search-result-team-logo" src="logo/${teamLogoSlug(e.team)}.png" alt="" onerror="${logoOnError}">
+        <span class="search-result-label">${e.team}</span>
         <span class="roddy-div-tag" style="background:${color};">${label}</span>
       </a>`;
     }).join("");
