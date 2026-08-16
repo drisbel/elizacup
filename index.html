@@ -345,7 +345,8 @@
   }
   .facup-bracket-side.won{font-weight:700;color:var(--ink);}
   .facup-bracket-side.selected{background:rgba(255,221,0,0.35);color:var(--ink);}
-  .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;}
+  .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;display:flex;align-items:center;gap:4px;}
+  .facup-bracket-logo{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
   .facup-bracket-pill{
     display:inline-block;color:#fff;font-size:9px;font-weight:700;
     padding:1px 5px;border-radius:8px;margin-right:5px;vertical-align:middle;
@@ -1621,6 +1622,59 @@ function csvUrlFor(division){
   return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${division.gid}&cachebust=` + Date.now();
 }
 
+// ---------- Short-lived fetch cache ----------
+// Every sheet/JSON URL on the site ends in "...&cachebust=<timestamp>" (or
+// "?cachebust=<timestamp>" for the static JSON files) specifically to defeat
+// the browser's own HTTP cache, so every navigation re-downloads fresh —
+// which also means revisiting a page you were just on seconds ago re-fetches
+// it from Google Sheets again for no reason. cachedFetch() is a drop-in
+// replacement for fetch() (same .ok/.status/.text()/.json() shape) used at
+// every GET call site on the site: it strips the ever-changing cachebust
+// value to get a stable per-sheet/tab key, and serves a sessionStorage'd
+// copy if one was fetched within SHEET_CACHE_TTL_MS — short enough that a
+// live round's numbers are never stale for long, and scoped to
+// sessionStorage so it never persists or is shared beyond this browser tab.
+// The Refresh button (refreshData()) always bypasses this via
+// forceFreshFetch, so a manual refresh is always guaranteed genuinely fresh.
+const SHEET_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+const SHEET_CACHE_PREFIX = "elizacup-cache:";
+let forceFreshFetch = false;
+
+function sheetCacheKeyFor(url){
+  return SHEET_CACHE_PREFIX + url.replace(/[?&]cachebust=\d+$/, "");
+}
+
+function cachedResponseFrom(text){
+  return {
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(text),
+    json: () => Promise.resolve(JSON.parse(text))
+  };
+}
+
+async function cachedFetch(url, options){
+  const key = sheetCacheKeyFor(url);
+  if(!forceFreshFetch){
+    try{
+      const raw = sessionStorage.getItem(key);
+      if(raw){
+        const entry = JSON.parse(raw);
+        if(Date.now() - entry.ts < SHEET_CACHE_TTL_MS) return cachedResponseFrom(entry.text);
+      }
+    }catch(e){ /* corrupted entry, or sessionStorage unavailable (private browsing etc.) — fall through to a real fetch */ }
+  }
+
+  const res = await fetch(url, options);
+  if(res.ok){
+    try{
+      const text = await res.clone().text();
+      sessionStorage.setItem(key, JSON.stringify({ text, ts: Date.now() }));
+    }catch(e){ /* sessionStorage full or unavailable — caching is best-effort, never required */ }
+  }
+  return res;
+}
+
 const TEAM_NAME_RE = /^[A-Z0-9][A-Z0-9 .'’()\-\/]{2,}$/; // ALL CAPS-ish team names as used in the sheet
 const ROLE_TOKENS = new Set(["GK","DEF","MID","ATT","VC","C"]);
 
@@ -1731,7 +1785,7 @@ async function ensureTeamSearchData(){
   if(roddyEntries.length > 0) return roddyEntries;
   if(teamSearchFetchPromise) return teamSearchFetchPromise;
   const roddyDiv = DIVISIONS.find(d=>d.id==="roddy");
-  teamSearchFetchPromise = fetch(csvUrlFor(roddyDiv))
+  teamSearchFetchPromise = cachedFetch(csvUrlFor(roddyDiv))
     .then(res=>{ if(!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
     .then(csvText=>{
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2039,7 +2093,7 @@ function pageVisibilityJsonUrlFor(){
 }
 async function loadPageVisibilityData(){
   if(pageVisibilityPromise) return pageVisibilityPromise;
-  pageVisibilityPromise = fetch(pageVisibilityJsonUrlFor()).then(r => {
+  pageVisibilityPromise = cachedFetch(pageVisibilityJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("page-visibility.json fetch failed: " + r.status);
     return r.json();
   }).then(map => {
@@ -2105,7 +2159,7 @@ function siteBannerJsonUrlFor(){
 }
 async function loadSiteBannerData(){
   if(siteBannerPromise) return siteBannerPromise;
-  siteBannerPromise = fetch(siteBannerJsonUrlFor()).then(r => {
+  siteBannerPromise = cachedFetch(siteBannerJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("site-banner.json fetch failed: " + r.status);
     return r.json();
   }).then(data => {
@@ -2353,7 +2407,7 @@ async function load(){
     document.getElementById('calendarContainer').innerHTML = "Loading calendar…";
     document.getElementById('calendarContainer').className = "state-msg";
     try{
-      const res = await fetch(csvUrlFor(currentDivision));
+      const res = await cachedFetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2365,7 +2419,7 @@ async function load(){
       document.getElementById('seasonFixturesContainer').innerHTML = "Loading fixtures…";
       document.getElementById('seasonFixturesContainer').className = "state-msg";
       try{
-        const sfRes = await fetch(seasonFixturesCsvUrlFor());
+        const sfRes = await cachedFetch(seasonFixturesCsvUrlFor());
         if(!sfRes.ok) throw new Error("HTTP " + sfRes.status);
         const sfText = await sfRes.text();
         const sfRows = Papa.parse(sfText, {skipEmptyLines:false}).data;
@@ -2398,7 +2452,7 @@ async function load(){
     document.getElementById('roddyContainer').innerHTML = "Loading leaderboard…";
     document.getElementById('roddyContainer').className = "state-msg";
     try{
-      const res = await fetch(csvUrlFor(currentDivision));
+      const res = await cachedFetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2428,7 +2482,7 @@ async function load(){
     document.getElementById('facupContainer').innerHTML = "Loading bracket…";
     document.getElementById('facupContainer').className = "state-msg";
     try{
-      const res = await fetch(csvUrlFor(currentDivision));
+      const res = await cachedFetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2457,7 +2511,7 @@ async function load(){
     document.getElementById('eclContainer').innerHTML = "Loading group tables…";
     document.getElementById('eclContainer').className = "state-msg";
     try{
-      const res = await fetch(csvUrlFor(currentDivision));
+      const res = await cachedFetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2498,7 +2552,7 @@ async function load(){
     document.getElementById('trophyLeadersContainer').innerHTML = "Loading trophy leaders…";
     document.getElementById('trophyLeadersContainer').className = "state-msg";
     try{
-      const res = await fetch(csvUrlFor(currentDivision));
+      const res = await cachedFetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2528,12 +2582,12 @@ async function load(){
     document.getElementById('statsContainer').className = "state-msg";
     try{
       const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
-      const roddyRes = await fetch(csvUrlFor(roddyDiv));
+      const roddyRes = await cachedFetch(csvUrlFor(roddyDiv));
       if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
       const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
       parseRoddy(roddyRows); // populates roddyEntries — used for each team's division pill
 
-      const res = await fetch(csvUrlFor(currentDivision));
+      const res = await cachedFetch(csvUrlFor(currentDivision));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
@@ -2586,7 +2640,7 @@ async function load(){
     document.getElementById('teamsContainer').className = "state-msg";
     try{
       const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
-      const res = await fetch(csvUrlFor(roddyDiv));
+      const res = await cachedFetch(csvUrlFor(roddyDiv));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -2649,7 +2703,7 @@ async function load(){
   document.getElementById('fixtureContainer').className = "state-msg";
 
   try{
-    const res = await fetch(csvUrlFor(currentDivision));
+    const res = await cachedFetch(csvUrlFor(currentDivision));
     if(!res.ok) throw new Error("HTTP " + res.status);
     const csvText = await res.text();
     const parsed = Papa.parse(csvText, {skipEmptyLines:false});
@@ -3129,7 +3183,19 @@ function renderFixtures(round){
   el.innerHTML = banner + `<div class="fixture-grid">${cardsHtml}</div>`;
 }
 
-document.getElementById('refreshBtn').addEventListener('click', load);
+// Manual refresh always bypasses the cache — forceFreshFetch makes every
+// cachedFetch() call during this one load() genuinely hit the network,
+// regardless of how recently anything was cached. Reset in a finally so a
+// thrown error can't accidentally leave every subsequent fetch forced-fresh.
+async function refreshData(){
+  forceFreshFetch = true;
+  try{
+    await load();
+  }finally{
+    forceFreshFetch = false;
+  }
+}
+document.getElementById('refreshBtn').addEventListener('click', refreshData);
 
 function h2hCardHtml(m){
   const homeStarterNames = new Set(m.homeStarters.map(p=>p.name.trim().toUpperCase()).filter(Boolean));
@@ -4574,7 +4640,7 @@ let siteControlData = { pageVisibility: {} }; // safe default before first load
 let siteControlPromise = null;
 async function loadSiteControlData(){
   if(siteControlPromise) return siteControlPromise;
-  siteControlPromise = fetch(siteControlCsvUrlFor()).then(r => r.text()).then(text => {
+  siteControlPromise = cachedFetch(siteControlCsvUrlFor()).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     siteControlData = parseSiteControl(rows);
     return siteControlData;
@@ -4597,7 +4663,7 @@ let newsData = { newsItems: [], debug: {} }; // safe default before first load
 let newsPromise = null;
 async function loadNewsData(){
   if(newsPromise) return newsPromise;
-  newsPromise = fetch(newsJsonUrlFor()).then(r => {
+  newsPromise = cachedFetch(newsJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("news.json fetch failed: " + r.status);
     return r.json();
   }).then(raw => {
@@ -4656,7 +4722,7 @@ function buildPreviousNameMap(rows){
 async function loadPreviousNameMap(){
   if(previousNameMap) return previousNameMap;
   if(previousNameMapPromise) return previousNameMapPromise;
-  previousNameMapPromise = fetch(clubInfoCsvUrlFor()).then(r => r.text()).then(text => {
+  previousNameMapPromise = cachedFetch(clubInfoCsvUrlFor()).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     previousNameMap = buildPreviousNameMap(rows);
     return previousNameMap;
@@ -4701,7 +4767,7 @@ function findTeamTrophies(teamName){
 
 async function loadTeamProfile(teamName){
   const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
-  const roddyRes = await fetch(csvUrlFor(roddyDiv));
+  const roddyRes = await cachedFetch(csvUrlFor(roddyDiv));
   if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
   const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
   parseRoddy(roddyRows);
@@ -4717,7 +4783,7 @@ async function loadTeamProfile(teamName){
     if(divId){
       const div = DIVISIONS.find(d => d.id === divId);
       fetches.push(
-        fetch(csvUrlFor(div)).then(r => r.text()).then(text => {
+        cachedFetch(csvUrlFor(div)).then(r => r.text()).then(text => {
           const rows = Papa.parse(text, {skipEmptyLines:false}).data;
           // parseStandings reads currentDivision.teams for its row range — swap in the
           // team's real division just for this parse, then restore whatever was active.
@@ -4754,7 +4820,7 @@ async function loadTeamProfile(teamName){
 
   const facupDiv = DIVISIONS.find(d => d.id === "facup");
   fetches.push(
-    fetch(csvUrlFor(facupDiv)).then(r => r.text()).then(text => {
+    cachedFetch(csvUrlFor(facupDiv)).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       parseFACup(rows);
       facupRounds.forEach(round=>{
@@ -4772,7 +4838,7 @@ async function loadTeamProfile(teamName){
   const eclDiv = DIVISIONS.find(d => d.id === "ecl");
   let eclMatches = [];
   fetches.push(
-    fetch(csvUrlFor(eclDiv)).then(r => r.text()).then(text => {
+    cachedFetch(csvUrlFor(eclDiv)).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       parseECL(rows);           // populates eclGroups + eclDebug.groupHeadersFound
       parseECLFixtures(rows);   // populates eclFixtures (depends on eclDebug from parseECL above)
@@ -4813,7 +4879,7 @@ async function loadTeamProfile(teamName){
   const dataDiv = { gid: "91806689" };
   let h2hRecords = [];
   fetches.push(
-    fetch(csvUrlFor(dataDiv)).then(r => r.text()).then(text => {
+    cachedFetch(csvUrlFor(dataDiv)).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       h2hRecords = findH2HRecords(rows, teamName);
     })
@@ -4822,7 +4888,7 @@ async function loadTeamProfile(teamName){
   const historyDiv = { gid: "1444343417" };
   let historicalRecords = [];
   fetches.push(
-    fetch(csvUrlFor(historyDiv)).then(r => r.text()).then(text => {
+    cachedFetch(csvUrlFor(historyDiv)).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       historicalRecords = findHistoricalRecords(rows, teamName);
     })
@@ -4831,7 +4897,7 @@ async function loadTeamProfile(teamName){
   const teamVsTeamDiv = { gid: "1560134779" };
   let teamVsTeamOpponents = [];
   fetches.push(
-    fetch(csvUrlFor(teamVsTeamDiv)).then(r => r.text()).then(text => {
+    cachedFetch(csvUrlFor(teamVsTeamDiv)).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       teamVsTeamOpponents = findTeamVsTeamRecords(rows, teamName);
     })
@@ -4839,7 +4905,7 @@ async function loadTeamProfile(teamName){
 
   let clubInfo = null;
   fetches.push(
-    fetch(clubInfoCsvUrlFor()).then(r => r.text()).then(text => {
+    cachedFetch(clubInfoCsvUrlFor()).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       clubInfo = findClubInfo(rows, teamName);
     }).catch(err => console.error("Club info fetch failed", err))
@@ -4850,7 +4916,7 @@ async function loadTeamProfile(teamName){
   let trophyNote = "";
   const trophyLeadersDiv = DIVISIONS.find(d => d.id === "honour");
   fetches.push(
-    fetch(csvUrlFor(trophyLeadersDiv)).then(r => r.text()).then(text => {
+    cachedFetch(csvUrlFor(trophyLeadersDiv)).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       parseTrophyLeaders(rows);
       const entry = trophyLeaders.find(t => (t.team||"").toUpperCase() === teamName.toUpperCase());
@@ -5952,10 +6018,17 @@ function histFacupFixtureCardHtml(f){
     ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
     : `<span class="upcoming">vs</span>`;
   const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:10px;text-transform:uppercase;">Replay</span>` : "";
+  // Older seasons sometimes carry a team's former name — resolve to whatever
+  // it's called now (same lookup histTeamLink uses below) so the logo file
+  // for the CURRENT name is found, rather than a slug that never existed.
+  const logoName = name => (previousNameMap && previousNameMap[name.toUpperCase()]) || name;
+  const teamLogo = name => name
+    ? `<span class="facup-team-logo-wrap"><img src="logo/${teamLogoSlug(logoName(name))}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName(name))}';}"></span>`
+    : "";
   return `<div class="facup-card">
-    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(h.name)}</span>${histDivPill(h.tag)}</div>
+    <div class="facup-team facup-team-home facup-team-with-logo ${resultClass(homeWin)}">${teamLogo(h.name)}<span class="facup-team-name">${histTeamLink(h.name)}${histDivPill(h.tag)}</span></div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${histTeamLink(a.name)}</span>${replayTag}</div>
+    <div class="facup-team facup-team-away facup-team-with-logo ${resultClass(awayWin)}"><span class="facup-team-name">${histDivPill(a.tag)}${histTeamLink(a.name)}${replayTag}</span>${teamLogo(a.name)}</div>
   </div>`;
 }
 
@@ -6126,7 +6199,7 @@ let aboutData = { sections: [], debug: {} };
 let aboutPromise = null;
 async function loadAboutData(){
   if(aboutPromise) return aboutPromise;
-  aboutPromise = fetch(aboutJsonUrlFor()).then(r => {
+  aboutPromise = cachedFetch(aboutJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("about.json fetch failed: " + r.status);
     return r.json();
   }).then(raw => {
@@ -6145,7 +6218,7 @@ let rulebookData = { sections: [], debug: {} };
 let rulebookPromise = null;
 async function loadRulebookData(){
   if(rulebookPromise) return rulebookPromise;
-  rulebookPromise = fetch(rulebookJsonUrlFor()).then(r => {
+  rulebookPromise = cachedFetch(rulebookJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("rulebook.json fetch failed: " + r.status);
     return r.json();
   }).then(raw => {
@@ -6252,7 +6325,7 @@ async function loadHistorySeason(seasonKey){
   historyActiveDivKey = "d1";
   try{
     const [res] = await Promise.all([
-      fetch(historyCsvUrlFor(season.gid)),
+      cachedFetch(historyCsvUrlFor(season.gid)),
       loadPreviousNameMap()
     ]);
     if(!res.ok) throw new Error("HTTP " + res.status);
@@ -6312,7 +6385,7 @@ function sideLeagueTeamMapCsvUrlFor(){
 function loadSideLeagueTeamMap(){
   if(sideLeagueTeamMapLoaded) return Promise.resolve(sideLeagueTeamMap);
   if(sideLeagueTeamMapPromise) return sideLeagueTeamMapPromise;
-  sideLeagueTeamMapPromise = fetch(sideLeagueTeamMapCsvUrlFor()).then(r => r.text()).then(text => {
+  sideLeagueTeamMapPromise = cachedFetch(sideLeagueTeamMapCsvUrlFor()).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     if(!rows.length){ sideLeagueTeamMapLoaded = true; return sideLeagueTeamMap; }
 
@@ -6389,7 +6462,7 @@ let sideLeaguesHubData = { cards: [], debug: {} };
 let sideLeaguesHubPromise = null;
 async function loadSideLeaguesHubData(){
   if(sideLeaguesHubPromise) return sideLeaguesHubPromise;
-  sideLeaguesHubPromise = fetch(sideLeaguesHubJsonUrlFor()).then(r => {
+  sideLeaguesHubPromise = cachedFetch(sideLeaguesHubJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("side-leagues-hub.json fetch failed: " + r.status);
     return r.json();
   }).then(raw => {
@@ -6581,7 +6654,7 @@ let wmdData = { teams: [], debug: {} };
 let wmdPromise = null;
 async function loadWmdData(){
   if(wmdPromise) return wmdPromise;
-  wmdPromise = fetch(wmdJsonUrlFor()).then(r => {
+  wmdPromise = cachedFetch(wmdJsonUrlFor()).then(r => {
     if(!r.ok) throw new Error("whats-my-division.json fetch failed: " + r.status);
     return r.json();
   }).then(raw => {
@@ -7012,7 +7085,7 @@ function fplCupCsvUrlFor(){
 async function loadFplCupData(){
   if(fplCupData) return fplCupData;
   if(fplCupPromise) return fplCupPromise;
-  fplCupPromise = fetch(fplCupCsvUrlFor()).then(r => r.text()).then(text => {
+  fplCupPromise = cachedFetch(fplCupCsvUrlFor()).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     const table = parseFplTable(rows, FPL_CUP_TITLE_TEXT);
     const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH, same base/round-test as NRL
@@ -7029,7 +7102,7 @@ async function loadFplCupData(){
 async function loadFplRoddyData(){
   if(fplRoddyData) return fplRoddyData;
   if(fplRoddyPromise) return fplRoddyPromise;
-  fplRoddyPromise = fetch(fplRoddyCsvUrlFor()).then(r => r.text()).then(text => {
+  fplRoddyPromise = cachedFetch(fplRoddyCsvUrlFor()).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     fplRoddyData = parseFplRoddy(rows);
     return fplRoddyData;
@@ -7343,7 +7416,7 @@ async function loadHonourBoardData(){
   if(honourBoardDataCache) return honourBoardDataCache;
   if(honourBoardDataPromise) return honourBoardDataPromise;
   const league = SIDE_LEAGUES.find(s => s.key === "honourboard");
-  honourBoardDataPromise = fetch(sideLeagueCsvUrlFor(league)).then(r => r.text()).then(text => {
+  honourBoardDataPromise = cachedFetch(sideLeagueCsvUrlFor(league)).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     honourBoardDataCache = parseHonourBoard(rows);
     return honourBoardDataCache;
@@ -7388,8 +7461,10 @@ function renderHonourBoard(data){
   const cards = data.competitions.map(comp => {
     const subsHtml = comp.subs.map(sub => {
       const yearVals = [sub.f, sub.g, sub.h, sub.i];
-      const yearLines = years.map((y,idx)=> yearVals[idx]
-        ? `<div class="honour-year-line"><span class="honour-year">${y}</span><span class="honour-winner">${yearVals[idx]}</span></div>`
+      // Sheet columns F→I run oldest→newest; walk the indices in reverse so
+      // the most recent year's winner shows first.
+      const yearLines = [3,2,1,0].map(idx => yearVals[idx]
+        ? `<div class="honour-year-line"><span class="honour-year">${years[idx]}</span><span class="honour-winner">${yearVals[idx]}</span></div>`
         : ""
       ).join("");
       return `<div class="honour-subcomp">
@@ -7869,7 +7944,7 @@ async function loadSideLeague(leagueKey){
 
   if(league.isLmsCup){
     try{
-      const res = await fetch(sideLeagueCsvUrlFor(league));
+      const res = await cachedFetch(sideLeagueCsvUrlFor(league));
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
@@ -7891,7 +7966,7 @@ async function loadSideLeague(leagueKey){
 
   try{
     const [res] = await Promise.all([
-      fetch(sideLeagueCsvUrlFor(league)),
+      cachedFetch(sideLeagueCsvUrlFor(league)),
       loadSideLeagueTeamMap()
     ]);
     if(!res.ok) throw new Error("HTTP " + res.status);
@@ -8261,8 +8336,11 @@ function renderFACupBracket(){
         const label = side.isBye ? "BYE" : (side.name || "TBD");
         const pill = side.division ? `<span class="facup-bracket-pill" style="background:${getDivisionColorByLabel(side.division)};">${getDivisionShortLabel(side.division)}</span>` : "";
         const clickAttr = side.name ? ` onclick="selectFacupBracketTeam('${side.name.replace(/'/g,"\\'")}')"` : "";
+        const logoHtml = (side.name && !side.isBye)
+          ? `<img class="facup-bracket-logo" src="logo/${teamLogoSlug(side.name)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(side.name)}';}">`
+          : "";
         return `<div class="facup-bracket-side${selected?' selected':''}${side.won?' won':''}"${clickAttr}>
-          <span class="facup-bracket-name">${pill}${label}</span><span>${side.score===null?"":side.score}</span>
+          <span class="facup-bracket-name">${logoHtml}${pill}${label}</span><span>${side.score===null?"":side.score}</span>
         </div>`;
       }).join("");
       return `<div class="facup-bracket-match" style="position:absolute;left:${colX}px;top:${m.top + LABEL_H}px;width:${FACUP_CARD_W}px;">${sidesHtml}</div>`;
