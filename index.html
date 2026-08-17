@@ -9,14 +9,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --pitch:#28427c;
-    --pitch-2:#3a5a9e;
+    /* Default/global brand colour — used by D1, Home, Roddy, and every page
+       without its own distinct colour (2A/2B/3A/3B/FA Cup/ECL/Hall of Fame
+       keep their own colours; see applyDivisionTheme + DIVISIONS/HONOUR_ROLL). */
+    --pitch:#000000;
+    --pitch-2:#404040;
     --chalk:#F6F2E8;
     --turf:#4FAE7E;
     --amber:#ffdd00;
     --red:#B95C50;
     --ink:#0E1F19;
-    --line:#3a5a9e;
+    --line:#404040;
     --line-light:#DAD3C0;
     --muted:#a9b8d8;
   }
@@ -345,8 +348,7 @@
   }
   .facup-bracket-side.won{font-weight:700;color:var(--ink);}
   .facup-bracket-side.selected{background:rgba(255,221,0,0.35);color:var(--ink);}
-  .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;display:flex;align-items:center;gap:4px;}
-  .facup-bracket-logo{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
+  .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;}
   .facup-bracket-pill{
     display:inline-block;color:#fff;font-size:9px;font-weight:700;
     padding:1px 5px;border-radius:8px;margin-right:5px;vertical-align:middle;
@@ -1517,14 +1519,14 @@ const SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
 const SEASON_2526_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
 
 const DIVISIONS = [
-  { id: "home", label: "Home",                    pill: "Home",    gid: null,         teams: 0,  color: "#28427c", type: "home" },
-  { id: "calendar", label: "Calendar",            pill: "Calendar", gid: "2066314959", teams: 0, color: "#28427c", type: "calendar" },
+  { id: "home", label: "Home",                    pill: "Home",    gid: null,         teams: 0,  color: "#000000", type: "home" },
+  { id: "calendar", label: "Calendar",            pill: "Calendar", gid: "2066314959", teams: 0, color: "#000000", type: "calendar" },
   { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1032423540", sheetId: SEASON_2526_SHEET_ID, teams: 14, color: "#28427c", type: "division" },
   { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "1011989388", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
   { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1025912239", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#990000", type: "division" },
   { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "352017161",  sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
   { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "1085366243", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#28427c", type: "roddy" },
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
   { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "267705899",  sheetId: SEASON_2526_SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
   { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "2092692043", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
 
@@ -1542,19 +1544,19 @@ const DIVISIONS = [
   { id: "d2b-test", label: "Division 2B (26/27 Test)", pill: "D2B Test", gid: "1047201294", teams: 12, color: "#990000", type: "division", isTest: true },
   { id: "d3a-test", label: "Division 3A (26/27 Test)", pill: "D3A Test", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division", isTest: true },
   { id: "d3b-test", label: "Division 3B (26/27 Test)", pill: "D3B Test", gid: "2079252892", teams: 12, color: "#274e13", type: "division", isTest: true },
-  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)", pill: "Roddy Test", gid: "418105482", teams: 62, color: "#28427c", type: "roddy", isTest: true },
+  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)", pill: "Roddy Test", gid: "418105482", teams: 62, color: "#000000", type: "roddy", isTest: true },
   { id: "facup-test", label: "Eliza FA Cup (26/27 Test)",        pill: "FA Cup Test", gid: "2398203",   teams: 64, color: "#0a2f85", type: "facup", isTest: true },
   { id: "ecl-test",   label: "Eliza Champions League (26/27 Test)", pill: "ECL Test", gid: "1490882074", teams: 12, color: "#111111", type: "ecl", isTest: true },
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
-  { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#28427c", type: "stats" },
-  { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#28427c", type: "history" },
-  { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#28427c", type: "news" },
-  { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#28427c", type: "about" },
-  { id: "bilbbet", label: "Bilbbet",                 pill: "Bilbbet", gid: null, teams: 0, color: "#28427c", type: "bilbbet" },
-  { id: "whatsmydiv", label: "26/27 Leagues",         pill: "26/27 Leagues", gid: null, teams: 0, color: "#28427c", type: "whatsmydiv" },
-  { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagues" },
-  { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#28427c", type: "sideleagueshub" },
-  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#28427c", type: "teams" }
+  { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#000000", type: "stats" },
+  { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#000000", type: "history" },
+  { id: "news", label: "News",                     pill: "News", gid: null, teams: 0, color: "#000000", type: "news" },
+  { id: "about", label: "About",                    pill: "About", gid: null, teams: 0, color: "#000000", type: "about" },
+  { id: "bilbbet", label: "Bilbbet",                 pill: "Bilbbet", gid: null, teams: 0, color: "#000000", type: "bilbbet" },
+  { id: "whatsmydiv", label: "26/27 Leagues",         pill: "26/27 Leagues", gid: null, teams: 0, color: "#000000", type: "whatsmydiv" },
+  { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagues" },
+  { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagueshub" },
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#000000", type: "teams" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1588,7 +1590,7 @@ function getDivisionFromHash(){
   const raw = (location.hash || "").replace("#","");
   if(raw.startsWith("team=")){
     const teamName = decodeURIComponent(raw.slice(5));
-    return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#28427c", gid: null };
+    return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#000000", gid: null };
   }
   if(raw.startsWith("sideleagues=")){
     const value = decodeURIComponent(raw.slice("sideleagues=".length));
@@ -5169,7 +5171,7 @@ function renderWinStreaks(streaks){
   }
   el.className = "";
   const divPill = (short, color) => `<span class="roddy-div-tag" style="background:${color};">${short}</span>`;
-  const TIER_COLORS = ['#28427c', '#bc3532', '#6aa84f', '#8B6914', '#0a2f85'];
+  const TIER_COLORS = ['#000000', '#bc3532', '#6aa84f', '#8B6914', '#0a2f85'];
 
   let rowsHtml = "";
   let lastStreak = null;
@@ -5540,7 +5542,7 @@ function teamInitials(name){
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-const PLACEHOLDER_LOGO_COLORS = ["#28427c", "#bc3532", "#990000", "#6aa84f", "#274e13", "#0a2f85"];
+const PLACEHOLDER_LOGO_COLORS = ["#000000", "#bc3532", "#990000", "#6aa84f", "#274e13", "#0a2f85"];
 function placeholderColorForTeam(name){
   let hash = 0;
   for(let i=0; i<(name||"").length; i++){ hash = (hash * 31 + name.charCodeAt(i)) >>> 0; }
@@ -5579,7 +5581,7 @@ function renderTeamProfile(data){
     return;
   }
 
-  const divColor = roddyEntry ? getDivisionColorByLabel(roddyEntry.division) : "#28427c";
+  const divColor = roddyEntry ? getDivisionColorByLabel(roddyEntry.division) : "#000000";
   const divShort = roddyEntry ? getDivisionShortLabel(roddyEntry.division) : "";
   const divLabel = divShort === "D1" ? "Eliza Cup" : divShort;
   const divLogoPath = divisionLogoForShortLabel(divShort);
@@ -6018,17 +6020,10 @@ function histFacupFixtureCardHtml(f){
     ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
     : `<span class="upcoming">vs</span>`;
   const replayTag = f.replay ? ` <span style="color:var(--red);font-weight:700;font-size:10px;text-transform:uppercase;">Replay</span>` : "";
-  // Older seasons sometimes carry a team's former name — resolve to whatever
-  // it's called now (same lookup histTeamLink uses below) so the logo file
-  // for the CURRENT name is found, rather than a slug that never existed.
-  const logoName = name => (previousNameMap && previousNameMap[name.toUpperCase()]) || name;
-  const teamLogo = name => name
-    ? `<span class="facup-team-logo-wrap"><img src="logo/${teamLogoSlug(logoName(name))}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName(name))}';}"></span>`
-    : "";
   return `<div class="facup-card">
-    <div class="facup-team facup-team-home facup-team-with-logo ${resultClass(homeWin)}">${teamLogo(h.name)}<span class="facup-team-name">${histTeamLink(h.name)}${histDivPill(h.tag)}</span></div>
+    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(h.name)}</span>${histDivPill(h.tag)}</div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="facup-team facup-team-away facup-team-with-logo ${resultClass(awayWin)}"><span class="facup-team-name">${histDivPill(a.tag)}${histTeamLink(a.name)}${replayTag}</span>${teamLogo(a.name)}</div>
+    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${histTeamLink(a.name)}</span>${replayTag}</div>
   </div>`;
 }
 
@@ -8060,10 +8055,10 @@ function homeCardCompactHtml({id, title, subtitle, color, logo, icon}){
 function homeDivisionsCardHtml(){
   const divs = DIVISIONS.filter(d => d.type === "division" && !d.isTest);
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
-  return `<div class="home-card" data-id="d1" style="border-left:5px solid #28427c;cursor:pointer;">
+  return `<div class="home-card" data-id="d1" style="border-left:5px solid #000000;cursor:pointer;">
     <div class="home-card-top">
       <img src="logo/eliza-logo.png" alt="" class="home-card-icon" onerror="this.style.display='none';">
-      <div class="home-card-title" style="color:#28427c;">Divisions</div>
+      <div class="home-card-title" style="color:#000000;">Divisions</div>
     </div>
     <div class="home-card-sub">League tables, fixtures &amp; head to head matchups</div>
     <div class="home-mini-pills">${pills}</div>
@@ -8147,19 +8142,19 @@ function renderHome(){
 
     <div class="home-card-grid">
       ${homeDivisionsCardHtml()}
-      ${homeCardHtml({id:"roddy", title:"Roddy Rodriguez Cup", subtitle:"Overall leaderboard for teams in all divisions", color:"#28427c", logo:"logo/roddy-logo.png"})}
+      ${homeCardHtml({id:"roddy", title:"Roddy Rodriguez Cup", subtitle:"Overall leaderboard for teams in all divisions", color:"#000000", logo:"logo/roddy-logo.png"})}
       ${homeCardHtml({id:"facup", title:"Eliza FA Cup", subtitle:"Knockout competition for teams in all divisions", color:"#0a2f85", logo:"logo/fa-cup-logo.png"})}
       ${homeCardHtml({id:"ecl", title:"Eliza Champions League", subtitle:"Group &amp; Knockout competition featuring last season's trophy winners", color:"#111111", logo:"logo/ecl-logo.png"})}
     </div>
 
     <div class="home-card-grid-compact">
-      ${homeCardCompactHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#28427c", icon:HOME_ICON_CALENDAR})}
+      ${homeCardCompactHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#000000", icon:HOME_ICON_CALENDAR})}
       ${homeCardCompactHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914", icon:HOME_ICON_TROPHY})}
-      ${homeCardCompactHtml({id:"teams", title:"Teams", subtitle:"Search any club's profile", color:"#28427c", icon:HOME_ICON_TEAMS})}
-      ${homeCardCompactHtml({id:"stats", title:"Statistics", subtitle:"Win streaks &amp; league-wide stats", color:"#28427c", icon:HOME_ICON_STATS})}
-      ${homeCardCompactHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#28427c", icon:HOME_ICON_HISTORY})}
-      ${homeCardCompactHtml({id:"sideleagueshub", title:"Side Leagues Hub", subtitle:"Fixtures and standings from all non-Eliza competitions", color:"#28427c", icon:HOME_ICON_SIDELEAGUES})}
-      ${homeCardCompactHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#28427c", icon:HOME_ICON_NEWS})}
+      ${homeCardCompactHtml({id:"teams", title:"Teams", subtitle:"Search any club's profile", color:"#000000", icon:HOME_ICON_TEAMS})}
+      ${homeCardCompactHtml({id:"stats", title:"Statistics", subtitle:"Win streaks &amp; league-wide stats", color:"#000000", icon:HOME_ICON_STATS})}
+      ${homeCardCompactHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#000000", icon:HOME_ICON_HISTORY})}
+      ${homeCardCompactHtml({id:"sideleagueshub", title:"Side Leagues Hub", subtitle:"Fixtures and standings from all non-Eliza competitions", color:"#000000", icon:HOME_ICON_SIDELEAGUES})}
+      ${homeCardCompactHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#000000", icon:HOME_ICON_NEWS})}
     </div>
 
     <div id="homeLatestNewsSection" style="display:none;">
@@ -8336,11 +8331,8 @@ function renderFACupBracket(){
         const label = side.isBye ? "BYE" : (side.name || "TBD");
         const pill = side.division ? `<span class="facup-bracket-pill" style="background:${getDivisionColorByLabel(side.division)};">${getDivisionShortLabel(side.division)}</span>` : "";
         const clickAttr = side.name ? ` onclick="selectFacupBracketTeam('${side.name.replace(/'/g,"\\'")}')"` : "";
-        const logoHtml = (side.name && !side.isBye)
-          ? `<img class="facup-bracket-logo" src="logo/${teamLogoSlug(side.name)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(side.name)}';}">`
-          : "";
         return `<div class="facup-bracket-side${selected?' selected':''}${side.won?' won':''}"${clickAttr}>
-          <span class="facup-bracket-name">${logoHtml}${pill}${label}</span><span>${side.score===null?"":side.score}</span>
+          <span class="facup-bracket-name">${pill}${label}</span><span>${side.score===null?"":side.score}</span>
         </div>`;
       }).join("");
       return `<div class="facup-bracket-match" style="position:absolute;left:${colX}px;top:${m.top + LABEL_H}px;width:${FACUP_CARD_W}px;">${sidesHtml}</div>`;
