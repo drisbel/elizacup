@@ -408,7 +408,10 @@
     text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;
   }
   .home-hero-title{font-size:56px;margin:0 0 10px;line-height:1;}
-  .home-hero-sub{font-family:'Barlow',sans-serif;font-size:15px;color:#5a6a63;max-width:480px;margin:0 auto;}
+  .home-hero-sub{font-family:'Barlow',sans-serif;font-size:15px;color:#5a6a63;max-width:640px;margin:0 auto;text-align:left;line-height:1.6;}
+  .home-hero-sub p{margin:0 0 12px;}
+  .home-hero-sub p:last-child{margin-bottom:0;}
+  .home-hero-sub a{color:var(--pitch);font-weight:600;text-decoration:underline;}
 
   .home-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
   .home-card{
@@ -1881,6 +1884,22 @@ function goToDivision(div){
   location.hash = div.id;
   document.getElementById('divPill').textContent = div.pill;
   applyDivisionTheme(div);
+  renderDivNav();
+  load();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+// Jumps straight to the Contact tab of the About page — used by the
+// homepage hero's "contact form" link. Mirrors goToDivision but also forces
+// aboutActiveTab to "contact" before rendering, so the About page opens
+// directly on that tab instead of its default "about" tab.
+function goToContact(){
+  const about = DIVISIONS.find(d=>d.id==="about");
+  aboutActiveTab = "contact";
+  currentDivision = about;
+  location.hash = about.id;
+  document.getElementById('divPill').textContent = about.pill;
+  applyDivisionTheme(about);
   renderDivNav();
   load();
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -8137,7 +8156,11 @@ function renderHome(){
     <div class="home-hero">
       <div class="home-hero-kicker">2025-26 Season</div>
       <h1 class="home-hero-title">Eliza Cup</h1>
-      <p class="home-hero-sub">Five divisions. Three cups. One trophy cabinet. Everything for the league, live from the sheet.</p>
+      <div class="home-hero-sub">
+        <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
+        <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
+        <p>If you would like more information on the league, please join us on our social links at the bottom of the page or reach out via the <a href="#" onclick="goToContact();return false;">contact form</a>.</p>
+      </div>
     </div>
 
     <div class="home-card-grid">
