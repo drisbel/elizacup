@@ -926,6 +926,9 @@
   }
 
   .slh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+  .slh-group{grid-column:1 / -1;border:2px solid var(--ink);border-radius:12px;padding:18px;background:#fafaf8;}
+  .slh-group-title{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:17px;font-weight:700;letter-spacing:.03em;margin-bottom:14px;}
+  .slh-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
   .slh-card{
     background:#fff;border:1px solid var(--line-light);border-radius:10px;
     padding:20px;display:flex;flex-direction:column;gap:10px;
@@ -6600,7 +6603,26 @@ function renderSideLeaguesHub(){
       return;
     }
     container.className = "";
-    container.innerHTML = `<div class="slh-grid">${data.cards.map(slhCardHtml).join("")}</div>`;
+    // Cards sharing a non-blank "group" (e.g. "Last Man Standing") render
+    // together in one bordered section instead of as separate top-level
+    // cards — admin-controlled via the Group field on each card, not
+    // hardcoded, so any future pairing can reuse this. A group's position
+    // in the grid follows wherever its first member card appears.
+    const seenGroups = new Set();
+    const blocksHtml = data.cards.map(c => {
+      const groupName = (c.group || "").trim();
+      if(groupName){
+        if(seenGroups.has(groupName)) return ""; // rendered as part of the group block already
+        seenGroups.add(groupName);
+        const members = data.cards.filter(x => (x.group||"").trim() === groupName);
+        return `<div class="slh-group">
+          <div class="slh-group-title">${groupName}</div>
+          <div class="slh-group-grid">${members.map(slhCardHtml).join("")}</div>
+        </div>`;
+      }
+      return slhCardHtml(c);
+    }).join("");
+    container.innerHTML = `<div class="slh-grid">${blocksHtml}</div>`;
     startSlhCountdowns();
   });
 }

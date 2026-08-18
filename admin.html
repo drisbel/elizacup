@@ -684,6 +684,12 @@
       </div>
 
       <div class="field">
+        <label for="slhGroup">Group (optional)</label>
+        <input type="text" id="slhGroup" placeholder="e.g. Last Man Standing">
+        <div class="hint">Cards sharing the exact same group name are bundled together into one bordered section on the overview page, in place of separate top-level cards. Leave blank for a normal standalone card.</div>
+      </div>
+
+      <div class="field">
         <label for="slhStatus">Status</label>
         <select id="slhStatus">
           <option value="active">Active</option>
@@ -1890,6 +1896,7 @@ function renderSlhList() {
       <div class="meta">
         <div class="title">${i + 1}. ${escapeHtml(c.label || "(untitled)")}
           <span class="badge ${c.status === "signups" ? "draft" : "pub"}" style="${c.status === "signups" ? "background:#fff4d6;color:#8a6700;" : ""}">${SLH_STATUS_LABEL[c.status] || "Active"}</span>
+          ${c.group ? `<span class="badge" style="background:#e5e7eb;color:#374151;">${escapeHtml(c.group)}</span>` : ""}
         </div>
       </div>
       <div class="item-actions">
@@ -1959,6 +1966,7 @@ function startEditSlh(id) {
   if (!c) return;
   slhEditingId = c.id;
   $("slhLabel").value = c.label || "";
+  $("slhGroup").value = c.group || "";
   $("slhStatus").value = c.status || "active";
   $("slhRoundInfo").value = c.roundInfo || "";
   slhFormWinners = Array.isArray(c.winners) ? [...c.winners] : (c.winner ? [c.winner] : []);
@@ -1979,6 +1987,7 @@ function startEditSlh(id) {
 function cancelEditSlh() {
   slhEditingId = null;
   $("slhLabel").value = "";
+  $("slhGroup").value = "";
   $("slhStatus").value = "active";
   $("slhRoundInfo").value = "";
   slhFormWinners = [];
@@ -2009,6 +2018,7 @@ function deleteSlhCard(id) {
 
 async function saveSlhCard() {
   const label = $("slhLabel").value.trim();
+  const group = $("slhGroup").value.trim();
   const status = $("slhStatus").value;
   const roundInfo = $("slhRoundInfo").value.trim();
   const winners = [...slhFormWinners];
@@ -2028,13 +2038,13 @@ async function saveSlhCard() {
   if (slhEditingId) {
     const idx = slhCards.findIndex(x => String(x.id) === String(slhEditingId));
     if (idx !== -1) {
-      slhCards[idx] = { ...slhCards[idx], label, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules };
+      slhCards[idx] = { ...slhCards[idx], label, group, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules };
       delete slhCards[idx].winner; // migrate off the old single-winner field
     }
   } else {
     slhCards.push({
       id: Date.now().toString(36),
-      label, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules
+      label, group, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules
     });
   }
 
@@ -3369,6 +3379,79 @@ function setWheelCustomColors(){
   drawRenderWheel();
 }
 
+// ---------- Wheel: remember last-used settings ----------
+// Persists title, colour settings (mode + custom colours + per-team colours
+// + text colour mode) and the centre logo choice to localStorage, restored
+// automatically next time the wheel tool is opened — so returning admins
+// aren't reconfiguring the same look every session. Deliberately does NOT
+// persist the team list, Side League mode/league, or Plain Wheel mode —
+// those describe whatever's actually being drawn right now, not a "look"
+// worth carrying over to the next unrelated draw.
+const WHEEL_SETTINGS_STORAGE_KEY = "elizacup_wheel_settings";
+
+function saveWheelSettings(){
+  try{
+    const settings = {
+      title: $("wheelTitleInput").value,
+      colorMode: wheelColorMode,
+      customColors: wheelCustomColors,
+      customUse3: wheelCustomUse3,
+      perTeamColors: wheelPerTeamColors,
+      textColorMode: wheelTextColorMode,
+      compLogoSelect: $("wheelCompLogoSelect").value,
+      compLogoCustom: $("wheelCompLogoCustom").value
+    };
+    localStorage.setItem(WHEEL_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  }catch(e){ /* localStorage full or unavailable — saving settings is best-effort, never required */ }
+}
+
+function loadWheelSettings(){
+  let settings;
+  try{
+    const raw = localStorage.getItem(WHEEL_SETTINGS_STORAGE_KEY);
+    if(!raw) return;
+    settings = JSON.parse(raw);
+  }catch(e){ return; }
+  if(!settings || typeof settings !== "object") return;
+
+  if(typeof settings.title === "string") $("wheelTitleInput").value = settings.title;
+
+  if(Array.isArray(settings.customColors) && settings.customColors.length === 3){
+    wheelCustomColors = settings.customColors.slice(0, 3);
+    $("wheelCustomColor1").value = wheelCustomColors[0];
+    $("wheelCustomColor1Hex").value = wheelCustomColors[0];
+    $("wheelCustomColor2").value = wheelCustomColors[1];
+    $("wheelCustomColor2Hex").value = wheelCustomColors[1];
+    $("wheelCustomColor3").value = wheelCustomColors[2];
+    $("wheelCustomColor3Hex").value = wheelCustomColors[2];
+  }
+  if(typeof settings.customUse3 === "boolean"){
+    wheelCustomUse3 = settings.customUse3;
+    $("wheelCustomUse3").checked = wheelCustomUse3;
+    $("wheelCustomColor3Wrap").style.display = wheelCustomUse3 ? "inline-flex" : "none";
+  }
+  if(settings.perTeamColors && typeof settings.perTeamColors === "object"){
+    wheelPerTeamColors = settings.perTeamColors;
+  }
+  if(typeof settings.compLogoSelect === "string"){
+    const select = $("wheelCompLogoSelect");
+    // Only apply if it's still one of the current options — guards against a
+    // saved value from a logo choice that's since been removed from the list.
+    if(Array.from(select.options).some(o => o.value === settings.compLogoSelect)){
+      select.value = settings.compLogoSelect;
+      $("wheelCompLogoCustom").style.display = settings.compLogoSelect === "__custom__" ? "" : "none";
+    }
+  }
+  if(typeof settings.compLogoCustom === "string") $("wheelCompLogoCustom").value = settings.compLogoCustom;
+
+  // These also trigger their own re-render, plus flip the right options
+  // panel / active toggle state — do them last so everything above (colours,
+  // logo path) is already in place by the time they draw.
+  if(["custom","division","per-team"].includes(settings.colorMode)) setWheelColorMode(settings.colorMode);
+  if(["auto","white","dark"].includes(settings.textColorMode)) setWheelTextColorMode(settings.textColorMode);
+  updateWheelCenterLogo();
+}
+
 // Builds the per-team colour-picker list from the currently entered team
 // list (not just whatever remains in drawPot), so colours can be set before
 // Start Draw is clicked and stay assigned to the right team throughout.
@@ -3392,6 +3475,7 @@ function renderWheelPerTeamList(){
     input.addEventListener("input", (e) => {
       wheelPerTeamColors[e.target.getAttribute("data-per-team-color")] = e.target.value;
       drawRenderWheel();
+      saveWheelSettings();
     });
   });
 }
@@ -3657,7 +3741,7 @@ function drawRenderWheel(){
   drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo);
 }
 
-// Draws the optional centre-hub logo on top of the slices — a white backing
+// Draws the optional centre-hub logo on top of the slices — a black backing
 // disc (so the logo reads clearly regardless of which colours land behind
 // it) clipped to a circle, with a thin white ring to neaten the edge.
 function drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo){
@@ -3666,7 +3750,7 @@ function drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo){
   ctx.beginPath();
   ctx.arc(center, center, hubRadius, 0, Math.PI*2);
   ctx.closePath();
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = "#000";
   ctx.fill();
   ctx.clip();
   const pad = hubRadius * 0.18;
@@ -3678,6 +3762,90 @@ function drawWheelCenterLogo(ctx, center, hubRadius, showCenterLogo){
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   ctx.stroke();
+}
+
+// ---------- Wheel: sound effects ----------
+// Synthesized via the Web Audio API rather than requiring audio files to be
+// hosted/uploaded — a short tick each time a slice passes the pointer during
+// the spin, and a two-note "ding" when the wheel lands. The AudioContext is
+// created lazily on the first spin click, which is itself the user gesture
+// browsers require before audio is allowed to play — nothing extra needed
+// to "unlock" it.
+let wheelAudioCtx = null;
+function getWheelAudioCtx(){
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) return null;
+  if(!wheelAudioCtx) wheelAudioCtx = new Ctx();
+  if(wheelAudioCtx.state === "suspended") wheelAudioCtx.resume();
+  return wheelAudioCtx;
+}
+
+function playWheelTick(){
+  const ctx = getWheelAudioCtx();
+  if(!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.value = 1000;
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.05);
+}
+
+function playWheelLandDing(){
+  const ctx = getWheelAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  [880, 1320].forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + i*0.05);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + i*0.05 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + i*0.05 + 0.5);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + i*0.05);
+    osc.stop(now + i*0.05 + 0.6);
+  });
+}
+
+// Reads the wheel canvas's actual current rotation mid-animation (parsed
+// from its CSS transform matrix) rather than assuming a fixed schedule —
+// since the spin uses a cubic-bezier ease-out, this makes ticks naturally
+// slow down along with the wheel as it decelerates, instead of a
+// mechanical constant-rate tick that would drift out of sync with what's
+// visually happening.
+function getCurrentRotationDeg(el){
+  const transform = getComputedStyle(el).transform;
+  if(transform === "none") return 0;
+  const match = transform.match(/^matrix\(([^)]+)\)$/);
+  if(!match) return 0;
+  const [a, b] = match[1].split(",").map(parseFloat);
+  let angle = Math.atan2(b, a) * (180 / Math.PI);
+  if(angle < 0) angle += 360;
+  return angle;
+}
+
+// Polls the wheel's rotation every frame during a spin and fires a tick
+// exactly when a new slice passes under the (fixed, top-of-wheel) pointer —
+// stops itself once drawSpinning goes false (spin landed or was reset).
+function startWheelTickPolling(canvas, anglePerSliceDeg, sliceCount){
+  let lastSliceIdx = null;
+  function poll(){
+    if(!drawSpinning) return;
+    const angle = getCurrentRotationDeg(canvas);
+    const normalized = (360 - angle) % 360; // matches the rotation convention drawSpin() uses to land on a slice
+    const idx = Math.floor(normalized / anglePerSliceDeg) % sliceCount;
+    if(idx !== lastSliceIdx){
+      lastSliceIdx = idx;
+      playWheelTick();
+    }
+    requestAnimationFrame(poll);
+  }
+  requestAnimationFrame(poll);
 }
 
 function drawSpin(){
@@ -3711,6 +3879,7 @@ function drawSpin(){
   const canvas = $("drawWheelCanvas");
   canvas.style.transition = "transform 4s cubic-bezier(0.15, 0.65, 0.1, 1)";
   canvas.style.transform = `rotate(${rotationDeg}deg)`;
+  startWheelTickPolling(canvas, anglePerSliceDeg, n);
 
   setTimeout(() => {
     const picked = drawPot.splice(winningIndex, 1)[0];
@@ -3719,6 +3888,7 @@ function drawSpin(){
 
     // Always show the result once the spin lands, every time.
     showDrawPick("drawWheelPick", "drawWheelPickName", picked, "drawWheelPickLogo");
+    playWheelLandDing();
     renderDrawShared();
 
     // This pick started a new pair (was nothing pending before, now there
@@ -3765,13 +3935,13 @@ $("drawStartBtn").addEventListener("click", drawStart);
 $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
-  btn.addEventListener("click", () => setWheelColorMode(btn.getAttribute("data-mode")));
+  btn.addEventListener("click", () => { setWheelColorMode(btn.getAttribute("data-mode")); saveWheelSettings(); });
 });
 document.querySelectorAll("#wheelTextColorModeToggle button").forEach(btn => {
-  btn.addEventListener("click", () => setWheelTextColorMode(btn.getAttribute("data-textmode")));
+  btn.addEventListener("click", () => { setWheelTextColorMode(btn.getAttribute("data-textmode")); saveWheelSettings(); });
 });
 ["wheelCustomColor1","wheelCustomColor2","wheelCustomColor3","wheelCustomUse3"].forEach(id => {
-  $(id).addEventListener("input", setWheelCustomColors);
+  $(id).addEventListener("input", () => { setWheelCustomColors(); saveWheelSettings(); });
 });
 $("wheelCustomUse3").addEventListener("change", (e) => {
   $("wheelCustomColor3Wrap").style.display = e.target.checked ? "inline-flex" : "none";
@@ -3788,17 +3958,20 @@ $("wheelCustomUse3").addEventListener("change", (e) => {
     if(/^#[0-9a-fA-F]{6}$/.test(v)){
       $(colorId).value = v.toLowerCase();
       setWheelCustomColors();
+      saveWheelSettings();
     }
   });
 });
+$("wheelTitleInput").addEventListener("input", saveWheelSettings);
 $("drawTeamInput").addEventListener("input", () => {
   if(wheelColorMode === "per-team") renderWheelPerTeamList();
 });
 $("wheelCompLogoSelect").addEventListener("change", (e) => {
   $("wheelCompLogoCustom").style.display = e.target.value === "__custom__" ? "" : "none";
   updateWheelCenterLogo();
+  saveWheelSettings();
 });
-$("wheelCompLogoCustom").addEventListener("input", updateWheelCenterLogo);
+$("wheelCompLogoCustom").addEventListener("input", () => { updateWheelCenterLogo(); saveWheelSettings(); });
 $("wheelSideLeagueMode").addEventListener("change", (e) => {
   wheelSideLeagueMode = e.target.checked;
   $("wheelSideLeagueSelectWrap").style.display = wheelSideLeagueMode ? "" : "none";
@@ -3826,6 +3999,7 @@ document.addEventListener("fullscreenchange", () => {
     exitWheelFullscreen();
   }
 });
+loadWheelSettings(); // restore last-used title/colours/logo before the initial render below
 drawRenderWheel(); // wheel is the only draw mode now, so render its empty-state immediately
 
 // ---------- Admin section switcher ----------
