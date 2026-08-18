@@ -403,7 +403,19 @@
   .home-hero{
     text-align:center;padding:36px 0 30px;border-bottom:2px solid var(--ink);margin-bottom:32px;
   }
-  .home-hero-logo{height:130px;max-width:100%;object-fit:contain;margin:0 auto 18px;display:block;}
+  .home-hero-banner{
+    background:#000;display:flex;align-items:center;justify-content:center;gap:22px;
+    padding:22px 28px;margin:0 0 28px;width:100%;
+  }
+  .home-hero-banner img{height:80px;width:auto;object-fit:contain;flex-shrink:0;}
+  .home-hero-banner-text{
+    color:#fff;font-weight:700;font-size:52px;line-height:1;letter-spacing:0.02em;white-space:nowrap;
+  }
+  @media (max-width:600px){
+    .home-hero-banner{padding:16px 18px;gap:14px;}
+    .home-hero-banner img{height:52px;}
+    .home-hero-banner-text{font-size:32px;}
+  }
   .home-hero-sub{font-family:'Barlow',sans-serif;font-size:15px;color:#5a6a63;width:100%;margin:0 auto;text-align:center;line-height:1.6;}
   .home-hero-sub p{margin:0 0 12px;}
   .home-hero-sub p:last-child{margin-bottom:0;}
@@ -8150,7 +8162,10 @@ function renderHome(){
   const container = document.getElementById('homeContainer');
   container.innerHTML = `
     <div class="home-hero">
-      <img src="logo/eliza-logo.png" alt="Eliza Cup" class="home-hero-logo" onerror="this.style.display='none';">
+      <div class="home-hero-banner">
+        <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
+        <div class="home-hero-banner-text">ELIZA CUP</div>
+      </div>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
