@@ -926,9 +926,6 @@
   }
 
   .slh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
-  .slh-group{grid-column:1 / -1;border:2px solid var(--ink);border-radius:12px;padding:18px;background:#fafaf8;}
-  .slh-group-title{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:17px;font-weight:700;letter-spacing:.03em;margin-bottom:14px;}
-  .slh-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
   .slh-card{
     background:#fff;border:1px solid var(--line-light);border-radius:10px;
     padding:20px;display:flex;flex-direction:column;gap:10px;
@@ -1791,6 +1788,13 @@ function getSearchablePages(){
     pages.push({ label: "FPL Championship", hash: "sideleagues=fpl:championship", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
     pages.push({ label: "FPL Roddy", hash: "sideleagues=fpl:roddy", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
     pages.push({ label: "FPL Cup", hash: "sideleagues=fpl:cup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+  }
+  // Last Man Standing likewise has sub-tabs (Australia Cup/A-League) rather
+  // than separate pages — A-League only searchable once LMS_ALEAGUE_ENABLED
+  // flips true, matching its sub-tab visibility.
+  if(SIDE_LEAGUES.some(l => l.key === "lms")){
+    pages.push({ label: "Australia Cup LMS", hash: "sideleagues=lms:auscup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+    if(LMS_ALEAGUE_ENABLED) pages.push({ label: "A-League LMS", hash: "sideleagues=lms:aleague", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
   }
   searchablePagesCache = pages;
   return pages;
@@ -6381,16 +6385,25 @@ async function loadHistorySeason(seasonKey){
 // the sheet, then the header row below it, then read each column by matching its own
 // header label (rather than trusting fixed positions), since exact column layout on
 // this sheet hasn't been verified against live data yet.
+// Flip to true once the A-League LMS competition is ready to go live — hides/
+// shows just that one sub-tab within the Last Man Standing page (Australia
+// Cup stays visible either way, since it's the currently-running competition).
+const LMS_ALEAGUE_ENABLED = false;
+
 const SIDE_LEAGUES = [
   { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
   { key: "eplsc", label: "EPL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1980185043", singleTable: true, titleText: "ELIZA SUPERCOACH EPL" },
-  { key: "auscup", label: "Australia Cup LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "590890124", isLmsCup: true },
-  // hidden: true keeps this reachable directly via #sideleagues=aleaguelms for
-  // testing, but out of the nav dropdown, mobile nav, round tabs, and search —
-  // remove the flag once ready to go live (see SIDE_LEAGUES filtering below).
-  { key: "aleaguelms", label: "A-League LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "922424054", isAleagueLms: true, hidden: true },
+  // Last Man Standing: one nav entry covering both competitions, toggled via
+  // sub-tabs like FPL's Premier/Championship/Roddy/Cup — see lmsGids below and
+  // the isLms branch in loadSideLeague. Both live on this same spreadsheet,
+  // different tabs. Australia Cup is the currently-running competition; the
+  // A-League sub-tab is built but held back via LMS_ALEAGUE_ENABLED below
+  // until the season's ready to go — flip that one flag when it's time, no
+  // need to touch the nav/hidden mechanics for it.
+  { key: "lms", label: "Last Man Standing", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk",
+    lmsGids: { auscup: "590890124", aleague: "922424054" }, isLms: true },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
@@ -6603,26 +6616,7 @@ function renderSideLeaguesHub(){
       return;
     }
     container.className = "";
-    // Cards sharing a non-blank "group" (e.g. "Last Man Standing") render
-    // together in one bordered section instead of as separate top-level
-    // cards — admin-controlled via the Group field on each card, not
-    // hardcoded, so any future pairing can reuse this. A group's position
-    // in the grid follows wherever its first member card appears.
-    const seenGroups = new Set();
-    const blocksHtml = data.cards.map(c => {
-      const groupName = (c.group || "").trim();
-      if(groupName){
-        if(seenGroups.has(groupName)) return ""; // rendered as part of the group block already
-        seenGroups.add(groupName);
-        const members = data.cards.filter(x => (x.group||"").trim() === groupName);
-        return `<div class="slh-group">
-          <div class="slh-group-title">${groupName}</div>
-          <div class="slh-group-grid">${members.map(slhCardHtml).join("")}</div>
-        </div>`;
-      }
-      return slhCardHtml(c);
-    }).join("");
-    container.innerHTML = `<div class="slh-grid">${blocksHtml}</div>`;
+    container.innerHTML = `<div class="slh-grid">${data.cards.map(slhCardHtml).join("")}</div>`;
     startSlhCountdowns();
   });
 }
@@ -6635,9 +6629,42 @@ function renderSideLeaguesHub(){
 // page by default — surfaced via a "Rules" button next to the league tabs
 // that pops up a modal. Uses the same newline-per-paragraph + inline-HTML
 // convention as the Rulebook/About pages.
-function findSideLeagueRulesCard(leagueKey){
+function findSideLeagueCardForLink(link){
   const cards = (sideLeaguesHubData && sideLeaguesHubData.cards) || [];
-  return cards.find(c => c.link === ("#sideleagues=" + leagueKey)) || null;
+  return cards.find(c => c.link === link) || null;
+}
+function findSideLeagueRulesCard(leagueKey){
+  return findSideLeagueCardForLink("#sideleagues=" + leagueKey);
+}
+
+// Trophy banner shown at the top of a side league's page once its hub card
+// (side-leagues-hub.json, managed via admin.html) is marked Complete — same
+// chip styling as the Trophies section on club profile pages
+// (teamTrophiesHtml), just without the season sub-line since a side league
+// card's winners are already scoped to that one completed run. Nothing extra
+// to manage here — set a card's Status to Complete and add its Winners, and
+// this picks it up automatically.
+//
+// Takes the exact card link rather than a bare league key: most leagues have
+// one hub card covering every sub-tab (e.g. "#sideleagues=fpl" covers
+// Premier/Championship/Roddy/Cup together, since FPL's Winners list already
+// holds one labelled entry per sub-competition on that single card). Last Man
+// Standing is the exception — Australia Cup and A-League are two
+// independently-tracked competitions with their own separate cards, so their
+// callers pass the sub-tab-specific link ("#sideleagues=lms:auscup" /
+// "#sideleagues=lms:aleague") to only show that competition's own winners.
+function sideLeagueWinnersBannerHtml(link){
+  const card = findSideLeagueCardForLink(link);
+  if(!card || card.status !== "complete") return "";
+  const winners = Array.isArray(card.winners) ? card.winners : (card.winner ? [card.winner] : []);
+  if(!winners.length) return "";
+  return `<div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">🏆 Winners</h2></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;max-width:640px;margin-bottom:28px;">
+      ${winners.map(w => `<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-light);border-left:4px solid var(--pitch);border-radius:5px;padding:8px 12px;">
+        <span style="font-size:16px;">🏆</span>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;">${w}</div>
+      </div>`).join("")}
+    </div>`;
 }
 
 // Shows/hides the Rules button for the given league key, using whatever's
@@ -7192,8 +7219,9 @@ function renderSideLeagueContent(){
   el.className = "";
 
   if(sideLeagueData.singleTable){
-    const { table, fx, overall, label } = sideLeagueData;
+    const { table, fx, overall, label, key } = sideLeagueData;
     el.innerHTML = `
+      ${sideLeagueWinnersBannerHtml("#sideleagues=" + key)}
       <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
       ${sideLeagueTableHtml(table)}
       <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
@@ -7210,6 +7238,11 @@ function renderSideLeagueContent(){
     : sideLeagueActiveDiv === "championship" ? "Eliza Championship"
     : sideLeagueActiveDiv === "roddy" ? "Eliza FPL Roddy" : "Eliza FPL Cup";
 
+  // One FPL card covers every sub-tab (its Winners list already holds one
+  // labelled entry per sub-competition), so this doesn't need to change
+  // based on which sub-tab is active.
+  const winnersHtml = sideLeagueWinnersBannerHtml("#sideleagues=fpl");
+
   const toggleHtml = `
     <div class="round-tabs" id="sideLeagueDivToggle">
       <button class="round-tab${sideLeagueActiveDiv==='premier'?' active':''}" data-div="premier">Premier League</button>
@@ -7219,7 +7252,7 @@ function renderSideLeagueContent(){
     </div>`;
 
   if(sideLeagueActiveDiv === "roddy"){
-    el.innerHTML = `${toggleHtml}
+    el.innerHTML = `${winnersHtml}${toggleHtml}
       <div class="section-head" style="margin-top:20px;"><h2 style="font-size:18px;">${label}</h2></div>
       <div id="fplRoddyContainer" class="state-msg">Loading Roddy leaderboard…</div>`;
     el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
@@ -7241,7 +7274,7 @@ function renderSideLeagueContent(){
   }
 
   if(sideLeagueActiveDiv === "cup"){
-    el.innerHTML = `${toggleHtml}
+    el.innerHTML = `${winnersHtml}${toggleHtml}
       <div id="fplCupContainer" class="state-msg" style="margin-top:20px;">Loading FPL Cup…</div>`;
     el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -7275,6 +7308,7 @@ function renderSideLeagueContent(){
   const fx = isPremier ? sideLeagueData.premierFx : sideLeagueData.champFx;
 
   el.innerHTML = `
+    ${winnersHtml}
     ${toggleHtml}
     <div class="section-head" style="margin-top:20px;"><h2 style="font-size:18px;">${label}</h2></div>
     ${sideLeagueTableHtml(table)}
@@ -7915,7 +7949,7 @@ async function submitLmsTip(e){
 // 3 lives per player, and richer pick-eligibility rules (max 3 uses of any one
 // team all season, no repeat in consecutive rounds, no more than 2 uses of a
 // team within either half of the season — rounds 1-13 or 14-26). Same
-// spreadsheet as Australia Cup LMS, separate tab — see the "aleaguelms" entry
+// spreadsheet as Australia Cup LMS, separate tab — see the "lms" entry
 // in SIDE_LEAGUES.
 
 function isAleagueLmsRoundHeader(rawText){
@@ -8071,8 +8105,9 @@ function renderAleagueLmsPlayerSummary(data){
     <div class="lms-pick-list" style="margin-bottom:28px;">${rows}</div>`;
 }
 
-function renderAleagueLms(data){
-  const el = document.getElementById('sideLeaguesContainer');
+function renderAleagueLms(data, containerId){
+  containerId = containerId || 'sideLeaguesContainer';
+  const el = document.getElementById(containerId);
   if(!data.rounds.length){
     el.className = "state-msg";
     el.innerHTML = "No A-League LMS data found. Check the Debug panel below.";
@@ -8112,7 +8147,8 @@ function renderAleagueLms(data){
     </div>`;
   }).join("");
 
-  el.innerHTML = renderAleagueLmsPlayerSummary(data) +
+  el.innerHTML = sideLeagueWinnersBannerHtml("#sideleagues=lms:aleague") +
+    renderAleagueLmsPlayerSummary(data) +
     `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
     <div class="lms-pick-list">${rowsHtml}</div>
@@ -8121,7 +8157,7 @@ function renderAleagueLms(data){
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       aleagueLmsActiveRoundIdx = parseInt(btn.dataset.idx, 10);
-      renderAleagueLms(data);
+      renderAleagueLms(data, containerId);
     });
   });
 
@@ -8323,8 +8359,88 @@ async function submitAleagueLmsTip(e){
   }
 }
 
-function renderLmsCup(data){
+// ---------- Last Man Standing hub (Australia Cup + A-League sub-tabs) ----------
+// Mirrors the FPL pattern: one SIDE_LEAGUES entry ("lms"), sub-tabs toggled
+// client-side rather than separate nav items. Unlike FPL's sub-tabs (which
+// all read different blocks of the same sheet gid), each LMS sub-tab is a
+// wholly separate sheet tab/gid with its own parser — see lmsGids on the
+// SIDE_LEAGUES entry and LMS_ALEAGUE_ENABLED above.
+let lmsHubActiveTab = "auscup"; // "auscup" | "aleague"
+let lmsHubData = { auscup: null, aleague: null }; // per-tab parsed-data cache, cleared on each page (re)load so Refresh still works
+
+function renderLmsHubShell(league){
   const el = document.getElementById('sideLeaguesContainer');
+  el.className = "";
+  const tabs = [{ key: "auscup", label: "Australia Cup" }];
+  if(LMS_ALEAGUE_ENABLED) tabs.push({ key: "aleague", label: "A-League" });
+
+  const toggleHtml = tabs.length > 1
+    ? `<div class="round-tabs" id="lmsHubToggle">
+        ${tabs.map(t => `<button class="round-tab${lmsHubActiveTab===t.key?' active':''}" data-tab="${t.key}">${t.label}</button>`).join("")}
+      </div>`
+    : "";
+
+  el.innerHTML = `${toggleHtml}<div id="lmsHubPanel" class="state-msg">Loading…</div>`;
+
+  el.querySelectorAll('#lmsHubToggle .round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(lmsHubActiveTab === btn.dataset.tab) return;
+      lmsHubActiveTab = btn.dataset.tab;
+      el.querySelectorAll('#lmsHubToggle .round-tab').forEach(b => b.classList.toggle('active', b===btn));
+      loadLmsHubTab(league, lmsHubActiveTab);
+    });
+  });
+}
+
+async function loadLmsHubTab(league, tabKey){
+  const panel = document.getElementById('lmsHubPanel');
+  if(!panel) return; // user navigated away before this resolved
+
+  if(lmsHubData[tabKey]){
+    if(tabKey === "auscup") renderLmsCup(lmsHubData[tabKey], 'lmsHubPanel');
+    else renderAleagueLms(lmsHubData[tabKey], 'lmsHubPanel');
+    return;
+  }
+
+  panel.className = "state-msg";
+  panel.innerHTML = "Loading…";
+  const label = tabKey === "auscup" ? "Australia Cup" : "A-League";
+  try{
+    const res = await cachedFetch(sideLeagueCsvUrlFor({ sheetId: league.sheetId, gid: league.lmsGids[tabKey] }));
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const csvText = await res.text();
+    const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+
+    if(tabKey === "auscup"){
+      const data = parseLmsCup(rows);
+      const matchIdx = data.currentRoundLabel
+        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
+        : -1;
+      lmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1;
+      lmsHubData.auscup = data;
+      renderLmsCup(data, 'lmsHubPanel');
+      sideLeagueDebug = Object.assign({}, sideLeagueDebug, { lmsCup: data.debug });
+    } else {
+      const data = parseAleagueLms(rows);
+      const matchIdx = data.currentRoundLabel
+        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
+        : -1;
+      aleagueLmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1;
+      lmsHubData.aleague = data;
+      renderAleagueLms(data, 'lmsHubPanel');
+      sideLeagueDebug = Object.assign({}, sideLeagueDebug, { aleagueLms: data.debug });
+    }
+    document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+  }catch(err){
+    console.error(err);
+    panel.className = "state-msg error";
+    panel.innerHTML = `Couldn't load ${label} LMS data. Make sure the sheet is shared as "Anyone with the link can view", then hit Refresh.`;
+  }
+}
+
+function renderLmsCup(data, containerId){
+  containerId = containerId || 'sideLeaguesContainer';
+  const el = document.getElementById(containerId);
   if(!data.rounds.length){
     el.className = "state-msg";
     el.innerHTML = "No Australia Cup LMS data found. Check the Debug panel below.";
@@ -8365,7 +8481,8 @@ function renderLmsCup(data){
     </div>`;
   }).join("");
 
-  el.innerHTML = `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
+  el.innerHTML = `${sideLeagueWinnersBannerHtml("#sideleagues=lms:auscup")}
+    <div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
     <div class="lms-pick-list">${rowsHtml}</div>
     ${lmsTipsFormHtml(data)}`;
@@ -8373,7 +8490,7 @@ function renderLmsCup(data){
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       lmsActiveRoundIdx = parseInt(btn.dataset.idx, 10);
-      renderLmsCup(data);
+      renderLmsCup(data, containerId);
     });
   });
 
@@ -8395,6 +8512,12 @@ async function loadSideLeague(leagueKey){
   el.className = "state-msg";
   el.innerHTML = "Loading " + league.label + " data…";
 
+  // Needed before any render call below so the Complete-status winners
+  // banner (sideLeagueWinnersBannerHtml) has real data on first paint rather
+  // than popping in after a delay — cached after the first call, so this
+  // only costs a real fetch once per session.
+  await loadSideLeaguesHubData();
+
   if(league.isHonourBoard){
     try{
       const data = await loadHonourBoardData();
@@ -8409,47 +8532,15 @@ async function loadSideLeague(leagueKey){
     return;
   }
 
-  if(league.isLmsCup){
-    try{
-      const res = await cachedFetch(sideLeagueCsvUrlFor(league));
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-      const data = parseLmsCup(rows);
-      const matchIdx = data.currentRoundLabel
-        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
-        : -1;
-      lmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1; // fall back to most recent round
-      renderLmsCup(data);
-      sideLeagueDebug = { lmsCup: data.debug };
-      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
-    }catch(err){
-      console.error(err);
-      el.className = "state-msg error";
-      el.innerHTML = "Couldn't load Australia Cup LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
-    }
-    return;
-  }
-
-  if(league.isAleagueLms){
-    try{
-      const res = await cachedFetch(sideLeagueCsvUrlFor(league));
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-      const data = parseAleagueLms(rows);
-      const matchIdx = data.currentRoundLabel
-        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
-        : -1;
-      aleagueLmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1; // fall back to most recent round
-      renderAleagueLms(data);
-      sideLeagueDebug = { aleagueLms: data.debug };
-      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
-    }catch(err){
-      console.error(err);
-      el.className = "state-msg error";
-      el.innerHTML = "Couldn't load A-League LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
-    }
+  if(league.isLms){
+    const validLmsSubTabs = new Set(["auscup", "aleague"]);
+    lmsHubActiveTab = (pendingSideLeagueSubTab && validLmsSubTabs.has(pendingSideLeagueSubTab) && (pendingSideLeagueSubTab !== "aleague" || LMS_ALEAGUE_ENABLED))
+      ? pendingSideLeagueSubTab
+      : "auscup";
+    pendingSideLeagueSubTab = null;
+    lmsHubData = { auscup: null, aleague: null };
+    renderLmsHubShell(league);
+    await loadLmsHubTab(league, lmsHubActiveTab);
     return;
   }
 
@@ -8473,7 +8564,7 @@ async function loadSideLeague(leagueKey){
       // AFL, NRL and EPL Supercoach. Shown underneath the Fixtures section.
       const overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
 
-      sideLeagueData = { singleTable: true, table, fx, overall, label: league.label };
+      sideLeagueData = { singleTable: true, table, fx, overall, label: league.label, key: league.key };
       sideLeagueActiveRound = {};
       renderSideLeagueContent();
 

@@ -684,12 +684,6 @@
       </div>
 
       <div class="field">
-        <label for="slhGroup">Group (optional)</label>
-        <input type="text" id="slhGroup" placeholder="e.g. Last Man Standing">
-        <div class="hint">Cards sharing the exact same group name are bundled together into one bordered section on the overview page, in place of separate top-level cards. Leave blank for a normal standalone card.</div>
-      </div>
-
-      <div class="field">
         <label for="slhStatus">Status</label>
         <select id="slhStatus">
           <option value="active">Active</option>
@@ -1896,7 +1890,6 @@ function renderSlhList() {
       <div class="meta">
         <div class="title">${i + 1}. ${escapeHtml(c.label || "(untitled)")}
           <span class="badge ${c.status === "signups" ? "draft" : "pub"}" style="${c.status === "signups" ? "background:#fff4d6;color:#8a6700;" : ""}">${SLH_STATUS_LABEL[c.status] || "Active"}</span>
-          ${c.group ? `<span class="badge" style="background:#e5e7eb;color:#374151;">${escapeHtml(c.group)}</span>` : ""}
         </div>
       </div>
       <div class="item-actions">
@@ -1966,7 +1959,6 @@ function startEditSlh(id) {
   if (!c) return;
   slhEditingId = c.id;
   $("slhLabel").value = c.label || "";
-  $("slhGroup").value = c.group || "";
   $("slhStatus").value = c.status || "active";
   $("slhRoundInfo").value = c.roundInfo || "";
   slhFormWinners = Array.isArray(c.winners) ? [...c.winners] : (c.winner ? [c.winner] : []);
@@ -1987,7 +1979,6 @@ function startEditSlh(id) {
 function cancelEditSlh() {
   slhEditingId = null;
   $("slhLabel").value = "";
-  $("slhGroup").value = "";
   $("slhStatus").value = "active";
   $("slhRoundInfo").value = "";
   slhFormWinners = [];
@@ -2018,7 +2009,6 @@ function deleteSlhCard(id) {
 
 async function saveSlhCard() {
   const label = $("slhLabel").value.trim();
-  const group = $("slhGroup").value.trim();
   const status = $("slhStatus").value;
   const roundInfo = $("slhRoundInfo").value.trim();
   const winners = [...slhFormWinners];
@@ -2038,13 +2028,13 @@ async function saveSlhCard() {
   if (slhEditingId) {
     const idx = slhCards.findIndex(x => String(x.id) === String(slhEditingId));
     if (idx !== -1) {
-      slhCards[idx] = { ...slhCards[idx], label, group, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules };
+      slhCards[idx] = { ...slhCards[idx], label, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules };
       delete slhCards[idx].winner; // migrate off the old single-winner field
     }
   } else {
     slhCards.push({
       id: Date.now().toString(36),
-      label, group, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules
+      label, status, roundInfo, winners, code, closeEnabled, closeDate, countdownEnabled, notes, link, rules
     });
   }
 
