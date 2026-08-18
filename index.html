@@ -1778,7 +1778,7 @@ function getSearchablePages(){
   // is exactly what those pages themselves render.
   const sideLeagueHub = DIVISIONS.find(d => d.id === "sideleagueshub");
   const sideLeagueLogoHtml = compLogoHtmlFor({ type: "sideleagues" });
-  SIDE_LEAGUES.forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key, logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color }));
+  SIDE_LEAGUES.filter(l => !l.hidden).forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key, logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color }));
   // FPL is the only side league with sub-tabs (Premier League/Championship/
   // Roddy/FPL Cup — everything else is a single-view page), so these are
   // hand-added rather than derived. Deep-links via the ":<subtab>" hash
@@ -1945,7 +1945,7 @@ function buildNavItemHtml(item, idPrefix){
       <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
       <div class="div-nav-dropdown" id="navDropdown-${idPrefix}${item.key}">
         <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-        ${SIDE_LEAGUES.map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
+        ${SIDE_LEAGUES.filter(s=>!s.hidden).map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
       </div>
     </div>`;
   }
@@ -2032,7 +2032,7 @@ function buildMobileNavItemHtml(item){
       <button class="mobile-nav-group-toggle${isActive?' active':''}" data-toggle-group type="button">${item.label}<span class="mobile-nav-group-caret">▾</span></button>
       <div class="mobile-nav-submenu">
         <button class="mobile-nav-sublink${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-        ${SIDE_LEAGUES.map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
+        ${SIDE_LEAGUES.filter(s=>!s.hidden).map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
       </div>
     </div>`;
   }
@@ -2416,6 +2416,11 @@ function togglePageSections(){
 // doPost script provided alongside this feature. Left blank shows a warning
 // instead of silently failing.
 const LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzp-On3f8ByMBuLo7hO4T0Jq_n1jvpbnVpqtKVUYhLU_2Yk8wN_KWFSVBaBWZd4Nss/exec";
+// Placeholder until the A-League LMS Apps Script is deployed — it needs to
+// write into AE:AH on this sheet specifically (append at the next blank row
+// within that column range, not a whole-sheet append), unlike the Australia
+// Cup script which posts to its own separate sheet.
+const ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL = "";
 
 async function load(){
   togglePageSections();
@@ -6379,6 +6384,10 @@ const SIDE_LEAGUES = [
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
   { key: "eplsc", label: "EPL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1980185043", singleTable: true, titleText: "ELIZA SUPERCOACH EPL" },
   { key: "auscup", label: "Australia Cup LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "590890124", isLmsCup: true },
+  // hidden: true keeps this reachable directly via #sideleagues=aleaguelms for
+  // testing, but out of the nav dropdown, mobile nav, round tabs, and search —
+  // remove the flag once ready to go live (see SIDE_LEAGUES filtering below).
+  { key: "aleaguelms", label: "A-League LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "922424054", isAleagueLms: true, hidden: true },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
@@ -7364,7 +7373,7 @@ function renderSideLeagueTabs(activeKey){
   const tabsEl = document.getElementById('sideLeaguesTabs');
   const initial = (activeKey && SIDE_LEAGUES.some(s=>s.key===activeKey)) ? activeKey : SIDE_LEAGUES[0].key;
   tabsEl.innerHTML = `<button class="round-tab" data-hub="1">Overview</button>` +
-    SIDE_LEAGUES.map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}</button>`).join("");
+    SIDE_LEAGUES.filter(s=>!s.hidden).map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}</button>`).join("");
   tabsEl.querySelector('[data-hub]').addEventListener('click', ()=>{
     const hub = DIVISIONS.find(d=>d.id==="sideleagueshub");
     goToDivision(hub);
@@ -7878,6 +7887,420 @@ async function submitLmsTip(e){
   }
 }
 
+// ---------- A-League LMS (season-long Last Man Standing, 3 lives) ----------
+// Distinct from the Australia Cup LMS above: this runs across all 26 regular-
+// season rounds with a fixed player list (not a shrinking knockout bracket),
+// 3 lives per player, and richer pick-eligibility rules (max 3 uses of any one
+// team all season, no repeat in consecutive rounds, no more than 2 uses of a
+// team within either half of the season — rounds 1-13 or 14-26). Same
+// spreadsheet as Australia Cup LMS, separate tab — see the "aleaguelms" entry
+// in SIDE_LEAGUES.
+
+function isAleagueLmsRoundHeader(rawText){
+  return /^ROUND\s+\d+$/i.test(normalizeLmsText(rawText));
+}
+function aleagueLmsRoundNum(rawText){
+  const m = normalizeLmsText(rawText).match(/^ROUND\s+(\d+)$/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function parseAleagueLms(rows){
+  const rounds = [];
+  let current = null;
+  const rawDump = [];
+  const headerCandidates = [];
+
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    const d = cell(row,3); // D
+
+    if(d && r < 45){
+      headerCandidates.push({ row: r+1, text: d, matched: isAleagueLmsRoundHeader(d) });
+    }
+
+    if(isAleagueLmsRoundHeader(d)){
+      current = { name: d, roundNum: aleagueLmsRoundNum(d), entries: [] };
+      rounds.push(current);
+      continue;
+    }
+    if(!current) continue;
+
+    const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
+    if(!d && !f && !g && !h) continue;
+
+    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
+    rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
+  }
+
+  // Round / Deadline / Current reference table — X = round name, Y = deadline
+  // (DD/MM/YYYY HH:MM:SS AEST), Z = "TRUE" for the current round. Same
+  // convention as Australia Cup LMS.
+  const deadlineMap = {};
+  let currentRoundLabel = "";
+  for(let r=0; r<rows.length; r++){
+    const roundName = cell(rows[r]||[], 23); // X
+    if(!roundName || normalizeLmsText(roundName) === "ROUND") continue;
+    const deadlineRaw = cell(rows[r]||[], 24); // Y
+    const isCurrent = cell(rows[r]||[], 25).trim().toUpperCase() === "TRUE"; // Z
+    deadlineMap[normalizeLmsText(roundName)] = deadlineRaw;
+    if(isCurrent) currentRoundLabel = roundName;
+  }
+
+  // Player summary — AA name, AB lives remaining, AC status (Active/Eliminated)
+  const playerSummary = [];
+  for(let r=0; r<rows.length; r++){
+    const name = cell(rows[r]||[], 26); // AA
+    if(!name || /^PLAYER NAME$/i.test(name)) continue;
+    playerSummary.push({
+      name,
+      lives: parseInt(cell(rows[r]||[], 27), 10) || 0, // AB
+      status: cell(rows[r]||[], 28) || "Active" // AC
+    });
+  }
+
+  // Fixture reference blocks — N holds "ROUND N" on the title row (no
+  // "FIXTURES" suffix, unlike Australia Cup), Q = home team, S = away team.
+  const fixtureBlocks = [];
+  let currentBlock = null;
+  for(let r=0; r<rows.length; r++){
+    const nCell = cell(rows[r]||[], 13); // N
+    if(isAleagueLmsRoundHeader(nCell)){
+      currentBlock = { roundName: nCell, roundNum: aleagueLmsRoundNum(nCell), fixtures: [] };
+      fixtureBlocks.push(currentBlock);
+      continue;
+    }
+    if(!currentBlock) continue;
+    const home = cell(rows[r]||[], 16), away = cell(rows[r]||[], 18); // Q, S
+    if(!home && !away) continue;
+    currentBlock.fixtures.push({ home, away });
+  }
+
+  // Raw form-submission log — AE timestamp, AF round, AG participant, AH team.
+  // Kept on this same sheet (unlike Australia Cup, which logs to a separate
+  // spreadsheet) — picks still get transcribed into the D:H entries block
+  // manually, this is just the raw record of what was submitted.
+  const submissionLog = [];
+  for(let r=0; r<rows.length; r++){
+    const ts = cell(rows[r]||[], 30); // AE
+    if(!ts || /^TIMESTAMP$/i.test(ts)) continue;
+    submissionLog.push({
+      timestamp: ts,
+      round: cell(rows[r]||[], 31), // AF
+      participant: cell(rows[r]||[], 32), // AG
+      team: cell(rows[r]||[], 33) // AH
+    });
+  }
+
+  // Team reference list — AY only. No elimination flag column (unlike
+  // Australia Cup): real A-League clubs don't get knocked out mid-season, so
+  // every team stays a valid option all year, subject only to the
+  // pick-eligibility rules below.
+  const teamList = [];
+  for(let r=0; r<rows.length; r++){
+    const name = cell(rows[r]||[], 50); // AY
+    if(!name || /^TEAMS?$/i.test(name)) continue;
+    teamList.push(name);
+  }
+
+  // Each participant's full pick history (round number + team), used for all
+  // three eligibility rules on the tips form.
+  const history = {};
+  rounds.forEach(round => {
+    round.entries.forEach(e => {
+      if(!e.pick || /^ELIMINATED/i.test(e.pick) || /^DNP$/i.test(e.pick)) return;
+      if(!history[e.name]) history[e.name] = [];
+      history[e.name].push({ roundNum: round.roundNum, team: e.pick.toUpperCase() });
+    });
+  });
+
+  return {
+    rounds, currentRoundLabel, deadlineMap, playerSummary, fixtureBlocks, submissionLog, teamList, history,
+    debug: {
+      roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })),
+      currentRoundLabel, deadlineMap,
+      playerSummaryFound: playerSummary.length, playerSummary,
+      fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})),
+      submissionLogFound: submissionLog.length,
+      teamListFound: teamList.length, teamList,
+      headerCandidates, rawDump: rawDump.slice(0,40)
+    }
+  };
+}
+
+let aleagueLmsActiveRoundIdx = 0;
+
+function renderAleagueLmsPlayerSummary(data){
+  const sorted = [...data.playerSummary].sort((a,b) => {
+    const aElim = /eliminated/i.test(a.status), bElim = /eliminated/i.test(b.status);
+    if(aElim !== bElim) return aElim ? 1 : -1;
+    if(b.lives !== a.lives) return b.lives - a.lives;
+    return a.name.localeCompare(b.name);
+  });
+  const rows = sorted.map(p => {
+    const eliminated = /eliminated/i.test(p.status);
+    const lives = "❤️".repeat(Math.max(p.lives,0)) + "🖤".repeat(Math.max(3-p.lives,0));
+    return `<div class="lms-pick-row" style="${eliminated ? 'background:#d1d5db;border-color:#6b7280;opacity:0.7;' : ''}">
+      <span class="lms-participant">${sideLeagueTeamLink(p.name)}</span>
+      <span class="lms-pick-col" style="font-size:16px;">${lives}</span>
+      <span class="lms-result" style="color:${eliminated ? '#991b1b' : '#166534'};">${p.status}</span>
+    </div>`;
+  }).join("");
+  return `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Lives Remaining</h2></div>
+    <div class="lms-pick-list" style="margin-bottom:28px;">${rows}</div>`;
+}
+
+function renderAleagueLms(data){
+  const el = document.getElementById('sideLeaguesContainer');
+  if(!data.rounds.length){
+    el.className = "state-msg";
+    el.innerHTML = "No A-League LMS data found. Check the Debug panel below.";
+    return;
+  }
+  el.className = "";
+  if(aleagueLmsActiveRoundIdx >= data.rounds.length) aleagueLmsActiveRoundIdx = data.rounds.length - 1;
+  if(aleagueLmsActiveRoundIdx < 0) aleagueLmsActiveRoundIdx = 0;
+
+  const tabsHtml = data.rounds.map((rd, idx) =>
+    `<button class="round-tab${idx===aleagueLmsActiveRoundIdx?' active':''}" data-idx="${idx}">${rd.name}</button>`
+  ).join("");
+
+  const round = data.rounds[aleagueLmsActiveRoundIdx];
+  const rowsHtml = round.entries.map(e => {
+    const isEliminated = /^ELIMINATED/i.test(e.pick);
+    const isDnp = /^DNP$/i.test(e.pick);
+    const isEntered = e.pick && !isEliminated && !isDnp;
+    const hasResult = e.result === "WIN" || e.result === "LOSS" || e.result === "DRAW";
+    const pickClass = isEliminated ? ' eliminated' : isDnp ? ' awaiting' : isEntered ? ' entered' : '';
+    const pickIcon = isDnp ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
+    const isBadOutcome = e.result === "LOSS" || e.result === "DRAW" || isDnp;
+    const resultColor = e.result === "WIN" ? "#166534" : isBadOutcome ? "#991b1b" : "#6b7c73";
+    const cardStyle = isEliminated ? "background:#d1d5db;border-color:#6b7280;"
+      : e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
+      : (e.result === "LOSS" || e.result === "DRAW") ? "background:#fee2e2;border-color:#991b1b;" : "";
+    const logoName = resolveSideLeagueTeamName(e.name);
+    const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+    const resultLabel = isDnp ? "DNP" : (e.result || "—");
+    return `<div class="lms-pick-row" style="${cardStyle}">
+      <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
+      <span class="lms-pick-col">
+        <span class="lms-pick${pickClass}">${pickIcon}${isDnp ? "Did Not Pick" : (e.pick || "—")}</span>
+        ${e.opponent && !isEliminated && !isDnp ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
+      </span>
+      <span class="lms-result" style="color:${resultColor};">${resultLabel}</span>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = renderAleagueLmsPlayerSummary(data) +
+    `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
+    <div class="round-tabs">${tabsHtml}</div>
+    <div class="lms-pick-list">${rowsHtml}</div>
+    ${aleagueLmsTipsFormHtml(data)}`;
+
+  el.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      aleagueLmsActiveRoundIdx = parseInt(btn.dataset.idx, 10);
+      renderAleagueLms(data);
+    });
+  });
+
+  const activeRoundBtn = el.querySelector('.round-tab.active');
+  if(activeRoundBtn){
+    try{ activeRoundBtn.scrollIntoView({inline:'center', block:'nearest'}); }catch(e){}
+  }
+
+  wireAleagueLmsTipsForm(data);
+}
+
+function aleagueLmsTipsFormHtml(data){
+  const aliveParticipants = data.playerSummary
+    .filter(p => !/eliminated/i.test(p.status))
+    .map(p => p.name)
+    .sort((a,b) => a.localeCompare(b));
+
+  return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Submit Your Tip</h2></div>
+    <div id="aleagueLmsTipsDeadlineBox"></div>
+    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 10px;">
+      You can only use a team 3 times all season, can't pick the same team two rounds in a row, and can't use a team more than twice in either half of the season (rounds 1-13 or 14-26). Ineligible teams are greyed out below.
+    </p>
+    ${!ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL ? `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:420px;margin-bottom:16px;">No Apps Script URL configured — submissions won't save.</div>` : ""}
+    <form id="aleagueLmsTipsForm" style="max-width:420px;">
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Your team name</label>
+      <select id="aleagueLmsTipsParticipant" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+        <option value="" selected disabled>Select your team name…</option>
+        ${aliveParticipants.map(n=>`<option value="${n}">${n}</option>`).join("")}
+      </select>
+
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Round</label>
+      <select id="aleagueLmsTipsRound" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:6px;box-sizing:border-box;">
+        ${data.rounds.map(r=>`<option value="${r.name}">${r.name}</option>`).join("")}
+      </select>
+
+      <div id="aleagueLmsTipsFixtureList" style="margin-bottom:14px;"></div>
+
+      <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
+      <select id="aleagueLmsTipsTeam" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
+
+      <button type="submit" class="lms-submit-btn">Submit Tip</button>
+      <div id="aleagueLmsTipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
+    </form>`;
+}
+
+// Computes, for one participant and target round number, which teams are
+// ineligible under the three pick-eligibility clauses (max 3 uses all season,
+// no repeat from the immediately preceding round, no more than 2 uses within
+// either half of the season — rounds 1-13 or 14-26) — and why, so the
+// dropdown can show a reason next to each disabled option (mirrors the
+// eliminated/already-used suffixes on the Australia Cup LMS dropdown).
+function aleagueLmsIneligibleTeams(data, participant, targetRoundNum){
+  const usage = (data.history && data.history[participant]) || [];
+  const disabled = {};
+  if(!targetRoundNum) return disabled;
+
+  const halfStart = targetRoundNum <= 13 ? 1 : 14;
+  const halfEnd = targetRoundNum <= 13 ? 13 : 26;
+
+  data.teamList.forEach(team => {
+    const upper = team.toUpperCase();
+    const totalUsed = usage.filter(u => u.team === upper).length;
+    const usedLastRound = usage.some(u => u.roundNum === targetRoundNum - 1 && u.team === upper);
+    const usedInHalf = usage.filter(u => u.roundNum >= halfStart && u.roundNum <= halfEnd && u.team === upper).length;
+
+    if(totalUsed >= 3) disabled[team] = "used 3 times";
+    else if(usedLastRound) disabled[team] = "picked last round";
+    else if(usedInHalf >= 2) disabled[team] = "used twice this half";
+  });
+  return disabled;
+}
+
+function renderAleagueLmsTipTeamOptions(data){
+  const teamSel = document.getElementById('aleagueLmsTipsTeam');
+  if(!teamSel) return;
+  const participant = document.getElementById('aleagueLmsTipsParticipant').value;
+  const roundName = document.getElementById('aleagueLmsTipsRound').value;
+  const roundNum = aleagueLmsRoundNum(roundName);
+  const ineligible = aleagueLmsIneligibleTeams(data, participant, roundNum);
+
+  const previousValue = teamSel.value;
+  teamSel.innerHTML = `<option value="">Select a team…</option>` + data.teamList.map(t => {
+    const reason = ineligible[t];
+    const disabled = !!reason;
+    const suffix = reason ? ` (${reason})` : "";
+    return `<option value="${t}"${disabled ? " disabled" : ""}>${t}${suffix}</option>`;
+  }).join("");
+  if([...teamSel.options].some(o => o.value === previousValue)) teamSel.value = previousValue;
+}
+
+function renderAleagueLmsTipFixtures(data){
+  const el = document.getElementById('aleagueLmsTipsFixtureList');
+  if(!el) return;
+  const roundName = document.getElementById('aleagueLmsTipsRound').value;
+  const block = data.fixtureBlocks.find(b => normalizeLmsText(b.roundName) === normalizeLmsText(roundName));
+  if(!block || !block.fixtures.length){
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = `<div style="border:1px solid var(--line-light);border-radius:6px;padding:8px 10px;background:#fafaf8;">
+    ${block.fixtures.map(f => `<div style="display:flex;justify-content:space-between;gap:8px;font-family:'Barlow',sans-serif;font-size:12px;padding:3px 0;">
+      <span style="text-align:right;flex:1;">${f.home}</span><span style="color:#8a9990;flex-shrink:0;">v</span><span style="text-align:left;flex:1;">${f.away}</span>
+    </div>`).join("")}
+  </div>`;
+}
+
+function renderAleagueLmsTipDeadline(data){
+  const box = document.getElementById('aleagueLmsTipsDeadlineBox');
+  if(!box) return;
+  const roundName = document.getElementById('aleagueLmsTipsRound').value;
+  const deadlineRaw = data.deadlineMap[normalizeLmsText(roundName)] || "";
+  const deadlineDate = parseLmsDeadline(deadlineRaw);
+
+  box.innerHTML = `<div style="background:var(--pitch);color:#fff;border-radius:8px;padding:14px 18px;max-width:420px;margin-bottom:8px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.03em;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">${roundName} Deadline</div>
+    <div id="aleagueLmsCountdownTimer" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;">${deadlineDate ? "" : "Awaiting Schedule Release"}</div>
+    ${deadlineDate ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;opacity:0.8;margin-top:4px;">${formatAestDateTime(deadlineDate)} AEST</div>` : ""}
+  </div>`;
+  startAleagueLmsCountdown(deadlineDate);
+}
+
+let aleagueLmsCountdownInterval = null;
+function startAleagueLmsCountdown(deadlineDate){
+  if(aleagueLmsCountdownInterval) clearInterval(aleagueLmsCountdownInterval);
+  if(!deadlineDate) return;
+  function tick(){
+    const el = document.getElementById('aleagueLmsCountdownTimer');
+    if(!el){ clearInterval(aleagueLmsCountdownInterval); return; }
+    const diff = deadlineDate.getTime() - Date.now();
+    if(diff <= 0){
+      el.textContent = "Deadline passed";
+      clearInterval(aleagueLmsCountdownInterval);
+      return;
+    }
+    const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    el.textContent = `${d}d ${h}h ${m}m`;
+  }
+  tick();
+  aleagueLmsCountdownInterval = setInterval(tick, 1000);
+}
+
+function wireAleagueLmsTipsForm(data){
+  const roundSel = document.getElementById('aleagueLmsTipsRound');
+  const currentIdx = data.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(data.currentRoundLabel));
+  roundSel.selectedIndex = currentIdx !== -1 ? currentIdx : data.rounds.length - 1;
+
+  renderAleagueLmsTipTeamOptions(data);
+  renderAleagueLmsTipFixtures(data);
+  renderAleagueLmsTipDeadline(data);
+
+  document.getElementById('aleagueLmsTipsParticipant').addEventListener('change', ()=> renderAleagueLmsTipTeamOptions(data));
+  roundSel.addEventListener('change', ()=> {
+    renderAleagueLmsTipTeamOptions(data);
+    renderAleagueLmsTipFixtures(data);
+    renderAleagueLmsTipDeadline(data);
+  });
+  document.getElementById('aleagueLmsTipsForm').addEventListener('submit', submitAleagueLmsTip);
+}
+
+async function submitAleagueLmsTip(e){
+  e.preventDefault();
+  const statusEl = document.getElementById('aleagueLmsTipsSubmitStatus');
+  const participant = document.getElementById('aleagueLmsTipsParticipant').value;
+  const round = document.getElementById('aleagueLmsTipsRound').value;
+  const tip = document.getElementById('aleagueLmsTipsTeam').value.trim();
+
+  if(!participant){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Select your team name before submitting.";
+    return;
+  }
+  if(!tip){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Select a team before submitting.";
+    return;
+  }
+  if(!ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Submissions aren't configured yet.";
+    return;
+  }
+
+  statusEl.style.color = "#6b7c73";
+  statusEl.textContent = "Submitting…";
+  try{
+    await fetch(ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ round, teamName: participant, tip })
+    });
+    statusEl.style.color = "#166534";
+    statusEl.textContent = `Submitted: ${participant} tipped ${tip} for ${round}.`;
+  }catch(err){
+    console.error(err);
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Couldn't submit — check your connection and try again.";
+  }
+}
+
 function renderLmsCup(data){
   const el = document.getElementById('sideLeaguesContainer');
   if(!data.rounds.length){
@@ -7982,6 +8405,28 @@ async function loadSideLeague(leagueKey){
       console.error(err);
       el.className = "state-msg error";
       el.innerHTML = "Couldn't load Australia Cup LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(league.isAleagueLms){
+    try{
+      const res = await cachedFetch(sideLeagueCsvUrlFor(league));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const data = parseAleagueLms(rows);
+      const matchIdx = data.currentRoundLabel
+        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
+        : -1;
+      aleagueLmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1; // fall back to most recent round
+      renderAleagueLms(data);
+      sideLeagueDebug = { aleagueLms: data.debug };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load A-League LMS data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
