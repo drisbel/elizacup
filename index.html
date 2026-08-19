@@ -1790,11 +1790,11 @@ function getSearchablePages(){
     pages.push({ label: "FPL Cup", hash: "sideleagues=fpl:cup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
   }
   // Last Man Standing likewise has sub-tabs (Australia Cup/A-League) rather
-  // than separate pages — A-League only searchable once LMS_ALEAGUE_ENABLED
-  // flips true, matching its sub-tab visibility.
+  // than separate pages — each only searchable while its own Page Visibility
+  // toggle (admin.html) is on, matching its sub-tab visibility.
   if(SIDE_LEAGUES.some(l => l.key === "lms")){
-    pages.push({ label: "Australia Cup LMS", hash: "sideleagues=lms:auscup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
-    if(LMS_ALEAGUE_ENABLED) pages.push({ label: "A-League LMS", hash: "sideleagues=lms:aleague", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+    if(lmsHubSubTabVisible("auscup")) pages.push({ label: "Australia Cup LMS", hash: "sideleagues=lms:auscup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
+    if(lmsHubSubTabVisible("aleague")) pages.push({ label: "A-League LMS", hash: "sideleagues=lms:aleague", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
   }
   searchablePagesCache = pages;
   return pages;
@@ -5572,8 +5572,10 @@ function teamLogoSlug(name){
 // ---------- Placeholder team logo (solid colour + initials) ----------
 // Used as the fallback whenever a team doesn't have an uploaded logo/{slug}.png file
 // yet — a small generated SVG avatar instead of a shared generic image, so every team
-// without a logo still looks distinct. Colour is picked deterministically from the
-// team name (same team always gets the same colour) out of the site's brand palette.
+// without a logo still looks distinct. Colour comes from the team's actual division
+// (same colours as getDivisionColorByLabel/DIVISIONS), so a placeholder reads as "this
+// is a 3A team" at a glance rather than an arbitrary colour. Teams not found in any
+// division's roster (side-league-only names, FPL managers, etc.) fall back to black.
 function teamInitials(name){
   const words = (name||"").trim().split(/\s+/).filter(Boolean);
   if(words.length === 0) return "?";
@@ -5581,11 +5583,15 @@ function teamInitials(name){
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-const PLACEHOLDER_LOGO_COLORS = ["#000000", "#bc3532", "#990000", "#6aa84f", "#274e13", "#0a2f85"];
 function placeholderColorForTeam(name){
-  let hash = 0;
-  for(let i=0; i<(name||"").length; i++){ hash = (hash * 31 + name.charCodeAt(i)) >>> 0; }
-  return PLACEHOLDER_LOGO_COLORS[hash % PLACEHOLDER_LOGO_COLORS.length];
+  // Fire-and-forget: if roddyEntries isn't loaded yet, kick off the same
+  // lazy fetch the search bar uses. Won't help resolve *this* call in time
+  // (it's synchronous), but means the next placeholder lookup — and this
+  // team's own logo next time it 404s — gets the real division colour
+  // instead of black.
+  if(roddyEntries.length === 0 && !teamSearchFetchPromise) ensureTeamSearchData();
+  const entry = roddyEntries.find(e => (e.team||"").toUpperCase() === (name||"").toUpperCase());
+  return entry ? getDivisionColorByLabel(entry.division) : "#000000";
 }
 
 function teamPlaceholderLogoDataUri(name){
@@ -6385,10 +6391,6 @@ async function loadHistorySeason(seasonKey){
 // the sheet, then the header row below it, then read each column by matching its own
 // header label (rather than trusting fixed positions), since exact column layout on
 // this sheet hasn't been verified against live data yet.
-// Flip to true once the A-League LMS competition is ready to go live — hides/
-// shows just that one sub-tab within the Last Man Standing page (Australia
-// Cup stays visible either way, since it's the currently-running competition).
-const LMS_ALEAGUE_ENABLED = false;
 
 const SIDE_LEAGUES = [
   { key: "fpl", label: "FPL", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1845986614" },
@@ -6398,10 +6400,10 @@ const SIDE_LEAGUES = [
   // Last Man Standing: one nav entry covering both competitions, toggled via
   // sub-tabs like FPL's Premier/Championship/Roddy/Cup — see lmsGids below and
   // the isLms branch in loadSideLeague. Both live on this same spreadsheet,
-  // different tabs. Australia Cup is the currently-running competition; the
-  // A-League sub-tab is built but held back via LMS_ALEAGUE_ENABLED below
-  // until the season's ready to go — flip that one flag when it's time, no
-  // need to touch the nav/hidden mechanics for it.
+  // different tabs. Each sub-tab's visibility is controlled via the Page
+  // Visibility panel in admin.html (ids "sideleagues=lms:auscup" /
+  // "sideleagues=lms:aleague") rather than a hardcoded flag, so no code
+  // change is needed to show/hide either one — see lmsHubSubTabVisible().
   { key: "lms", label: "Last Man Standing", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk",
     lmsGids: { auscup: "590890124", aleague: "922424054" }, isLms: true },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
@@ -8364,15 +8366,29 @@ async function submitAleagueLmsTip(e){
 // client-side rather than separate nav items. Unlike FPL's sub-tabs (which
 // all read different blocks of the same sheet gid), each LMS sub-tab is a
 // wholly separate sheet tab/gid with its own parser — see lmsGids on the
-// SIDE_LEAGUES entry and LMS_ALEAGUE_ENABLED above.
+// SIDE_LEAGUES entry.
 let lmsHubActiveTab = "auscup"; // "auscup" | "aleague"
 let lmsHubData = { auscup: null, aleague: null }; // per-tab parsed-data cache, cleared on each page (re)load so Refresh still works
+
+// Whether a given LMS sub-tab should show at all, per the Page Visibility
+// panel in admin.html — ids "sideleagues=lms:auscup" / "sideleagues=lms:aleague".
+// Same convention as every other page-visibility.json entry: absent/true
+// means visible, explicit false means hidden. Because it's "visible by
+// default", a brand-new sub-tab shows immediately unless someone actively
+// unchecks it in admin — worth doing that for A-League until its season's
+// ready to go live, since there's no separate hardcoded flag to hold it back
+// anymore.
+function lmsHubSubTabVisible(tabKey){
+  const id = "sideleagues=lms:" + tabKey;
+  return pageVisibilityMap[id] !== false;
+}
 
 function renderLmsHubShell(league){
   const el = document.getElementById('sideLeaguesContainer');
   el.className = "";
-  const tabs = [{ key: "auscup", label: "Australia Cup" }];
-  if(LMS_ALEAGUE_ENABLED) tabs.push({ key: "aleague", label: "A-League" });
+  const tabs = [];
+  if(lmsHubSubTabVisible("auscup")) tabs.push({ key: "auscup", label: "Australia Cup" });
+  if(lmsHubSubTabVisible("aleague")) tabs.push({ key: "aleague", label: "A-League" });
 
   const toggleHtml = tabs.length > 1
     ? `<div class="round-tabs" id="lmsHubToggle">
@@ -8517,6 +8533,9 @@ async function loadSideLeague(leagueKey){
   // than popping in after a delay — cached after the first call, so this
   // only costs a real fetch once per session.
   await loadSideLeaguesHubData();
+  // Same reasoning for the LMS sub-tab visibility check (lmsHubSubTabVisible)
+  // — needed before renderLmsHubShell decides which tabs to draw.
+  await loadPageVisibilityData();
 
   if(league.isHonourBoard){
     try{
@@ -8534,7 +8553,7 @@ async function loadSideLeague(leagueKey){
 
   if(league.isLms){
     const validLmsSubTabs = new Set(["auscup", "aleague"]);
-    lmsHubActiveTab = (pendingSideLeagueSubTab && validLmsSubTabs.has(pendingSideLeagueSubTab) && (pendingSideLeagueSubTab !== "aleague" || LMS_ALEAGUE_ENABLED))
+    lmsHubActiveTab = (pendingSideLeagueSubTab && validLmsSubTabs.has(pendingSideLeagueSubTab) && lmsHubSubTabVisible(pendingSideLeagueSubTab))
       ? pendingSideLeagueSubTab
       : "auscup";
     pendingSideLeagueSubTab = null;
