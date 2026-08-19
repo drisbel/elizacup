@@ -10,8 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
-    --pitch:#28427c;
-    --pitch-2:#3a5a9e;
+    --pitch:#000000;
+    --pitch-2:#404040;
     --amber:#ffdd00;
     --ink:#1c2733;
     --muted:#6b7686;
@@ -428,6 +428,54 @@
   .wheel-pick-inline .pick-body .name{
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
   }
+
+  /* ---------- Exports section (shareable graphics, html2canvas) ---------- */
+  /* Card is a fixed pixel width rather than percentage/responsive — it's the
+     literal html2canvas capture target, so its on-screen size is the
+     exported image's size (before the 2x scale factor). 640px gives a clean
+     square-ish result that works fine on socials without being enormous. */
+  .export-card{
+    width:640px;max-width:100%;background:#fff;border:1px solid var(--line);
+    font-family:'Barlow',sans-serif;overflow:hidden;
+  }
+  .export-card-header{
+    background:#000;color:#fff;display:flex;align-items:center;gap:16px;
+    padding:20px 26px;
+  }
+  .export-card-header img{height:52px;width:auto;object-fit:contain;flex-shrink:0;}
+  .export-card-header-text{min-width:0;}
+  .export-card-kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:2px;}
+  .export-card-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .export-card-body{padding:22px 26px 26px;}
+  .export-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .export-table th{
+    text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.03em;
+    text-transform:uppercase;color:#6b7686;padding:0 6px 8px;border-bottom:2px solid #000;
+  }
+  .export-table td{padding:7px 6px;border-bottom:1px solid var(--line);}
+  .export-table td.num, .export-table th.num{text-align:center;width:34px;}
+  .export-table tr:last-child td{border-bottom:none;}
+  .export-table .pos{font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#6b7686;}
+  .export-table .team-cell{display:flex;align-items:center;gap:8px;}
+  .export-table .team-cell img{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
+  .export-table .pts{font-weight:700;}
+  .export-fixture-row{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    padding:12px 4px;border-bottom:1px solid var(--line);
+  }
+  .export-fixture-row:last-child{border-bottom:none;}
+  .export-fixture-team{display:flex;align-items:center;gap:8px;width:220px;font-size:14px;font-weight:600;}
+  .export-fixture-team img{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
+  .export-fixture-team.away{flex-direction:row-reverse;text-align:right;}
+  .export-fixture-score{
+    font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
+    min-width:70px;text-align:center;flex-shrink:0;
+  }
+  .export-fixture-score.pending{font-size:13px;font-weight:600;color:#6b7686;text-transform:uppercase;letter-spacing:.03em;}
+  .export-card-footer{
+    padding:12px 26px;text-align:center;font-size:11px;letter-spacing:.04em;
+    text-transform:uppercase;color:#6b7686;border-top:1px solid var(--line);
+  }
   .draw-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line);border-radius:6px;
@@ -484,6 +532,7 @@
       <button type="button" class="admin-section-btn" data-section="sideleagues">Side Leagues Hub</button>
       <button type="button" class="admin-section-btn" data-section="wmd">26/27 Leagues</button>
       <button type="button" class="admin-section-btn" data-section="draw">Fixture Draw</button>
+      <button type="button" class="admin-section-btn" data-section="exports">Exports</button>
     </div>
 
     <div class="admin-section active" id="section-pagevisibility">
@@ -874,8 +923,8 @@
           <div class="hint" style="display:block;margin-bottom:8px;">Choose 2 or 3 colours to alternate around the wheel. Use the swatch or type a hex code directly.</div>
           <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
             <span style="display:flex;align-items:center;gap:6px;">
-              <input type="color" id="wheelCustomColor1" value="#28427c">
-              <input type="text" id="wheelCustomColor1Hex" class="wheel-hex-input" value="#28427c" maxlength="7" placeholder="#28427c">
+              <input type="color" id="wheelCustomColor1" value="#000000">
+              <input type="text" id="wheelCustomColor1Hex" class="wheel-hex-input" value="#000000" maxlength="7" placeholder="#000000">
             </span>
             <span style="display:flex;align-items:center;gap:6px;">
               <input type="color" id="wheelCustomColor2" value="#ffdd00">
@@ -961,6 +1010,47 @@
       </div>
 
       <div id="drawFixtureList" style="margin-top:18px;"></div>
+    </div>
+
+    <div class="admin-section" id="section-exports">
+      <h2>Exports</h2>
+      <p class="hint">Generates a shareable graphic — pulls the sheet data itself and renders its own version for the image, so nothing needs to change on the public site pages. Same html2canvas approach as the wheel's Complete Draw export.</p>
+
+      <div class="field" style="max-width:320px;">
+        <label for="exportCompetition">Competition</label>
+        <select id="exportCompetition">
+          <option value="fpl-premier">FPL &mdash; Premier League</option>
+        </select>
+        <div class="hint">More competitions (divisions, other side leagues) will be added here later.</div>
+      </div>
+
+      <div class="field" style="max-width:320px;">
+        <label for="exportContentType">Content</label>
+        <select id="exportContentType">
+          <option value="table">Standings Table</option>
+          <option value="results">Round Results</option>
+        </select>
+      </div>
+
+      <div class="field" id="exportRoundField" style="max-width:320px;display:none;">
+        <label for="exportRound">Round</label>
+        <select id="exportRound"></select>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="exportLoadBtn">Load Data</button>
+      <span id="exportLoadStatus" class="hint" style="margin-left:10px;"></span>
+
+      <div id="exportPreviewWrap" style="margin-top:22px;display:none;">
+        <div class="export-card" id="exportPreviewTarget"></div>
+        <div style="margin-top:14px;">
+          <button type="button" class="btn btn-primary" id="exportImageBtn">Export as Image</button>
+        </div>
+      </div>
+
+      <details style="margin-top:22px;">
+        <summary style="cursor:pointer;font-family:'Barlow',sans-serif;font-size:13px;color:var(--muted);">Debug</summary>
+        <pre id="exportDebugOut" style="font-size:11px;background:#f5f7fa;padding:10px;border-radius:6px;overflow:auto;max-height:300px;white-space:pre-wrap;"></pre>
+      </details>
     </div>
 
     </div>
@@ -3167,7 +3257,7 @@ async function renderWheelMatchupInfo(teamA, teamB){
 // Fallback palette used only to seed default colours in Per Team mode (and
 // as a last-resort fallback there) — the old Theme mode's "Brand" palette,
 // kept since Theme mode itself was removed but this is still handy internally.
-const WHEEL_DEFAULT_PALETTE = ["#28427c","#ffdd00","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"];
+const WHEEL_DEFAULT_PALETTE = ["#000000","#ffdd00","#bc3532","#990000","#6aa84f","#274e13","#0a2f85","#7a4d99","#c2703d","#1c6b6b"];
 let wheelSize = 340;
 let wheelTitle = "";
 let wheelPlainMode = false;
@@ -3215,7 +3305,7 @@ function updateWheelCenterLogo(){
 //               transitions, since it'll just start reading the new gid.
 //  "per-team" — an individual colour chosen per team, kept in wheelPerTeamColors
 let wheelColorMode = "custom";
-let wheelCustomColors = ["#28427c", "#ffdd00", "#6aa84f"];
+let wheelCustomColors = ["#000000", "#ffdd00", "#6aa84f"];
 let wheelCustomUse3 = false;
 let wheelPerTeamColors = {}; // { teamName: "#hex" }
 
@@ -4008,6 +4098,204 @@ document.addEventListener("fullscreenchange", () => {
 loadWheelSettings(); // restore last-used title/colours/logo before the initial render below
 drawRenderWheel(); // wheel is the only draw mode now, so render its empty-state immediately
 
+// ---------- Exports (shareable graphics) ----------
+// Independently fetches + parses each competition's sheet and renders its
+// own purpose-built graphic here, rather than screenshotting the public site
+// — admin.html can't reach into index.html's live DOM (separate page). Same
+// html2canvas export mechanism as the wheel's Complete Draw button. Starting
+// with FPL Premier League only; more competitions (divisions, other side
+// leagues) can be added to the Competition dropdown later using the same
+// pattern once this is confirmed working.
+function cell(row, i){ return (row[i] || "").toString().trim(); }
+
+const EXPORT_FPL_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
+const EXPORT_FPL_GID = "1845986614";
+// Same column map as index.html's FPL_COL — kept as its own local constant
+// rather than shared between the two files, since they're separate pages.
+const EXPORT_FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11 };
+
+let exportData = null; // last-loaded competition's table + fixtures, replaced on each Load Data click
+
+// Trimmed-down port of index.html's parseFplTable — same title-cell-search +
+// fixed-offset-from-header approach, just without the verbose debug payload
+// (kept a lighter one here since this only ever needs to report success/failure
+// while building the export, not diagnose a brand-new sheet layout).
+function exportParseFplTable(rows, titleText){
+  let titleRow = -1;
+  for(let r=0; r<rows.length && titleRow===-1; r++){
+    const row = rows[r]||[];
+    for(let c=0; c<row.length; c++){
+      if((row[c]||"").toString().trim().toUpperCase() === titleText){
+        const nextRow = rows[r+1]||[];
+        const looksLikeHeader = nextRow.some(v => (v||"").toString().trim().toUpperCase() === "TEAM");
+        if(looksLikeHeader){ titleRow = r; break; }
+      }
+    }
+  }
+  if(titleRow === -1) return { teams: [], debug: { titleFound: false } };
+  const headerRow = titleRow + 1;
+  const cols = EXPORT_FPL_COL;
+  const teams = [];
+  for(let dr=headerRow+1; dr<rows.length; dr++){
+    const pos = cell(rows[dr]||[], cols.pos);
+    if(!pos) break;
+    const wVal = cell(rows[dr]||[],cols.w), dVal = cell(rows[dr]||[],cols.d);
+    const ptsRaw = cell(rows[dr]||[],cols.pts);
+    const ptsCalc = (parseInt(wVal,10)||0) * 3 + (parseInt(dVal,10)||0);
+    teams.push({
+      pos, team: cell(rows[dr]||[],cols.team),
+      pts: ptsRaw !== "" ? ptsRaw : ptsCalc,
+      w: wVal, d: dVal, l: cell(rows[dr]||[],cols.l)
+    });
+  }
+  return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, teamsFound: teams.length, firstTeam: teams[0]||null } };
+}
+
+// Trimmed-down port of index.html's parseFplFixtures for the Premier League
+// block specifically (base column AH=33 — same as index.html's premierFx).
+function exportParseFplFixtures(rows, base){
+  const gameweeks = [];
+  let current = null;
+  for(let r=0; r<rows.length; r++){
+    const c0 = cell(rows[r]||[], base);
+    if(/^GW\s*\d+/i.test(c0)){
+      current = { name: c0.toUpperCase().replace(/\s+/g,' ').trim(), fixtures: [] };
+      gameweeks.push(current);
+      continue;
+    }
+    if(!current) continue;
+    const home = cell(rows[r]||[], base);
+    const homeScore = cell(rows[r]||[], base+1);
+    const awayScore = cell(rows[r]||[], base+2);
+    const away = cell(rows[r]||[], base+3);
+    if(home && away) current.fixtures.push({ home, homeScore, awayScore, away });
+  }
+  return { gameweeks };
+}
+
+async function exportLoadData(){
+  const statusEl = $("exportLoadStatus");
+  const btn = $("exportLoadBtn");
+  const competition = $("exportCompetition").value;
+  btn.disabled = true;
+  statusEl.textContent = "Loading…";
+  $("exportPreviewWrap").style.display = "none";
+
+  try{
+    if(competition === "fpl-premier"){
+      const url = `https://docs.google.com/spreadsheets/d/${EXPORT_FPL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_FPL_GID}&cachebust=` + Date.now();
+      const res = await fetch(url);
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
+      const table = exportParseFplTable(rows, "ELIZA PREMIER LEAGUE");
+      const fixtures = exportParseFplFixtures(rows, 33); // AH, same block index.html reads for Premier fixtures
+      exportData = { competition, label: "Eliza Premier League", table, fixtures };
+
+      $("exportDebugOut").textContent = JSON.stringify({
+        table: table.debug,
+        gameweeksFound: fixtures.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length}))
+      }, null, 2);
+
+      const roundSel = $("exportRound");
+      roundSel.innerHTML = fixtures.gameweeks.map(g => `<option value="${g.name}">${g.name}</option>`).join("");
+      // Default to the most recent gameweek with any scores entered — falls
+      // back to the first gameweek pre-season, when nothing's been played yet.
+      const reversedIdx = [...fixtures.gameweeks].reverse().findIndex(g => g.fixtures.some(f => f.homeScore !== "" || f.awayScore !== ""));
+      roundSel.selectedIndex = reversedIdx !== -1 ? (fixtures.gameweeks.length - 1 - reversedIdx) : 0;
+
+      statusEl.textContent = `Loaded — ${table.teams.length} teams, ${fixtures.gameweeks.length} gameweeks found.`;
+      if(!table.teams.length) statusEl.textContent += " No teams found — check Debug below.";
+      exportRenderPreview();
+    }
+  }catch(err){
+    console.error("Export load failed", err);
+    statusEl.textContent = "Couldn't load: " + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function exportRenderPreview(){
+  if(!exportData) return;
+  const contentType = $("exportContentType").value;
+  const target = $("exportPreviewTarget");
+  $("exportPreviewWrap").style.display = "block";
+
+  if(contentType === "table"){
+    const rowsHtml = exportData.table.teams.map(t => `
+      <tr>
+        <td class="num pos">${t.pos}</td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${teamLogoOnErrorAttr(t.team)}">${t.team}</div></td>
+        <td class="num">${t.w||0}</td>
+        <td class="num">${t.d||0}</td>
+        <td class="num">${t.l||0}</td>
+        <td class="num pts">${t.pts||0}</td>
+      </tr>`).join("");
+    target.innerHTML = `
+      <div class="export-card-header">
+        <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+        <div class="export-card-header-text">
+          <div class="export-card-kicker">Standings</div>
+          <div class="export-card-title">${exportData.label}</div>
+        </div>
+      </div>
+      <div class="export-card-body">
+        <table class="export-table">
+          <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>
+          <tbody>${rowsHtml || `<tr><td colspan="6" class="hint">No teams found.</td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="export-card-footer">elizacup.com</div>`;
+  } else {
+    const roundName = $("exportRound").value;
+    const gw = exportData.fixtures.gameweeks.find(g => g.name === roundName);
+    const fixturesHtml = (gw ? gw.fixtures : []).map(f => {
+      const hasScore = f.homeScore !== "" || f.awayScore !== "";
+      const scoreHtml = hasScore ? `${f.homeScore || 0} &ndash; ${f.awayScore || 0}` : `vs`;
+      return `<div class="export-fixture-row">
+        <div class="export-fixture-team"><img src="logo/${teamLogoSlug(f.home)}.png" alt="" onerror="${teamLogoOnErrorAttr(f.home)}">${f.home}</div>
+        <div class="export-fixture-score${hasScore ? '' : ' pending'}">${scoreHtml}</div>
+        <div class="export-fixture-team away"><img src="logo/${teamLogoSlug(f.away)}.png" alt="" onerror="${teamLogoOnErrorAttr(f.away)}">${f.away}</div>
+      </div>`;
+    }).join("");
+    target.innerHTML = `
+      <div class="export-card-header">
+        <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+        <div class="export-card-header-text">
+          <div class="export-card-kicker">${exportData.label}</div>
+          <div class="export-card-title">${roundName || "Round Results"}</div>
+        </div>
+      </div>
+      <div class="export-card-body">${fixturesHtml || `<p class="hint">No fixtures found for this round.</p>`}</div>
+      <div class="export-card-footer">elizacup.com</div>`;
+  }
+}
+
+function exportImage(){
+  const btn = $("exportImageBtn");
+  const target = $("exportPreviewTarget");
+  if(!btn || !target || typeof html2canvas !== "function") return;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Exporting…";
+  html2canvas(target, { backgroundColor: "#ffffff", scale: 2, useCORS: true }).then(canvas => {
+    const label = (exportData && exportData.label ? exportData.label : "export").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-+|-+$)/g,"");
+    const contentType = $("exportContentType").value;
+    const suffix = contentType === "table" ? "table" : ($("exportRound").value || "results").toLowerCase().replace(/[^a-z0-9]+/g,"-");
+    const link = document.createElement("a");
+    link.download = `${label}-${suffix}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }).catch(err => {
+    console.error("Export image failed", err);
+    alert("Couldn't export the image: " + err.message);
+  }).finally(() => {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  });
+}
+
 // ---------- Admin section switcher ----------
 document.querySelectorAll(".admin-section-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -4023,6 +4311,13 @@ $("saveSlhBtn").addEventListener("click", saveSlhCard);
 $("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
 $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
+$("exportLoadBtn").addEventListener("click", exportLoadData);
+$("exportContentType").addEventListener("change", () => {
+  $("exportRoundField").style.display = $("exportContentType").value === "results" ? "block" : "none";
+  if(exportData) exportRenderPreview();
+});
+$("exportRound").addEventListener("change", exportRenderPreview);
+$("exportImageBtn").addEventListener("click", exportImage);
 $("saveWmdBtn").addEventListener("click", saveWmdEntry);
 $("wmdImportBtn").addEventListener("click", importWmdFromPaste);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
