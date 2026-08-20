@@ -5599,7 +5599,12 @@ function teamPlaceholderLogoDataUri(name){
   const bg = placeholderColorForTeam(name);
   // No single quotes anywhere in this SVG — it gets assigned via a single-quoted JS
   // string inside an onerror="" HTML attribute, so an unescaped ' would break it.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
+  // Explicit width/height (not just viewBox) so the SVG has a deterministic
+  // intrinsic size — without this, some renderers (notably html2canvas, used
+  // by admin.html's wheel export and Exports section) fall back to the
+  // CSS-default 300x150 box for an unsized SVG and only show the top-left
+  // sliver of it, ignoring the img's own CSS width/height/object-fit entirely.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">` +
     `<rect width="100" height="100" rx="16" fill="${bg}"/>` +
     `<text x="50" y="54" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#ffffff">${initials}</text>` +
     `</svg>`;

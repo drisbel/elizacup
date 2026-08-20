@@ -2922,7 +2922,12 @@ function placeholderColorForTeam(name){
 function teamPlaceholderLogoDataUri(name){
   const initials = teamInitials(name);
   const bg = placeholderColorForTeam(name);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
+  // Explicit width/height (not just viewBox) so the SVG has a deterministic
+  // intrinsic size — without this, some renderers (notably html2canvas,
+  // used by the Exports section below) fall back to the CSS-default 300x150
+  // box for an unsized SVG and only show the top-left sliver of it, ignoring
+  // the img's own CSS width/height/object-fit entirely.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">` +
     `<rect width="100" height="100" rx="16" fill="${bg}"/>` +
     `<text x="50" y="54" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#ffffff">${initials}</text>` +
     `</svg>`;
@@ -4114,6 +4119,45 @@ const EXPORT_FPL_GID = "1845986614";
 // rather than shared between the two files, since they're separate pages.
 const EXPORT_FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11 };
 
+// FPL managers pick their own fantasy team name (e.g. "Le Fee & Foo"), which
+// isn't a real Eliza Cup club and has no logo file of its own — same mapping
+// sheet/columns as index.html's SIDE_LEAGUE_TEAM_MAP_* / resolveSideLeagueTeamName,
+// ported here so logo lookups resolve to the actual club crest while the
+// manager's chosen name is still what's displayed as text.
+const EXPORT_TEAM_MAP_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
+const EXPORT_TEAM_MAP_GID = "1831804785";
+const EXPORT_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
+const EXPORT_TEAM_MAP_FPL_COL_LABEL = "FPL"; // header text of the column to use, once found
+
+async function exportLoadTeamMap(){
+  const url = `https://docs.google.com/spreadsheets/d/${EXPORT_TEAM_MAP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_TEAM_MAP_GID}&cachebust=` + Date.now();
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
+  const map = {};
+  if(!rows.length) return map;
+  const headerRow = rows[0];
+  let fplCol = -1;
+  for(let c = 2; c < headerRow.length; c++){
+    if(cell(headerRow, c).toUpperCase() === EXPORT_TEAM_MAP_FPL_COL_LABEL) { fplCol = c; break; }
+  }
+  if(fplCol === -1) return map;
+  for(let r = 1; r < rows.length; r++){
+    const elizaTeam = cell(rows[r], EXPORT_TEAM_MAP_NAME_COL);
+    const fplName = cell(rows[r], fplCol);
+    if(elizaTeam && fplName) map[fplName.toUpperCase()] = elizaTeam;
+  }
+  return map;
+}
+
+// Resolves a manager's fantasy team name to the real Eliza Cup club name for
+// logo purposes only — falls back to the name as-is if there's no match
+// (e.g. mapping sheet not loaded yet, or a genuinely new/unmapped entry).
+function exportResolveTeamName(name){
+  const map = (exportData && exportData.teamMap) || {};
+  return map[(name||"").toUpperCase()] || name;
+}
+
 let exportData = null; // last-loaded competition's table + fixtures, replaced on each Load Data click
 
 // Trimmed-down port of index.html's parseFplTable — same title-cell-search +
@@ -4183,18 +4227,21 @@ async function exportLoadData(){
 
   try{
     if(competition === "fpl-premier"){
-      const url = `https://docs.google.com/spreadsheets/d/${EXPORT_FPL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_FPL_GID}&cachebust=` + Date.now();
-      const res = await fetch(url);
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
+      const [csvRes, teamMap] = await Promise.all([
+        fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_FPL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_FPL_GID}&cachebust=` + Date.now()),
+        exportLoadTeamMap().catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
+      ]);
+      if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
+      const csvText = await csvRes.text();
       const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
       const table = exportParseFplTable(rows, "ELIZA PREMIER LEAGUE");
       const fixtures = exportParseFplFixtures(rows, 33); // AH, same block index.html reads for Premier fixtures
-      exportData = { competition, label: "Eliza Premier League", table, fixtures };
+      exportData = { competition, label: "Eliza Premier League", table, fixtures, teamMap };
 
       $("exportDebugOut").textContent = JSON.stringify({
         table: table.debug,
-        gameweeksFound: fixtures.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length}))
+        gameweeksFound: fixtures.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})),
+        teamMapEntriesFound: Object.keys(teamMap).length
       }, null, 2);
 
       const roundSel = $("exportRound");
@@ -4206,6 +4253,7 @@ async function exportLoadData(){
 
       statusEl.textContent = `Loaded — ${table.teams.length} teams, ${fixtures.gameweeks.length} gameweeks found.`;
       if(!table.teams.length) statusEl.textContent += " No teams found — check Debug below.";
+      if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks. Check Debug below.";
       exportRenderPreview();
     }
   }catch(err){
@@ -4223,15 +4271,18 @@ function exportRenderPreview(){
   $("exportPreviewWrap").style.display = "block";
 
   if(contentType === "table"){
-    const rowsHtml = exportData.table.teams.map(t => `
+    const rowsHtml = exportData.table.teams.map(t => {
+      const logoName = exportResolveTeamName(t.team);
+      return `
       <tr>
         <td class="num pos">${t.pos}</td>
-        <td><div class="team-cell"><img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${teamLogoOnErrorAttr(t.team)}">${t.team}</div></td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
         <td class="num">${t.w||0}</td>
         <td class="num">${t.d||0}</td>
         <td class="num">${t.l||0}</td>
         <td class="num pts">${t.pts||0}</td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
     target.innerHTML = `
       <div class="export-card-header">
         <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
@@ -4253,10 +4304,12 @@ function exportRenderPreview(){
     const fixturesHtml = (gw ? gw.fixtures : []).map(f => {
       const hasScore = f.homeScore !== "" || f.awayScore !== "";
       const scoreHtml = hasScore ? `${f.homeScore || 0} &ndash; ${f.awayScore || 0}` : `vs`;
+      const homeLogoName = exportResolveTeamName(f.home);
+      const awayLogoName = exportResolveTeamName(f.away);
       return `<div class="export-fixture-row">
-        <div class="export-fixture-team"><img src="logo/${teamLogoSlug(f.home)}.png" alt="" onerror="${teamLogoOnErrorAttr(f.home)}">${f.home}</div>
+        <div class="export-fixture-team"><img src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(homeLogoName)}">${f.home}</div>
         <div class="export-fixture-score${hasScore ? '' : ' pending'}">${scoreHtml}</div>
-        <div class="export-fixture-team away"><img src="logo/${teamLogoSlug(f.away)}.png" alt="" onerror="${teamLogoOnErrorAttr(f.away)}">${f.away}</div>
+        <div class="export-fixture-team away"><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}">${f.away}</div>
       </div>`;
     }).join("");
     target.innerHTML = `
