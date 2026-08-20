@@ -435,7 +435,7 @@
      exported image's size (before the 2x scale factor). 640px gives a clean
      square-ish result that works fine on socials without being enormous. */
   .export-card{
-    width:640px;max-width:100%;background:#fff;border:1px solid var(--line);
+    width:760px;max-width:100%;background:#fff;border:1px solid var(--line);
     font-family:'Barlow',sans-serif;overflow:hidden;
   }
   .export-card-header{
@@ -459,6 +459,7 @@
   .export-table .team-cell{display:flex;align-items:center;gap:8px;}
   .export-table .team-cell img{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
   .export-table .pts{font-weight:700;}
+  .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;}
   .export-fixture-row{
     display:flex;align-items:center;justify-content:center;gap:14px;
     padding:12px 4px;border-bottom:1px solid var(--line);
@@ -476,6 +477,25 @@
     padding:12px 26px;text-align:center;font-size:11px;letter-spacing:.04em;
     text-transform:uppercase;color:#6b7686;border-top:1px solid var(--line);
   }
+  /* Status-tier row highlighting (Winner/Promoted/Playoff/Relegated) — same
+     colours as histDivStatusStyle in index.html, which reads this straight
+     from the sheet's own status column rather than a guessed position cutoff. */
+  .export-table tr.status-winner{background:rgba(20,83,45,0.20);}
+  .export-table tr.status-winner td:first-child{border-left:4px solid #14532D;}
+  .export-table tr.status-promoted{background:rgba(74,222,128,0.20);}
+  .export-table tr.status-promoted td:first-child{border-left:4px solid #4ADE80;}
+  .export-table tr.status-playoff{background:rgba(234,179,8,0.18);}
+  .export-table tr.status-playoff td:first-child{border-left:4px solid #EAB308;}
+  .export-table tr.status-relegated{background:rgba(188,53,50,0.12);}
+  .export-table tr.status-relegated td:first-child{border-left:4px solid #B93C32;}
+  .export-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:11px;color:#6b7686;}
+  .export-legend span{display:flex;align-items:center;gap:5px;}
+  .export-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  /* Round Results winner/loser highlighting — same convention as the public
+     site's fx-win/fx-lose fixture cards, just bolder for a shareable graphic. */
+  .export-fixture-team.fx-win{color:#166534;font-weight:700;}
+  .export-fixture-team.fx-lose{color:#8a8a8a;}
+  .export-fixture-score.fx-drawn{color:#B8930A;}
   .draw-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line);border-radius:6px;
@@ -1022,16 +1042,23 @@
         <label for="exportCompetition">Competition</label>
         <select id="exportCompetition">
           <option value="fpl-premier">FPL &mdash; Premier League</option>
+          <option value="fpl-championship">FPL &mdash; Championship</option>
+          <option value="fpl-roddy">FPL &mdash; Roddy</option>
+          <option value="fpl-cup">FPL &mdash; Cup</option>
+          <option value="afl">AFL Supercoach</option>
+          <option value="nrl">NRL Supercoach</option>
+          <option value="eplsc">EPL Supercoach</option>
         </select>
-        <div class="hint">More competitions (divisions, other side leagues) will be added here later.</div>
+        <div class="hint">More competitions (divisions) can be added here later.</div>
       </div>
 
-      <div class="field" style="max-width:320px;">
+      <div class="field" id="exportContentTypeField" style="max-width:320px;">
         <label for="exportContentType">Content</label>
         <select id="exportContentType">
           <option value="table">Standings Table</option>
           <option value="results">Round Results</option>
         </select>
+        <div class="hint" id="exportRoddyHint" style="display:none;">Roddy is a single leaderboard, so there's no Content choice for it.</div>
       </div>
 
       <div class="field" id="exportRoundField" style="max-width:320px;display:none;">
@@ -4107,29 +4134,49 @@ drawRenderWheel(); // wheel is the only draw mode now, so render its empty-state
 // Independently fetches + parses each competition's sheet and renders its
 // own purpose-built graphic here, rather than screenshotting the public site
 // — admin.html can't reach into index.html's live DOM (separate page). Same
-// html2canvas export mechanism as the wheel's Complete Draw button. Starting
-// with FPL Premier League only; more competitions (divisions, other side
-// leagues) can be added to the Competition dropdown later using the same
-// pattern once this is confirmed working.
+// html2canvas export mechanism as the wheel's Complete Draw button. Config-
+// driven (EXPORT_COMPETITIONS below) so new competitions are just a new
+// config entry — FPL Premier/Championship and EPL Supercoach all share the
+// exact same underlying sheet layout/parsers as index.html (parseFplTable/
+// parseFplFixtures cover all three there too), just with different title
+// text, fixture columns, and round-label formats.
 function cell(row, i){ return (row[i] || "").toString().trim(); }
 
-const EXPORT_FPL_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
-const EXPORT_FPL_GID = "1845986614";
+const EXPORT_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk"; // shared by every competition below
 // Same column map as index.html's FPL_COL — kept as its own local constant
 // rather than shared between the two files, since they're separate pages.
-const EXPORT_FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11 };
+const EXPORT_FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, next:24, status:29 };
+const EXPORT_GW_RE = /^GW\s*\d+/i;
+// Same as index.html's AFL_ROUND_RE — Supercoach fixtures use round labels
+// ("ROUND 1", "Quarter Final", etc.) rather than FPL's "GW1" gameweek labels.
+const EXPORT_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
 
-// FPL managers pick their own fantasy team name (e.g. "Le Fee & Foo"), which
-// isn't a real Eliza Cup club and has no logo file of its own — same mapping
-// sheet/columns as index.html's SIDE_LEAGUE_TEAM_MAP_* / resolveSideLeagueTeamName,
-// ported here so logo lookups resolve to the actual club crest while the
-// manager's chosen name is still what's displayed as text.
+const EXPORT_COMPETITIONS = {
+  "fpl-premier": { label: "Eliza Premier League", gid: "1845986614", titleText: "ELIZA PREMIER LEAGUE", fixturesBase: 33, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL" },
+  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL" },
+  "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL" },
+  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL" },
+  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL" },
+  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH" }
+};
+// FPL Roddy isn't a standings+fixtures competition like the others — it's a
+// single leaderboard (same shape as index.html's parseFplRoddy/fplRoddyTableHtml)
+// — handled as its own branch below rather than through EXPORT_COMPETITIONS.
+const EXPORT_RODDY_GID = "638425443";
+
+// FPL/Supercoach managers pick their own fantasy team name (e.g. "Le Fee &
+// Foo"), which isn't a real Eliza Cup club and has no logo file of its own —
+// same mapping sheet/columns as index.html's SIDE_LEAGUE_TEAM_MAP_* /
+// resolveSideLeagueTeamName, ported here so logo lookups resolve to the
+// actual club crest while the manager's chosen name is still what's
+// displayed as text. Each competition has its own column on that sheet
+// (mapColumnLabel above) — same one index.html's SIDE_LEAGUE_MAP_COLUMN_LABEL
+// uses per side league key.
 const EXPORT_TEAM_MAP_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
 const EXPORT_TEAM_MAP_GID = "1831804785";
 const EXPORT_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
-const EXPORT_TEAM_MAP_FPL_COL_LABEL = "FPL"; // header text of the column to use, once found
 
-async function exportLoadTeamMap(){
+async function exportLoadTeamMap(colLabel){
   const url = `https://docs.google.com/spreadsheets/d/${EXPORT_TEAM_MAP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_TEAM_MAP_GID}&cachebust=` + Date.now();
   const res = await fetch(url);
   if(!res.ok) throw new Error("HTTP " + res.status);
@@ -4137,15 +4184,15 @@ async function exportLoadTeamMap(){
   const map = {};
   if(!rows.length) return map;
   const headerRow = rows[0];
-  let fplCol = -1;
+  let mapCol = -1;
   for(let c = 2; c < headerRow.length; c++){
-    if(cell(headerRow, c).toUpperCase() === EXPORT_TEAM_MAP_FPL_COL_LABEL) { fplCol = c; break; }
+    if(cell(headerRow, c).toUpperCase() === colLabel) { mapCol = c; break; }
   }
-  if(fplCol === -1) return map;
+  if(mapCol === -1) return map;
   for(let r = 1; r < rows.length; r++){
     const elizaTeam = cell(rows[r], EXPORT_TEAM_MAP_NAME_COL);
-    const fplName = cell(rows[r], fplCol);
-    if(elizaTeam && fplName) map[fplName.toUpperCase()] = elizaTeam;
+    const compName = cell(rows[r], mapCol);
+    if(elizaTeam && compName) map[compName.toUpperCase()] = elizaTeam;
   }
   return map;
 }
@@ -4156,6 +4203,31 @@ async function exportLoadTeamMap(){
 function exportResolveTeamName(name){
   const map = (exportData && exportData.teamMap) || {};
   return map[(name||"").toUpperCase()] || name;
+}
+
+// Row highlight class + legend label for a team's status text, straight from
+// the sheet's own status column (FPL_COL.status in index.html) — same
+// matching logic as histDivStatusStyle, so the export always agrees with
+// whatever the live public table currently shows, not a hardcoded position
+// cutoff that could drift out of sync with it.
+function exportStatusInfo(status){
+  const s = (status||"").toUpperCase();
+  if(s.includes("WINNER")) return { cls: "status-winner", label: "Winner", swatch: "#14532D" };
+  if(s.includes("PROMOTED")) return { cls: "status-promoted", label: "Promoted", swatch: "#4ADE80" };
+  if(s.includes("PLAYOFF")) return { cls: "status-playoff", label: "Playoff", swatch: "#EAB308" };
+  if(s.includes("RELEGATED")) return { cls: "status-relegated", label: "Relegated", swatch: "#B93C32" };
+  return null;
+}
+function exportStatusLegendHtml(teams){
+  const seen = new Map();
+  teams.forEach(t => {
+    const info = exportStatusInfo(t.status);
+    if(info && !seen.has(info.cls)) seen.set(info.cls, info);
+  });
+  if(!seen.size) return "";
+  return `<div class="export-legend">${[...seen.values()].map(info =>
+    `<span><i style="background:${info.swatch};"></i>${info.label}</span>`
+  ).join("")}</div>`;
 }
 
 let exportData = null; // last-loaded competition's table + fixtures, replaced on each Load Data click
@@ -4189,7 +4261,10 @@ function exportParseFplTable(rows, titleText){
     teams.push({
       pos, team: cell(rows[dr]||[],cols.team),
       pts: ptsRaw !== "" ? ptsRaw : ptsCalc,
-      w: wVal, d: dVal, l: cell(rows[dr]||[],cols.l)
+      w: wVal, d: dVal, l: cell(rows[dr]||[],cols.l),
+      for: cell(rows[dr]||[],cols.ptsFor), aga: cell(rows[dr]||[],cols.ptsAgn),
+      dif: cell(rows[dr]||[],cols.diff), next: cell(rows[dr]||[],cols.next),
+      status: cell(rows[dr]||[],cols.status)
     });
   }
   return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, teamsFound: teams.length, firstTeam: teams[0]||null } };
@@ -4197,12 +4272,13 @@ function exportParseFplTable(rows, titleText){
 
 // Trimmed-down port of index.html's parseFplFixtures for the Premier League
 // block specifically (base column AH=33 — same as index.html's premierFx).
-function exportParseFplFixtures(rows, base){
+function exportParseFplFixtures(rows, base, roundTest){
+  const test = roundTest || (v => EXPORT_GW_RE.test(v));
   const gameweeks = [];
   let current = null;
   for(let r=0; r<rows.length; r++){
     const c0 = cell(rows[r]||[], base);
-    if(/^GW\s*\d+/i.test(c0)){
+    if(test(c0)){
       current = { name: c0.toUpperCase().replace(/\s+/g,' ').trim(), fixtures: [] };
       gameweeks.push(current);
       continue;
@@ -4217,6 +4293,36 @@ function exportParseFplFixtures(rows, base){
   return { gameweeks };
 }
 
+// Trimmed-down port of index.html's parseFplRoddy — same header-search
+// (anchors on "TEAM" in column D, since this table's position has shifted
+// before) and same fixed chip-column offsets (S:V) once the header's found.
+function exportParseFplRoddy(rows){
+  let headerRowIdx = -1;
+  for(let r=0; r<Math.min(rows.length, 20); r++){
+    if(cell(rows[r]||[], 3).toUpperCase() === "TEAM"){ headerRowIdx = r; break; }
+  }
+  if(headerRowIdx === -1) return { chipHeaders: [], entries: [], debug: { headerRowFound: false } };
+
+  const headerRow = rows[headerRowIdx] || [];
+  const chipCols = [18,19,20,21]; // S,T,U,V
+  const chipHeaders = chipCols.map(c => cell(headerRow, c));
+
+  const entries = [];
+  let runningPos = 0;
+  for(let r=headerRowIdx+1; r<rows.length; r++){
+    const row = rows[r] || [];
+    const team = cell(row, 3); // D
+    if(!team) continue; // anchor on Team, not Pos — top-3 rows' Pos cell can be a medal icon instead of plain text
+    runningPos++;
+    const posRaw = cell(row, 1); // B
+    entries.push({
+      pos: posRaw || String(runningPos), team, gw: cell(row,10), chip: cell(row,11),
+      pts: cell(row,12), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
+    });
+  }
+  return { chipHeaders, entries, debug: { headerFetchedRowIndex: headerRowIdx+1, chipHeaders, entriesFound: entries.length } };
+}
+
 async function exportLoadData(){
   const statusEl = $("exportLoadStatus");
   const btn = $("exportLoadBtn");
@@ -4225,37 +4331,68 @@ async function exportLoadData(){
   statusEl.textContent = "Loading…";
   $("exportPreviewWrap").style.display = "none";
 
-  try{
-    if(competition === "fpl-premier"){
+  if(competition === "fpl-roddy"){
+    try{
       const [csvRes, teamMap] = await Promise.all([
-        fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_FPL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_FPL_GID}&cachebust=` + Date.now()),
-        exportLoadTeamMap().catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
+        fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_RODDY_GID}&cachebust=` + Date.now()),
+        exportLoadTeamMap("FPL").catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
       ]);
       if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
-      const csvText = await csvRes.text();
-      const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
-      const table = exportParseFplTable(rows, "ELIZA PREMIER LEAGUE");
-      const fixtures = exportParseFplFixtures(rows, 33); // AH, same block index.html reads for Premier fixtures
-      exportData = { competition, label: "Eliza Premier League", table, fixtures, teamMap };
+      const rows = Papa.parse(await csvRes.text(), { skipEmptyLines: false }).data;
+      const roddy = exportParseFplRoddy(rows);
+      exportData = { competition, label: "Eliza FPL Roddy", roddy, teamMap };
 
-      $("exportDebugOut").textContent = JSON.stringify({
-        table: table.debug,
-        gameweeksFound: fixtures.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})),
-        teamMapEntriesFound: Object.keys(teamMap).length
-      }, null, 2);
+      $("exportDebugOut").textContent = JSON.stringify({ roddy: roddy.debug, teamMapEntriesFound: Object.keys(teamMap).length }, null, 2);
 
-      const roundSel = $("exportRound");
-      roundSel.innerHTML = fixtures.gameweeks.map(g => `<option value="${g.name}">${g.name}</option>`).join("");
-      // Default to the most recent gameweek with any scores entered — falls
-      // back to the first gameweek pre-season, when nothing's been played yet.
-      const reversedIdx = [...fixtures.gameweeks].reverse().findIndex(g => g.fixtures.some(f => f.homeScore !== "" || f.awayScore !== ""));
-      roundSel.selectedIndex = reversedIdx !== -1 ? (fixtures.gameweeks.length - 1 - reversedIdx) : 0;
-
-      statusEl.textContent = `Loaded — ${table.teams.length} teams, ${fixtures.gameweeks.length} gameweeks found.`;
-      if(!table.teams.length) statusEl.textContent += " No teams found — check Debug below.";
-      if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks. Check Debug below.";
+      statusEl.textContent = `Loaded — ${roddy.entries.length} entries found.`;
+      if(!roddy.entries.length) statusEl.textContent += " Check Debug below.";
+      if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks.";
       exportRenderPreview();
+    }catch(err){
+      console.error("Export load failed", err);
+      statusEl.textContent = "Couldn't load: " + err.message;
+    }finally{
+      btn.disabled = false;
     }
+    return;
+  }
+
+  const cfg = EXPORT_COMPETITIONS[competition];
+  if(!cfg){
+    statusEl.textContent = "Unknown competition.";
+    btn.disabled = false;
+    return;
+  }
+
+  try{
+    const [csvRes, teamMap] = await Promise.all([
+      fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${cfg.gid}&cachebust=` + Date.now()),
+      exportLoadTeamMap(cfg.mapColumnLabel).catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
+    ]);
+    if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
+    const csvText = await csvRes.text();
+    const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
+    const table = exportParseFplTable(rows, cfg.titleText);
+    const fixtures = exportParseFplFixtures(rows, cfg.fixturesBase, cfg.roundTest);
+    exportData = { competition, label: cfg.label, table, fixtures, teamMap };
+
+    $("exportDebugOut").textContent = JSON.stringify({
+      table: table.debug,
+      gameweeksFound: fixtures.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})),
+      teamMapEntriesFound: Object.keys(teamMap).length
+    }, null, 2);
+
+    const roundSel = $("exportRound");
+    roundSel.innerHTML = fixtures.gameweeks.map(g => `<option value="${g.name}">${g.name}</option>`).join("");
+    // Default to the most recent round with any scores entered — falls back
+    // to the first round pre-season, when nothing's been played yet.
+    const reversedIdx = [...fixtures.gameweeks].reverse().findIndex(g => g.fixtures.some(f => f.homeScore !== "" || f.awayScore !== ""));
+    roundSel.selectedIndex = reversedIdx !== -1 ? (fixtures.gameweeks.length - 1 - reversedIdx) : 0;
+
+    statusEl.textContent = `Loaded — ${table.teams.length} teams, ${fixtures.gameweeks.length} rounds found.`;
+    if(!table.teams.length) statusEl.textContent += " No teams found — check Debug below.";
+    if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks. Check Debug below.";
+    exportRenderPreview();
   }catch(err){
     console.error("Export load failed", err);
     statusEl.textContent = "Couldn't load: " + err.message;
@@ -4266,21 +4403,32 @@ async function exportLoadData(){
 
 function exportRenderPreview(){
   if(!exportData) return;
-  const contentType = $("exportContentType").value;
   const target = $("exportPreviewTarget");
   $("exportPreviewWrap").style.display = "block";
+
+  if(exportData.roddy){
+    exportRenderRoddyPreview();
+    return;
+  }
+
+  const contentType = $("exportContentType").value;
 
   if(contentType === "table"){
     const rowsHtml = exportData.table.teams.map(t => {
       const logoName = exportResolveTeamName(t.team);
+      const statusInfo = exportStatusInfo(t.status);
       return `
-      <tr>
+      <tr${statusInfo ? ` class="${statusInfo.cls}"` : ""}>
         <td class="num pos">${t.pos}</td>
         <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
+        <td class="num pts">${t.pts||0}</td>
         <td class="num">${t.w||0}</td>
         <td class="num">${t.d||0}</td>
         <td class="num">${t.l||0}</td>
-        <td class="num pts">${t.pts||0}</td>
+        <td class="num">${t.for||0}</td>
+        <td class="num">${t.aga||0}</td>
+        <td class="num">${t.dif||0}</td>
+        <td class="next-opp">${t.next || "—"}</td>
       </tr>`;
     }).join("");
     target.innerHTML = `
@@ -4293,23 +4441,30 @@ function exportRenderPreview(){
       </div>
       <div class="export-card-body">
         <table class="export-table">
-          <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>
-          <tbody>${rowsHtml || `<tr><td colspan="6" class="hint">No teams found.</td></tr>`}</tbody>
+          <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Pts</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">For</th><th class="num">Aga</th><th class="num">Diff</th><th>Next</th></tr></thead>
+          <tbody>${rowsHtml || `<tr><td colspan="10" class="hint">No teams found.</td></tr>`}</tbody>
         </table>
+        ${exportStatusLegendHtml(exportData.table.teams)}
       </div>
       <div class="export-card-footer">elizacup.com</div>`;
   } else {
     const roundName = $("exportRound").value;
     const gw = exportData.fixtures.gameweeks.find(g => g.name === roundName);
     const fixturesHtml = (gw ? gw.fixtures : []).map(f => {
-      const hasScore = f.homeScore !== "" || f.awayScore !== "";
-      const scoreHtml = hasScore ? `${f.homeScore || 0} &ndash; ${f.awayScore || 0}` : `vs`;
+      const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
+      const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
+      const homeWin = hasScore && homeNum > awayNum;
+      const awayWin = hasScore && awayNum > homeNum;
+      const isDrawn = hasScore && homeNum === awayNum;
+      const scoreHtml = hasScore ? `${f.homeScore} &ndash; ${f.awayScore}` : `vs`;
       const homeLogoName = exportResolveTeamName(f.home);
       const awayLogoName = exportResolveTeamName(f.away);
+      const homeCls = homeWin ? " fx-win" : hasScore && !isDrawn ? " fx-lose" : "";
+      const awayCls = awayWin ? " fx-win" : hasScore && !isDrawn ? " fx-lose" : "";
       return `<div class="export-fixture-row">
-        <div class="export-fixture-team"><img src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(homeLogoName)}">${f.home}</div>
-        <div class="export-fixture-score${hasScore ? '' : ' pending'}">${scoreHtml}</div>
-        <div class="export-fixture-team away"><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}">${f.away}</div>
+        <div class="export-fixture-team${homeCls}"><img src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(homeLogoName)}">${f.home}</div>
+        <div class="export-fixture-score${hasScore ? '' : ' pending'}${isDrawn ? ' fx-drawn' : ''}">${scoreHtml}</div>
+        <div class="export-fixture-team away${awayCls}"><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}">${f.away}</div>
       </div>`;
     }).join("");
     target.innerHTML = `
@@ -4323,6 +4478,58 @@ function exportRenderPreview(){
       <div class="export-card-body">${fixturesHtml || `<p class="hint">No fixtures found for this round.</p>`}</div>
       <div class="export-card-footer">elizacup.com</div>`;
   }
+}
+
+// Roddy is a single leaderboard rather than a table+fixtures pair, so it gets
+// its own render path — same columns/order as index.html's fplRoddyTableHtml:
+// Pos, Team, GW, Chip, Pts, Ovr Rank, then one column per chip-remaining flag.
+function exportRenderRoddyPreview(){
+  const target = $("exportPreviewTarget");
+  const data = exportData.roddy;
+  if(!data.entries.length){
+    target.innerHTML = `
+      <div class="export-card-header">
+        <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+        <div class="export-card-header-text">
+          <div class="export-card-kicker">FPL</div>
+          <div class="export-card-title">Roddy</div>
+        </div>
+      </div>
+      <div class="export-card-body"><p class="hint">No Roddy data found. Check Debug below.</p></div>
+      <div class="export-card-footer">elizacup.com</div>`;
+    return;
+  }
+
+  const chipLabels = data.chipHeaders.map((h,i) => h || ("Chip " + (i+1)));
+  const rowsHtml = data.entries.map(e => {
+    const logoName = exportResolveTeamName(e.team);
+    return `
+      <tr>
+        <td class="num pos">${e.pos}</td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${e.team}</div></td>
+        <td class="num">${e.gw || "—"}</td>
+        <td class="num">${e.chip || "—"}</td>
+        <td class="num pts">${e.pts}</td>
+        <td class="num">${e.ovrRank || "—"}</td>
+        ${e.chips.map(c => `<td class="num">${c ? "✓" : "—"}</td>`).join("")}
+      </tr>`;
+  }).join("");
+
+  target.innerHTML = `
+    <div class="export-card-header">
+      <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+      <div class="export-card-header-text">
+        <div class="export-card-kicker">FPL</div>
+        <div class="export-card-title">Roddy</div>
+      </div>
+    </div>
+    <div class="export-card-body">
+      <table class="export-table">
+        <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num">Pts</th><th class="num">Ovr Rank</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
+    <div class="export-card-footer">elizacup.com</div>`;
 }
 
 function exportImage(){
@@ -4365,6 +4572,12 @@ $("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
 $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
 $("exportLoadBtn").addEventListener("click", exportLoadData);
+$("exportCompetition").addEventListener("change", () => {
+  const isRoddy = $("exportCompetition").value === "fpl-roddy";
+  $("exportContentType").style.display = isRoddy ? "none" : "block";
+  $("exportRoddyHint").style.display = isRoddy ? "block" : "none";
+  $("exportRoundField").style.display = (!isRoddy && $("exportContentType").value === "results") ? "block" : "none";
+});
 $("exportContentType").addEventListener("change", () => {
   $("exportRoundField").style.display = $("exportContentType").value === "results" ? "block" : "none";
   if(exportData) exportRenderPreview();
