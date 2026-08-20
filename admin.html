@@ -435,17 +435,24 @@
      exported image's size (before the 2x scale factor). 640px gives a clean
      square-ish result that works fine on socials without being enormous. */
   .export-card{
-    width:760px;max-width:100%;background:#fff;border:1px solid var(--line);
+    width:760px;flex-shrink:0;background:#fff;border:1px solid var(--line);
     font-family:'Barlow',sans-serif;overflow:hidden;
   }
+  /* Preview wrapper scrolls horizontally on narrow screens instead of the
+     card itself shrinking — .export-card must stay at its real 760px width
+     at all times, since html2canvas captures the element's actual layout
+     size. Letting it shrink via max-width on mobile was squashing the
+     multi-column table and clipping/cutting off content in the exported
+     image itself, not just the on-screen preview. */
+  .export-preview-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .export-card-header{
-    background:#000;color:#fff;display:flex;align-items:center;gap:16px;
-    padding:20px 26px;
+    display:flex;align-items:center;gap:16px;
+    padding:22px 26px;
   }
-  .export-card-header img{height:52px;width:auto;object-fit:contain;flex-shrink:0;}
+  .export-card-header img{height:58px;width:auto;object-fit:contain;flex-shrink:0;}
   .export-card-header-text{min-width:0;}
-  .export-card-kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:2px;}
-  .export-card-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .export-card-kicker{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.85;margin-bottom:3px;}
+  .export-card-title{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;letter-spacing:.01em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .export-card-body{padding:22px 26px 26px;}
   .export-table{width:100%;border-collapse:collapse;font-size:13.5px;}
   .export-table th{
@@ -496,6 +503,19 @@
   .export-fixture-team.fx-win{color:#166534;font-weight:700;}
   .export-fixture-team.fx-lose{color:#8a8a8a;}
   .export-fixture-score.fx-drawn{color:#B8930A;}
+  /* LMS round picks — one row per entrant, pick + result */
+  .export-lms-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);}
+  .export-lms-row:last-child{border-bottom:none;}
+  .export-lms-name{flex:1;font-weight:600;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .export-lms-pick{display:flex;align-items:center;gap:6px;font-size:13px;flex-shrink:0;}
+  .export-lms-pick img{width:20px;height:20px;object-fit:contain;}
+  .export-lms-result{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 8px;border-radius:20px;flex-shrink:0;min-width:64px;text-align:center;}
+  .export-lms-result.win{background:#dcfce7;color:#166534;}
+  .export-lms-result.loss, .export-lms-result.draw{background:#fee2e2;color:#991b1b;}
+  .export-lms-result.dnp, .export-lms-result.eliminated{background:#e5e7eb;color:#4b5563;}
+  /* LMS survivors — status/lives leaderboard */
+  .export-lms-row.eliminated{opacity:.55;}
+  .export-lms-lives{font-size:15px;letter-spacing:1px;flex-shrink:0;}
   .draw-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line);border-radius:6px;
@@ -1048,6 +1068,8 @@
           <option value="afl">AFL Supercoach</option>
           <option value="nrl">NRL Supercoach</option>
           <option value="eplsc">EPL Supercoach</option>
+          <option value="auscup">LMS &mdash; Australia Cup</option>
+          <option value="aleague">LMS &mdash; A-League</option>
         </select>
         <div class="hint">More competitions (divisions) can be added here later.</div>
       </div>
@@ -1070,7 +1092,10 @@
       <span id="exportLoadStatus" class="hint" style="margin-left:10px;"></span>
 
       <div id="exportPreviewWrap" style="margin-top:22px;display:none;">
-        <div class="export-card" id="exportPreviewTarget"></div>
+        <div class="export-preview-scroll">
+          <div class="export-card" id="exportPreviewTarget"></div>
+        </div>
+        <p class="hint" style="margin-top:8px;">On a narrow screen, scroll sideways to see the full preview — the exported image always includes everything regardless of what's currently visible on screen.</p>
         <div style="margin-top:14px;">
           <button type="button" class="btn btn-primary" id="exportImageBtn">Export as Image</button>
         </div>
@@ -4152,17 +4177,18 @@ const EXPORT_GW_RE = /^GW\s*\d+/i;
 const EXPORT_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
 
 const EXPORT_COMPETITIONS = {
-  "fpl-premier": { label: "Eliza Premier League", gid: "1845986614", titleText: "ELIZA PREMIER LEAGUE", fixturesBase: 33, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL" },
-  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL" },
-  "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL" },
-  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL" },
-  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL" },
-  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH" }
+  "fpl-premier": { label: "Eliza Premier League", gid: "1845986614", titleText: "ELIZA PREMIER LEAGUE", fixturesBase: 33, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#28427c", textColor: "#fff" },
+  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#3a5a9e", textColor: "#fff" },
+  "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL", color: "#0a2f85", textColor: "#fff" },
+  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL", color: "#c2703d", textColor: "#fff" },
+  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL", color: "#1c6b6b", textColor: "#fff" },
+  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#990000", textColor: "#fff" }
 };
 // FPL Roddy isn't a standings+fixtures competition like the others — it's a
 // single leaderboard (same shape as index.html's parseFplRoddy/fplRoddyTableHtml)
 // — handled as its own branch below rather than through EXPORT_COMPETITIONS.
 const EXPORT_RODDY_GID = "638425443";
+const EXPORT_RODDY_COLOR = "#ffdd00", EXPORT_RODDY_TEXT_COLOR = "#000";
 
 // FPL/Supercoach managers pick their own fantasy team name (e.g. "Le Fee &
 // Foo"), which isn't a real Eliza Cup club and has no logo file of its own —
@@ -4197,6 +4223,90 @@ async function exportLoadTeamMap(colLabel){
   return map;
 }
 
+// ---------- Last Man Standing (Australia Cup + A-League) ----------
+// Genuinely different shape from everything above — no table/fixtures, just
+// entrants picking a team each round and living or losing a life. Entrant
+// names are people, not clubs, so they never need the team-name-map
+// resolution above; only their pick (a real Eliza Cup team) needs a logo.
+const EXPORT_LMS_COMPETITIONS = {
+  "auscup": { label: "Australia Cup LMS", gid: "590890124", type: "cup", color: "#B95C50", textColor: "#fff" },
+  "aleague": { label: "A-League LMS", gid: "922424054", type: "aleague", color: "#7a4d99", textColor: "#fff" }
+};
+
+// Same dash/whitespace normalization as index.html's normalizeLmsText, so
+// "ROUND OF 32 – PHASE 1" (Sheets often auto-converts a typed "-" into an
+// en/em-dash) still matches "ROUND OF 32 - PHASE 1".
+function exportNormalizeLmsText(s){
+  return (s||"").toString().toUpperCase().replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim();
+}
+const EXPORT_LMS_ROUND_NAMES = ["ROUND OF 32 - PHASE 1", "ROUND OF 32 - PHASE 2", "ROUND OF 16", "QUARTER FINALS", "SEMI FINALS", "FINAL"];
+function exportIsLmsCupRoundHeader(rawText){
+  return EXPORT_LMS_ROUND_NAMES.some(name => exportNormalizeLmsText(name) === exportNormalizeLmsText(rawText));
+}
+function exportIsAleagueLmsRoundHeader(rawText){
+  return /^ROUND\s+\d+$/i.test(exportNormalizeLmsText(rawText));
+}
+
+// Trimmed-down port of index.html's parseLmsCup (Australia Cup — knockout,
+// single life, named rounds). Same D/F/G/H entries columns as A-League below.
+function exportParseLmsCup(rows){
+  const rounds = [];
+  let current = null;
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    const d = cell(row,3); // D
+    if(exportIsLmsCupRoundHeader(d)){
+      current = { name: d, entries: [] };
+      rounds.push(current);
+      continue;
+    }
+    if(!current) continue;
+    const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
+    if(!d && !f && !g && !h) continue;
+    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
+  }
+  // Derives each entrant's current status from their most recent appearance
+  // across rounds — Australia Cup has no dedicated status column (unlike
+  // A-League's AA:AC), so "still alive" means their last-seen pick doesn't
+  // start with "ELIMINATED".
+  const lastSeen = {};
+  rounds.forEach(round => {
+    round.entries.forEach(e => { lastSeen[e.name] = e; });
+  });
+  const survivors = Object.keys(lastSeen).map(name => ({
+    name, eliminated: /^ELIMINATED/i.test(lastSeen[name].pick)
+  }));
+  return { rounds, survivors, debug: { roundsFound: rounds.map(r=>({name:r.name, entries:r.entries.length})), survivorsFound: survivors.length } };
+}
+
+// Trimmed-down port of index.html's parseAleagueLms (A-League — season-long,
+// 3 lives, numbered rounds 1-26). Has its own AA:AC player-summary block, so
+// unlike Australia Cup this doesn't need status derived from entries.
+function exportParseAleagueLms(rows){
+  const rounds = [];
+  let current = null;
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    const d = cell(row,3); // D
+    if(exportIsAleagueLmsRoundHeader(d)){
+      current = { name: d, entries: [] };
+      rounds.push(current);
+      continue;
+    }
+    if(!current) continue;
+    const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
+    if(!d && !f && !g && !h) continue;
+    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
+  }
+  const playerSummary = [];
+  for(let r=0; r<rows.length; r++){
+    const name = cell(rows[r]||[], 26); // AA
+    if(!name || /^PLAYER NAME$/i.test(name)) continue;
+    playerSummary.push({ name, lives: parseInt(cell(rows[r]||[], 27), 10) || 0, status: cell(rows[r]||[], 28) || "Active" }); // AB, AC
+  }
+  return { rounds, playerSummary, debug: { roundsFound: rounds.map(r=>({name:r.name, entries:r.entries.length})), playerSummaryFound: playerSummary.length } };
+}
+
 // Resolves a manager's fantasy team name to the real Eliza Cup club name for
 // logo purposes only — falls back to the name as-is if there's no match
 // (e.g. mapping sheet not loaded yet, or a genuinely new/unmapped entry).
@@ -4228,6 +4338,22 @@ function exportStatusLegendHtml(teams){
   return `<div class="export-legend">${[...seen.values()].map(info =>
     `<span><i style="background:${info.swatch};"></i>${info.label}</span>`
   ).join("")}</div>`;
+}
+
+// Shared masthead for every export card — each competition gets its own
+// accent colour (exportData.color/textColor, set in exportLoadData from the
+// relevant config entry) so the graphics read as distinct competitions at a
+// glance rather than all sharing one identical black banner.
+function exportCardHeaderHtml(kicker, title){
+  const bg = (exportData && exportData.color) || "#000";
+  const fg = (exportData && exportData.textColor) || "#fff";
+  return `<div class="export-card-header" style="background:${bg};color:${fg};">
+      <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
+      <div class="export-card-header-text">
+        <div class="export-card-kicker">${kicker}</div>
+        <div class="export-card-title">${title}</div>
+      </div>
+    </div>`;
 }
 
 let exportData = null; // last-loaded competition's table + fixtures, replaced on each Load Data click
@@ -4323,6 +4449,28 @@ function exportParseFplRoddy(rows){
   return { chipHeaders, entries, debug: { headerFetchedRowIndex: headerRowIdx+1, chipHeaders, entriesFound: entries.length } };
 }
 
+// Swaps the Content dropdown's options to match whichever competition is
+// selected — Roddy has no content choice (single leaderboard), LMS gets
+// Round Picks/Survivors instead of Standings Table/Round Results.
+function exportSyncContentOptions(){
+  const competition = $("exportCompetition").value;
+  const isRoddy = competition === "fpl-roddy";
+  const isLms = !!EXPORT_LMS_COMPETITIONS[competition];
+  const typeSel = $("exportContentType");
+
+  $("exportRoddyHint").style.display = isRoddy ? "block" : "none";
+  typeSel.style.display = isRoddy ? "none" : "block";
+
+  if(isLms){
+    typeSel.innerHTML = `<option value="picks">Round Picks</option><option value="survivors">Survivors</option>`;
+  } else if(!isRoddy){
+    typeSel.innerHTML = `<option value="table">Standings Table</option><option value="results">Round Results</option>`;
+  }
+
+  const needsRound = !isRoddy && (typeSel.value === "results" || typeSel.value === "picks");
+  $("exportRoundField").style.display = needsRound ? "block" : "none";
+}
+
 async function exportLoadData(){
   const statusEl = $("exportLoadStatus");
   const btn = $("exportLoadBtn");
@@ -4340,13 +4488,40 @@ async function exportLoadData(){
       if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
       const rows = Papa.parse(await csvRes.text(), { skipEmptyLines: false }).data;
       const roddy = exportParseFplRoddy(rows);
-      exportData = { competition, label: "Eliza FPL Roddy", roddy, teamMap };
+      exportData = { competition, label: "Eliza FPL Roddy", roddy, teamMap, color: EXPORT_RODDY_COLOR, textColor: EXPORT_RODDY_TEXT_COLOR };
 
       $("exportDebugOut").textContent = JSON.stringify({ roddy: roddy.debug, teamMapEntriesFound: Object.keys(teamMap).length }, null, 2);
 
       statusEl.textContent = `Loaded — ${roddy.entries.length} entries found.`;
       if(!roddy.entries.length) statusEl.textContent += " Check Debug below.";
       if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks.";
+      exportRenderPreview();
+    }catch(err){
+      console.error("Export load failed", err);
+      statusEl.textContent = "Couldn't load: " + err.message;
+    }finally{
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  if(EXPORT_LMS_COMPETITIONS[competition]){
+    const lmsCfg = EXPORT_LMS_COMPETITIONS[competition];
+    try{
+      const res = await fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${lmsCfg.gid}&cachebust=` + Date.now());
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
+      const lms = lmsCfg.type === "cup" ? exportParseLmsCup(rows) : exportParseAleagueLms(rows);
+      exportData = { competition, label: lmsCfg.label, lms, lmsType: lmsCfg.type, color: lmsCfg.color, textColor: lmsCfg.textColor };
+
+      $("exportDebugOut").textContent = JSON.stringify(lms.debug, null, 2);
+
+      const roundSel = $("exportRound");
+      roundSel.innerHTML = lms.rounds.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
+      roundSel.selectedIndex = Math.max(lms.rounds.length - 1, 0); // most recent round with any entries
+
+      statusEl.textContent = `Loaded — ${lms.rounds.length} rounds found.`;
+      if(!lms.rounds.length) statusEl.textContent += " Check Debug below.";
       exportRenderPreview();
     }catch(err){
       console.error("Export load failed", err);
@@ -4374,7 +4549,7 @@ async function exportLoadData(){
     const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
     const table = exportParseFplTable(rows, cfg.titleText);
     const fixtures = exportParseFplFixtures(rows, cfg.fixturesBase, cfg.roundTest);
-    exportData = { competition, label: cfg.label, table, fixtures, teamMap };
+    exportData = { competition, label: cfg.label, table, fixtures, teamMap, color: cfg.color, textColor: cfg.textColor };
 
     $("exportDebugOut").textContent = JSON.stringify({
       table: table.debug,
@@ -4411,6 +4586,11 @@ function exportRenderPreview(){
     return;
   }
 
+  if(exportData.lms){
+    exportRenderLmsPreview();
+    return;
+  }
+
   const contentType = $("exportContentType").value;
 
   if(contentType === "table"){
@@ -4432,13 +4612,7 @@ function exportRenderPreview(){
       </tr>`;
     }).join("");
     target.innerHTML = `
-      <div class="export-card-header">
-        <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
-        <div class="export-card-header-text">
-          <div class="export-card-kicker">Standings</div>
-          <div class="export-card-title">${exportData.label}</div>
-        </div>
-      </div>
+      ${exportCardHeaderHtml("Standings", exportData.label)}
       <div class="export-card-body">
         <table class="export-table">
           <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Pts</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">For</th><th class="num">Aga</th><th class="num">Diff</th><th>Next</th></tr></thead>
@@ -4468,13 +4642,7 @@ function exportRenderPreview(){
       </div>`;
     }).join("");
     target.innerHTML = `
-      <div class="export-card-header">
-        <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
-        <div class="export-card-header-text">
-          <div class="export-card-kicker">${exportData.label}</div>
-          <div class="export-card-title">${roundName || "Round Results"}</div>
-        </div>
-      </div>
+      ${exportCardHeaderHtml(exportData.label, roundName || "Round Results")}
       <div class="export-card-body">${fixturesHtml || `<p class="hint">No fixtures found for this round.</p>`}</div>
       <div class="export-card-footer">elizacup.com</div>`;
   }
@@ -4488,13 +4656,7 @@ function exportRenderRoddyPreview(){
   const data = exportData.roddy;
   if(!data.entries.length){
     target.innerHTML = `
-      <div class="export-card-header">
-        <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
-        <div class="export-card-header-text">
-          <div class="export-card-kicker">FPL</div>
-          <div class="export-card-title">Roddy</div>
-        </div>
-      </div>
+      ${exportCardHeaderHtml("FPL", "Roddy")}
       <div class="export-card-body"><p class="hint">No Roddy data found. Check Debug below.</p></div>
       <div class="export-card-footer">elizacup.com</div>`;
     return;
@@ -4516,19 +4678,80 @@ function exportRenderRoddyPreview(){
   }).join("");
 
   target.innerHTML = `
-    <div class="export-card-header">
-      <img src="logo/eliza-logo.png" alt="" onerror="this.style.display='none';">
-      <div class="export-card-header-text">
-        <div class="export-card-kicker">FPL</div>
-        <div class="export-card-title">Roddy</div>
-      </div>
-    </div>
+    ${exportCardHeaderHtml("FPL", "Roddy")}
     <div class="export-card-body">
       <table class="export-table">
         <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num">Pts</th><th class="num">Ovr Rank</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>
+    <div class="export-card-footer">elizacup.com</div>`;
+}
+
+// Renders whichever LMS content type is selected — Round Picks (one round's
+// entries: pick + result, colour-coded like the fixture rows above) or
+// Survivors (who's still in, ordered by lives remaining for A-League or just
+// Active-first for Australia Cup, which has no lives count of its own).
+function exportRenderLmsPreview(){
+  const target = $("exportPreviewTarget");
+  const contentType = $("exportContentType").value;
+  const data = exportData.lms;
+  const kicker = "Last Man Standing";
+
+  if(contentType === "survivors"){
+    let entries;
+    if(exportData.lmsType === "aleague"){
+      entries = [...data.playerSummary].sort((a,b) => {
+        const aElim = /eliminated/i.test(a.status), bElim = /eliminated/i.test(b.status);
+        if(aElim !== bElim) return aElim ? 1 : -1;
+        if(b.lives !== a.lives) return b.lives - a.lives;
+        return a.name.localeCompare(b.name);
+      });
+    } else {
+      entries = [...data.survivors].sort((a,b) => {
+        if(a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    const rowsHtml = entries.map(e => {
+      const eliminated = exportData.lmsType === "aleague" ? /eliminated/i.test(e.status) : e.eliminated;
+      const livesHtml = exportData.lmsType === "aleague"
+        ? `<span class="export-lms-lives">${"❤️".repeat(Math.max(e.lives,0))}${"🖤".repeat(Math.max(3-e.lives,0))}</span>`
+        : "";
+      return `<div class="export-lms-row${eliminated ? ' eliminated' : ''}">
+        <div class="export-lms-name">${e.name}</div>
+        ${livesHtml}
+        <div class="export-lms-result ${eliminated ? 'eliminated' : 'win'}">${eliminated ? 'Eliminated' : 'Active'}</div>
+      </div>`;
+    }).join("");
+    target.innerHTML = `
+      ${exportCardHeaderHtml(kicker, exportData.label + " — Survivors")}
+      <div class="export-card-body">${rowsHtml || `<p class="hint">No entrants found.</p>`}</div>
+      <div class="export-card-footer">elizacup.com</div>`;
+    return;
+  }
+
+  // Round Picks
+  const roundName = $("exportRound").value;
+  const round = data.rounds.find(r => r.name === roundName);
+  const entries = round ? round.entries : [];
+  const rowsHtml = entries.map(e => {
+    const isEliminated = /^ELIMINATED/i.test(e.pick);
+    const isDnp = /^DNP$/i.test(e.pick);
+    const resultCls = e.result === "WIN" ? "win" : (e.result === "LOSS" || e.result === "DRAW") ? "loss" : isDnp ? "dnp" : isEliminated ? "eliminated" : "";
+    const resultLabel = isEliminated ? "Eliminated" : isDnp ? "DNP" : (e.result || "Pending");
+    const pickHtml = (isEliminated || isDnp || !e.pick)
+      ? `<span class="export-lms-pick">${isEliminated ? "—" : (isDnp ? "Did not pick" : "—")}</span>`
+      : `<span class="export-lms-pick"><img src="logo/${teamLogoSlug(e.pick)}.png" alt="" onerror="${teamLogoOnErrorAttr(e.pick)}">${e.pick}</span>`;
+    return `<div class="export-lms-row">
+      <div class="export-lms-name">${e.name}</div>
+      ${pickHtml}
+      <div class="export-lms-result ${resultCls}">${resultLabel}</div>
+    </div>`;
+  }).join("");
+  target.innerHTML = `
+    ${exportCardHeaderHtml(kicker + " — " + exportData.label, roundName || "Round Picks")}
+    <div class="export-card-body">${rowsHtml || `<p class="hint">No picks found for this round.</p>`}</div>
     <div class="export-card-footer">elizacup.com</div>`;
 }
 
@@ -4572,14 +4795,10 @@ $("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
 $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
 $("exportLoadBtn").addEventListener("click", exportLoadData);
-$("exportCompetition").addEventListener("change", () => {
-  const isRoddy = $("exportCompetition").value === "fpl-roddy";
-  $("exportContentType").style.display = isRoddy ? "none" : "block";
-  $("exportRoddyHint").style.display = isRoddy ? "block" : "none";
-  $("exportRoundField").style.display = (!isRoddy && $("exportContentType").value === "results") ? "block" : "none";
-});
+$("exportCompetition").addEventListener("change", exportSyncContentOptions);
 $("exportContentType").addEventListener("change", () => {
-  $("exportRoundField").style.display = $("exportContentType").value === "results" ? "block" : "none";
+  const needsRound = $("exportContentType").value === "results" || $("exportContentType").value === "picks";
+  $("exportRoundField").style.display = needsRound ? "block" : "none";
   if(exportData) exportRenderPreview();
 });
 $("exportRound").addEventListener("change", exportRenderPreview);
