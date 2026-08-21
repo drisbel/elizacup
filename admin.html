@@ -938,6 +938,14 @@
         <textarea id="drawTeamInput" rows="8" placeholder="Team A&#10;Team B&#10;Team C&#10;..."></textarea>
       </div>
 
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
+          <input type="checkbox" id="drawIncludeAverage" style="width:auto;">
+          Include "Average" — auto-selected as the first pick when the draw starts
+        </label>
+        <div class="hint">"Average" isn't one of the teams above and never goes on the wheel itself — it's set as the pending pick the instant you start the draw, so the very first spin pairs against it. Needs an odd number of teams entered above so everyone pairs up evenly once Average takes one of the slots.</div>
+      </div>
+
       <!-- Wheel mode -->
       <div id="drawWheelMode">
         <div class="field">
@@ -2615,11 +2623,26 @@ function drawStart(){
     alert("Enter at least 2 teams (one per line) before starting the draw.");
     return;
   }
+  const includeAverage = $("drawIncludeAverage").checked;
+  if(includeAverage && teams.length % 2 === 0){
+    alert(`With "Average" included, you need an odd number of teams entered above so everyone pairs up evenly once Average takes one of the slots. You currently have ${teams.length} teams — add or remove one.`);
+    return;
+  }
   drawPot = shuffleArray(teams);
   drawWheelDisplayPot = drawPot.slice();
-  drawPending = null;
   drawFixtures = [];
   $("drawSpinBtn").disabled = false;
+
+  if(includeAverage){
+    // Pre-selected the instant the draw starts, not spun for — it never
+    // occupies a wheel segment, so it's excluded from drawPot above (which
+    // only ever holds the real teams still to be spun).
+    drawPending = "Average";
+    showDrawPick("drawWheelPick", "drawWheelPickName", "Average", "drawWheelPickLogo");
+  }else{
+    drawPending = null;
+  }
+
   renderDrawShared();
   resetWheelMatchupInfo();
   if(wheelFullscreenResultsActive) hideWheelResultsView();
@@ -3287,6 +3310,21 @@ async function renderWheelMatchupInfo(teamA, teamB){
   const box = $("wheelMatchupInfo");
   const pending = !teamB;
 
+  // "Average" isn't a real Eliza Cup team, so there's no standings/H2H data
+  // to fetch for it — show a plain explanatory panel instead of a
+  // "no data found" result that could read as a bug.
+  if(teamA === "Average" || teamB === "Average"){
+    box.innerHTML = `
+      <div class="wheel-matchup-teams">
+        ${wheelMatchupTeamBlockHtml(teamA, null)}
+        <div class="wheel-matchup-vs">VS</div>
+        ${pending ? wheelMatchupEmptySlotHtml() : wheelMatchupTeamBlockHtml(teamB, null)}
+      </div>
+      <div class="wheel-matchup-h2h-title">Head to Head</div>
+      <div id="wheelMatchupH2H"><div class="wheel-matchup-h2h-empty">${pending ? "Waiting for the second team to be drawn…" : "\"Average\" isn't a real team, so there's no head-to-head history to show."}</div></div>`;
+    return;
+  }
+
   box.innerHTML = `
     <div class="wheel-matchup-teams">
       ${wheelMatchupTeamBlockHtml(teamA, null)}
@@ -3552,7 +3590,8 @@ function saveWheelSettings(){
       perTeamColors: wheelPerTeamColors,
       textColorMode: wheelTextColorMode,
       compLogoSelect: $("wheelCompLogoSelect").value,
-      compLogoCustom: $("wheelCompLogoCustom").value
+      compLogoCustom: $("wheelCompLogoCustom").value,
+      includeAverage: $("drawIncludeAverage").checked
     };
     localStorage.setItem(WHEEL_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }catch(e){ /* localStorage full or unavailable — saving settings is best-effort, never required */ }
@@ -3596,6 +3635,7 @@ function loadWheelSettings(){
     }
   }
   if(typeof settings.compLogoCustom === "string") $("wheelCompLogoCustom").value = settings.compLogoCustom;
+  if(typeof settings.includeAverage === "boolean") $("drawIncludeAverage").checked = settings.includeAverage;
 
   // These also trigger their own re-render, plus flip the right options
   // panel / active toggle state — do them last so everything above (colours,
@@ -4125,6 +4165,7 @@ $("wheelCompLogoSelect").addEventListener("change", (e) => {
   saveWheelSettings();
 });
 $("wheelCompLogoCustom").addEventListener("input", () => { updateWheelCenterLogo(); saveWheelSettings(); });
+$("drawIncludeAverage").addEventListener("change", saveWheelSettings);
 $("wheelSideLeagueMode").addEventListener("change", (e) => {
   wheelSideLeagueMode = e.target.checked;
   $("wheelSideLeagueSelectWrap").style.display = wheelSideLeagueMode ? "" : "none";
@@ -4178,17 +4219,17 @@ const EXPORT_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\
 
 const EXPORT_COMPETITIONS = {
   "fpl-premier": { label: "Eliza Premier League", gid: "1845986614", titleText: "ELIZA PREMIER LEAGUE", fixturesBase: 33, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#28427c", textColor: "#fff" },
-  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#3a5a9e", textColor: "#fff" },
-  "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL", color: "#0a2f85", textColor: "#fff" },
-  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL", color: "#c2703d", textColor: "#fff" },
-  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL", color: "#1c6b6b", textColor: "#fff" },
-  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#990000", textColor: "#fff" }
+  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#990000", textColor: "#fff" },
+  "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL", color: "#963CFF", textColor: "#fff" },
+  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL", color: "#d90a30", textColor: "#fff", hasOverall: true },
+  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL", color: "#01c36b", textColor: "#fff", hasOverall: true },
+  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#7cb648", textColor: "#fff", hasOverall: true }
 };
 // FPL Roddy isn't a standings+fixtures competition like the others — it's a
-// single leaderboard (same shape as index.html's parseFplRoddy/fplRoddyTableHtml)
+// single leaderboard (same shape as index.html's parseFplTable/fplRoddyTableHtml)
 // — handled as its own branch below rather than through EXPORT_COMPETITIONS.
 const EXPORT_RODDY_GID = "638425443";
-const EXPORT_RODDY_COLOR = "#ffdd00", EXPORT_RODDY_TEXT_COLOR = "#000";
+const EXPORT_RODDY_COLOR = "#3D195B", EXPORT_RODDY_TEXT_COLOR = "#fff";
 
 // FPL/Supercoach managers pick their own fantasy team name (e.g. "Le Fee &
 // Foo"), which isn't a real Eliza Cup club and has no logo file of its own —
@@ -4229,8 +4270,8 @@ async function exportLoadTeamMap(colLabel){
 // names are people, not clubs, so they never need the team-name-map
 // resolution above; only their pick (a real Eliza Cup team) needs a logo.
 const EXPORT_LMS_COMPETITIONS = {
-  "auscup": { label: "Australia Cup LMS", gid: "590890124", type: "cup", color: "#B95C50", textColor: "#fff" },
-  "aleague": { label: "A-League LMS", gid: "922424054", type: "aleague", color: "#7a4d99", textColor: "#fff" }
+  "auscup": { label: "Australia Cup LMS", gid: "590890124", type: "cup" },
+  "aleague": { label: "A-League LMS", gid: "922424054", type: "aleague" }
 };
 
 // Same dash/whitespace normalization as index.html's normalizeLmsText, so
@@ -4419,6 +4460,37 @@ function exportParseFplFixtures(rows, base, roundTest){
   return { gameweeks };
 }
 
+// Trimmed-down port of index.html's parseSideLeagueOverallTable — a simple
+// season-aggregate Pos/Team/Pts table shown beneath Fixtures on the AFL/NRL/
+// EPL Supercoach pages (labelled "Overall" there). Located the same way:
+// find the OVERALL_TABLE_START marker cell, then read fixed offsets from its
+// own column rather than a hardcoded column letter, since its position has
+// shifted before.
+const EXPORT_OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
+const EXPORT_OVERALL_COL_OFFSET = { pos: 1, team: 3, pts: 4 };
+function exportParseOverallTable(rows){
+  let markerRow = -1, markerCol = -1;
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r]||[];
+    const idx = row.findIndex(v => (v||"").toString().trim().toUpperCase() === EXPORT_OVERALL_TABLE_MARKER);
+    if(idx !== -1){ markerRow = r; markerCol = idx; break; }
+  }
+  if(markerRow === -1) return { entries: [], debug: { markerFound: false } };
+
+  const headerRow = markerRow + 1;
+  const posCol = markerCol + EXPORT_OVERALL_COL_OFFSET.pos;
+  const teamCol = markerCol + EXPORT_OVERALL_COL_OFFSET.team;
+  const ptsCol = markerCol + EXPORT_OVERALL_COL_OFFSET.pts;
+
+  const entries = [];
+  for(let dr=headerRow+1; dr<rows.length; dr++){
+    const team = cell(rows[dr]||[], teamCol);
+    if(!team) break;
+    entries.push({ pos: cell(rows[dr]||[], posCol), team, pts: cell(rows[dr]||[], ptsCol) });
+  }
+  return { entries, debug: { markerFound: true, markerRow: markerRow+1, headerRow: headerRow+1, entriesFound: entries.length } };
+}
+
 // Trimmed-down port of index.html's parseFplRoddy — same header-search
 // (anchors on "TEAM" in column D, since this table's position has shifted
 // before) and same fixed chip-column offsets (S:V) once the header's found.
@@ -4456,6 +4528,7 @@ function exportSyncContentOptions(){
   const competition = $("exportCompetition").value;
   const isRoddy = competition === "fpl-roddy";
   const isLms = !!EXPORT_LMS_COMPETITIONS[competition];
+  const cfg = EXPORT_COMPETITIONS[competition];
   const typeSel = $("exportContentType");
 
   $("exportRoddyHint").style.display = isRoddy ? "block" : "none";
@@ -4464,7 +4537,7 @@ function exportSyncContentOptions(){
   if(isLms){
     typeSel.innerHTML = `<option value="picks">Round Picks</option><option value="survivors">Survivors</option>`;
   } else if(!isRoddy){
-    typeSel.innerHTML = `<option value="table">Standings Table</option><option value="results">Round Results</option>`;
+    typeSel.innerHTML = `<option value="table">Standings Table</option><option value="results">Round Results</option>${cfg && cfg.hasOverall ? '<option value="overall">Overall</option>' : ''}`;
   }
 
   const needsRound = !isRoddy && (typeSel.value === "results" || typeSel.value === "picks");
@@ -4549,11 +4622,13 @@ async function exportLoadData(){
     const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
     const table = exportParseFplTable(rows, cfg.titleText);
     const fixtures = exportParseFplFixtures(rows, cfg.fixturesBase, cfg.roundTest);
-    exportData = { competition, label: cfg.label, table, fixtures, teamMap, color: cfg.color, textColor: cfg.textColor };
+    const overall = cfg.hasOverall ? exportParseOverallTable(rows) : null;
+    exportData = { competition, label: cfg.label, table, fixtures, overall, teamMap, color: cfg.color, textColor: cfg.textColor };
 
     $("exportDebugOut").textContent = JSON.stringify({
       table: table.debug,
       gameweeksFound: fixtures.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})),
+      overall: overall ? overall.debug : undefined,
       teamMapEntriesFound: Object.keys(teamMap).length
     }, null, 2);
 
@@ -4592,6 +4667,28 @@ function exportRenderPreview(){
   }
 
   const contentType = $("exportContentType").value;
+
+  if(contentType === "overall"){
+    const rowsHtml = (exportData.overall ? exportData.overall.entries : []).map(e => {
+      const logoName = exportResolveTeamName(e.team);
+      return `
+      <tr>
+        <td class="num pos">${e.pos}</td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${e.team}</div></td>
+        <td class="num pts">${e.pts||0}</td>
+      </tr>`;
+    }).join("");
+    target.innerHTML = `
+      ${exportCardHeaderHtml("Overall", exportData.label)}
+      <div class="export-card-body">
+        <table class="export-table">
+          <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Pts</th></tr></thead>
+          <tbody>${rowsHtml || `<tr><td colspan="3" class="hint">No data found — check Debug below.</td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="export-card-footer">elizacup.com</div>`;
+    return;
+  }
 
   if(contentType === "table"){
     const rowsHtml = exportData.table.teams.map(t => {
