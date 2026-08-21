@@ -472,10 +472,10 @@
     padding:12px 0;border-bottom:1px solid var(--line);
   }
   .export-fixture-row:last-child{border-bottom:none;}
-  .export-fixture-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;}
+  .export-fixture-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:16px;font-weight:600;}
   .export-fixture-team span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .export-fixture-team img{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
-  .export-fixture-team.away{flex-direction:row-reverse;text-align:right;justify-content:flex-end;}
+  .export-fixture-team.away{justify-content:flex-end;text-align:right;}
   .export-fixture-score{
     font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
     min-width:70px;text-align:center;flex-shrink:0;
@@ -4549,6 +4549,7 @@ function exportRenderPreview(){
         <td class="num pts">${e.pts||0}</td>
       </tr>`;
     }).join("");
+    target.style.width = "760px";
     target.innerHTML = `
       ${exportCardHeaderHtml("Overall", exportData.label)}
       <div class="export-card-body">
@@ -4579,6 +4580,7 @@ function exportRenderPreview(){
         <td class="next-opp">${t.next || "—"}</td>
       </tr>`;
     }).join("");
+    target.style.width = "760px";
     target.innerHTML = `
       ${exportCardHeaderHtml("Standings", exportData.label)}
       <div class="export-card-body">
@@ -4608,9 +4610,13 @@ function exportRenderPreview(){
       return `<div class="export-fixture-row">
         <div class="export-fixture-team${homeCls}"><img src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(homeLogoName)}"><span>${f.home}</span></div>
         <div class="export-fixture-score${hasScore ? '' : ' pending'}${isDrawn ? ' fx-drawn' : ''}">${scoreHtml}</div>
-        <div class="export-fixture-team away${awayCls}"><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}"><span>${f.away}</span></div>
+        <div class="export-fixture-team away${awayCls}"><span>${f.away}</span><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}"></div>
       </div>`;
     }).join("");
+    // Round Results has far less content than the 10-column Standings Table
+    // (which needs the full 760px) — narrower card so there's no leftover
+    // empty space down the sides once the team blocks stop stretching wide.
+    target.style.width = "560px";
     target.innerHTML = `
       ${exportCardHeaderHtml(exportData.label, roundName || "Round Results")}
       <div class="export-card-body">${fixturesHtml || `<p class="hint">No fixtures found for this round.</p>`}</div>
@@ -4624,6 +4630,7 @@ function exportRenderPreview(){
 function exportRenderRoddyPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.roddy;
+  target.style.width = "760px";
   if(!data.entries.length){
     target.innerHTML = `
       ${exportCardHeaderHtml("FPL", "Roddy")}
