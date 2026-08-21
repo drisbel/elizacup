@@ -468,13 +468,14 @@
   .export-table .pts{font-weight:700;}
   .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;}
   .export-fixture-row{
-    display:flex;align-items:center;justify-content:center;gap:14px;
-    padding:12px 4px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 0;border-bottom:1px solid var(--line);
   }
   .export-fixture-row:last-child{border-bottom:none;}
-  .export-fixture-team{display:flex;align-items:center;gap:8px;width:220px;font-size:14px;font-weight:600;}
+  .export-fixture-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;}
+  .export-fixture-team span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .export-fixture-team img{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
-  .export-fixture-team.away{flex-direction:row-reverse;text-align:right;}
+  .export-fixture-team.away{flex-direction:row-reverse;text-align:right;justify-content:flex-end;}
   .export-fixture-score{
     font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
     min-width:70px;text-align:center;flex-shrink:0;
@@ -499,23 +500,14 @@
   .export-legend span{display:flex;align-items:center;gap:5px;}
   .export-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
   /* Round Results winner/loser highlighting — same convention as the public
-     site's fx-win/fx-lose fixture cards, just bolder for a shareable graphic. */
+     site's fx-win/fx-lose fixture cards, just bolder for a shareable graphic.
+     Applied to both the team name and that side's own score digit, not just
+     the name, so the score itself shows who won at a glance too. */
   .export-fixture-team.fx-win{color:#166534;font-weight:700;}
-  .export-fixture-team.fx-lose{color:#8a8a8a;}
+  .export-fixture-team.fx-lose{color:#B93C32;}
+  .export-fixture-score .fx-win{color:#166534;}
+  .export-fixture-score .fx-lose{color:#B93C32;}
   .export-fixture-score.fx-drawn{color:#B8930A;}
-  /* LMS round picks — one row per entrant, pick + result */
-  .export-lms-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);}
-  .export-lms-row:last-child{border-bottom:none;}
-  .export-lms-name{flex:1;font-weight:600;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .export-lms-pick{display:flex;align-items:center;gap:6px;font-size:13px;flex-shrink:0;}
-  .export-lms-pick img{width:20px;height:20px;object-fit:contain;}
-  .export-lms-result{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 8px;border-radius:20px;flex-shrink:0;min-width:64px;text-align:center;}
-  .export-lms-result.win{background:#dcfce7;color:#166534;}
-  .export-lms-result.loss, .export-lms-result.draw{background:#fee2e2;color:#991b1b;}
-  .export-lms-result.dnp, .export-lms-result.eliminated{background:#e5e7eb;color:#4b5563;}
-  /* LMS survivors — status/lives leaderboard */
-  .export-lms-row.eliminated{opacity:.55;}
-  .export-lms-lives{font-size:15px;letter-spacing:1px;flex-shrink:0;}
   .draw-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line);border-radius:6px;
@@ -1076,8 +1068,6 @@
           <option value="afl">AFL Supercoach</option>
           <option value="nrl">NRL Supercoach</option>
           <option value="eplsc">EPL Supercoach</option>
-          <option value="auscup">LMS &mdash; Australia Cup</option>
-          <option value="aleague">LMS &mdash; A-League</option>
         </select>
         <div class="hint">More competitions (divisions) can be added here later.</div>
       </div>
@@ -4264,90 +4254,6 @@ async function exportLoadTeamMap(colLabel){
   return map;
 }
 
-// ---------- Last Man Standing (Australia Cup + A-League) ----------
-// Genuinely different shape from everything above — no table/fixtures, just
-// entrants picking a team each round and living or losing a life. Entrant
-// names are people, not clubs, so they never need the team-name-map
-// resolution above; only their pick (a real Eliza Cup team) needs a logo.
-const EXPORT_LMS_COMPETITIONS = {
-  "auscup": { label: "Australia Cup LMS", gid: "590890124", type: "cup" },
-  "aleague": { label: "A-League LMS", gid: "922424054", type: "aleague" }
-};
-
-// Same dash/whitespace normalization as index.html's normalizeLmsText, so
-// "ROUND OF 32 – PHASE 1" (Sheets often auto-converts a typed "-" into an
-// en/em-dash) still matches "ROUND OF 32 - PHASE 1".
-function exportNormalizeLmsText(s){
-  return (s||"").toString().toUpperCase().replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim();
-}
-const EXPORT_LMS_ROUND_NAMES = ["ROUND OF 32 - PHASE 1", "ROUND OF 32 - PHASE 2", "ROUND OF 16", "QUARTER FINALS", "SEMI FINALS", "FINAL"];
-function exportIsLmsCupRoundHeader(rawText){
-  return EXPORT_LMS_ROUND_NAMES.some(name => exportNormalizeLmsText(name) === exportNormalizeLmsText(rawText));
-}
-function exportIsAleagueLmsRoundHeader(rawText){
-  return /^ROUND\s+\d+$/i.test(exportNormalizeLmsText(rawText));
-}
-
-// Trimmed-down port of index.html's parseLmsCup (Australia Cup — knockout,
-// single life, named rounds). Same D/F/G/H entries columns as A-League below.
-function exportParseLmsCup(rows){
-  const rounds = [];
-  let current = null;
-  for(let r=0; r<rows.length; r++){
-    const row = rows[r] || [];
-    const d = cell(row,3); // D
-    if(exportIsLmsCupRoundHeader(d)){
-      current = { name: d, entries: [] };
-      rounds.push(current);
-      continue;
-    }
-    if(!current) continue;
-    const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
-    if(!d && !f && !g && !h) continue;
-    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
-  }
-  // Derives each entrant's current status from their most recent appearance
-  // across rounds — Australia Cup has no dedicated status column (unlike
-  // A-League's AA:AC), so "still alive" means their last-seen pick doesn't
-  // start with "ELIMINATED".
-  const lastSeen = {};
-  rounds.forEach(round => {
-    round.entries.forEach(e => { lastSeen[e.name] = e; });
-  });
-  const survivors = Object.keys(lastSeen).map(name => ({
-    name, eliminated: /^ELIMINATED/i.test(lastSeen[name].pick)
-  }));
-  return { rounds, survivors, debug: { roundsFound: rounds.map(r=>({name:r.name, entries:r.entries.length})), survivorsFound: survivors.length } };
-}
-
-// Trimmed-down port of index.html's parseAleagueLms (A-League — season-long,
-// 3 lives, numbered rounds 1-26). Has its own AA:AC player-summary block, so
-// unlike Australia Cup this doesn't need status derived from entries.
-function exportParseAleagueLms(rows){
-  const rounds = [];
-  let current = null;
-  for(let r=0; r<rows.length; r++){
-    const row = rows[r] || [];
-    const d = cell(row,3); // D
-    if(exportIsAleagueLmsRoundHeader(d)){
-      current = { name: d, entries: [] };
-      rounds.push(current);
-      continue;
-    }
-    if(!current) continue;
-    const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
-    if(!d && !f && !g && !h) continue;
-    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
-  }
-  const playerSummary = [];
-  for(let r=0; r<rows.length; r++){
-    const name = cell(rows[r]||[], 26); // AA
-    if(!name || /^PLAYER NAME$/i.test(name)) continue;
-    playerSummary.push({ name, lives: parseInt(cell(rows[r]||[], 27), 10) || 0, status: cell(rows[r]||[], 28) || "Active" }); // AB, AC
-  }
-  return { rounds, playerSummary, debug: { roundsFound: rounds.map(r=>({name:r.name, entries:r.entries.length})), playerSummaryFound: playerSummary.length } };
-}
-
 // Resolves a manager's fantasy team name to the real Eliza Cup club name for
 // logo purposes only — falls back to the name as-is if there's no match
 // (e.g. mapping sheet not loaded yet, or a genuinely new/unmapped entry).
@@ -4527,16 +4433,13 @@ function exportParseFplRoddy(rows){
 function exportSyncContentOptions(){
   const competition = $("exportCompetition").value;
   const isRoddy = competition === "fpl-roddy";
-  const isLms = !!EXPORT_LMS_COMPETITIONS[competition];
   const cfg = EXPORT_COMPETITIONS[competition];
   const typeSel = $("exportContentType");
 
   $("exportRoddyHint").style.display = isRoddy ? "block" : "none";
   typeSel.style.display = isRoddy ? "none" : "block";
 
-  if(isLms){
-    typeSel.innerHTML = `<option value="picks">Round Picks</option><option value="survivors">Survivors</option>`;
-  } else if(!isRoddy){
+  if(!isRoddy){
     typeSel.innerHTML = `<option value="table">Standings Table</option><option value="results">Round Results</option>${cfg && cfg.hasOverall ? '<option value="overall">Overall</option>' : ''}`;
   }
 
@@ -4568,33 +4471,6 @@ async function exportLoadData(){
       statusEl.textContent = `Loaded — ${roddy.entries.length} entries found.`;
       if(!roddy.entries.length) statusEl.textContent += " Check Debug below.";
       if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks.";
-      exportRenderPreview();
-    }catch(err){
-      console.error("Export load failed", err);
-      statusEl.textContent = "Couldn't load: " + err.message;
-    }finally{
-      btn.disabled = false;
-    }
-    return;
-  }
-
-  if(EXPORT_LMS_COMPETITIONS[competition]){
-    const lmsCfg = EXPORT_LMS_COMPETITIONS[competition];
-    try{
-      const res = await fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${lmsCfg.gid}&cachebust=` + Date.now());
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
-      const lms = lmsCfg.type === "cup" ? exportParseLmsCup(rows) : exportParseAleagueLms(rows);
-      exportData = { competition, label: lmsCfg.label, lms, lmsType: lmsCfg.type, color: lmsCfg.color, textColor: lmsCfg.textColor };
-
-      $("exportDebugOut").textContent = JSON.stringify(lms.debug, null, 2);
-
-      const roundSel = $("exportRound");
-      roundSel.innerHTML = lms.rounds.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
-      roundSel.selectedIndex = Math.max(lms.rounds.length - 1, 0); // most recent round with any entries
-
-      statusEl.textContent = `Loaded — ${lms.rounds.length} rounds found.`;
-      if(!lms.rounds.length) statusEl.textContent += " Check Debug below.";
       exportRenderPreview();
     }catch(err){
       console.error("Export load failed", err);
@@ -4661,11 +4537,6 @@ function exportRenderPreview(){
     return;
   }
 
-  if(exportData.lms){
-    exportRenderLmsPreview();
-    return;
-  }
-
   const contentType = $("exportContentType").value;
 
   if(contentType === "overall"){
@@ -4727,15 +4598,17 @@ function exportRenderPreview(){
       const homeWin = hasScore && homeNum > awayNum;
       const awayWin = hasScore && awayNum > homeNum;
       const isDrawn = hasScore && homeNum === awayNum;
-      const scoreHtml = hasScore ? `${f.homeScore} &ndash; ${f.awayScore}` : `vs`;
-      const homeLogoName = exportResolveTeamName(f.home);
-      const awayLogoName = exportResolveTeamName(f.away);
       const homeCls = homeWin ? " fx-win" : hasScore && !isDrawn ? " fx-lose" : "";
       const awayCls = awayWin ? " fx-win" : hasScore && !isDrawn ? " fx-lose" : "";
+      const scoreHtml = hasScore
+        ? `<span class="${homeCls.trim()}">${f.homeScore}</span> &ndash; <span class="${awayCls.trim()}">${f.awayScore}</span>`
+        : `vs`;
+      const homeLogoName = exportResolveTeamName(f.home);
+      const awayLogoName = exportResolveTeamName(f.away);
       return `<div class="export-fixture-row">
-        <div class="export-fixture-team${homeCls}"><img src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(homeLogoName)}">${f.home}</div>
+        <div class="export-fixture-team${homeCls}"><img src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(homeLogoName)}"><span>${f.home}</span></div>
         <div class="export-fixture-score${hasScore ? '' : ' pending'}${isDrawn ? ' fx-drawn' : ''}">${scoreHtml}</div>
-        <div class="export-fixture-team away${awayCls}"><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}">${f.away}</div>
+        <div class="export-fixture-team away${awayCls}"><img src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(awayLogoName)}"><span>${f.away}</span></div>
       </div>`;
     }).join("");
     target.innerHTML = `
@@ -4782,73 +4655,6 @@ function exportRenderRoddyPreview(){
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>
-    <div class="export-card-footer">elizacup.com</div>`;
-}
-
-// Renders whichever LMS content type is selected — Round Picks (one round's
-// entries: pick + result, colour-coded like the fixture rows above) or
-// Survivors (who's still in, ordered by lives remaining for A-League or just
-// Active-first for Australia Cup, which has no lives count of its own).
-function exportRenderLmsPreview(){
-  const target = $("exportPreviewTarget");
-  const contentType = $("exportContentType").value;
-  const data = exportData.lms;
-  const kicker = "Last Man Standing";
-
-  if(contentType === "survivors"){
-    let entries;
-    if(exportData.lmsType === "aleague"){
-      entries = [...data.playerSummary].sort((a,b) => {
-        const aElim = /eliminated/i.test(a.status), bElim = /eliminated/i.test(b.status);
-        if(aElim !== bElim) return aElim ? 1 : -1;
-        if(b.lives !== a.lives) return b.lives - a.lives;
-        return a.name.localeCompare(b.name);
-      });
-    } else {
-      entries = [...data.survivors].sort((a,b) => {
-        if(a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
-        return a.name.localeCompare(b.name);
-      });
-    }
-    const rowsHtml = entries.map(e => {
-      const eliminated = exportData.lmsType === "aleague" ? /eliminated/i.test(e.status) : e.eliminated;
-      const livesHtml = exportData.lmsType === "aleague"
-        ? `<span class="export-lms-lives">${"❤️".repeat(Math.max(e.lives,0))}${"🖤".repeat(Math.max(3-e.lives,0))}</span>`
-        : "";
-      return `<div class="export-lms-row${eliminated ? ' eliminated' : ''}">
-        <div class="export-lms-name">${e.name}</div>
-        ${livesHtml}
-        <div class="export-lms-result ${eliminated ? 'eliminated' : 'win'}">${eliminated ? 'Eliminated' : 'Active'}</div>
-      </div>`;
-    }).join("");
-    target.innerHTML = `
-      ${exportCardHeaderHtml(kicker, exportData.label + " — Survivors")}
-      <div class="export-card-body">${rowsHtml || `<p class="hint">No entrants found.</p>`}</div>
-      <div class="export-card-footer">elizacup.com</div>`;
-    return;
-  }
-
-  // Round Picks
-  const roundName = $("exportRound").value;
-  const round = data.rounds.find(r => r.name === roundName);
-  const entries = round ? round.entries : [];
-  const rowsHtml = entries.map(e => {
-    const isEliminated = /^ELIMINATED/i.test(e.pick);
-    const isDnp = /^DNP$/i.test(e.pick);
-    const resultCls = e.result === "WIN" ? "win" : (e.result === "LOSS" || e.result === "DRAW") ? "loss" : isDnp ? "dnp" : isEliminated ? "eliminated" : "";
-    const resultLabel = isEliminated ? "Eliminated" : isDnp ? "DNP" : (e.result || "Pending");
-    const pickHtml = (isEliminated || isDnp || !e.pick)
-      ? `<span class="export-lms-pick">${isEliminated ? "—" : (isDnp ? "Did not pick" : "—")}</span>`
-      : `<span class="export-lms-pick"><img src="logo/${teamLogoSlug(e.pick)}.png" alt="" onerror="${teamLogoOnErrorAttr(e.pick)}">${e.pick}</span>`;
-    return `<div class="export-lms-row">
-      <div class="export-lms-name">${e.name}</div>
-      ${pickHtml}
-      <div class="export-lms-result ${resultCls}">${resultLabel}</div>
-    </div>`;
-  }).join("");
-  target.innerHTML = `
-    ${exportCardHeaderHtml(kicker + " — " + exportData.label, roundName || "Round Picks")}
-    <div class="export-card-body">${rowsHtml || `<p class="hint">No picks found for this round.</p>`}</div>
     <div class="export-card-footer">elizacup.com</div>`;
 }
 

@@ -1597,6 +1597,26 @@ function applyDivisionTheme(division){
   root.setProperty('--line', lightenColor(division.color, 0.25));
 }
 
+// Same colours as admin.html's Exports tab config, so a side league's public
+// page and its shareable export graphic always match. LMS pages intentionally
+// left out (kept the default sideleagues colour instead — decided against
+// custom colours there after trying them). Applied from renderSideLeagueContent
+// itself (both on initial load and on FPL's in-page sub-tab clicks, since
+// those don't trigger a hashchange/full navigation).
+const SIDE_LEAGUE_THEME_COLORS = {
+  "fpl:premier": "#28427c",
+  "fpl:championship": "#990000",
+  "fpl:roddy": "#3D195B",
+  "fpl:cup": "#963CFF",
+  "afl": "#d90a30",
+  "nrl": "#01c36b",
+  "eplsc": "#7cb648"
+};
+function sideLeagueThemeColor(key, subTab){
+  const lookupKey = key === "fpl" ? ("fpl:" + (subTab || "premier")) : key;
+  return SIDE_LEAGUE_THEME_COLORS[lookupKey] || null;
+}
+
 function getDivisionFromHash(){
   const raw = (location.hash || "").replace("#","");
   if(raw.startsWith("team=")){
@@ -7227,6 +7247,8 @@ function renderSideLeagueContent(){
 
   if(sideLeagueData.singleTable){
     const { table, fx, overall, label, key } = sideLeagueData;
+    const themeColor = sideLeagueThemeColor(key);
+    if(themeColor) applyDivisionTheme({ color: themeColor });
     el.innerHTML = `
       ${sideLeagueWinnersBannerHtml("#sideleagues=" + key)}
       <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
@@ -7244,6 +7266,9 @@ function renderSideLeagueContent(){
   const label = sideLeagueActiveDiv === "premier" ? "Eliza Premier League"
     : sideLeagueActiveDiv === "championship" ? "Eliza Championship"
     : sideLeagueActiveDiv === "roddy" ? "Eliza FPL Roddy" : "Eliza FPL Cup";
+
+  const fplThemeColor = sideLeagueThemeColor("fpl", sideLeagueActiveDiv);
+  if(fplThemeColor) applyDivisionTheme({ color: fplThemeColor });
 
   // One FPL card covers every sub-tab (its Winners list already holds one
   // labelled entry per sub-competition), so this doesn't need to change
