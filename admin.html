@@ -479,6 +479,8 @@
   .export-chip-pill.export-chip-uc{background:#FFF6CC;color:#B8930A;}
   .export-chip-pill.export-chip-fh{background:#F9E0DC;color:#A8443A;}
   .export-chip-pill.export-chip-wc{background:#DCF2E3;color:#1F8A4C;}
+  .export-chip-pill.export-chip-blank{background:#E4DFD0;color:#B0A890;font-weight:400;}
+  .roddy-pts-divider{border-right:2px solid var(--ink);}
   .export-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     padding:12px 0;border-bottom:1px solid var(--line);
@@ -4657,6 +4659,16 @@ function exportRenderRoddyPreview(){
   // matching specific chip name text, since which 4 chips appear (and in
   // what order) can vary sheet to sheet.
   const chipPillStyles = ["export-chip-bb", "export-chip-uc", "export-chip-fh", "export-chip-wc"];
+  // The "Chip" column (this week's chip, if any) gets the same pill treatment
+  // as the per-chip-type columns — colour matched to whichever chip-type
+  // column it corresponds to, so e.g. "WC" here and the WC column's own pill
+  // always render in the same colour.
+  const chipPillFor = (text) => {
+    if(!text) return "—";
+    const idx = chipLabels.findIndex(l => (l||"").trim().toUpperCase() === text.trim().toUpperCase());
+    const cls = idx !== -1 ? chipPillStyles[idx % chipPillStyles.length] : "export-chip-blank";
+    return `<span class="export-chip-pill ${cls}">${text}</span>`;
+  };
   const rowsHtml = data.entries.map(e => {
     const logoName = exportResolveTeamName(e.team);
     const chipsHtml = e.chips.map((c, i) => {
@@ -4672,8 +4684,8 @@ function exportRenderRoddyPreview(){
         <td class="num pos">${e.pos}</td>
         <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${e.team}</div></td>
         <td class="num">${e.gw || "—"}</td>
-        <td class="num">${e.chip || "—"}</td>
-        <td class="num pts">${e.pts}</td>
+        <td class="num">${chipPillFor(e.chip)}</td>
+        <td class="num pts roddy-pts-divider">${e.pts}</td>
         ${chipsHtml}
       </tr>`;
   }).join("");
@@ -4682,7 +4694,7 @@ function exportRenderRoddyPreview(){
     ${exportCardHeaderHtml("FPL", "Roddy")}
     <div class="export-card-body">
       <table class="export-table">
-        <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num">Pts</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
+        <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num roddy-pts-divider">Pts</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>

@@ -752,6 +752,7 @@
   .chip-pill.chip-fh{background:#F9E0DC;color:#A8443A;}
   .chip-pill.chip-wc{background:#DCF2E3;color:#1F8A4C;}
   .chip-pill.chip-blank{background:#E4DFD0;color:#B0A890;font-weight:400;}
+  .roddy-pts-divider{border-right:2px solid var(--ink);}
 
   /* Fixtures */
   .round-tabs{
@@ -7229,9 +7230,19 @@ function fplRoddyTableHtml(data){
   // than matching specific chip name text, since which 4 chips appear (and
   // in what order) can vary sheet to sheet.
   const chipPillClasses = ["chip-bb", "chip-uc", "chip-fh", "chip-wc"];
+  // The "Chip" column (this week's chip, if any) gets the same pill treatment
+  // as the per-chip-type columns — colour matched to whichever chip-type
+  // column it corresponds to, so e.g. "WC" here and the WC column's own pill
+  // always render in the same colour.
+  const chipPillFor = (text) => {
+    if(!text) return "—";
+    const idx = chipLabels.findIndex(l => (l||"").trim().toUpperCase() === text.trim().toUpperCase());
+    const cls = idx !== -1 ? chipPillClasses[idx % chipPillClasses.length] : "chip-blank";
+    return `<span class="chip-pill ${cls}">${text}</span>`;
+  };
   return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
       <th>Pos</th><th style="text-align:left;">Team</th>
-      <th>GW</th><th>Chip</th><th>Pts</th>
+      <th>GW</th><th>Chip</th><th class="roddy-pts-divider">Pts</th>
       ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
     </tr></thead><tbody>
       ${data.entries.map(e=>{
@@ -7247,7 +7258,7 @@ function fplRoddyTableHtml(data){
         }).join("");
         return `<tr>
         <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
-        <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td>
+        <td>${e.gw || "—"}</td><td>${chipPillFor(e.chip)}</td><td class="pts roddy-pts-divider">${e.pts}</td>
         ${chipsHtml}
       </tr>`;
       }).join("")}
