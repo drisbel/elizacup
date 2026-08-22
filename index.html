@@ -7224,18 +7224,31 @@ async function loadFplRoddyData(){
 function fplRoddyTableHtml(data){
   if(!data.entries.length) return `<p class="state-msg">No Roddy data found. Check the Debug panel below.</p>`;
   const chipLabels = data.chipHeaders.map((h,i) => h || ("Chip " + (i+1)));
+  // Same 4-colour rotation as the main Roddy Rodriguez Cup table's chip-bb/
+  // chip-uc/chip-fh/chip-wc pill styles, applied by column position rather
+  // than matching specific chip name text, since which 4 chips appear (and
+  // in what order) can vary sheet to sheet.
+  const chipPillClasses = ["chip-bb", "chip-uc", "chip-fh", "chip-wc"];
   return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
       <th>Pos</th><th style="text-align:left;">Team</th>
-      <th>GW</th><th>Chip</th><th>Pts</th><th>Ovr Rank</th>
+      <th>GW</th><th>Chip</th><th>Pts</th>
       ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
     </tr></thead><tbody>
       ${data.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+        const chipsHtml = e.chips.map((c,i) => {
+          if(!c) return `<td>—</td>`;
+          // Unused chips show their own name (e.g. "WC") as a coloured pill.
+          // Used chips show the round they were played (e.g. "GW5") as plain text.
+          const isUnused = c.trim().toUpperCase() === (chipLabels[i]||"").trim().toUpperCase();
+          if(isUnused) return `<td><span class="chip-pill ${chipPillClasses[i % chipPillClasses.length]}">${c}</span></td>`;
+          return `<td>${c}</td>`;
+        }).join("");
         return `<tr>
         <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
-        <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td><td>${e.ovrRank || "—"}</td>
-        ${e.chips.map(c=>`<td>${c ? "✓" : "—"}</td>`).join("")}
+        <td>${e.gw || "—"}</td><td>${e.chip || "—"}</td><td class="pts">${e.pts}</td>
+        ${chipsHtml}
       </tr>`;
       }).join("")}
     </tbody></table></div>`;

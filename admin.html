@@ -467,6 +467,18 @@
   .export-table .team-cell img{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
   .export-table .pts{font-weight:700;}
   .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;}
+  /* Roddy chip pills — same 4-colour set as index.html's .chip-pill (an
+     unused chip shown as a coloured pill, a used one shown as plain text
+     naming the round it was played). */
+  .export-chip-pill{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:34px;padding:3px 6px;border-radius:4px;font-size:10.5px;font-weight:600;
+    font-family:'Barlow',sans-serif;
+  }
+  .export-chip-pill.export-chip-bb{background:#E1E9F7;color:#28427c;}
+  .export-chip-pill.export-chip-uc{background:#FFF6CC;color:#B8930A;}
+  .export-chip-pill.export-chip-fh{background:#F9E0DC;color:#A8443A;}
+  .export-chip-pill.export-chip-wc{background:#DCF2E3;color:#1F8A4C;}
   .export-fixture-row{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     padding:12px 0;border-bottom:1px solid var(--line);
@@ -4640,8 +4652,21 @@ function exportRenderRoddyPreview(){
   }
 
   const chipLabels = data.chipHeaders.map((h,i) => h || ("Chip " + (i+1)));
+  // Same 4-colour rotation as the main site's Roddy table (chip-bb/chip-uc/
+  // chip-fh/chip-wc pill styles), applied by column position rather than
+  // matching specific chip name text, since which 4 chips appear (and in
+  // what order) can vary sheet to sheet.
+  const chipPillStyles = ["export-chip-bb", "export-chip-uc", "export-chip-fh", "export-chip-wc"];
   const rowsHtml = data.entries.map(e => {
     const logoName = exportResolveTeamName(e.team);
+    const chipsHtml = e.chips.map((c, i) => {
+      if(!c) return `<td class="num">—</td>`;
+      // Unused chips show their own name (e.g. "BB") as a coloured pill.
+      // Used chips show the round they were played (e.g. "GW5") as plain text.
+      const isUnused = c.trim().toUpperCase() === (chipLabels[i]||"").trim().toUpperCase();
+      if(isUnused) return `<td class="num"><span class="export-chip-pill ${chipPillStyles[i % chipPillStyles.length]}">${c}</span></td>`;
+      return `<td class="num">${c}</td>`;
+    }).join("");
     return `
       <tr>
         <td class="num pos">${e.pos}</td>
@@ -4649,8 +4674,7 @@ function exportRenderRoddyPreview(){
         <td class="num">${e.gw || "—"}</td>
         <td class="num">${e.chip || "—"}</td>
         <td class="num pts">${e.pts}</td>
-        <td class="num">${e.ovrRank || "—"}</td>
-        ${e.chips.map(c => `<td class="num">${c ? "✓" : "—"}</td>`).join("")}
+        ${chipsHtml}
       </tr>`;
   }).join("");
 
@@ -4658,7 +4682,7 @@ function exportRenderRoddyPreview(){
     ${exportCardHeaderHtml("FPL", "Roddy")}
     <div class="export-card-body">
       <table class="export-table">
-        <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num">Pts</th><th class="num">Ovr Rank</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
+        <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num">Pts</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>
