@@ -2,11 +2,11 @@
   {
     "id": "msbh576f",
     "label": "Fantasy Premier League",
-    "status": "signups",
+    "status": "active",
     "code": "https://fantasy.premierleague.com/leagues/auto-join/6bf4qz",
     "notes": "Link is for FPL Roddy League.\nPremier League and Championship H2H leagues will also be run via Side League sheet, as well as FPL Cup",
     "link": "#sideleagues=fpl",
-    "roundInfo": "",
+    "roundInfo": "GW1",
     "closeEnabled": true,
     "closeDate": "22/08/2026 05:00:00 AM",
     "countdownEnabled": true,
