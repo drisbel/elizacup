@@ -888,49 +888,71 @@
   .fixture-team.fx-lose, .facup-team.fx-lose{color:var(--red);}
   .fixture-team.fx-draw, .facup-team.fx-draw{color:#C99A2E;}
 
-  /* FPL live head-to-head squad matchup (Premier League/Championship Live Scores) */
-  .h2h-card{
+  /* FPL live head-to-head squad matchup (Premier League/Championship Live Scores).
+     Prefixed fpl-live-h2h- rather than h2h- to avoid colliding with the
+     unrelated pre-existing .h2h-* classes used by the main Roddy Rodriguez
+     Cup's own player-vs-player card further down this stylesheet. */
+  .fpl-live-h2h-card{
     border:1px solid var(--line-light);border-radius:8px;background:#fff;
     margin-bottom:20px;overflow:hidden;
   }
-  .h2h-card-header{
+  .fpl-live-h2h-card-header{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     padding:14px 16px;background:var(--chalk);border-bottom:1px solid var(--line-light);
   }
-  .h2h-card-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;}
-  .h2h-card-team.away{flex-direction:row-reverse;text-align:right;justify-content:flex-end;}
-  .h2h-team-logo{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
-  .h2h-team-name{overflow-wrap:break-word;word-break:break-word;min-width:0;}
-  .h2h-card-score{
+  .fpl-live-h2h-card-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;}
+  .fpl-live-h2h-card-team.away{flex-direction:row-reverse;text-align:right;justify-content:flex-end;}
+  .fpl-live-h2h-team-logo{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
+  .fpl-live-h2h-team-name{overflow-wrap:break-word;word-break:break-word;min-width:0;}
+  .fpl-live-h2h-card-score{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;
     flex-shrink:0;padding:0 6px;white-space:nowrap;
   }
-  .h2h-card-score .sep{margin:0 6px;color:#a8a296;}
-  .h2h-card-score .fx-win{color:var(--turf);}
-  .h2h-lineup-grid{display:grid;grid-template-columns:1fr 1fr;}
-  .h2h-lineup-col{padding:12px 16px;}
-  .h2h-lineup-col:first-child{border-right:1px solid var(--line-light);}
-  .h2h-lineup-label{
+  .fpl-live-h2h-card-score .sep{margin:0 6px;color:#a8a296;}
+  .fpl-live-h2h-card-score .fx-win{color:var(--turf);}
+  .fpl-live-h2h-chip-badge{
+    display:inline-block;font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.03em;background:var(--amber);color:var(--ink);
+    border-radius:20px;padding:2px 8px;margin-top:3px;
+  }
+  .fpl-live-h2h-lineup-grid{display:grid;grid-template-columns:1fr 1fr;}
+  .fpl-live-h2h-lineup-col{padding:12px 16px;}
+  .fpl-live-h2h-lineup-col:first-child{border-right:1px solid var(--line-light);}
+  .fpl-live-h2h-lineup-label{
     font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:700;text-transform:uppercase;
     letter-spacing:0.04em;color:#8a9990;margin:10px 0 4px;
   }
-  .h2h-lineup-label:first-child{margin-top:0;}
-  .h2h-player-row{
+  .fpl-live-h2h-lineup-label:first-child{margin-top:0;}
+  .fpl-live-h2h-player-row{
     display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding:4px 0;font-size:13px;
   }
-  .h2h-player-row.bench{color:#8a9990;}
-  .h2h-player-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-  .h2h-player-pts{font-weight:700;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;}
-  .h2h-cap-badge{
+  .fpl-live-h2h-player-row.bench{color:#8a9990;}
+  /* Same "greyed out" treatment as the main Roddy H2H card's .h2h-shared —
+     a player who starts for both teams this gameweek can't actually swing
+     the result between them, so they're dimmed with a ⚠ to draw the eye to
+     the players who do differ. */
+  .fpl-live-h2h-player-row.shared{opacity:0.4;}
+  .fpl-live-h2h-player-row.shared .fpl-live-h2h-player-name::after{content:" ⚠";font-size:10px;opacity:0.8;}
+  .fpl-live-h2h-player-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .fpl-live-h2h-player-pts{font-weight:700;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;}
+  .fpl-live-h2h-cap-badge{
     display:inline-flex;align-items:center;justify-content:center;
     width:15px;height:15px;border-radius:50%;background:var(--pitch);color:#fff;
     font-size:9px;font-weight:700;margin-left:5px;vertical-align:middle;
   }
-  .h2h-cap-badge.vice{background:#a8a296;}
+  .fpl-live-h2h-cap-badge.vice{background:#a8a296;}
+  /* Per-player live status (finished/live/unplayed) — colour dot before the
+     name, distinct from the captain badge which sits after it. */
+  .fpl-live-h2h-status-dot{
+    display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0;
+  }
+  .fpl-live-h2h-status-dot.status-live{background:#1F8A4C;box-shadow:0 0 0 2px rgba(31,138,76,0.25);}
+  .fpl-live-h2h-status-dot.status-finished{background:#a8a296;}
+  .fpl-live-h2h-status-dot.status-unplayed{background:transparent;border:1.5px solid #cfc9ba;}
   @media (max-width:640px){
-    .h2h-lineup-grid{grid-template-columns:1fr;}
-    .h2h-lineup-col:first-child{border-right:none;border-bottom:1px solid var(--line-light);}
+    .fpl-live-h2h-lineup-grid{grid-template-columns:1fr;}
+    .fpl-live-h2h-lineup-col:first-child{border-right:none;border-bottom:1px solid var(--line-light);}
   }
 
   /* Cross-conference promotion playoff (Division 2/3 fixture tabs) */
@@ -7131,13 +7153,14 @@ function sideLeagueOverallTableHtml(overall){
 // ---------- FPL live head-to-head (Premier League + Championship only) ----------
 // A separate sheet Dan keeps updated live from the FPL API during a
 // gameweek — one row per manager, holding their GW total plus their full
-// 15-man squad (11 starters + 4 bench) with each player's own live points.
-// Doesn't contain matchup pairings itself (no opponent column), so this is
-// combined with the *existing* fixtures data (which already has the
-// scheduled pairings) purely to know who's facing who — the squad detail
-// itself all comes from this sheet. Team names here are the raw FPL manager
-// team names — same convention already used in f.home/f.away on the
-// fixtures themselves, so no name-mapping/resolution needed to match up.
+// 15-man squad (11 starters + 4 bench) with each player's own live points,
+// plus which chip (if any) they've played this gameweek (column L). Doesn't
+// contain matchup pairings itself (no opponent column), so this is combined
+// with the *existing* fixtures data (which already has the scheduled
+// pairings) purely to know who's facing who — the squad detail itself all
+// comes from this sheet. Team names here are the raw FPL manager team
+// names — same convention already used in f.home/f.away on the fixtures
+// themselves, so no name-mapping/resolution needed to match up.
 const FPL_LIVE_SCORES_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
 const FPL_LIVE_SCORES_GID = "1398583038";
 function fplLiveScoresCsvUrlFor(){
@@ -7146,6 +7169,11 @@ function fplLiveScoresCsvUrlFor(){
 // Starting XI: N/O (P1 Player/Pts) through AH/AI (P11 Player/Pts) — 11 pairs,
 // two columns apart, starting at column 13. Bench: AJ/AK (B1) through AP/AQ
 // (B4) — 4 pairs, same two-columns-apart pattern, starting at column 35.
+// NOTE: a per-player Status column (finished/live/unplayed) has been added
+// to the sheet but isn't wired up here yet — its exact position (before or
+// after Pts) needs confirming against a fresh CSV before parsing it, since
+// getting a column-width change like this wrong misaligns every player
+// after the first one, not just the new field.
 const FPL_LIVE_PLAYER_COLS = [
   ...Array.from({length:11}, (_,i) => ({ nameCol: 13 + i*2, bench: false })),
   ...Array.from({length:4}, (_,i) => ({ nameCol: 35 + i*2, bench: true }))
@@ -7157,6 +7185,7 @@ function parseFplLiveScores(rows){
     const team = cell(row, 4); // E
     if(!team) continue;
     const points = cell(row, 5); // F
+    const chip = cell(row, 11); // L — blank if no chip played this gameweek
     const players = FPL_LIVE_PLAYER_COLS.map(pc => {
       const rawName = cell(row, pc.nameCol);
       if(!rawName) return null;
@@ -7165,7 +7194,7 @@ function parseFplLiveScores(rows){
       const name = rawName.replace(/\s*\((C|VC)\)\s*$/i, "").trim();
       return { name, pts: cell(row, pc.nameCol + 1), isCaptain, isVice, bench: pc.bench };
     }).filter(Boolean);
-    teams[team.trim().toUpperCase()] = { points, players };
+    teams[team.trim().toUpperCase()] = { points, chip, players };
   }
   return teams;
 }
@@ -7180,23 +7209,27 @@ async function fetchFplLiveScores(){
     return {};
   }
 }
-function fplLivePlayerRowHtml(p){
-  const badge = p.isCaptain ? `<span class="h2h-cap-badge">C</span>` : p.isVice ? `<span class="h2h-cap-badge vice">V</span>` : "";
-  return `<div class="h2h-player-row${p.bench ? ' bench' : ''}">
-    <span class="h2h-player-name">${p.name}${badge}</span>
-    <span class="h2h-player-pts">${p.pts}</span>
+function fplLivePlayerRowHtml(p, isShared){
+  const badge = p.isCaptain ? `<span class="fpl-live-h2h-cap-badge">C</span>` : p.isVice ? `<span class="fpl-live-h2h-cap-badge vice">V</span>` : "";
+  return `<div class="fpl-live-h2h-player-row${p.bench ? ' bench' : ''}${isShared ? ' shared' : ''}" ${isShared ? `title="Also starts for the other team this gameweek"` : ''}>
+    <span class="fpl-live-h2h-player-name">${p.name}${badge}</span>
+    <span class="fpl-live-h2h-player-pts">${p.pts}</span>
   </div>`;
 }
-function fplLiveSquadColHtml(teamData){
+// sharedNames: set of starter names (uppercased) that appear in BOTH teams'
+// starting XI this gameweek — same "greyed out" treatment as the main Roddy
+// H2H card, since a player who starts for both teams can't swing the result
+// between them either way.
+function fplLiveSquadColHtml(teamData, sharedNames){
   if(!teamData){
-    return `<div class="h2h-lineup-col"><p class="hint" style="padding:12px 0;">No live squad data found for this team.</p></div>`;
+    return `<div class="fpl-live-h2h-lineup-col"><p class="hint" style="padding:12px 0;">No live squad data found for this team.</p></div>`;
   }
   const starters = teamData.players.filter(p => !p.bench);
   const bench = teamData.players.filter(p => p.bench);
-  return `<div class="h2h-lineup-col">
-    <div class="h2h-lineup-label">Starting XI</div>
-    ${starters.map(fplLivePlayerRowHtml).join("")}
-    ${bench.length ? `<div class="h2h-lineup-label bench">Bench</div>${bench.map(fplLivePlayerRowHtml).join("")}` : ""}
+  return `<div class="fpl-live-h2h-lineup-col">
+    <div class="fpl-live-h2h-lineup-label">Starting XI</div>
+    ${starters.map(p => fplLivePlayerRowHtml(p, sharedNames.has(p.name.trim().toUpperCase()))).join("")}
+    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench</div>${bench.map(p => fplLivePlayerRowHtml(p, false)).join("")}` : ""}
   </div>`;
 }
 function fplLiveMatchupCardHtml(f, liveScores){
@@ -7210,15 +7243,23 @@ function fplLiveMatchupCardHtml(f, liveScores){
   const awayPts = away ? away.points : "—";
   const homeWin = home && away && parseInt(home.points,10) > parseInt(away.points,10);
   const awayWin = home && away && parseInt(away.points,10) > parseInt(home.points,10);
-  return `<div class="h2h-card">
-    <div class="h2h-card-header">
-      <div class="h2h-card-team home"><img class="h2h-team-logo" src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" onerror="${homeLogoOnError}"><span class="h2h-team-name">${sideLeagueTeamLink(f.home)}</span></div>
-      <div class="h2h-card-score"><span class="${homeWin?'fx-win':''}">${homePts}</span><span class="sep">&ndash;</span><span class="${awayWin?'fx-win':''}">${awayPts}</span></div>
-      <div class="h2h-card-team away"><span class="h2h-team-name">${sideLeagueTeamLink(f.away)}</span><img class="h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
+  const homeChipBadge = home && home.chip ? `<span class="fpl-live-h2h-chip-badge">${home.chip}</span>` : "";
+  const awayChipBadge = away && away.chip ? `<span class="fpl-live-h2h-chip-badge">${away.chip}</span>` : "";
+
+  const homeStarterNames = new Set((home ? home.players : []).filter(p=>!p.bench).map(p=>p.name.trim().toUpperCase()));
+  const awayStarterNames = new Set((away ? away.players : []).filter(p=>!p.bench).map(p=>p.name.trim().toUpperCase()));
+  const sharedNames = new Set([...homeStarterNames].filter(n => awayStarterNames.has(n)));
+
+  return `<div class="fpl-live-h2h-card">
+    <div class="fpl-live-h2h-card-header">
+      <div class="fpl-live-h2h-card-team home"><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" onerror="${homeLogoOnError}"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.home)}</span>${homeChipBadge}</span></div>
+      <div class="fpl-live-h2h-card-score"><span class="${homeWin?'fx-win':''}">${homePts}</span><span class="sep">&ndash;</span><span class="${awayWin?'fx-win':''}">${awayPts}</span></div>
+      <div class="fpl-live-h2h-card-team away"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.away)}</span>${awayChipBadge}</span><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
     </div>
-    <div class="h2h-lineup-grid">
-      ${fplLiveSquadColHtml(home)}
-      ${fplLiveSquadColHtml(away)}
+    ${sharedNames.size ? `<div style="text-align:center;font-size:11px;color:#8a9990;padding:6px 0 0;">Greyed players (⚠) start for both teams</div>` : ""}
+    <div class="fpl-live-h2h-lineup-grid">
+      ${fplLiveSquadColHtml(home, sharedNames)}
+      ${fplLiveSquadColHtml(away, sharedNames)}
     </div>
   </div>`;
 }
