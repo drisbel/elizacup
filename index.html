@@ -888,6 +888,51 @@
   .fixture-team.fx-lose, .facup-team.fx-lose{color:var(--red);}
   .fixture-team.fx-draw, .facup-team.fx-draw{color:#C99A2E;}
 
+  /* FPL live head-to-head squad matchup (Premier League/Championship Live Scores) */
+  .h2h-card{
+    border:1px solid var(--line-light);border-radius:8px;background:#fff;
+    margin-bottom:20px;overflow:hidden;
+  }
+  .h2h-card-header{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 16px;background:var(--chalk);border-bottom:1px solid var(--line-light);
+  }
+  .h2h-card-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;}
+  .h2h-card-team.away{flex-direction:row-reverse;text-align:right;justify-content:flex-end;}
+  .h2h-team-logo{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
+  .h2h-team-name{overflow-wrap:break-word;word-break:break-word;min-width:0;}
+  .h2h-card-score{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;
+    flex-shrink:0;padding:0 6px;white-space:nowrap;
+  }
+  .h2h-card-score .sep{margin:0 6px;color:#a8a296;}
+  .h2h-card-score .fx-win{color:var(--turf);}
+  .h2h-lineup-grid{display:grid;grid-template-columns:1fr 1fr;}
+  .h2h-lineup-col{padding:12px 16px;}
+  .h2h-lineup-col:first-child{border-right:1px solid var(--line-light);}
+  .h2h-lineup-label{
+    font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.04em;color:#8a9990;margin:10px 0 4px;
+  }
+  .h2h-lineup-label:first-child{margin-top:0;}
+  .h2h-player-row{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:4px 0;font-size:13px;
+  }
+  .h2h-player-row.bench{color:#8a9990;}
+  .h2h-player-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .h2h-player-pts{font-weight:700;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;}
+  .h2h-cap-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:15px;height:15px;border-radius:50%;background:var(--pitch);color:#fff;
+    font-size:9px;font-weight:700;margin-left:5px;vertical-align:middle;
+  }
+  .h2h-cap-badge.vice{background:#a8a296;}
+  @media (max-width:640px){
+    .h2h-lineup-grid{grid-template-columns:1fr;}
+    .h2h-lineup-col:first-child{border-right:none;border-bottom:1px solid var(--line-light);}
+  }
+
   /* Cross-conference promotion playoff (Division 2/3 fixture tabs) */
   .playoff-banner{
     font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;
@@ -7083,29 +7128,46 @@ function sideLeagueOverallTableHtml(overall){
     </tbody></table></div>`;
 }
 
-// ---------- FPL live scores (Premier League + Championship only) ----------
+// ---------- FPL live head-to-head (Premier League + Championship only) ----------
 // A separate sheet Dan keeps updated live from the FPL API during a
-// gameweek — League Rank/Manager/Team/GW Points/etc, one row per manager.
+// gameweek — one row per manager, holding their GW total plus their full
+// 15-man squad (11 starters + 4 bench) with each player's own live points.
 // Doesn't contain matchup pairings itself (no opponent column), so this is
 // combined with the *existing* fixtures data (which already has the
-// scheduled pairings) purely to substitute in a live score instead of
-// waiting for the fixtures sheet's own score columns to be filled in
-// afterward. Team names here are the raw FPL manager team names — same
-// convention already used in f.home/f.away on the fixtures themselves, so no
-// name-mapping/resolution needed to match the two up.
+// scheduled pairings) purely to know who's facing who — the squad detail
+// itself all comes from this sheet. Team names here are the raw FPL manager
+// team names — same convention already used in f.home/f.away on the
+// fixtures themselves, so no name-mapping/resolution needed to match up.
 const FPL_LIVE_SCORES_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
 const FPL_LIVE_SCORES_GID = "1398583038";
 function fplLiveScoresCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/${FPL_LIVE_SCORES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${FPL_LIVE_SCORES_GID}&cachebust=` + Date.now();
 }
+// Starting XI: N/O (P1 Player/Pts) through AH/AI (P11 Player/Pts) — 11 pairs,
+// two columns apart, starting at column 13. Bench: AJ/AK (B1) through AP/AQ
+// (B4) — 4 pairs, same two-columns-apart pattern, starting at column 35.
+const FPL_LIVE_PLAYER_COLS = [
+  ...Array.from({length:11}, (_,i) => ({ nameCol: 13 + i*2, bench: false })),
+  ...Array.from({length:4}, (_,i) => ({ nameCol: 35 + i*2, bench: true }))
+];
 function parseFplLiveScores(rows){
-  const scores = {};
+  const teams = {};
   for(let r=1; r<rows.length; r++){ // row 1 is the header row
-    const team = cell(rows[r]||[], 4); // E
-    const pts = cell(rows[r]||[], 5); // F
-    if(team) scores[team.trim().toUpperCase()] = pts;
+    const row = rows[r] || [];
+    const team = cell(row, 4); // E
+    if(!team) continue;
+    const points = cell(row, 5); // F
+    const players = FPL_LIVE_PLAYER_COLS.map(pc => {
+      const rawName = cell(row, pc.nameCol);
+      if(!rawName) return null;
+      const isCaptain = /\(C\)\s*$/i.test(rawName);
+      const isVice = /\(VC\)\s*$/i.test(rawName);
+      const name = rawName.replace(/\s*\((C|VC)\)\s*$/i, "").trim();
+      return { name, pts: cell(row, pc.nameCol + 1), isCaptain, isVice, bench: pc.bench };
+    }).filter(Boolean);
+    teams[team.trim().toUpperCase()] = { points, players };
   }
-  return scores;
+  return teams;
 }
 async function fetchFplLiveScores(){
   try{
@@ -7118,17 +7180,55 @@ async function fetchFplLiveScores(){
     return {};
   }
 }
-// Builds fixture-card-style matchups (same fplFixtureCardHtml used for the
-// Fixtures section above it) using a live score substituted in for whichever
-// gameweek is currently active in that Fixtures section, instead of the
-// fixtures sheet's own (manually-entered-afterward) score columns.
+function fplLivePlayerRowHtml(p){
+  const badge = p.isCaptain ? `<span class="h2h-cap-badge">C</span>` : p.isVice ? `<span class="h2h-cap-badge vice">V</span>` : "";
+  return `<div class="h2h-player-row${p.bench ? ' bench' : ''}">
+    <span class="h2h-player-name">${p.name}${badge}</span>
+    <span class="h2h-player-pts">${p.pts}</span>
+  </div>`;
+}
+function fplLiveSquadColHtml(teamData){
+  if(!teamData){
+    return `<div class="h2h-lineup-col"><p class="hint" style="padding:12px 0;">No live squad data found for this team.</p></div>`;
+  }
+  const starters = teamData.players.filter(p => !p.bench);
+  const bench = teamData.players.filter(p => p.bench);
+  return `<div class="h2h-lineup-col">
+    <div class="h2h-lineup-label">Starting XI</div>
+    ${starters.map(fplLivePlayerRowHtml).join("")}
+    ${bench.length ? `<div class="h2h-lineup-label bench">Bench</div>${bench.map(fplLivePlayerRowHtml).join("")}` : ""}
+  </div>`;
+}
+function fplLiveMatchupCardHtml(f, liveScores){
+  const home = liveScores[(f.home||"").trim().toUpperCase()] || null;
+  const away = liveScores[(f.away||"").trim().toUpperCase()] || null;
+  const homeLogoName = resolveSideLeagueTeamName(f.home);
+  const awayLogoName = resolveSideLeagueTeamName(f.away);
+  const homeLogoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(homeLogoName)}';}`;
+  const awayLogoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(awayLogoName)}';}`;
+  const homePts = home ? home.points : "—";
+  const awayPts = away ? away.points : "—";
+  const homeWin = home && away && parseInt(home.points,10) > parseInt(away.points,10);
+  const awayWin = home && away && parseInt(away.points,10) > parseInt(home.points,10);
+  return `<div class="h2h-card">
+    <div class="h2h-card-header">
+      <div class="h2h-card-team home"><img class="h2h-team-logo" src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" onerror="${homeLogoOnError}"><span class="h2h-team-name">${sideLeagueTeamLink(f.home)}</span></div>
+      <div class="h2h-card-score"><span class="${homeWin?'fx-win':''}">${homePts}</span><span class="sep">&ndash;</span><span class="${awayWin?'fx-win':''}">${awayPts}</span></div>
+      <div class="h2h-card-team away"><span class="h2h-team-name">${sideLeagueTeamLink(f.away)}</span><img class="h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
+    </div>
+    <div class="h2h-lineup-grid">
+      ${fplLiveSquadColHtml(home)}
+      ${fplLiveSquadColHtml(away)}
+    </div>
+  </div>`;
+}
 function renderFplLiveMatchups(gw){
   const container = document.getElementById('sideLeagueLiveScoresContainer');
   if(!container) return; // not currently on a page with this section (Supercoach/Roddy/Cup don't have it)
   const liveScores = (sideLeagueData && sideLeagueData.liveScores) || null;
   if(!liveScores || !Object.keys(liveScores).length){
     container.className = "state-msg";
-    container.innerHTML = "Live scores aren't available right now.";
+    container.innerHTML = "Live squad data isn't available right now.";
     return;
   }
   if(!gw || !gw.fixtures.length){
@@ -7137,13 +7237,7 @@ function renderFplLiveMatchups(gw){
     return;
   }
   container.className = "";
-  const liveFixtures = gw.fixtures.map(f => ({
-    home: f.home,
-    away: f.away,
-    homeScore: liveScores[(f.home||"").trim().toUpperCase()] ?? "",
-    awayScore: liveScores[(f.away||"").trim().toUpperCase()] ?? ""
-  }));
-  container.innerHTML = `<div class="fixture-grid">${liveFixtures.map(fplFixtureCardHtml).join("")}</div>`;
+  container.innerHTML = gw.fixtures.map(f => fplLiveMatchupCardHtml(f, liveScores)).join("");
 }
 
 function fplFixtureCardHtml(f){
@@ -7435,7 +7529,7 @@ function renderSideLeagueContent(){
     <div class="round-tabs" id="sideLeagueRoundTabs"></div>
     <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>
     <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Live Scores</h2></div>
-    <div id="sideLeagueLiveScoresContainer" class="fixture-grid state-msg">Loading…</div>`;
+    <div id="sideLeagueLiveScoresContainer" class="state-msg">Loading…</div>`;
 
   el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
