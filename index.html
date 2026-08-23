@@ -7083,6 +7083,69 @@ function sideLeagueOverallTableHtml(overall){
     </tbody></table></div>`;
 }
 
+// ---------- FPL live scores (Premier League + Championship only) ----------
+// A separate sheet Dan keeps updated live from the FPL API during a
+// gameweek — League Rank/Manager/Team/GW Points/etc, one row per manager.
+// Doesn't contain matchup pairings itself (no opponent column), so this is
+// combined with the *existing* fixtures data (which already has the
+// scheduled pairings) purely to substitute in a live score instead of
+// waiting for the fixtures sheet's own score columns to be filled in
+// afterward. Team names here are the raw FPL manager team names — same
+// convention already used in f.home/f.away on the fixtures themselves, so no
+// name-mapping/resolution needed to match the two up.
+const FPL_LIVE_SCORES_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
+const FPL_LIVE_SCORES_GID = "1398583038";
+function fplLiveScoresCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${FPL_LIVE_SCORES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${FPL_LIVE_SCORES_GID}&cachebust=` + Date.now();
+}
+function parseFplLiveScores(rows){
+  const scores = {};
+  for(let r=1; r<rows.length; r++){ // row 1 is the header row
+    const team = cell(rows[r]||[], 4); // E
+    const pts = cell(rows[r]||[], 5); // F
+    if(team) scores[team.trim().toUpperCase()] = pts;
+  }
+  return scores;
+}
+async function fetchFplLiveScores(){
+  try{
+    const res = await cachedFetch(fplLiveScoresCsvUrlFor());
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const rows = Papa.parse(await res.text(), {skipEmptyLines:false}).data;
+    return parseFplLiveScores(rows);
+  }catch(err){
+    console.error("FPL live scores failed to load", err);
+    return {};
+  }
+}
+// Builds fixture-card-style matchups (same fplFixtureCardHtml used for the
+// Fixtures section above it) using a live score substituted in for whichever
+// gameweek is currently active in that Fixtures section, instead of the
+// fixtures sheet's own (manually-entered-afterward) score columns.
+function renderFplLiveMatchups(gw){
+  const container = document.getElementById('sideLeagueLiveScoresContainer');
+  if(!container) return; // not currently on a page with this section (Supercoach/Roddy/Cup don't have it)
+  const liveScores = (sideLeagueData && sideLeagueData.liveScores) || null;
+  if(!liveScores || !Object.keys(liveScores).length){
+    container.className = "state-msg";
+    container.innerHTML = "Live scores aren't available right now.";
+    return;
+  }
+  if(!gw || !gw.fixtures.length){
+    container.className = "state-msg";
+    container.innerHTML = "No fixtures found for this gameweek.";
+    return;
+  }
+  container.className = "";
+  const liveFixtures = gw.fixtures.map(f => ({
+    home: f.home,
+    away: f.away,
+    homeScore: liveScores[(f.home||"").trim().toUpperCase()] ?? "",
+    awayScore: liveScores[(f.away||"").trim().toUpperCase()] ?? ""
+  }));
+  container.innerHTML = `<div class="fixture-grid">${liveFixtures.map(fplFixtureCardHtml).join("")}</div>`;
+}
+
 function fplFixtureCardHtml(f){
   const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
   const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
@@ -7370,7 +7433,9 @@ function renderSideLeagueContent(){
     ${sideLeagueTableHtml(table)}
     <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
     <div class="round-tabs" id="sideLeagueRoundTabs"></div>
-    <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
+    <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>
+    <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Live Scores</h2></div>
+    <div id="sideLeagueLiveScoresContainer" class="fixture-grid state-msg">Loading…</div>`;
 
   el.querySelectorAll('#sideLeagueDivToggle .round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -7380,10 +7445,10 @@ function renderSideLeagueContent(){
     });
   });
 
-  wireSideLeagueRoundTabs(fx, sideLeagueActiveDiv);
+  wireSideLeagueRoundTabs(fx, sideLeagueActiveDiv, renderFplLiveMatchups);
 }
 
-function wireSideLeagueRoundTabs(fx, roundGroupKey){
+function wireSideLeagueRoundTabs(fx, roundGroupKey, onRoundChange){
   const roundTabsEl = document.getElementById('sideLeagueRoundTabs');
   const gws = fx.gameweeks;
   if(!gws.length){
@@ -7412,6 +7477,7 @@ function wireSideLeagueRoundTabs(fx, roundGroupKey){
   roundButtons[activeIdx].classList.add('active');
   sideLeagueActiveRound[roundGroupKey] = gws[activeIdx].name;
   renderSideLeagueFixtures(gws[activeIdx]);
+  if(onRoundChange) onRoundChange(gws[activeIdx]);
   try{ roundButtons[activeIdx].scrollIntoView({inline:'center', block:'nearest'}); }catch(e){}
 
   roundButtons.forEach((btn,i)=>{
@@ -7420,6 +7486,7 @@ function wireSideLeagueRoundTabs(fx, roundGroupKey){
       btn.classList.add('active');
       sideLeagueActiveRound[roundGroupKey] = gws[i].name;
       renderSideLeagueFixtures(gws[i]);
+      if(onRoundChange) onRoundChange(gws[i]);
     });
   });
 }
@@ -8618,9 +8685,11 @@ async function loadSideLeague(leagueKey){
   }
 
   try{
-    const [res] = await Promise.all([
+    const isFpl = league.key === "fpl";
+    const [res, , liveScores] = await Promise.all([
       cachedFetch(sideLeagueCsvUrlFor(league)),
-      loadSideLeagueTeamMap()
+      loadSideLeagueTeamMap(),
+      isFpl ? fetchFplLiveScores() : Promise.resolve(null)
     ]);
     if(!res.ok) throw new Error("HTTP " + res.status);
     const csvText = await res.text();
@@ -8655,7 +8724,7 @@ async function loadSideLeague(leagueKey){
     const premierFx = parseFplFixtures(rows, 33); // AH
     const champFx = parseFplFixtures(rows, 40);   // AO
 
-    sideLeagueData = { singleTable: false, premier, champ, premierFx, champFx };
+    sideLeagueData = { singleTable: false, premier, champ, premierFx, champFx, liveScores };
     const validFplSubTabs = new Set(["premier","championship","roddy","cup"]);
     sideLeagueActiveDiv = (pendingSideLeagueSubTab && validFplSubTabs.has(pendingSideLeagueSubTab)) ? pendingSideLeagueSubTab : "premier";
     pendingSideLeagueSubTab = null;
@@ -8665,7 +8734,8 @@ async function loadSideLeague(leagueKey){
     sideLeagueDebug = {
       premier: premier.debug, championship: champ.debug,
       premierFixtures: { gameweeksFound: premierFx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: premierFx.rawDump },
-      championshipFixtures: { gameweeksFound: champFx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: champFx.rawDump }
+      championshipFixtures: { gameweeksFound: champFx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: champFx.rawDump },
+      liveScores: liveScores ? { teamsFound: Object.keys(liveScores).length, teams: Object.keys(liveScores) } : undefined
     };
     document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
   }catch(err){
