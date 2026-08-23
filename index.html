@@ -928,6 +928,13 @@
     padding:4px 0;font-size:13px;
   }
   .fpl-live-h2h-player-row.bench{color:#8a9990;}
+  /* Bench Boost active: bench points count this gameweek same as starters,
+     so drop the usual muted/dimmed treatment and highlight it instead. */
+  .fpl-live-h2h-player-row.bench-boosted{color:var(--ink);background:#FFF6CC;border-radius:4px;padding-left:4px;padding-right:4px;margin:1px -4px;}
+  .fpl-live-h2h-bench-boost-tag{
+    display:inline-block;font-size:9.5px;font-weight:600;text-transform:none;letter-spacing:normal;
+    color:#B8930A;background:#FFF6CC;border-radius:20px;padding:1px 7px;margin-left:4px;vertical-align:middle;
+  }
   /* Same "greyed out" treatment as the main Roddy H2H card's .h2h-shared —
      a player who starts for both teams this gameweek can't actually swing
      the result between them, so they're dimmed with a ⚠ to draw the eye to
@@ -948,8 +955,8 @@
     display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0;
   }
   .fpl-live-h2h-status-dot.status-live{background:#1F8A4C;box-shadow:0 0 0 2px rgba(31,138,76,0.25);}
-  .fpl-live-h2h-status-dot.status-finished{background:#a8a296;}
-  .fpl-live-h2h-status-dot.status-unplayed{background:transparent;border:1.5px solid #cfc9ba;}
+  .fpl-live-h2h-status-dot.status-finished{background:#1F8A4C;}
+  .fpl-live-h2h-status-dot.status-unplayed{background:#cfc9ba;}
   /* Stays side-by-side even on narrow screens (never collapses to a single
      stacked column) — shrinks font sizes/padding/logo instead, so both
      squads are still visible next to each other on mobile. */
@@ -7217,13 +7224,13 @@ async function fetchFplLiveScores(){
     return {};
   }
 }
-function fplLivePlayerRowHtml(p, isShared){
+function fplLivePlayerRowHtml(p, isShared, benchBoosted){
   const badge = p.isCaptain ? `<span class="fpl-live-h2h-cap-badge">C</span>` : p.isVice ? `<span class="fpl-live-h2h-cap-badge vice">V</span>` : "";
   const statusKey = (p.status||"").trim().toLowerCase();
   const statusCls = statusKey === "live" ? "status-live" : statusKey === "finished" ? "status-finished" : "status-unplayed";
   const statusTitle = p.status || "Unplayed";
   const statusDot = `<span class="fpl-live-h2h-status-dot ${statusCls}" title="${statusTitle}"></span>`;
-  return `<div class="fpl-live-h2h-player-row${p.bench ? ' bench' : ''}${isShared ? ' shared' : ''}" ${isShared ? `title="Also starts for the other team this gameweek"` : ''}>
+  return `<div class="fpl-live-h2h-player-row${p.bench ? ' bench' : ''}${benchBoosted ? ' bench-boosted' : ''}${isShared ? ' shared' : ''}" ${isShared ? `title="Also starts for the other team this gameweek with the same captain status"` : ''}>
     <span class="fpl-live-h2h-player-name">${statusDot}${p.name}${badge}</span>
     <span class="fpl-live-h2h-player-pts">${p.pts}</span>
   </div>`;
@@ -7232,16 +7239,36 @@ function fplLivePlayerRowHtml(p, isShared){
 // starting XI this gameweek — same "greyed out" treatment as the main Roddy
 // H2H card, since a player who starts for both teams can't swing the result
 // between them either way.
-function fplLiveSquadColHtml(teamData, sharedNames){
+// Composite key for "shared player" comparison — same name AND same
+// captain/vice status. A player who's captain for one team but a plain
+// starter for the other isn't really the "same pick" strategically, so
+// they shouldn't be treated as cancelling each other out.
+function fplPlayerShareKey(p){
+  return p.name.trim().toUpperCase() + "|" + (p.isCaptain ? "C" : p.isVice ? "V" : "");
+}
+function fplLiveSquadColHtml(teamData, sharedKeys){
   if(!teamData){
     return `<div class="fpl-live-h2h-lineup-col"><p class="hint" style="padding:12px 0;">No live squad data found for this team.</p></div>`;
   }
+  const isShared = p => sharedKeys.has(fplPlayerShareKey(p));
+  // Players unique to this team first (they're the ones that can actually
+  // swing the result between the two managers), players shared with the
+  // other team's starting XI pushed to the bottom — stable within each
+  // group, so it doesn't otherwise reshuffle the sheet's own player order.
   const starters = teamData.players.filter(p => !p.bench);
+  const uniqueStarters = starters.filter(p => !isShared(p));
+  const sharedStarters = starters.filter(p => isShared(p));
   const bench = teamData.players.filter(p => p.bench);
+  // Bench Boost means the bench's points count toward the total this
+  // gameweek same as the starters — so instead of the usual dimmed/muted
+  // bench treatment, highlight it to make that clear at a glance.
+  const benchBoostActive = /bboost/i.test(teamData.chip || "");
   return `<div class="fpl-live-h2h-lineup-col">
     <div class="fpl-live-h2h-lineup-label">Starting XI</div>
-    ${starters.map(p => fplLivePlayerRowHtml(p, sharedNames.has(p.name.trim().toUpperCase()))).join("")}
-    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench</div>${bench.map(p => fplLivePlayerRowHtml(p, false)).join("")}` : ""}
+    ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false)).join("")}
+    ${sharedStarters.map(p => fplLivePlayerRowHtml(p, true)).join("")}
+    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? ` <span class="fpl-live-h2h-bench-boost-tag">Bench Boost active — counts this week</span>` : ""}</div>
+    ${bench.map(p => fplLivePlayerRowHtml(p, false, benchBoostActive)).join("")}` : ""}
   </div>`;
 }
 function fplLiveMatchupCardHtml(f, liveScores){
@@ -7258,9 +7285,9 @@ function fplLiveMatchupCardHtml(f, liveScores){
   const homeChipBadge = home && home.chip ? `<span class="fpl-live-h2h-chip-badge">${home.chip}</span>` : "";
   const awayChipBadge = away && away.chip ? `<span class="fpl-live-h2h-chip-badge">${away.chip}</span>` : "";
 
-  const homeStarterNames = new Set((home ? home.players : []).filter(p=>!p.bench).map(p=>p.name.trim().toUpperCase()));
-  const awayStarterNames = new Set((away ? away.players : []).filter(p=>!p.bench).map(p=>p.name.trim().toUpperCase()));
-  const sharedNames = new Set([...homeStarterNames].filter(n => awayStarterNames.has(n)));
+  const homeStarterKeys = new Set((home ? home.players : []).filter(p=>!p.bench).map(fplPlayerShareKey));
+  const awayStarterKeys = new Set((away ? away.players : []).filter(p=>!p.bench).map(fplPlayerShareKey));
+  const sharedKeys = new Set([...homeStarterKeys].filter(k => awayStarterKeys.has(k)));
 
   return `<div class="fpl-live-h2h-card">
     <div class="fpl-live-h2h-card-header">
@@ -7268,10 +7295,10 @@ function fplLiveMatchupCardHtml(f, liveScores){
       <div class="fpl-live-h2h-card-score"><span class="${homeWin?'fx-win':''}">${homePts}</span><span class="sep">&ndash;</span><span class="${awayWin?'fx-win':''}">${awayPts}</span></div>
       <div class="fpl-live-h2h-card-team away"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.away)}</span>${awayChipBadge}</span><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
     </div>
-    ${sharedNames.size ? `<div style="text-align:center;font-size:11px;color:#8a9990;padding:6px 0 0;">Greyed players (⚠) start for both teams</div>` : ""}
+    ${sharedKeys.size ? `<div style="text-align:center;font-size:11px;color:#8a9990;padding:6px 0 0;">Greyed players (⚠) start for both teams with the same captain status</div>` : ""}
     <div class="fpl-live-h2h-lineup-grid">
-      ${fplLiveSquadColHtml(home, sharedNames)}
-      ${fplLiveSquadColHtml(away, sharedNames)}
+      ${fplLiveSquadColHtml(home, sharedKeys)}
+      ${fplLiveSquadColHtml(away, sharedKeys)}
     </div>
   </div>`;
 }
