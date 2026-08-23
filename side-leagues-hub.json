@@ -30,7 +30,7 @@
   {
     "id": "msbhvee7",
     "label": "AFL Supercoach",
-    "status": "active",
+    "status": "complete",
     "code": "",
     "notes": "",
     "link": "#sideleagues=afl",
@@ -39,7 +39,9 @@
     "countdownEnabled": false,
     "roundInfo": "GRAND FINAL - BC UNITED v LOAVES & FISHES",
     "winners": [
-      "League - BC United"
+      "League - BC United",
+      "Finals - BC United",
+      "Overall - Juan El Magico FC"
     ],
     "rules": "<strong><u>AFL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official AFL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
   },
