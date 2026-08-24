@@ -898,18 +898,18 @@
   }
   .fpl-live-h2h-card-header{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
-    padding:14px 16px;background:var(--chalk);border-bottom:1px solid var(--line-light);
+    padding:14px 16px;background:var(--pitch);color:#fff;border-bottom:1px solid var(--line-light);
   }
-  .fpl-live-h2h-card-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;}
-  .fpl-live-h2h-card-team.away{flex-direction:row-reverse;text-align:right;justify-content:flex-end;}
+  .fpl-live-h2h-card-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;font-weight:600;color:#fff;}
+  .fpl-live-h2h-card-team.away{justify-content:flex-end;text-align:right;}
   .fpl-live-h2h-team-logo{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
   .fpl-live-h2h-team-name{overflow-wrap:break-word;word-break:break-word;min-width:0;}
   .fpl-live-h2h-card-score{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;
-    flex-shrink:0;padding:0 6px;white-space:nowrap;
+    flex-shrink:0;padding:0 6px;white-space:nowrap;color:#fff;
   }
-  .fpl-live-h2h-card-score .sep{margin:0 6px;color:#a8a296;}
-  .fpl-live-h2h-card-score .fx-win{color:var(--turf);}
+  .fpl-live-h2h-card-score .sep{margin:0 6px;color:rgba(255,255,255,0.45);}
+  .fpl-live-h2h-card-score .fx-win{color:#8FF0B9;}
   .fpl-live-h2h-chip-badge{
     display:inline-block;font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;
     text-transform:uppercase;letter-spacing:0.03em;background:var(--amber);color:var(--ink);
@@ -921,6 +921,7 @@
   .fpl-live-h2h-lineup-label{
     font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:700;text-transform:uppercase;
     letter-spacing:0.04em;color:#8a9990;margin:10px 0 4px;
+    display:flex;align-items:center;gap:5px;white-space:nowrap;
   }
   .fpl-live-h2h-lineup-label:first-child{margin-top:0;}
   .fpl-live-h2h-player-row{
@@ -933,7 +934,7 @@
   .fpl-live-h2h-player-row.bench-boosted{color:var(--ink);background:#FFF6CC;border-radius:4px;padding-left:4px;padding-right:4px;margin:1px -4px;}
   .fpl-live-h2h-bench-boost-tag{
     display:inline-block;font-size:9.5px;font-weight:600;text-transform:none;letter-spacing:normal;
-    color:#B8930A;background:#FFF6CC;border-radius:20px;padding:1px 7px;margin-left:4px;vertical-align:middle;
+    color:#B8930A;background:#FFF6CC;border-radius:20px;padding:1px 7px;vertical-align:middle;white-space:nowrap;
   }
   /* Same "greyed out" treatment as the main Roddy H2H card's .h2h-shared —
      a player who starts for both teams this gameweek can't actually swing
@@ -973,6 +974,7 @@
     .fpl-live-h2h-card-score{font-size:17px;padding:0 3px;}
     .fpl-live-h2h-card-score .sep{margin:0 3px;}
     .fpl-live-h2h-chip-badge{font-size:8.5px;padding:1px 5px;}
+    .fpl-live-h2h-bench-boost-tag{font-size:8px;padding:1px 5px;}
   }
 
   /* Cross-conference promotion playoff (Division 2/3 fixture tabs) */
@@ -6731,7 +6733,16 @@ function renderSideLeaguesHub(){
       return;
     }
     container.className = "";
-    container.innerHTML = `<div class="slh-grid">${data.cards.map(slhCardHtml).join("")}</div>`;
+    // Completed leagues sink to the bottom, below Active/Signups ones — a
+    // stable sort, so within "still going" and within "complete" the
+    // admin-defined order (slh-order, set via the Reorder tool in admin.html)
+    // is otherwise preserved exactly.
+    const sortedCards = [...data.cards].sort((a, b) => {
+      const aDone = a.status === "complete" ? 1 : 0;
+      const bDone = b.status === "complete" ? 1 : 0;
+      return aDone - bDone;
+    });
+    container.innerHTML = `<div class="slh-grid">${sortedCards.map(slhCardHtml).join("")}</div>`;
     startSlhCountdowns();
   });
 }
@@ -7267,11 +7278,11 @@ function fplLiveSquadColHtml(teamData, sharedKeys){
     <div class="fpl-live-h2h-lineup-label">Starting XI</div>
     ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false)).join("")}
     ${sharedStarters.map(p => fplLivePlayerRowHtml(p, true)).join("")}
-    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? ` <span class="fpl-live-h2h-bench-boost-tag">Bench Boost active — counts this week</span>` : ""}</div>
+    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? `<span class="fpl-live-h2h-bench-boost-tag">Bench Boost Active</span>` : ""}</div>
     ${bench.map(p => fplLivePlayerRowHtml(p, false, benchBoostActive)).join("")}` : ""}
   </div>`;
 }
-function fplLiveMatchupCardHtml(f, liveScores){
+function fplLiveMatchupCardHtml(f, liveScores, idx){
   const home = liveScores[(f.home||"").trim().toUpperCase()] || null;
   const away = liveScores[(f.away||"").trim().toUpperCase()] || null;
   const homeLogoName = resolveSideLeagueTeamName(f.home);
@@ -7289,22 +7300,27 @@ function fplLiveMatchupCardHtml(f, liveScores){
   const awayStarterKeys = new Set((away ? away.players : []).filter(p=>!p.bench).map(fplPlayerShareKey));
   const sharedKeys = new Set([...homeStarterKeys].filter(k => awayStarterKeys.has(k)));
 
-  return `<div class="fpl-live-h2h-card">
+  return `<div class="fpl-live-h2h-card" id="fpl-live-h2h-${idx}">
     <div class="fpl-live-h2h-card-header">
       <div class="fpl-live-h2h-card-team home"><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" onerror="${homeLogoOnError}"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.home)}</span>${homeChipBadge}</span></div>
       <div class="fpl-live-h2h-card-score"><span class="${homeWin?'fx-win':''}">${homePts}</span><span class="sep">&ndash;</span><span class="${awayWin?'fx-win':''}">${awayPts}</span></div>
       <div class="fpl-live-h2h-card-team away"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.away)}</span>${awayChipBadge}</span><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
     </div>
-    ${sharedKeys.size ? `<div style="text-align:center;font-size:11px;color:#8a9990;padding:6px 0 0;">Greyed players (⚠) start for both teams with the same captain status</div>` : ""}
     <div class="fpl-live-h2h-lineup-grid">
       ${fplLiveSquadColHtml(home, sharedKeys)}
       ${fplLiveSquadColHtml(away, sharedKeys)}
     </div>
   </div>`;
 }
+// The FPL Live Scores section always shows the current round's matchups
+// (fxCurrentRoundIndex), independent of whichever round tab is selected in
+// Fixtures above it — see fplWireFixtureCardClicks for how the two stay
+// connected regardless.
+let fplLiveScoresRound = null; // the fixed current-round gameweek object, set once per page load
 function renderFplLiveMatchups(gw){
   const container = document.getElementById('sideLeagueLiveScoresContainer');
   if(!container) return; // not currently on a page with this section (Supercoach/Roddy/Cup don't have it)
+  fplLiveScoresRound = gw;
   const liveScores = (sideLeagueData && sideLeagueData.liveScores) || null;
   if(!liveScores || !Object.keys(liveScores).length){
     container.className = "state-msg";
@@ -7317,7 +7333,24 @@ function renderFplLiveMatchups(gw){
     return;
   }
   container.className = "";
-  container.innerHTML = gw.fixtures.map(f => fplLiveMatchupCardHtml(f, liveScores)).join("");
+  container.innerHTML = gw.fixtures.map((f,i) => fplLiveMatchupCardHtml(f, liveScores, i)).join("");
+}
+// Makes each fixture card in the Fixtures section above clickable — jumping
+// down to its matching Live Scores card — but only when the round currently
+// being viewed in Fixtures is the same round Live Scores is pinned to
+// (fplLiveScoresRound); any other round has no matching card to jump to.
+function fplWireFixtureCardClicks(viewedGw){
+  const container = document.getElementById('sideLeagueFixtureContainer');
+  if(!container) return;
+  const isCurrentRound = viewedGw && fplLiveScoresRound && viewedGw.name === fplLiveScoresRound.name;
+  const cards = container.querySelectorAll('.fixture-card');
+  cards.forEach((card, i) => {
+    card.style.cursor = isCurrentRound ? "pointer" : "";
+    card.onclick = isCurrentRound ? () => {
+      const target = document.getElementById('fpl-live-h2h-' + i);
+      if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+    } : null;
+  });
 }
 
 function fplFixtureCardHtml(f){
@@ -7479,7 +7512,7 @@ function fplRoddyTableHtml(data){
   };
   return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
       <th>Pos</th><th style="text-align:left;">Team</th>
-      <th>GW</th><th>Chip</th><th class="roddy-pts-divider">Pts</th>
+      <th>GW</th><th>Chip</th><th>Pts</th><th class="roddy-pts-divider">Ovr Rank</th>
       ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
     </tr></thead><tbody>
       ${data.entries.map(e=>{
@@ -7495,7 +7528,7 @@ function fplRoddyTableHtml(data){
         }).join("");
         return `<tr>
         <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
-        <td>${e.gw || "—"}</td><td>${chipPillFor(e.chip)}</td><td class="pts roddy-pts-divider">${e.pts}</td>
+        <td>${e.gw || "—"}</td><td>${chipPillFor(e.chip)}</td><td class="pts">${e.pts}</td><td class="roddy-pts-divider">${e.ovrRank || "—"}</td>
         ${chipsHtml}
       </tr>`;
       }).join("")}
@@ -7619,9 +7652,24 @@ function renderSideLeagueContent(){
     });
   });
 
-  wireSideLeagueRoundTabs(fx, sideLeagueActiveDiv, renderFplLiveMatchups);
+  // Live Scores always shows the current round regardless of which round tab
+  // is selected in Fixtures — pinned once here, not re-rendered on tab clicks.
+  renderFplLiveMatchups(fx.gameweeks[fxCurrentRoundIndex(fx.gameweeks)]);
+  wireSideLeagueRoundTabs(fx, sideLeagueActiveDiv, fplWireFixtureCardClicks);
 }
 
+// Most recent gameweek with any played (scored) result — same "current round"
+// definition used both for the default-selected Fixtures tab and for pinning
+// the FPL Live Scores section, so the two always agree on what "current" means.
+function fxCurrentRoundIndex(gws){
+  for(let i = gws.length - 1; i >= 0; i--){
+    const hasPlayed = gws[i].fixtures.some(f =>
+      !isNaN(parseInt(f.homeScore, 10)) && !isNaN(parseInt(f.awayScore, 10))
+    );
+    if(hasPlayed) return i;
+  }
+  return 0;
+}
 function wireSideLeagueRoundTabs(fx, roundGroupKey, onRoundChange){
   const roundTabsEl = document.getElementById('sideLeagueRoundTabs');
   const gws = fx.gameweeks;
@@ -7634,15 +7682,7 @@ function wireSideLeagueRoundTabs(fx, roundGroupKey, onRoundChange){
 
   roundTabsEl.innerHTML = gws.map(gw => `<button class="round-tab" data-name="${gw.name}">${gw.name}</button>`).join("");
 
-  // Default to the most recent gameweek with any played (scored) result — walk
-  // backward from the last gameweek and stop at the first one with a score in it.
-  let defaultIdx = 0;
-  for(let i = gws.length - 1; i >= 0; i--){
-    const hasPlayed = gws[i].fixtures.some(f =>
-      !isNaN(parseInt(f.homeScore, 10)) && !isNaN(parseInt(f.awayScore, 10))
-    );
-    if(hasPlayed){ defaultIdx = i; break; }
-  }
+  const defaultIdx = fxCurrentRoundIndex(gws);
   const savedName = sideLeagueActiveRound[roundGroupKey];
   const savedIdx = gws.findIndex(gw => gw.name === savedName);
   const activeIdx = savedIdx >= 0 ? savedIdx : defaultIdx;
