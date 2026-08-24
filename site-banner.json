@@ -1,9 +1,9 @@
 {
-  "enabled": false,
-  "message": "FPL and EPL Supercoach Leagues now open! View Side Leagues Hub for more info.",
+  "enabled": true,
+  "message": "SOKKAH FANTASY coming soon! See News section",
   "scope": "home",
   "countdown": {
-    "enabled": true,
+    "enabled": false,
     "label": "Deadline",
     "deadline": "22/08/2026 05:00 AM"
   }
