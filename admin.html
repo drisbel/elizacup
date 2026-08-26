@@ -673,9 +673,10 @@
           <button type="button" class="fmt-btn b" data-fmt-target="fBody" data-fmt-tag="strong" title="Bold">B</button>
           <button type="button" class="fmt-btn u" data-fmt-target="fBody" data-fmt-tag="u" title="Underline">U</button>
           <button type="button" class="fmt-btn i" data-fmt-target="fBody" data-fmt-tag="em" title="Italic">I</button>
+          <button type="button" class="fmt-btn link" data-fmt-target="fBody" title="Turn selected text into a link">&#128279;</button>
         </div>
         <textarea id="fBody" placeholder="Article text. Leave a blank line between paragraphs."></textarea>
-        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site. Select text and click B/U/I to format it.</div>
+        <div class="hint">Press Enter to start a new paragraph — each line becomes its own paragraph on the site. Select text and click B/U/I to format it, or the link icon to turn it into a clickable link.</div>
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="fPublished" checked>
@@ -4718,11 +4719,29 @@ function exportRenderRoddyPreview(){
     ${exportCardHeaderHtml("FPL", "Roddy")}
     <div class="export-card-body">
       <table class="export-table">
-        <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">GW</th><th class="num">Chip</th><th class="num">Pts</th><th class="num roddy-pts-divider">Ovr Rank</th>${chipLabels.map(l=>`<th class="num">${l}</th>`).join("")}</tr></thead>
+        <thead><tr>${exportRoddyHeaderCellsHtml(chipLabels)}</tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>
     <div class="export-card-footer">elizacup.com</div>`;
+}
+
+// Explicit width per column, computed rather than left to the browser, since
+// Ovr Rank's values (e.g. "169.92") are noticeably wider than GW/Pts's short
+// numbers and were wrapping/overflowing when every "num" column shared the
+// same fixed 34px. Sized as percentages of the export card, adapting to
+// however many chip-type columns the sheet actually has (usually 4).
+function exportRoddyHeaderCellsHtml(chipLabels){
+  const fixed = { pos: 5, team: 28, gw: 6, chip: 7, pts: 6, ovrRank: 13 };
+  const fixedTotal = Object.values(fixed).reduce((a,b) => a+b, 0);
+  const chipColWidth = chipLabels.length ? (100 - fixedTotal) / chipLabels.length : 0;
+  return `<th class="num" style="width:${fixed.pos}%;">Pos</th>` +
+    `<th style="width:${fixed.team}%;">Team</th>` +
+    `<th class="num" style="width:${fixed.gw}%;">GW</th>` +
+    `<th class="num" style="width:${fixed.chip}%;">Chip</th>` +
+    `<th class="num" style="width:${fixed.pts}%;">Pts</th>` +
+    `<th class="num roddy-pts-divider" style="width:${fixed.ovrRank}%;">Ovr Rank</th>` +
+    chipLabels.map(l => `<th class="num" style="width:${chipColWidth}%;">${l}</th>`).join("");
 }
 
 function exportImage(){
@@ -4810,9 +4829,40 @@ function wrapSelection(textareaId, tag){
   el.setSelectionRange(newCursorStart, newCursorEnd);
 }
 
+// Same idea as wrapSelection, but for <a href="..."> specifically, since that
+// tag needs a URL supplied first rather than being a fixed open/close pair.
+function wrapSelectionAsLink(textareaId){
+  const el = $(textareaId);
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const value = el.value;
+  const selected = value.slice(start, end);
+  if(!selected.length){
+    alert("Select the text you want to turn into a link first.");
+    return;
+  }
+  let url = prompt("Link URL:", "https://");
+  if(!url) return; // cancelled
+  url = url.trim();
+  if(!url) return;
+  const openTag = `<a href="${url.replace(/"/g, "&quot;")}" target="_blank" rel="noopener">`;
+  const closeTag = `</a>`;
+  const newText = value.slice(0, start) + openTag + selected + closeTag + value.slice(end);
+  const newCursorStart = start + openTag.length;
+  const newCursorEnd = newCursorStart + selected.length;
+
+  el.value = newText;
+  el.focus();
+  el.setSelectionRange(newCursorStart, newCursorEnd);
+}
+
 document.querySelectorAll(".fmt-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    wrapSelection(btn.getAttribute("data-fmt-target"), btn.getAttribute("data-fmt-tag"));
+    if(btn.classList.contains("link")){
+      wrapSelectionAsLink(btn.getAttribute("data-fmt-target"));
+    } else {
+      wrapSelection(btn.getAttribute("data-fmt-target"), btn.getAttribute("data-fmt-tag"));
+    }
   });
 });
 
