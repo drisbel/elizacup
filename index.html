@@ -304,7 +304,7 @@
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
   .comp-switcher{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 24px 16px;}
-  .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #6b7c73);display:inline-flex;align-items:center;gap:6px;}
+  .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #000);display:inline-flex;align-items:center;gap:6px;}
   .comp-switcher .div-tab:hover{border-color:var(--amber);color:var(--ink);}
   .comp-switcher .div-tab.active{background:var(--amber);border-color:var(--amber);color:var(--ink);}
   .switcher-pill-logo{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
@@ -323,7 +323,7 @@
     font-size:12.5px;padding:3px 0;border-bottom:1px dashed var(--line-light);
   }
   .honour-year-line:last-child{border-bottom:none;}
-  .honour-year{color:#8a9990;flex-shrink:0;}
+  .honour-year{color:#000;flex-shrink:0;}
   .honour-winner{font-weight:600;text-align:right;}
   .lms-pick-list{display:flex;flex-direction:column;gap:6px;max-width:620px;}
   .lms-pick-row{
@@ -337,14 +337,15 @@
   .lms-pick.eliminated{font-size:12px;font-weight:600;color:var(--red);font-style:italic;}
   .lms-pick.awaiting{color:#b45309;}
   .lms-pick.entered{color:#166534;}
-  .lms-opponent{font-size:10.5px;color:#8a9990;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
+  .lms-opponent{font-size:10.5px;color:#000;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
+  .lms-opponent.lms-tiebreak{font-weight:700;}
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
   .facup-bracket-wrap{overflow-x:auto;padding-bottom:14px;}
-  .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#6b7c73;text-align:center;}
+  .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#000;text-align:center;}
   .facup-bracket-match{border:1px solid var(--line-light);border-radius:6px;padding:6px 8px;background:#fff;box-sizing:border-box;z-index:2;}
   .facup-bracket-side{
     display:flex;justify-content:space-between;gap:6px;font-family:'Barlow',sans-serif;
-    font-size:12.5px;padding:3px 5px;border-radius:4px;cursor:pointer;color:#6b7c73;
+    font-size:12.5px;padding:3px 5px;border-radius:4px;cursor:pointer;color:#000;
   }
   .facup-bracket-side.won{font-weight:700;color:var(--ink);}
   .facup-bracket-side.selected{background:rgba(255,221,0,0.35);color:var(--ink);}
@@ -397,7 +398,7 @@
     margin-bottom:14px;border-bottom:2px solid var(--ink);padding-bottom:8px;
   }
   .section-head h2{font-size:30px;margin:0;}
-  .section-head .sub{font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;}
+  .section-head .sub{font-family:'Barlow',sans-serif;font-size:12px;color:#000;text-transform:uppercase;letter-spacing:0.05em;}
 
   /* ---------- Home page ---------- */
   .home-hero{
@@ -431,7 +432,7 @@
   .home-card-icon{width:28px;height:28px;object-fit:contain;flex-shrink:0;}
   .home-card-icon-svg{display:inline-flex;align-items:center;justify-content:center;}
   .home-card-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;margin:0;}
-  .home-card-sub{font-family:'Barlow',sans-serif;font-size:12.5px;color:#6b7c73;}
+  .home-card-sub{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;}
   .home-mini-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
   .home-mini-pill{
     font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;color:#fff;
@@ -447,7 +448,7 @@
   .home-card-compact-icon{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
   .home-card-compact-icon-svg{display:inline-flex;align-items:center;justify-content:center;}
   .home-card-compact-title{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;margin:0;}
-  .home-card-compact-sub{font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;margin-top:1px;}
+  .home-card-compact-sub{font-family:'Barlow',sans-serif;font-size:11px;color:#000;margin-top:1px;}
 
   .home-champ-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}
   .home-champ{border-radius:8px;padding:22px 16px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;}
@@ -687,7 +688,7 @@
     cursor:pointer;box-sizing:border-box;
   }
   .tvt-select-toggle:hover{border-color:var(--pitch);}
-  .tvt-select-arrow{color:#6b7c73;font-size:11px;flex-shrink:0;}
+  .tvt-select-arrow{color:#000;font-size:11px;flex-shrink:0;}
   .tvt-select-menu{
     position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;
     background:#fff;border:1px solid var(--line-light);border-radius:5px;
@@ -705,7 +706,7 @@
   .streak-row.inactive{opacity:0.6;}
   .streak-tier-row td{
     background:var(--chalk);font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;
-    text-transform:uppercase;letter-spacing:0.05em;color:#6b7c73;text-align:left !important;
+    text-transform:uppercase;letter-spacing:0.05em;color:#000;text-align:left !important;
     padding:5px 10px !important;border-top:1px solid var(--line-light);
   }
   .streak-badge{
@@ -837,7 +838,7 @@
   .facup-team-logo-wrap{display:flex;justify-content:center;}
   .facup-team-logo-wrap img{width:28px;height:28px;object-fit:contain;}
   .facup-team-with-logo .facup-team-name{text-align:center;}
-  .facup-team-div-tag{font-weight:500;color:#8a9990;}
+  .facup-team-div-tag{font-weight:500;color:#000;}
   @media (max-width:640px){
     .facup-team-with-logo{grid-template-columns:22px 1fr;}
     .facup-team-with-logo.facup-team-away{grid-template-columns:1fr 22px;}
@@ -846,7 +847,7 @@
   .facup-byes{margin-top:22px;}
   .facup-byes h4{
     font-family:'Barlow Condensed',sans-serif;font-size:14px;text-transform:uppercase;
-    letter-spacing:0.05em;color:#6b7c73;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line-light);
+    letter-spacing:0.05em;color:#000;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line-light);
   }
   .facup-bye-list{display:flex;flex-wrap:wrap;gap:8px;}
   .facup-bye-pill{
@@ -920,7 +921,7 @@
   .fpl-live-h2h-lineup-col:first-child{border-right:1px solid var(--line-light);}
   .fpl-live-h2h-lineup-label{
     font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:700;text-transform:uppercase;
-    letter-spacing:0.04em;color:#8a9990;margin:10px 0 4px;
+    letter-spacing:0.04em;color:#000;margin:10px 0 4px;
     display:flex;align-items:center;gap:5px;white-space:nowrap;
   }
   .fpl-live-h2h-lineup-label:first-child{margin-top:0;}
@@ -928,7 +929,7 @@
     display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding:4px 0;font-size:13px;
   }
-  .fpl-live-h2h-player-row.bench{color:#8a9990;}
+  .fpl-live-h2h-player-row.bench{color:#000;}
   /* Bench Boost active: bench points count this gameweek same as starters,
      so drop the usual muted/dimmed treatment and highlight it instead. */
   .fpl-live-h2h-player-row.bench-boosted{color:var(--ink);background:#FFF6CC;border-radius:4px;padding-left:4px;padding-right:4px;margin:1px -4px;}
@@ -987,12 +988,12 @@
   .fixture-team .roddy-div-tag{vertical-align:middle;margin:0 2px;}
   .fixture-card-wrap{display:flex;flex-direction:column;}
   .playoff-seed-row{
-    font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;color:#6b7c73;
+    font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;color:#000;
     text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;text-align:center;
   }
   .playoff-seed-row span{color:#a8a296;font-weight:400;text-transform:none;margin:0 5px;}
   .season-fixture-date{
-    font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;color:#8a9990;
+    font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;color:#000;
     margin-bottom:3px;text-align:center;
   }
 
@@ -1029,14 +1030,14 @@
     letter-spacing:.04em;padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;
   }
   .slh-status.active{background:#e5f4e8;color:#1e7e34;}
-  .slh-status.complete{background:#eef0f2;color:#6b7c73;}
+  .slh-status.complete{background:#eef0f2;color:#000;}
   .slh-status.signups{background:#fff4d6;color:#8a6700;}
   .slh-code{
     font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
     background:#f5f7fa;border:1px dashed var(--line-light);border-radius:6px;
     padding:8px 10px;color:var(--ink,#1c2733);
   }
-  .slh-notes{font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;line-height:1.5;}
+  .slh-notes{font-family:'Barlow',sans-serif;font-size:13px;color:#000;line-height:1.5;}
   .slh-code a, .slh-notes a{color:var(--pitch);text-decoration:underline;}
   .slh-code a:hover, .slh-notes a:hover{color:#3a5a9e;}
   .slh-round-info{
@@ -1078,8 +1079,8 @@
     background:#f5f7fa;border:1px dashed var(--line-light);border-radius:6px;padding:8px 12px;display:inline-block;
   }
   .wmd-result-link{color:var(--pitch);text-decoration:underline;font-weight:600;}
-  .wmd-no-result{margin-top:16px;font-family:'Barlow',sans-serif;font-size:13.5px;color:#6b7c73;text-align:center;}
-  .wmd-no-code{color:#8a9990;font-style:italic;}
+  .wmd-no-result{margin-top:16px;font-family:'Barlow',sans-serif;font-size:13.5px;color:#000;text-align:center;}
+  .wmd-no-code{color:#000;font-style:italic;}
 
   .wmd-div-section{margin-bottom:36px;}
   .wmd-div-heading{
@@ -1112,12 +1113,12 @@
     .wmd-team-card-logo{width:44px;height:44px;}
     .wmd-team-card-name{font-size:11.5px;}
   }
-  .slh-closing{font-family:'Barlow',sans-serif;font-size:12.5px;color:#6b7c73;}
+  .slh-closing{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;}
   .slh-closing .slh-closing-label{font-weight:600;}
   .slh-countdown{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--pitch);
   }
-  .slh-closing-date{font-size:11.5px;color:#8a9990;margin-top:2px;}
+  .slh-closing-date{font-size:11.5px;color:#000;margin-top:2px;}
   .slh-link-btn{
     align-self:flex-start;margin-top:auto;
     background:var(--pitch);color:#fff;text-decoration:none;
@@ -1145,13 +1146,13 @@
     font-family:'Barlow',sans-serif;font-weight:800;font-size:30px;color:var(--ink);
     background:var(--chalk);border:1px solid var(--line-light);border-radius:6px;padding:6px 16px;
   }
-  .h2h-round-label{text-align:center;font-size:12px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:18px;}
+  .h2h-round-label{text-align:center;font-size:12px;color:#000;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:18px;}
 
   .h2h-lineups{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
   .h2h-side{min-width:0;}
   .h2h-side h4{
     font-family:'Barlow Condensed',sans-serif;font-size:13px;text-transform:uppercase;
-    letter-spacing:0.06em;color:#8a9990;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line-light);
+    letter-spacing:0.06em;color:#000;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line-light);
   }
   .h2h-player-row{
     display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:13.5px;border-radius:4px;
@@ -1202,7 +1203,7 @@
   }
 
   .state-msg{
-    font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;
+    font-family:'Barlow',sans-serif;font-size:13px;color:#000;
     padding:24px;text-align:center;border:1px dashed var(--line-light);border-radius:6px;
   }
   .state-msg.error{color:var(--red);border-color:var(--red);}
@@ -3487,7 +3488,7 @@ function getDivisionColorByLabel(text){
   if(t.includes("TERCERA")) return "#274e13";
   if(/\b2\b/.test(t)) return "#990000";
   if(/\b3\b/.test(t)) return "#274e13";
-  return "#8a9990";
+  return "#000";
 }
 function getDivisionShortLabel(text){
   const t = (text||"").toUpperCase();
@@ -4030,7 +4031,7 @@ function eclFixturesHtml(){
     ["A","B","C"].forEach(groupLetter=>{
       const groupFixtures = mdFixtures.filter(f => (f.group||"").toUpperCase() === groupLetter);
       if(groupFixtures.length === 0) return;
-      html += `<div style="font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;margin:8px 0 6px;">Group ${groupLetter}</div>
+      html += `<div style="font-family:'Barlow',sans-serif;font-size:11px;color:#000;text-transform:uppercase;letter-spacing:0.05em;margin:8px 0 6px;">Group ${groupLetter}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">`;
       groupFixtures.forEach(f=>{
         const played = f.homeScore !== null && f.awayScore !== null;
@@ -4387,7 +4388,7 @@ function trophyLeadersHtml(){
   // Footnote for any asterisked trophy (e.g. "1*"), pulled from that team's own Notes cell.
   const asterisked = trophyLeaders.find(t => (t.total||"").includes("*") || (t.elizaCup||"").includes("*"));
   if(asterisked && asterisked.notes){
-    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:8px;">* ${asterisked.notes}</div>`;
+    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:8px;">* ${asterisked.notes}</div>`;
   }
 
   // Acknowledgements: any team with a Notes entry, excluding the asterisk explanation above.
@@ -4399,7 +4400,7 @@ function trophyLeadersHtml(){
       <div>` + acknowledgements.map(t => `
         <div style="padding:8px 0;border-bottom:1px solid var(--line-light);">
           <span style="font-weight:600;">${teamLink(t.team)}</span>
-          <span style="color:#6b7c73;"> — ${t.notes}</span>
+          <span style="color:#000;"> — ${t.notes}</span>
         </div>`).join("") + `</div>`;
   }
 
@@ -4421,7 +4422,7 @@ function honourCompetitionHtml(name, comp){
   const fg = comp.textColor || "#fff";
   const rows = comp.winners.map(([season, winner]) => `
     <div style="display:grid;grid-template-columns:90px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid var(--line-light);">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#6b7c73;">${season}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#000;">${season}</span>
       <span style="font-size:15px;font-weight:600;">${winner}</span>
     </div>`).join("");
 
@@ -4641,12 +4642,12 @@ function renderCalendar(){
   });
   html += `</tbody></table></div>`;
 
-  html += `<div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;">
+  html += `<div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-family:'Barlow',sans-serif;font-size:12px;color:#000;">
     <span><span style="display:inline-block;width:11px;height:11px;background:#F9E0DC;border:1px solid #d99a90;border-radius:2px;vertical-align:-1px;margin-right:5px;"></span>Bye round</span>
     <span><span style="display:inline-block;width:11px;height:11px;background:#DCF2E3;border:1px solid #8fc46b;border-radius:2px;vertical-align:-1px;margin-right:5px;"></span>Double round</span>
   </div>`;
 
-  html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:10px;">*All Oppo Eliza FA Cup and Eliza Champions League rounds subject to change. Rounds may be moved to avoid unplanned byes/doubles. Any changes will be announced as necessary.</div>`;
+  html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:10px;">*All Oppo Eliza FA Cup and Eliza Champions League rounds subject to change. Rounds may be moved to avoid unplanned byes/doubles. Any changes will be announced as necessary.</div>`;
 
   container.innerHTML = html;
   document.getElementById('calendarUpdated').textContent = calendarRounds.length + " rounds";
@@ -4668,7 +4669,7 @@ function renderTeamsBrowse(){
     const f = (filter||"").trim().toUpperCase();
     const filtered = f ? sorted.filter(e => e.team.toUpperCase().includes(f)) : sorted;
     if(filtered.length === 0){
-      return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No teams match "${filter}".</p>`;
+      return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">No teams match "${filter}".</p>`;
     }
     return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">` +
       filtered.map(e => {
@@ -5346,7 +5347,7 @@ function renderWinStreaks(streaks){
     </tbody></table></div>`;
 
   const buildDetailHtml = (s) => `<div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin:10px 0 8px;">
-      ${teamLink(s.team1)} <span style="color:#6b7c73;font-weight:400;">v</span> ${teamLink(s.team2)}
+      ${teamLink(s.team1)} <span style="color:#000;font-weight:400;">v</span> ${teamLink(s.team2)}
     </div>` + tvtMatchesTableHtml(s.matches);
 
   el.querySelectorAll('.streak-row').forEach(tr=>{
@@ -5382,7 +5383,7 @@ function lookupTeamDivInfo(rawName){
   return {
     display, active,
     divShort: active ? getDivisionShortLabel(roddyMatch.division) : "N/A",
-    divColor: active ? getDivisionColorByLabel(roddyMatch.division) : "#8a9990"
+    divColor: active ? getDivisionColorByLabel(roddyMatch.division) : "#000"
   };
 }
 
@@ -5449,7 +5450,7 @@ function findTeamVsTeamRecords(rows, teamName){
     const display = roddyMatch ? roddyMatch.team : titleCaseFallback(t2);
     const active = !!roddyMatch;
     const divShort = active ? getDivisionShortLabel(roddyMatch.division) : "N/A";
-    const divColor = active ? getDivisionColorByLabel(roddyMatch.division) : "#8a9990";
+    const divColor = active ? getDivisionColorByLabel(roddyMatch.division) : "#000";
 
     opponents.push({
       key: t2.toUpperCase(),
@@ -5485,7 +5486,7 @@ function findTeamVsTeamRecords(rows, teamName){
 
 function tvtStatBox(label, value){
   return `<div style="background:#fff;border:1px solid var(--line-light);border-radius:5px;padding:8px 14px;text-align:center;min-width:52px;">
-    <div style="font-family:'Barlow',sans-serif;font-size:10px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;">${label}</div>
+    <div style="font-family:'Barlow',sans-serif;font-size:10px;color:#000;text-transform:uppercase;letter-spacing:0.05em;">${label}</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;">${value}</div>
   </div>`;
 }
@@ -5507,7 +5508,7 @@ function tvtMatchRowHtml(m){
 
 function tvtMatchesTableHtml(matches){
   if(!matches.length){
-    return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">These two teams haven't played each other yet.</p>`;
+    return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">These two teams haven't played each other yet.</p>`;
   }
   let html = `<div class="table-wrap" style="max-width:460px;"><table class="standings compact h2h-record-table"><thead><tr>
       <th style="text-align:left;">Comp</th><th>Year</th><th>Round</th><th>Result</th><th>For</th><th>Aga</th>
@@ -5518,7 +5519,7 @@ function tvtMatchesTableHtml(matches){
   // scoreline — almost certainly the same real-world fixture counted once for each
   // competition it fell under (e.g. league & ECL landing on the same week).
   if(matches.some(m => m.doubleUp)){
-    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:8px;">† these two rows look like the same fixture, counted once for each competition it fell under in the same round</div>`;
+    html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:8px;">† these two rows look like the same fixture, counted once for each competition it fell under in the same round</div>`;
   }
   return html;
 }
@@ -5547,7 +5548,7 @@ function teamVsTeamSectionHtml(teamName, opponents){
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Head-to-Head vs Opponent</h2></div>
     <div style="max-width:480px;">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px;">
-        ${teamName} <span style="color:#6b7c73;font-weight:400;">v</span>
+        ${teamName} <span style="color:#000;font-weight:400;">v</span>
       </div>
       <div class="tvt-select-wrap">
         <button type="button" id="tvtOpponentToggle" class="tvt-select-toggle">
@@ -5574,7 +5575,7 @@ function resultPillRow(label, opponent, isHome, homeScore, awayScore, played){
   }
   const cls = result === "W" ? "form-w" : result === "L" ? "form-l" : result === "D" ? "form-d" : "form-blank";
   return `<div style="display:grid;grid-template-columns:56px 22px 1fr auto;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-light);">
-    <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#6b7c73;">${label}</span>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#000;">${label}</span>
     ${result ? `<span class="form-pill ${cls}">${result}</span>` : `<span></span>`}
     <span style="font-size:13.5px;">${opponent ? "vs " + teamLink(opponent) : "Bye"}</span>
     <span style="font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;">${scoreText}</span>
@@ -5631,18 +5632,18 @@ function eclStatusText(eclSummary, eclMatches){
 
 function overviewCardHtml(label, value, color){
   return `<div style="background:#fff;border:1px solid var(--line-light);border-left:4px solid ${color};border-radius:5px;padding:12px 14px;">
-    <div style="font-family:'Barlow',sans-serif;font-size:10.5px;color:#6b7c73;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${label}</div>
+    <div style="font-family:'Barlow',sans-serif;font-size:10.5px;color:#000;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${label}</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;">${value}</div>
   </div>`;
 }
 
 function teamTrophiesHtml(trophies, trophyNote){
   const noteHtml = trophyNote
-    ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;margin-top:10px;">${trophyNote}</div>`
+    ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:10px;">${trophyNote}</div>`
     : "";
   if(!trophies || !trophies.length){
     return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies</h2></div>
-      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No trophies yet.</p>${noteHtml}`;
+      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">No trophies yet.</p>${noteHtml}`;
   }
   return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies (${trophies.length})</h2></div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;max-width:640px;">
@@ -5650,7 +5651,7 @@ function teamTrophiesHtml(trophies, trophyNote){
         <span style="font-size:16px;">🏆</span>
         <div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;">${t.competition}</div>
-          <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">${t.season}</div>
+          <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#000;">${t.season}</div>
         </div>
       </div>`).join("")}
     </div>${noteHtml}`;
@@ -5659,12 +5660,12 @@ function teamTrophiesHtml(trophies, trophyNote){
 function sideLeagueHonoursHtml(honours){
   if(!honours || !honours.length){
     return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Side Leagues Honours</h2></div>
-      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">No Side Leagues honours yet.</p>`;
+      <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">No Side Leagues honours yet.</p>`;
   }
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Side Leagues Honours</h2></div>
     <div style="max-width:480px;">
       ${honours.map(h => `<div style="display:flex;justify-content:space-between;gap:10px;font-family:'Barlow',sans-serif;font-size:13px;padding:7px 0;border-bottom:1px dashed var(--line-light);">
-        <span style="color:#6b7c73;flex-shrink:0;">${h.year}</span>
+        <span style="color:#000;flex-shrink:0;">${h.year}</span>
         <span style="text-align:right;font-weight:600;">${h.competition}${h.subComp ? ", " + h.subComp : ""}</span>
       </div>`).join("")}
     </div>`;
@@ -5763,7 +5764,7 @@ function renderTeamProfile(data){
           ${divLogoPath ? `<img src="${divLogoPath}" alt="" style="width:20px;height:20px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none';">` : ""}
           ${divLabel ? `<span class="sub" style="background:${divColor};color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">${divShort === "D1" ? divLabel : "Division " + divLabel}</span>` : `<span class="sub" style="background:#8a9990;color:#fff;padding:3px 9px;border-radius:10px;text-transform:none;">Not currently in a division</span>`}
         </div>
-        ${clubInfo && (clubInfo.manager || clubInfo.yearEntered) ? `<div style="font-family:'Barlow',sans-serif;font-size:13px;color:#6b7c73;">
+        ${clubInfo && (clubInfo.manager || clubInfo.yearEntered) ? `<div style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">
             ${clubInfo.manager ? `Manager: <b style="color:var(--ink);">${clubInfo.manager}</b>` : ""}${clubInfo.manager && clubInfo.yearEntered ? " · " : ""}${clubInfo.yearEntered ? `Est. ${clubInfo.yearEntered}` : ""}
           </div>` : ""}
         ${clubInfo && clubInfo.previousNames ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#a8a296;">Previously: ${clubInfo.previousNames}</div>` : ""}
@@ -6070,7 +6071,7 @@ function bracketPositionStyle(pos){
   return "";
 }
 function bracketPositionLegendHtml(){
-  return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">
+  return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#000;">
     <span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:4px;"></span>Winners Bracket (Pos 1–8)</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:#EAB308;border-radius:2px;margin-right:4px;"></span>Losers Bracket (Pos 9–16)</span>
   </div>`;
@@ -6095,7 +6096,7 @@ function histEclStatusStyle(status){
 }
 
 function histStatusLegendHtml(){
-  return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#6b7c73;">
+  return `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Barlow',sans-serif;font-size:11px;color:#000;">
     <span><span style="display:inline-block;width:10px;height:10px;background:#14532D;border-radius:2px;margin-right:4px;"></span>Winner</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:#4ADE80;border-radius:2px;margin-right:4px;"></span>Automatic Promotion</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:#EAB308;border-radius:2px;margin-right:4px;"></span>Promotion via playoff/finals</span>
@@ -6155,7 +6156,7 @@ function histDivPill(tag){
   const label = tag === "D1" ? "D1" : tag.slice(1);
   // Older seasons before the 2A/2B and 3A/3B split just say "D2"/"D3" — colour them
   // the same as the B conference, but keep showing "D2"/"D3" as the label text.
-  const color = HIST_DIV_COLORS[label] || (label === "2" ? HIST_DIV_COLORS["2B"] : label === "3" ? HIST_DIV_COLORS["3B"] : "#8a9990");
+  const color = HIST_DIV_COLORS[label] || (label === "2" ? HIST_DIV_COLORS["2B"] : label === "3" ? HIST_DIV_COLORS["3B"] : "#000");
   const displayLabel = (label === "2") ? "D2" : (label === "3") ? "D3" : label;
   return `<span class="roddy-div-tag" style="background:${color};">${displayLabel}</span>`;
 }
@@ -6293,7 +6294,7 @@ function newsCardHtml(item){
   return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
     ${item.image ? `<img src="${item.image}" alt="" style="width:100%;max-height:280px;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
     <div style="padding:16px 18px;">
-      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#8a9990;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
+      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
       <div style="font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);">${paragraphs}</div>
     </div>
@@ -6309,7 +6310,7 @@ function newsExcerptCardHtml(item){
   return `<a href="#news" style="display:flex;gap:14px;border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;text-decoration:none;color:inherit;">
     ${item.image ? `<img src="${item.image}" alt="" style="width:120px;flex-shrink:0;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
     <div style="padding:14px 16px 14px 0;padding-left:${item.image ? '0':'16px'};min-width:0;">
-      <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#8a9990;margin-bottom:3px;">${formatNewsDate(item.date)}</div>
+      <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#000;margin-bottom:3px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;margin:0 0 6px;color:var(--pitch);">${item.title}</h3>
       <p style="font-family:'Barlow',sans-serif;font-size:13px;line-height:1.45;color:var(--ink);margin:0 0 6px;">${excerpt}</p>
       <span style="font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;color:var(--pitch);">Read more →</span>
@@ -8153,7 +8154,7 @@ function lmsTipsFormHtml(data){
 
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Submit Your Tip</h2></div>
     <div id="lmsTipsDeadlineBox"></div>
-    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 20px;">
+    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;max-width:420px;margin:0 0 20px;">
       Any tips not entered prior to the deadline will be randomly selected via a wheel generator in the Discord server.
     </p>
     ${!LMS_TIPS_APPS_SCRIPT_URL ? `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:420px;margin-bottom:16px;">No Apps Script URL configured — submissions won't save.</div>` : ""}
@@ -8175,7 +8176,7 @@ function lmsTipsFormHtml(data){
       <select id="lmsTipsTeam" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
 
       <div id="lmsTipsFinalFields" style="display:none;">
-        <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 10px;">
+        <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;max-width:420px;margin:0 0 10px;">
           It's the Final — these two are used as tiebreakers if more than one person's pick is correct.
         </p>
         <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">First goalscorer</label>
@@ -8226,7 +8227,7 @@ function renderLmsTipFixtures(data){
   }
   el.innerHTML = `<div style="border:1px solid var(--line-light);border-radius:6px;padding:8px 10px;background:#fafaf8;">
     ${block.fixtures.map(f => `<div style="display:flex;justify-content:space-between;gap:8px;font-family:'Barlow',sans-serif;font-size:12px;padding:3px 0;">
-      <span style="text-align:right;flex:1;">${f.home}</span><span style="color:#8a9990;flex-shrink:0;">v</span><span style="text-align:left;flex:1;">${f.away}</span>
+      <span style="text-align:right;flex:1;">${f.home}</span><span style="color:#000;flex-shrink:0;">v</span><span style="text-align:left;flex:1;">${f.away}</span>
     </div>`).join("")}
   </div>`;
 }
@@ -8295,7 +8296,7 @@ async function submitLmsTip(e){
     return;
   }
 
-  statusEl.style.color = "#6b7c73";
+  statusEl.style.color = "#000";
   statusEl.textContent = "Submitting…";
   try{
     // no-cors: Apps Script Web Apps don't return CORS headers by default, so the
@@ -8508,7 +8509,7 @@ function renderAleagueLms(data, containerId){
     const pickClass = isEliminated ? ' eliminated' : isDnp ? ' awaiting' : isEntered ? ' entered' : '';
     const pickIcon = isDnp ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
     const isBadOutcome = e.result === "LOSS" || e.result === "DRAW" || isDnp;
-    const resultColor = e.result === "WIN" ? "#166534" : isBadOutcome ? "#991b1b" : "#6b7c73";
+    const resultColor = e.result === "WIN" ? "#166534" : isBadOutcome ? "#991b1b" : "#000";
     const cardStyle = isEliminated ? "background:#d1d5db;border-color:#6b7280;"
       : e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
       : (e.result === "LOSS" || e.result === "DRAW") ? "background:#fee2e2;border-color:#991b1b;" : "";
@@ -8555,7 +8556,7 @@ function aleagueLmsTipsFormHtml(data){
 
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Submit Your Tip</h2></div>
     <div id="aleagueLmsTipsDeadlineBox"></div>
-    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 10px;">
+    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;max-width:420px;margin:0 0 10px;">
       You can only use a team 3 times all season, can't pick the same team two rounds in a row, and can't use a team more than twice in either half of the season (rounds 1-13 or 14-26). Ineligible teams are greyed out below.
     </p>
     ${!ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL ? `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:#991b1b;max-width:420px;margin-bottom:16px;">No Apps Script URL configured — submissions won't save.</div>` : ""}
@@ -8637,7 +8638,7 @@ function renderAleagueLmsTipFixtures(data){
   }
   el.innerHTML = `<div style="border:1px solid var(--line-light);border-radius:6px;padding:8px 10px;background:#fafaf8;">
     ${block.fixtures.map(f => `<div style="display:flex;justify-content:space-between;gap:8px;font-family:'Barlow',sans-serif;font-size:12px;padding:3px 0;">
-      <span style="text-align:right;flex:1;">${f.home}</span><span style="color:#8a9990;flex-shrink:0;">v</span><span style="text-align:left;flex:1;">${f.away}</span>
+      <span style="text-align:right;flex:1;">${f.home}</span><span style="color:#000;flex-shrink:0;">v</span><span style="text-align:left;flex:1;">${f.away}</span>
     </div>`).join("")}
   </div>`;
 }
@@ -8719,7 +8720,7 @@ async function submitAleagueLmsTip(e){
     return;
   }
 
-  statusEl.style.color = "#6b7c73";
+  statusEl.style.color = "#000";
   statusEl.textContent = "Submitting…";
   try{
     await fetch(ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL, {
@@ -8858,7 +8859,7 @@ function renderLmsCup(data, containerId){
     // whole card's colour already shows the outcome, so the tick would just
     // be redundant clutter at that point.
     const pickIcon = isAwaiting ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
-    const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#6b7c73";
+    const resultColor = e.result === "WIN" ? "#166534" : e.result === "LOSS" ? "#991b1b" : "#000";
     const cardStyle = isEliminated ? "background:#d1d5db;border-color:#6b7280;"
       : e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
       : e.result === "LOSS" ? "background:#fee2e2;border-color:#991b1b;" : "";
@@ -8867,7 +8868,7 @@ function renderLmsCup(data, containerId){
     // Tiebreaker line only ever applies to the Final and only once both parts
     // of it have actually been entered — no partial "First goal: — (12')".
     const tiebreakHtml = (isFinalRound && e.scorer && e.minute)
-      ? `<span class="lms-opponent">First goal: ${e.scorer} (${e.minute}')</span>` : "";
+      ? `<span class="lms-opponent lms-tiebreak">First goal: ${e.scorer} (${e.minute}')</span>` : "";
     return `<div class="lms-pick-row" style="${cardStyle}">
       <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
       <span class="lms-pick-col">
