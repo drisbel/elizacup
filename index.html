@@ -7387,8 +7387,9 @@ let sideLeagueActiveRound = {};
 
 // FPL Roddy leaderboard: separate gid on the Side Leagues sheet. Title row 5,
 // header row 6, entries rows 7-36. B=Pos, D=Team, I=Player, K=GW, L=Chip, N=Pts,
-// Q=Overall Rank, S:V=4 "chips remaining" columns (labels read from the header row
-// rather than assumed, since we don't know the exact chip names/order up front).
+// Q=Overall Rank, R:U=4 "chips remaining" columns (labels read from the header row
+// rather than assumed, since we don't know the exact chip names/order up front),
+// V=FT's Remaining, W=Team Value.
 function fplRoddyCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk/gviz/tq?tqx=out:csv&gid=638425443&cachebust=` + Date.now();
 }
@@ -7415,7 +7416,7 @@ function parseFplRoddy(rows){
   }
 
   const headerRow = rows[headerRowIdx] || [];
-  const chipCols = [18,19,20,21]; // S,T,U,V
+  const chipCols = [17,18,19,20]; // R,S,T,U
   const chipHeaders = chipCols.map(c => cell(headerRow, c));
 
   const entries = [];
@@ -7431,7 +7432,8 @@ function parseFplRoddy(rows){
     const posRaw = cell(row, 1); // B
     const entry = {
       pos: posRaw || String(runningPos), team, player: cell(row,8), gw: cell(row,10), chip: cell(row,11),
-      pts: cell(row,12), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c))
+      pts: cell(row,12), ovrRank: cell(row,16), chips: chipCols.map(c => cell(row,c)),
+      ftsRemaining: cell(row,21), teamValue: cell(row,22) // V, W
     };
     entries.push(entry);
     rawDump.push({ fetchedRowIndex: r+1, posRaw, ...entry });
@@ -7449,6 +7451,9 @@ let fplRoddyPromise = null;
 // when the "FPL Cup" tab is clicked, same as Roddy, rather than fetched
 // eagerly with the main FPL page.
 const FPL_CUP_GID = "154493860";
+// TODO: paste the Challonge bracket URL here once Dan creates the tournament.
+// Until it's set, the "powered by" line below still shows but isn't a link.
+const FPL_CUP_CHALLONGE_URL = "";
 // Best guess at the title text parseFplTable anchors on — the one thing
 // that couldn't be confirmed without seeing the actual sheet. If the Debug
 // panel shows "titleFound: false" this needs to become the exact text from
@@ -7459,6 +7464,18 @@ let fplCupPromise = null;
 
 function fplCupCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk/gviz/tq?tqx=out:csv&gid=${FPL_CUP_GID}&cachebust=` + Date.now();
+}
+
+// Small attribution/link line pointing to the Challonge bracket the FPL Cup
+// knockout rounds are run on. Renders as plain text until FPL_CUP_CHALLONGE_URL
+// is filled in, then becomes a clickable link — so the section is already in
+// place and just needs the URL dropped in once the tournament exists.
+function fplCupChallongeLinkHtml(){
+  return FPL_CUP_CHALLONGE_URL
+    ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;margin:4px 0 18px;">
+        <a href="${FPL_CUP_CHALLONGE_URL}" target="_blank" rel="noopener" style="color:#000;font-weight:600;text-decoration:none;border-bottom:1px solid #000;">FPL Cup powered by Challonge.com ↗</a>
+      </div>`
+    : `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;opacity:0.6;margin:4px 0 18px;">FPL Cup powered by Challonge.com</div>`;
 }
 
 async function loadFplCupData(){
@@ -7514,23 +7531,26 @@ function fplRoddyTableHtml(data){
   return `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
       <th>Pos</th><th style="text-align:left;">Team</th>
       <th>GW</th><th>Chip</th><th>Pts</th><th class="roddy-pts-divider">Ovr Rank</th>
-      ${chipLabels.map(l=>`<th>${l}</th>`).join("")}
+      ${chipLabels.map((l,i)=>`<th${i===chipLabels.length-1 ? ' class="roddy-pts-divider"' : ''}>${l}</th>`).join("")}
+      <th>FT's Remain</th><th>Team Value</th>
     </tr></thead><tbody>
       ${data.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         const chipsHtml = e.chips.map((c,i) => {
-          if(!c) return `<td>—</td>`;
+          const dividerAttr = i === e.chips.length-1 ? ' class="roddy-pts-divider"' : '';
+          if(!c) return `<td${dividerAttr}>—</td>`;
           // Unused chips show their own name (e.g. "WC") as a coloured pill.
           // Used chips show the round they were played (e.g. "GW5") as plain text.
           const isUnused = c.trim().toUpperCase() === (chipLabels[i]||"").trim().toUpperCase();
-          if(isUnused) return `<td><span class="chip-pill ${chipPillClasses[i % chipPillClasses.length]}">${c}</span></td>`;
-          return `<td>${c}</td>`;
+          if(isUnused) return `<td${dividerAttr}><span class="chip-pill ${chipPillClasses[i % chipPillClasses.length]}">${c}</span></td>`;
+          return `<td${dividerAttr}>${c}</td>`;
         }).join("");
         return `<tr>
         <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
         <td>${e.gw || "—"}</td><td>${chipPillFor(e.chip)}</td><td class="pts">${e.pts}</td><td class="roddy-pts-divider">${e.ovrRank || "—"}</td>
         ${chipsHtml}
+        <td>${e.ftsRemaining || "—"}</td><td>${e.teamValue || "—"}</td>
       </tr>`;
       }).join("")}
     </tbody></table></div>`;
@@ -7616,6 +7636,7 @@ function renderSideLeagueContent(){
       container.className = "";
       container.innerHTML = `
         <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
+        ${fplCupChallongeLinkHtml()}
         ${sideLeagueTableHtml(data.table, { bracketByPosition: true })}
         <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
         <div class="round-tabs" id="sideLeagueRoundTabs"></div>
