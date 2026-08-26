@@ -7966,10 +7966,14 @@ function parseLmsCup(rows){
     if(!current) continue;
 
     const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
-    if(!d && !f && !g && !h) continue;
+    // I, J only apply to the Final round — the goalscorer/minute tiebreaker.
+    // Blank for every other round's entries, same as opponent/result would be
+    // for a round with no data yet.
+    const i = cell(row,8), j = cell(row,9); // I, J
+    if(!d && !f && !g && !h && !i && !j) continue;
 
-    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
-    rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
+    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase(), scorer: i, minute: j });
+    rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h, I:i, J:j });
   }
 
   // Round / Deadline / Current reference table, columns X:Z — X = round name,
@@ -8170,6 +8174,17 @@ function lmsTipsFormHtml(data){
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
       <select id="lmsTipsTeam" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
 
+      <div id="lmsTipsFinalFields" style="display:none;">
+        <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#6b7c73;max-width:420px;margin:0 0 10px;">
+          It's the Final — these two are used as tiebreakers if more than one person's pick is correct.
+        </p>
+        <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">First goalscorer</label>
+        <input id="lmsTipsScorer" type="text" placeholder="Player name" style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+
+        <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Minute of first goal</label>
+        <input id="lmsTipsMinute" type="number" min="1" max="120" placeholder="e.g. 23" style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+      </div>
+
       <button type="submit" class="lms-submit-btn">Submit Tip</button>
       <div id="lmsTipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
     </form>`;
@@ -8216,6 +8231,19 @@ function renderLmsTipFixtures(data){
   </div>`;
 }
 
+// Shows/hides the Final-only goalscorer + minute tiebreaker fields and toggles
+// their "required" state to match, so a non-Final submission never gets
+// blocked by fields the person can't see.
+function renderLmsFinalFields(){
+  const wrap = document.getElementById('lmsTipsFinalFields');
+  if(!wrap) return;
+  const roundName = document.getElementById('lmsTipsRound').value;
+  const isFinal = normalizeLmsText(roundName) === "FINAL";
+  wrap.style.display = isFinal ? "" : "none";
+  document.getElementById('lmsTipsScorer').required = isFinal;
+  document.getElementById('lmsTipsMinute').required = isFinal;
+}
+
 function wireLmsTipsForm(data){
   const roundSel = document.getElementById('lmsTipsRound');
   const currentIdx = data.rounds.findIndex(r => normalizeLmsText(r.name) === normalizeLmsText(data.currentRoundLabel));
@@ -8224,12 +8252,14 @@ function wireLmsTipsForm(data){
   renderLmsTipTeamOptions(data);
   renderLmsTipFixtures(data);
   renderLmsTipDeadline(data);
+  renderLmsFinalFields();
 
   document.getElementById('lmsTipsParticipant').addEventListener('change', ()=> renderLmsTipTeamOptions(data));
   roundSel.addEventListener('change', ()=> {
     renderLmsTipTeamOptions(data);
     renderLmsTipFixtures(data);
     renderLmsTipDeadline(data);
+    renderLmsFinalFields();
   });
   document.getElementById('lmsTipsForm').addEventListener('submit', submitLmsTip);
 }
@@ -8240,6 +8270,9 @@ async function submitLmsTip(e){
   const participant = document.getElementById('lmsTipsParticipant').value;
   const round = document.getElementById('lmsTipsRound').value;
   const tip = document.getElementById('lmsTipsTeam').value.trim();
+  const isFinal = normalizeLmsText(round) === "FINAL";
+  const scorer = document.getElementById('lmsTipsScorer').value.trim();
+  const minute = document.getElementById('lmsTipsMinute').value.trim();
 
   if(!participant){
     statusEl.style.color = "#991b1b";
@@ -8249,6 +8282,11 @@ async function submitLmsTip(e){
   if(!tip){
     statusEl.style.color = "#991b1b";
     statusEl.textContent = "Select a team before submitting.";
+    return;
+  }
+  if(isFinal && (!scorer || !minute)){
+    statusEl.style.color = "#991b1b";
+    statusEl.textContent = "Enter both the first goalscorer and the minute — they're used as tiebreakers for the Final.";
     return;
   }
   if(!LMS_TIPS_APPS_SCRIPT_URL){
@@ -8264,15 +8302,18 @@ async function submitLmsTip(e){
     // response can't be read — this just fires the request and assumes success if
     // no network error was thrown. Resubmitting overwrites the previous tip for
     // this participant+round, since the site always reads the *latest* matching
-    // row as the authoritative tip.
+    // row as the authoritative tip. scorer/minute are only sent for the Final —
+    // Apps Script writes them into the two extra log columns reserved for it.
     await fetch(LMS_TIPS_APPS_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ round, teamName: participant, tip })
+      body: JSON.stringify({ round, teamName: participant, tip, scorer: isFinal ? scorer : "", minute: isFinal ? minute : "" })
     });
     statusEl.style.color = "#166534";
-    statusEl.textContent = `Submitted: ${participant} tipped ${tip} for ${round}.`;
+    statusEl.textContent = isFinal
+      ? `Submitted: ${participant} tipped ${tip} (first goal: ${scorer}, ${minute}') for ${round}.`
+      : `Submitted: ${participant} tipped ${tip} for ${round}.`;
   }catch(err){
     console.error(err);
     statusEl.style.color = "#991b1b";
@@ -8806,6 +8847,7 @@ function renderLmsCup(data, containerId){
   ).join("");
 
   const round = data.rounds[lmsActiveRoundIdx];
+  const isFinalRound = normalizeLmsText(round.name) === "FINAL";
   const rowsHtml = round.entries.map(e => {
     const isEliminated = /^ELIMINATED/i.test(e.pick);
     const isAwaiting = /AWAITING TIP/i.test(e.pick);
@@ -8822,11 +8864,16 @@ function renderLmsCup(data, containerId){
       : e.result === "LOSS" ? "background:#fee2e2;border-color:#991b1b;" : "";
     const logoName = resolveSideLeagueTeamName(e.name);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+    // Tiebreaker line only ever applies to the Final and only once both parts
+    // of it have actually been entered — no partial "First goal: — (12')".
+    const tiebreakHtml = (isFinalRound && e.scorer && e.minute)
+      ? `<span class="lms-opponent">First goal: ${e.scorer} (${e.minute}')</span>` : "";
     return `<div class="lms-pick-row" style="${cardStyle}">
       <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
       <span class="lms-pick-col">
         <span class="lms-pick${pickClass}">${pickIcon}${e.pick || "—"}</span>
         ${e.opponent && !isEliminated ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
+        ${tiebreakHtml}
       </span>
       <span class="lms-result" style="color:${resultColor};">${e.result || "—"}</span>
     </div>`;
