@@ -304,11 +304,7 @@
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
   .div-nav-dropdown-item-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .div-nav-complete-badge{
-    font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:700;text-transform:uppercase;
-    letter-spacing:.03em;background:rgba(255,255,255,0.18);color:inherit;padding:2px 6px;
-    border-radius:8px;flex-shrink:0;
-  }
+  .div-nav-complete-badge{font-size:12px;flex-shrink:0;line-height:1;}
   .comp-switcher{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 24px 16px;}
   .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #000);display:inline-flex;align-items:center;gap:6px;}
   .comp-switcher .div-tab:hover{border-color:var(--amber);color:var(--ink);}
@@ -2069,7 +2065,7 @@ function buildNavItemHtml(item, idPrefix){
       <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
       <div class="div-nav-dropdown" id="navDropdown-${idPrefix}${item.key}">
         <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-        ${sideLeaguesInDisplayOrder().map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button"><span class="div-nav-dropdown-item-row">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span class="div-nav-complete-badge">Complete</span>' : ''}</span></button>`).join("")}
+        ${sideLeaguesInDisplayOrder().map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button"><span class="div-nav-dropdown-item-row">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span class="div-nav-complete-badge" title="Complete">🏁</span>' : ''}</span></button>`).join("")}
       </div>
     </div>`;
   }
@@ -2156,7 +2152,7 @@ function buildMobileNavItemHtml(item){
       <button class="mobile-nav-group-toggle${isActive?' active':''}" data-toggle-group type="button">${item.label}<span class="mobile-nav-group-caret">▾</span></button>
       <div class="mobile-nav-submenu">
         <button class="mobile-nav-sublink${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-        ${sideLeaguesInDisplayOrder().map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button"><span class="div-nav-dropdown-item-row">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span class="div-nav-complete-badge">Complete</span>' : ''}</span></button>`).join("")}
+        ${sideLeaguesInDisplayOrder().map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button"><span class="div-nav-dropdown-item-row">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span class="div-nav-complete-badge" title="Complete">🏁</span>' : ''}</span></button>`).join("")}
       </div>
     </div>`;
   }
@@ -7857,7 +7853,7 @@ function renderSideLeagueTabs(activeKey){
   const tabsEl = document.getElementById('sideLeaguesTabs');
   const initial = (activeKey && SIDE_LEAGUES.some(s=>s.key===activeKey)) ? activeKey : SIDE_LEAGUES[0].key;
   tabsEl.innerHTML = `<button class="round-tab" data-hub="1">Overview</button>` +
-    sideLeaguesInDisplayOrder().map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span style="opacity:0.65;font-size:10.5px;margin-left:5px;">✓ Complete</span>' : ''}</button>`).join("");
+    sideLeaguesInDisplayOrder().map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}${completedSideLeagueKeys.has(s.key) ? ' <span title="Complete">🏁</span>' : ''}</button>`).join("");
   tabsEl.querySelector('[data-hub]').addEventListener('click', ()=>{
     const hub = DIVISIONS.find(d=>d.id==="sideleagueshub");
     goToDivision(hub);
