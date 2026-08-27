@@ -6991,7 +6991,7 @@ function colIndexToLetter(idx){
 
 // Exact column letters as given: POS=B, TEAM=D (merged D:H), NAME=H, PTS=I, W=J, D=K, L=L,
 // PTS+=M, PTS-=N, DIFF=O, NEXT OPPONENT=Y, STATUS=AD.
-const FPL_COL = { pos:1, team:3, name:7, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, next:24, status:29 };
+const FPL_COL = { pos:1, team:3, name:7, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, form:[19,20,21,22,23], next:24, status:29 };
 
 function parseFplTable(rows, titleText){
   // Some sheets (AFL Supercoach) reuse the table's title text as a decorative page
@@ -7013,6 +7013,11 @@ function parseFplTable(rows, titleText){
   // Confirmed: the header row is always exactly one row below the title row.
   const headerRow = titleRow + 1;
   const cols = FPL_COL;
+  // Form columns (T:X) — same 5-round W/D/L pill system as the main division
+  // tables. Header labels are read live (rather than assumed "1"-"5") since
+  // early in the season most are blank and X (rightmost) is always whichever
+  // round was most recently played.
+  const formRoundLabels = cols.form.map(c => cell(rows[headerRow]||[], c));
 
   const teams = [];
   for(let dr=headerRow+1; dr<rows.length; dr++){
@@ -7027,6 +7032,7 @@ function parseFplTable(rows, titleText){
       w: wVal, d: dVal, l: cell(rows[dr]||[],cols.l),
       for: cell(rows[dr]||[],cols.ptsFor), aga: cell(rows[dr]||[],cols.ptsAgn),
       dif: cell(rows[dr]||[],cols.diff), status: cell(rows[dr]||[],cols.status),
+      form: cols.form.map(c => cell(rows[dr]||[],c)),
       next: cell(rows[dr]||[],cols.next)
     });
   }
@@ -7037,8 +7043,8 @@ function parseFplTable(rows, titleText){
   );
   const firstParsedTeam = teams[0] || null;
   const ptsCalcCheck = teams.slice(0,3).map(t=>({team:t.team, w:t.w, d:t.d, ptsUsed:t.pts}));
-  const colsAsLetters = Object.fromEntries(Object.entries(cols).map(([k,v])=>[k, colIndexToLetter(v)]));
-  return { teams, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, colsAsLetters, rawHeaderRow, rawDataRows, firstParsedTeam, ptsCalcCheck } };
+  const colsAsLetters = Object.fromEntries(Object.entries(cols).map(([k,v])=>[k, Array.isArray(v) ? v.map(colIndexToLetter) : colIndexToLetter(v)]));
+  return { teams, formRoundLabels, debug: { titleFound: true, titleRow: titleRow+1, headerRow: headerRow+1, colsAsLetters, formRoundLabels, rawHeaderRow, rawDataRows, firstParsedTeam, ptsCalcCheck } };
 }
 
 // "Overall" table — a separate, simpler standings on the same tab as the
@@ -7150,17 +7156,28 @@ const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*F
 function sideLeagueTableHtml(table, opts){
   opts = opts || {};
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
+  const formLabels = table.formRoundLabels || [];
+  const formHeaderHtml = opts.showForm
+    ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
+    : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th><th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         const rowStyle = opts.bracketByPosition ? bracketPositionStyle(t.pos) : histDivStatusStyle(t.status);
+        const formCellHtml = opts.showForm
+          ? `<td class="form-cell"><span class="form-row">${(t.form||[]).map(f=>{
+              const up = (f||"").toUpperCase();
+              const cls = up==="W" ? "form-w" : up==="L" ? "form-l" : up==="D" ? "form-d" : "form-blank";
+              return `<span class="form-pill ${cls}">${up || "–"}</span>`;
+            }).join("")}</span></td>`
+          : "";
         return `<tr style="${rowStyle}">
         <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
-        <td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
+        ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
       }).join("")}
     </tbody></table></div>
@@ -7659,8 +7676,7 @@ function renderSideLeagueContent(){
     ${winnersHtml}
     ${toggleHtml}
     <div class="section-head" style="margin-top:20px;"><h2 style="font-size:18px;">${label}</h2></div>
-    ${sideLeagueTableHtml(table)}
-    <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
+    ${sideLeagueTableHtml(table, { showForm: true })}
     <div class="round-tabs" id="sideLeagueRoundTabs"></div>
     <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>
     <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Live Scores</h2></div>
