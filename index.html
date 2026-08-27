@@ -22,6 +22,7 @@
     --line:#404040;
     --line-light:#DAD3C0;
     --muted:#a9b8d8;
+    --nav-dropdown-text:#F6F2E8;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -299,9 +300,9 @@
   .div-nav-dropdown-item{
     display:block;width:100%;text-align:left;font-family:'Barlow',sans-serif;
     font-size:13px;font-weight:600;padding:8px 10px;border-radius:6px;border:none;
-    background:transparent;color:var(--muted);cursor:pointer;
+    background:transparent;color:var(--nav-dropdown-text, var(--muted));cursor:pointer;
   }
-  .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
+  .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.15);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
   .div-nav-dropdown-item-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .div-nav-complete-badge{font-size:12px;flex-shrink:0;line-height:1;}
@@ -1683,11 +1684,23 @@ function lightenColor(hex, percent){
   return "#" + [r,g,b].map(v => v.toString(16).padStart(2,"0")).join("");
 }
 
+// Quick perceptual luminance check (0=black, 1=white) — used to pick readable
+// nav dropdown text against --pitch-2, which varies a lot per page (some
+// division colours lighten toward a pale pastel, others stay quite dark), so
+// a single fixed text colour can't stay readable against all of them.
+function relativeLuminance(hex){
+  const num = parseInt(hex.replace("#",""), 16);
+  const r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+  return (0.299*r + 0.587*g + 0.114*b) / 255;
+}
+
 function applyDivisionTheme(division){
   const root = document.documentElement.style;
+  const pitch2 = lightenColor(division.color, 0.25);
   root.setProperty('--pitch', division.color);
-  root.setProperty('--pitch-2', lightenColor(division.color, 0.25));
-  root.setProperty('--line', lightenColor(division.color, 0.25));
+  root.setProperty('--pitch-2', pitch2);
+  root.setProperty('--line', pitch2);
+  root.setProperty('--nav-dropdown-text', relativeLuminance(pitch2) > 0.6 ? '#0E1F19' : '#F6F2E8');
 }
 
 // Same colours as admin.html's Exports tab config, so a side league's public
