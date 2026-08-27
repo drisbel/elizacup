@@ -303,6 +303,12 @@
   }
   .div-nav-dropdown-item:hover{background:rgba(255,255,255,0.1);color:var(--chalk);}
   .div-nav-dropdown-item.active{background:var(--amber);color:var(--ink);}
+  .div-nav-dropdown-item-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .div-nav-complete-badge{
+    font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.03em;background:rgba(255,255,255,0.18);color:inherit;padding:2px 6px;
+    border-radius:8px;flex-shrink:0;
+  }
   .comp-switcher{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 24px 16px;}
   .comp-switcher .div-tab{border-color:var(--line-light);color:var(--muted-dark, #000);display:inline-flex;align-items:center;gap:6px;}
   .comp-switcher .div-tab:hover{border-color:var(--amber);color:var(--ink);}
@@ -2063,7 +2069,7 @@ function buildNavItemHtml(item, idPrefix){
       <button class="div-tab${isActive?' active':''}" data-sidegroup="${item.key}" type="button">${activeLeague ? activeLeague.label : item.label}<span class="div-tab-caret">▾</span></button>
       <div class="div-nav-dropdown" id="navDropdown-${idPrefix}${item.key}">
         <button class="div-nav-dropdown-item${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-        ${SIDE_LEAGUES.filter(s=>!s.hidden).map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
+        ${sideLeaguesInDisplayOrder().map(s=>`<button class="div-nav-dropdown-item${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button"><span class="div-nav-dropdown-item-row">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span class="div-nav-complete-badge">Complete</span>' : ''}</span></button>`).join("")}
       </div>
     </div>`;
   }
@@ -2150,7 +2156,7 @@ function buildMobileNavItemHtml(item){
       <button class="mobile-nav-group-toggle${isActive?' active':''}" data-toggle-group type="button">${item.label}<span class="mobile-nav-group-caret">▾</span></button>
       <div class="mobile-nav-submenu">
         <button class="mobile-nav-sublink${isHub?' active':''}" data-id="sideleagueshub" type="button">Side Leagues Hub</button>
-        ${SIDE_LEAGUES.filter(s=>!s.hidden).map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button">${s.label}</button>`).join("")}
+        ${sideLeaguesInDisplayOrder().map(s=>`<button class="mobile-nav-sublink${activeKey===s.key?' active':''}" data-side-key="${s.key}" type="button"><span class="div-nav-dropdown-item-row">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span class="div-nav-complete-badge">Complete</span>' : ''}</span></button>`).join("")}
       </div>
     </div>`;
   }
@@ -6525,6 +6531,35 @@ const SIDE_LEAGUES = [
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
 ];
 
+// Competition-selector ordering/completion — kept in sync with whatever order
+// and status Dan sets on the Side Leagues Hub cards (side-leagues-hub.json,
+// admin's Reorder tool), so the dropdown/mobile nav don't drift out of sync
+// with the Hub page. A hub card's key is derived from its own link field
+// (e.g. "#sideleagues=fpl" -> "fpl", "#sideleagues=lms:auscup" -> "lms"),
+// since cards aren't otherwise tied to a SIDE_LEAGUES entry.
+function sideLeagueHubKeyFromLink(link){
+  const m = (link||"").match(/^#sideleagues=([a-z0-9]+)/i);
+  return m ? m[1].toLowerCase() : null;
+}
+let sideLeagueOrderOverride = null; // array of keys, admin's hub order — null until hub data loads
+let completedSideLeagueKeys = new Set();
+
+// Returns the nav-visible SIDE_LEAGUES entries sorted to match the admin's
+// hub order once it's available. Leagues with no matching hub card (e.g. no
+// card created for that page yet) keep their original relative order,
+// appended after any that do have a match — never dropped or crash the nav.
+function sideLeaguesInDisplayOrder(){
+  const base = SIDE_LEAGUES.filter(s=>!s.hidden);
+  if(!sideLeagueOrderOverride) return base;
+  const orderIndex = new Map();
+  sideLeagueOrderOverride.forEach((k,i) => { if(!orderIndex.has(k)) orderIndex.set(k, i); });
+  return [...base].sort((a,b) => {
+    const ai = orderIndex.has(a.key) ? orderIndex.get(a.key) : Infinity;
+    const bi = orderIndex.has(b.key) ? orderIndex.get(b.key) : Infinity;
+    return ai - bi;
+  });
+}
+
 // Side-league team names (e.g. "Le Fee & Foo") aren't the same as Eliza Cup
 // team names, so they don't have their own logo files — this sheet (managed
 // by Dan directly, not via admin.html) maps each Eliza team's name in column
@@ -6641,6 +6676,25 @@ async function loadSideLeaguesHubData(){
   });
   return sideLeaguesHubPromise;
 }
+
+// Kicks off the hub data fetch immediately on every page (not just when the
+// Hub page itself is viewed), so the competition selector can pick up the
+// same order/"complete" marking as soon as it's available. loadSideLeaguesHubData
+// is promise-memoized and already sessionStorage-cached via cachedFetch, so
+// this doesn't cost an extra request once the Hub page is actually visited —
+// renderSideLeaguesHub() below reuses this same resolved promise.
+loadSideLeaguesHubData().then(data => {
+  sideLeagueOrderOverride = data.cards.map(c => sideLeagueHubKeyFromLink(c.link)).filter(Boolean);
+  completedSideLeagueKeys = new Set(
+    data.cards.filter(c => c.status === "complete").map(c => sideLeagueHubKeyFromLink(c.link)).filter(Boolean)
+  );
+  renderDivNav();
+  if(currentDivision.type === "sideleagues"){
+    const activeKey = (currentDivision.sideLeagueKey && SIDE_LEAGUES.some(s=>s.key===currentDivision.sideLeagueKey))
+      ? currentDivision.sideLeagueKey : SIDE_LEAGUES[0].key;
+    renderSideLeagueTabs(activeKey);
+  }
+});
 
 const SLH_STATUS_LABEL = { active: "Active", complete: "Complete", signups: "Signups Open" };
 
@@ -7584,8 +7638,7 @@ function renderSideLeagueContent(){
     el.innerHTML = `
       ${sideLeagueWinnersBannerHtml("#sideleagues=" + key)}
       <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
-      ${sideLeagueTableHtml(table)}
-      <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
+      ${sideLeagueTableHtml(table, { showForm: true })}
       <div class="round-tabs" id="sideLeagueRoundTabs"></div>
       <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>
       ${overall ? `
@@ -7804,7 +7857,7 @@ function renderSideLeagueTabs(activeKey){
   const tabsEl = document.getElementById('sideLeaguesTabs');
   const initial = (activeKey && SIDE_LEAGUES.some(s=>s.key===activeKey)) ? activeKey : SIDE_LEAGUES[0].key;
   tabsEl.innerHTML = `<button class="round-tab" data-hub="1">Overview</button>` +
-    SIDE_LEAGUES.filter(s=>!s.hidden).map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}</button>`).join("");
+    sideLeaguesInDisplayOrder().map(s => `<button class="round-tab${s.key===initial?' active':''}" data-key="${s.key}">${s.label}${completedSideLeagueKeys.has(s.key) ? '<span style="opacity:0.65;font-size:10.5px;margin-left:5px;">✓ Complete</span>' : ''}</button>`).join("");
   tabsEl.querySelector('[data-hub]').addEventListener('click', ()=>{
     const hub = DIVISIONS.find(d=>d.id==="sideleagueshub");
     goToDivision(hub);

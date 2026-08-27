@@ -467,6 +467,16 @@
   .export-table .team-cell img{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
   .export-table .pts{font-weight:700;}
   .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;}
+  /* Same 5-round W/D/L pill system as index.html's .form-pill, but with the
+     colours hardcoded rather than pulled from CSS variables — html2canvas
+     doesn't reliably resolve var() on the capture target, same reason every
+     other colour on this export table is a literal hex value. */
+  .export-form-row{display:inline-flex;gap:3px;}
+  .export-form-pill{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:700;color:#fff;}
+  .export-form-pill.form-w{background:#4FAE7E;}
+  .export-form-pill.form-l{background:#B95C50;}
+  .export-form-pill.form-d{background:#9AA79E;}
+  .export-form-pill.form-blank{background:#E4DFD0;color:#B0A890;}
   /* Roddy chip pills — same 4-colour set as index.html's .chip-pill (an
      unused chip shown as a coloured pill, a used one shown as plain text
      naming the round it was played). */
@@ -4239,19 +4249,19 @@ function cell(row, i){ return (row[i] || "").toString().trim(); }
 const EXPORT_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk"; // shared by every competition below
 // Same column map as index.html's FPL_COL — kept as its own local constant
 // rather than shared between the two files, since they're separate pages.
-const EXPORT_FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, next:24, status:29 };
+const EXPORT_FPL_COL = { pos:1, team:3, pts:8, w:9, d:10, l:11, ptsFor:12, ptsAgn:13, diff:14, form:[19,20,21,22,23], next:24, status:29 };
 const EXPORT_GW_RE = /^GW\s*\d+/i;
 // Same as index.html's AFL_ROUND_RE — Supercoach fixtures use round labels
 // ("ROUND 1", "Quarter Final", etc.) rather than FPL's "GW1" gameweek labels.
 const EXPORT_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
 
 const EXPORT_COMPETITIONS = {
-  "fpl-premier": { label: "Eliza Premier League", gid: "1845986614", titleText: "ELIZA PREMIER LEAGUE", fixturesBase: 33, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#28427c", textColor: "#fff" },
-  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#990000", textColor: "#fff" },
+  "fpl-premier": { label: "Eliza Premier League", gid: "1845986614", titleText: "ELIZA PREMIER LEAGUE", fixturesBase: 33, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#28427c", textColor: "#fff", hasForm: true },
+  "fpl-championship": { label: "Eliza Championship", gid: "1845986614", titleText: "ELIZA CHAMPIONSHIP", fixturesBase: 40, roundTest: v => EXPORT_GW_RE.test(v), mapColumnLabel: "FPL", color: "#990000", textColor: "#fff", hasForm: true },
   "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL", color: "#963CFF", textColor: "#fff" },
-  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL", color: "#d90a30", textColor: "#fff", hasOverall: true },
-  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL", color: "#01c36b", textColor: "#fff", hasOverall: true },
-  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#7cb648", textColor: "#fff", hasOverall: true }
+  "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL", color: "#d90a30", textColor: "#fff", hasOverall: true, hasForm: true },
+  "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL", color: "#01c36b", textColor: "#fff", hasOverall: true, hasForm: true },
+  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#7cb648", textColor: "#fff", hasOverall: true, hasForm: true }
 };
 // FPL Roddy isn't a standings+fixtures competition like the others — it's a
 // single leaderboard (same shape as index.html's parseFplTable/fplRoddyTableHtml)
@@ -4375,6 +4385,7 @@ function exportParseFplTable(rows, titleText){
       w: wVal, d: dVal, l: cell(rows[dr]||[],cols.l),
       for: cell(rows[dr]||[],cols.ptsFor), aga: cell(rows[dr]||[],cols.ptsAgn),
       dif: cell(rows[dr]||[],cols.diff), next: cell(rows[dr]||[],cols.next),
+      form: cols.form.map(c => cell(rows[dr]||[],c)),
       status: cell(rows[dr]||[],cols.status)
     });
   }
@@ -4537,7 +4548,7 @@ async function exportLoadData(){
     const table = exportParseFplTable(rows, cfg.titleText);
     const fixtures = exportParseFplFixtures(rows, cfg.fixturesBase, cfg.roundTest);
     const overall = cfg.hasOverall ? exportParseOverallTable(rows) : null;
-    exportData = { competition, label: cfg.label, table, fixtures, overall, teamMap, color: cfg.color, textColor: cfg.textColor };
+    exportData = { competition, label: cfg.label, table, fixtures, overall, teamMap, color: cfg.color, textColor: cfg.textColor, hasForm: !!cfg.hasForm };
 
     $("exportDebugOut").textContent = JSON.stringify({
       table: table.debug,
@@ -4604,6 +4615,13 @@ function exportRenderPreview(){
     const rowsHtml = exportData.table.teams.map(t => {
       const logoName = exportResolveTeamName(t.team);
       const statusInfo = exportStatusInfo(t.status);
+      const formCellHtml = exportData.hasForm
+        ? `<td><span class="export-form-row">${(t.form||[]).map(f=>{
+            const up = (f||"").toUpperCase();
+            const cls = up==="W" ? "form-w" : up==="L" ? "form-l" : up==="D" ? "form-d" : "form-blank";
+            return `<span class="export-form-pill ${cls}">${up || "–"}</span>`;
+          }).join("")}</span></td>`
+        : "";
       return `
       <tr${statusInfo ? ` class="${statusInfo.cls}"` : ""}>
         <td class="num pos">${t.pos}</td>
@@ -4615,16 +4633,20 @@ function exportRenderPreview(){
         <td class="num">${t.for||0}</td>
         <td class="num">${t.aga||0}</td>
         <td class="num">${t.dif||0}</td>
-        <td class="next-opp">${t.next || "—"}</td>
+        ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>
       </tr>`;
     }).join("");
     target.style.width = "760px";
+    const formHeaderHtml = exportData.hasForm ? `<th style="width:13%;">Form</th>` : "";
+    const nextWidth = exportData.hasForm ? "17%" : "18%";
+    const teamWidth = exportData.hasForm ? "27%" : "32%";
+    const forWidth = exportData.hasForm ? "6%" : "7%";
     target.innerHTML = `
       ${exportCardHeaderHtml("Standings", exportData.label)}
       <div class="export-card-body">
         <table class="export-table">
-          <thead><tr><th class="num" style="width:5%;">Pos</th><th style="width:32%;">Team</th><th class="num" style="width:6%;">Pts</th><th class="num" style="width:6%;">W</th><th class="num" style="width:6%;">D</th><th class="num" style="width:6%;">L</th><th class="num" style="width:7%;">For</th><th class="num" style="width:7%;">Aga</th><th class="num" style="width:7%;">Diff</th><th style="width:18%;">Next</th></tr></thead>
-          <tbody>${rowsHtml || `<tr><td colspan="10" class="hint">No teams found.</td></tr>`}</tbody>
+          <thead><tr><th class="num" style="width:5%;">Pos</th><th style="width:${teamWidth};">Team</th><th class="num" style="width:6%;">Pts</th><th class="num" style="width:6%;">W</th><th class="num" style="width:6%;">D</th><th class="num" style="width:6%;">L</th><th class="num" style="width:${forWidth};">For</th><th class="num" style="width:${forWidth};">Aga</th><th class="num" style="width:${forWidth};">Diff</th>${formHeaderHtml}<th style="width:${nextWidth};">Next</th></tr></thead>
+          <tbody>${rowsHtml || `<tr><td colspan="${exportData.hasForm ? 11 : 10}" class="hint">No teams found.</td></tr>`}</tbody>
         </table>
         ${exportStatusLegendHtml(exportData.table.teams)}
       </div>
