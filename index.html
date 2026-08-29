@@ -7316,15 +7316,23 @@ async function fetchFplLiveScores(){
     return {};
   }
 }
-function fplLivePlayerRowHtml(p, isShared, benchBoosted){
+function fplLivePlayerRowHtml(p, isShared, benchBoosted, tripleCaptainActive){
   const badge = p.isCaptain ? `<span class="fpl-live-h2h-cap-badge">C</span>` : p.isVice ? `<span class="fpl-live-h2h-cap-badge vice">V</span>` : "";
   const statusKey = (p.status||"").trim().toLowerCase();
   const statusCls = statusKey === "live" ? "status-live" : statusKey === "finished" ? "status-finished" : "status-unplayed";
   const statusTitle = p.status || "Unplayed";
   const statusDot = `<span class="fpl-live-h2h-status-dot ${statusCls}" title="${statusTitle}"></span>`;
+  // The sheet stores each player's raw single-score points — captaincy
+  // doubling (or tripling, under Triple Captain) isn't applied there, so
+  // it's applied here for display only. Left as-is if the value isn't a
+  // plain number (e.g. blank/unplayed).
+  const multiplier = tripleCaptainActive ? 3 : 2;
+  const rawPts = p.pts;
+  const numPts = parseFloat(rawPts);
+  const displayPts = (p.isCaptain && !isNaN(numPts)) ? (numPts * multiplier) : rawPts;
   return `<div class="fpl-live-h2h-player-row${p.bench ? ' bench' : ''}${benchBoosted ? ' bench-boosted' : ''}${isShared ? ' shared' : ''}" ${isShared ? `title="Also starts for the other team this gameweek with the same captain status"` : ''}>
     <span class="fpl-live-h2h-player-name">${statusDot}${p.name}${badge}</span>
-    <span class="fpl-live-h2h-player-pts">${p.pts}</span>
+    <span class="fpl-live-h2h-player-pts"${p.isCaptain && !isNaN(numPts) ? ` title="${numPts} × ${multiplier} (Captain${tripleCaptainActive ? ' — Triple Captain' : ''})"` : ''}>${displayPts}</span>
   </div>`;
 }
 // sharedNames: set of starter names (uppercased) that appear in BOTH teams'
@@ -7355,12 +7363,15 @@ function fplLiveSquadColHtml(teamData, sharedKeys){
   // gameweek same as the starters — so instead of the usual dimmed/muted
   // bench treatment, highlight it to make that clear at a glance.
   const benchBoostActive = /bboost/i.test(teamData.chip || "");
+  // Triple Captain means the captain's score is tripled instead of the usual
+  // doubled — same FPL API chip-code convention as the Bench Boost check above.
+  const tripleCaptainActive = /3xc/i.test(teamData.chip || "");
   return `<div class="fpl-live-h2h-lineup-col">
     <div class="fpl-live-h2h-lineup-label">Starting XI</div>
-    ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false)).join("")}
-    ${sharedStarters.map(p => fplLivePlayerRowHtml(p, true)).join("")}
+    ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false, false, tripleCaptainActive)).join("")}
+    ${sharedStarters.map(p => fplLivePlayerRowHtml(p, true, false, tripleCaptainActive)).join("")}
     ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? `<span class="fpl-live-h2h-bench-boost-tag">Bench Boost Active</span>` : ""}</div>
-    ${bench.map(p => fplLivePlayerRowHtml(p, false, benchBoostActive)).join("")}` : ""}
+    ${bench.map(p => fplLivePlayerRowHtml(p, false, benchBoostActive, tripleCaptainActive)).join("")}` : ""}
   </div>`;
 }
 function fplLiveMatchupCardHtml(f, liveScores, idx){
