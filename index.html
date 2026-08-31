@@ -344,8 +344,24 @@
   .lms-opponent.lms-tiebreak{font-weight:700;}
 
   /* LMS Competition Overview — participants down the rows, rounds across the
-     columns, coloured by that round's WIN/LOSS result. */
-  .lms-overview-table th, .lms-overview-table td{white-space:nowrap;}
+     columns, coloured by that round's WIN/LOSS result. Deliberately NOT using
+     the shared .standings/.roddy-table classes here — those bake in a
+     "sticky first TWO columns" + background-color:inherit pattern built for
+     Pos+Team tables, which was catching this table's first ROUND column too
+     (making it sticky and blocking the win/loss background colour). Only the
+     Participant column should be sticky.  */
+  .lms-overview-table{border-collapse:collapse;width:100%;min-width:640px;}
+  .lms-overview-table th, .lms-overview-table td{padding:8px;border-bottom:1px solid var(--line-light);white-space:nowrap;}
+  .lms-overview-table thead th{
+    background:var(--pitch);color:var(--chalk);font-family:'Barlow',sans-serif;
+    font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    text-align:center;position:sticky;top:0;z-index:2;
+  }
+  .lms-overview-table tbody tr{background:#fff;}
+  .lms-overview-table th:first-child, .lms-overview-table td:first-child{
+    position:sticky;left:0;z-index:3;background:#fff;text-align:left;
+  }
+  .lms-overview-table thead th:first-child{background:var(--pitch);text-align:left;z-index:4;}
   .lms-overview-cell{font-size:11.5px;text-align:center;padding:6px 4px;border-radius:3px;}
   .lms-overview-cell.win{background:#dcfce7;color:#166534;font-weight:600;}
   .lms-overview-cell.loss{background:#fee2e2;color:#991b1b;font-weight:600;}
@@ -8959,6 +8975,9 @@ async function loadLmsHubTab(league, tabKey){
 // not past ones, so relying on deadlines alone would wrongly hide every
 // already-completed round too. The deadline check is kept as a fallback for
 // the rare case the current-round pointer itself can't be matched.
+// Rows are sorted teams-still-alive-first, then eliminated teams ordered by
+// how far they got — eliminated furthest along near the top of that group,
+// eliminated in the earliest round at the very bottom.
 function lmsOverviewTableHtml(data){
   if(!data.rounds.length) return "";
   const names = [];
@@ -8975,11 +8994,30 @@ function lmsOverviewTableHtml(data){
     const deadline = parseLmsDeadline(data.deadlineMap[normalizeLmsText(rd.name)] || "");
     return !!deadline && deadline.getTime() <= now;
   };
+  const lastStartedIdx = currentIdx !== -1 ? currentIdx : data.rounds.length - 1;
 
-  const headHtml = `<th style="text-align:left;">Participant</th>` +
+  // -1 = still alive (no "ELIMINATED" pick found in any started round yet).
+  const eliminatedAtIdx = {};
+  names.forEach(name => {
+    let idx = -1;
+    for(let i=0; i<=lastStartedIdx; i++){
+      const e = data.rounds[i].entries.find(en => en.name === name);
+      if(e && /^ELIMINATED/i.test(e.pick||"")){ idx = i; break; }
+    }
+    eliminatedAtIdx[name] = idx;
+  });
+  const sortedNames = [...names].sort((a,b) => {
+    const ea = eliminatedAtIdx[a], eb = eliminatedAtIdx[b];
+    if(ea === -1 && eb === -1) return 0; // both alive — keep original order
+    if(ea === -1) return -1; // a alive, b eliminated — a first
+    if(eb === -1) return 1;  // b alive, a eliminated — b first
+    return eb - ea; // both eliminated — later elimination (survived longer) first
+  });
+
+  const headHtml = `<th>Participant</th>` +
     data.rounds.map(rd => `<th>${rd.name}</th>`).join("");
 
-  const rowsHtml = names.map(name => {
+  const rowsHtml = sortedNames.map(name => {
     const logoName = resolveSideLeagueTeamName(name);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
     const cellsHtml = data.rounds.map((rd, idx) => {
@@ -8992,13 +9030,13 @@ function lmsOverviewTableHtml(data){
       return `<td class="lms-overview-cell ${cls}" title="${e.pick}">${e.pick}</td>`;
     }).join("");
     return `<tr>
-      <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(name)}</td>
+      <td><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(name)}</td>
       ${cellsHtml}
     </tr>`;
   }).join("");
 
   return `<div class="section-head" style="margin-top:32px;margin-bottom:10px;"><h2 style="font-size:18px;">Competition Overview</h2></div>
-    <div class="table-wrap"><table class="standings compact lms-overview-table">
+    <div class="table-wrap"><table class="lms-overview-table">
       <thead><tr>${headHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table></div>`;
