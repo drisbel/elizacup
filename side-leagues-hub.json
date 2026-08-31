@@ -28,6 +28,21 @@
     "rules": "<strong><u>EPL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official EPL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
   },
   {
+    "id": "msbhwfxa",
+    "label": "Australia Cup LMS",
+    "status": "active",
+    "code": "",
+    "notes": "8 of 14 still standing",
+    "link": "#sideleagues=lms:auscup",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "roundInfo": "QUARTER FINALS",
+    "winners": [],
+    "rules": "<strong><u>LAST MAN STANDING RULES\t\t</u></strong>\t\t\t\t\t\t\t\t\nThe aim of the game is to choose a winner from each round of the competition\t\t\t\t\t\t\t\t\t\t\nAll tips must be unique for every round until the final - you cannot repeat a team unless you have survived until the final.\t\t\t\t\t\t\t\t\t\t\nAt any stage before the final if you have previously selected all remaining teams in the competition, you will be eliminated\t\t\t\t\t\t\t\t\t\t\nIf all remaining players are eliminated together before the final round, all teams will move on to the next round.\t\t\t\t\t\t\t\t\t\t\nOnce you get a prediction incorrect you are eliminated.\t\t\t\t\t\t\t\t\t\t\nIf a tip is not entered before deadline, a random pick will be chosen via wheel spinner on discord\t\t\t\t\t\t\t\t\t\t\nOnce the tournament reaches the final round, all remaining players are free to pick any of the final teams, however will also need to answer the following tie-breaker questions to determine a winner.\t\t\t\t\t\n- First Goalscorer\t\t\t\t\t\t\t\t\t\t\n- Minute of First goal\t\t\t\t\t\t\t\t\t\t\nYou must pick at least 1 NPL team in either Phase 1 or Phase 2 of the Round of 32.\t\n\t\t\t\t\t\t\t\t\t\n<u>AUSTRALIA CUP LMS FORMAT\t\t</u>\t\t\t\t\t\t\t\t\nROUND OF 32 - 2 PHASES - MUST TIP IN BOTH PHASES.\t\t\t\t\t\t\t\t\t\t\nPhase 1 -  22/7 - 27/7\t\t\t\t\t\t\t\t\t\t\nPhase 2 -  29/7-30/7\t\t\t\t\t\t\t\t\t\t\nROUND OF 16\t\t\t\t\t\t\t\t\t\t\nQUARTER FINALS\t\t\t\t\t\t\t\t\t\t\nSEMI FINALS\t\t\t\t\t\t\t\t\t\t\nFINAL",
+    "group": ""
+  },
+  {
     "id": "msbhw36i",
     "label": "NRL Supercoach",
     "status": "active",
@@ -42,21 +57,6 @@
       "League - Zen Garden"
     ],
     "rules": "<strong><u>NRL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official NRL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
-  },
-  {
-    "id": "msbhwfxa",
-    "label": "Australia Cup LMS",
-    "status": "active",
-    "code": "",
-    "notes": "8 of 14 still standing",
-    "link": "#sideleagues=lms:auscup",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "roundInfo": "QUARTER FINALS",
-    "winners": [],
-    "rules": "<strong><u>LAST MAN STANDING RULES\t\t</u></strong>\t\t\t\t\t\t\t\t\nThe aim of the game is to choose a winner from each round of the competition\t\t\t\t\t\t\t\t\t\t\nAll tips must be unique for every round until the final - you cannot repeat a team unless you have survived until the final.\t\t\t\t\t\t\t\t\t\t\nAt any stage before the final if you have previously selected all remaining teams in the competition, you will be eliminated\t\t\t\t\t\t\t\t\t\t\nIf all remaining players are eliminated together before the final round, all teams will move on to the next round.\t\t\t\t\t\t\t\t\t\t\nOnce you get a prediction incorrect you are eliminated.\t\t\t\t\t\t\t\t\t\t\nIf a tip is not entered before deadline, a random pick will be chosen via wheel spinner on discord\t\t\t\t\t\t\t\t\t\t\nOnce the tournament reaches the final round, all remaining players are free to pick any of the final teams, however will also need to answer the following tie-breaker questions to determine a winner.\t\t\t\t\t\n- First Goalscorer\t\t\t\t\t\t\t\t\t\t\n- Minute of First goal\t\t\t\t\t\t\t\t\t\t\nYou must pick at least 1 NPL team in either Phase 1 or Phase 2 of the Round of 32.\t\n\t\t\t\t\t\t\t\t\t\n<u>AUSTRALIA CUP LMS FORMAT\t\t</u>\t\t\t\t\t\t\t\t\nROUND OF 32 - 2 PHASES - MUST TIP IN BOTH PHASES.\t\t\t\t\t\t\t\t\t\t\nPhase 1 -  22/7 - 27/7\t\t\t\t\t\t\t\t\t\t\nPhase 2 -  29/7-30/7\t\t\t\t\t\t\t\t\t\t\nROUND OF 16\t\t\t\t\t\t\t\t\t\t\nQUARTER FINALS\t\t\t\t\t\t\t\t\t\t\nSEMI FINALS\t\t\t\t\t\t\t\t\t\t\nFINAL",
-    "group": ""
   },
   {
     "id": "msbhvee7",
