@@ -8953,11 +8953,12 @@ async function loadLmsHubTab(league, tabKey){
 
 // Competition Overview — participants down the rows, rounds across the
 // columns, each cell showing that participant's pick for that round shaded
-// by the result. A round is only revealed once its tip deadline has passed
-// (no parseable deadline yet, e.g. "Awaiting Schedule Release", is treated
-// as not-started too) — this hides everyone's picks for an upcoming round
-// even if some participants have already submitted theirs, so the overview
-// can't be used to see what others have tipped before it's locked in.
+// by the result. A round only counts as "started" (and its picks revealed)
+// once it's reached or passed the sheet's declared current round (Z column) —
+// the X:Z deadline reference table only tracks upcoming/current deadlines,
+// not past ones, so relying on deadlines alone would wrongly hide every
+// already-completed round too. The deadline check is kept as a fallback for
+// the rare case the current-round pointer itself can't be matched.
 function lmsOverviewTableHtml(data){
   if(!data.rounds.length) return "";
   const names = [];
@@ -8968,7 +8969,9 @@ function lmsOverviewTableHtml(data){
   if(!names.length) return "";
 
   const now = Date.now();
-  const roundStarted = rd => {
+  const currentIdx = data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel));
+  const roundStarted = (rd, idx) => {
+    if(currentIdx !== -1) return idx <= currentIdx;
     const deadline = parseLmsDeadline(data.deadlineMap[normalizeLmsText(rd.name)] || "");
     return !!deadline && deadline.getTime() <= now;
   };
@@ -8979,8 +8982,8 @@ function lmsOverviewTableHtml(data){
   const rowsHtml = names.map(name => {
     const logoName = resolveSideLeagueTeamName(name);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
-    const cellsHtml = data.rounds.map(rd => {
-      if(!roundStarted(rd)) return `<td class="lms-overview-cell locked" title="Round hasn't started yet">🔒</td>`;
+    const cellsHtml = data.rounds.map((rd, idx) => {
+      if(!roundStarted(rd, idx)) return `<td class="lms-overview-cell locked" title="Round hasn't started yet">🔒</td>`;
       const e = rd.entries.find(en => en.name === name);
       if(!e || !e.pick) return `<td class="lms-overview-cell">—</td>`;
       if(/^ELIMINATED/i.test(e.pick)) return `<td class="lms-overview-cell eliminated" title="Eliminated">—</td>`;
