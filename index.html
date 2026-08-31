@@ -342,6 +342,16 @@
   .lms-pick.entered{color:#166534;}
   .lms-opponent{font-size:10.5px;color:#000;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
   .lms-opponent.lms-tiebreak{font-weight:700;}
+
+  /* LMS Competition Overview — participants down the rows, rounds across the
+     columns, coloured by that round's WIN/LOSS result. */
+  .lms-overview-table th, .lms-overview-table td{white-space:nowrap;}
+  .lms-overview-cell{font-size:11.5px;text-align:center;padding:6px 4px;border-radius:3px;}
+  .lms-overview-cell.win{background:#dcfce7;color:#166534;font-weight:600;}
+  .lms-overview-cell.loss{background:#fee2e2;color:#991b1b;font-weight:600;}
+  .lms-overview-cell.eliminated{background:#d1d5db;color:#6b7280;}
+  .lms-overview-cell.awaiting{background:#fef3c7;color:#92400e;}
+  .lms-overview-cell.locked{background:#f3f4f6;color:#9ca3af;font-size:13px;}
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
   .facup-bracket-wrap{overflow-x:auto;padding-bottom:14px;}
   .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#000;text-align:center;}
@@ -8941,6 +8951,56 @@ async function loadLmsHubTab(league, tabKey){
   }
 }
 
+// Competition Overview — participants down the rows, rounds across the
+// columns, each cell showing that participant's pick for that round shaded
+// by the result. A round is only revealed once its tip deadline has passed
+// (no parseable deadline yet, e.g. "Awaiting Schedule Release", is treated
+// as not-started too) — this hides everyone's picks for an upcoming round
+// even if some participants have already submitted theirs, so the overview
+// can't be used to see what others have tipped before it's locked in.
+function lmsOverviewTableHtml(data){
+  if(!data.rounds.length) return "";
+  const names = [];
+  const seen = new Set();
+  data.rounds.forEach(rd => rd.entries.forEach(e => {
+    if(e.name && !seen.has(e.name)){ seen.add(e.name); names.push(e.name); }
+  }));
+  if(!names.length) return "";
+
+  const now = Date.now();
+  const roundStarted = rd => {
+    const deadline = parseLmsDeadline(data.deadlineMap[normalizeLmsText(rd.name)] || "");
+    return !!deadline && deadline.getTime() <= now;
+  };
+
+  const headHtml = `<th style="text-align:left;">Participant</th>` +
+    data.rounds.map(rd => `<th>${rd.name}</th>`).join("");
+
+  const rowsHtml = names.map(name => {
+    const logoName = resolveSideLeagueTeamName(name);
+    const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+    const cellsHtml = data.rounds.map(rd => {
+      if(!roundStarted(rd)) return `<td class="lms-overview-cell locked" title="Round hasn't started yet">🔒</td>`;
+      const e = rd.entries.find(en => en.name === name);
+      if(!e || !e.pick) return `<td class="lms-overview-cell">—</td>`;
+      if(/^ELIMINATED/i.test(e.pick)) return `<td class="lms-overview-cell eliminated" title="Eliminated">—</td>`;
+      if(/AWAITING TIP/i.test(e.pick)) return `<td class="lms-overview-cell awaiting" title="No tip submitted">—</td>`;
+      const cls = e.result === "WIN" ? "win" : e.result === "LOSS" ? "loss" : "";
+      return `<td class="lms-overview-cell ${cls}" title="${e.pick}">${e.pick}</td>`;
+    }).join("");
+    return `<tr>
+      <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(name)}</td>
+      ${cellsHtml}
+    </tr>`;
+  }).join("");
+
+  return `<div class="section-head" style="margin-top:32px;margin-bottom:10px;"><h2 style="font-size:18px;">Competition Overview</h2></div>
+    <div class="table-wrap"><table class="standings compact lms-overview-table">
+      <thead><tr>${headHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>`;
+}
+
 function renderLmsCup(data, containerId){
   containerId = containerId || 'sideLeaguesContainer';
   const el = document.getElementById(containerId);
@@ -8994,7 +9054,8 @@ function renderLmsCup(data, containerId){
     <div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Australia Cup LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
     <div class="lms-pick-list">${rowsHtml}</div>
-    ${lmsTipsFormHtml(data)}`;
+    ${lmsTipsFormHtml(data)}
+    ${lmsOverviewTableHtml(data)}`;
 
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
