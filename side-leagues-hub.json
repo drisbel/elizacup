@@ -45,7 +45,7 @@
   {
     "id": "msbhw36i",
     "label": "NRL Supercoach",
-    "status": "active",
+    "status": "complete",
     "code": "",
     "notes": "",
     "link": "#sideleagues=nrl",
@@ -54,7 +54,9 @@
     "countdownEnabled": false,
     "roundInfo": "FINAL",
     "winners": [
-      "League - Zen Garden"
+      "League - Zen Garden",
+      "Finals - Cag's Investors",
+      "Overall - Frogbert Rugby"
     ],
     "rules": "<strong><u>NRL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official NRL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
   },
