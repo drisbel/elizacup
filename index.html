@@ -7568,9 +7568,7 @@ let fplRoddyPromise = null;
 // when the "FPL Cup" tab is clicked, same as Roddy, rather than fetched
 // eagerly with the main FPL page.
 const FPL_CUP_GID = "154493860";
-// TODO: paste the Challonge bracket URL here once Dan creates the tournament.
-// Until it's set, the "powered by" line below still shows but isn't a link.
-const FPL_CUP_CHALLONGE_URL = "";
+const FPL_CUP_CHALLONGE_URL = "https://challonge.com/ongzpg9u";
 // Best guess at the title text parseFplTable anchors on — the one thing
 // that couldn't be confirmed without seeing the actual sheet. If the Debug
 // panel shows "titleFound: false" this needs to become the exact text from
@@ -7589,8 +7587,8 @@ function fplCupCsvUrlFor(){
 // place and just needs the URL dropped in once the tournament exists.
 function fplCupChallongeLinkHtml(){
   return FPL_CUP_CHALLONGE_URL
-    ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;margin:4px 0 18px;">
-        <a href="${FPL_CUP_CHALLONGE_URL}" target="_blank" rel="noopener" style="color:#000;font-weight:600;text-decoration:none;border-bottom:1px solid #000;">FPL Cup powered by Challonge.com ↗</a>
+    ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin:4px 0 18px;">
+        FPL Cup bracket — <a href="${FPL_CUP_CHALLONGE_URL}" target="_blank" rel="noopener" style="color:#000;font-weight:600;text-decoration:underline;">view live on Challonge.com ↗</a>
       </div>`
     : `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;opacity:0.6;margin:4px 0 18px;">FPL Cup powered by Challonge.com</div>`;
 }
