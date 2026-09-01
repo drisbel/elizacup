@@ -140,6 +140,39 @@
   .status-msg.ok{color:var(--ok);}
   .status-msg.err{color:var(--danger);}
 
+  /* ---- 26/27 Planning Portal ---- */
+  .planning-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;}
+  .planning-board{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;}
+  .planning-col{
+    flex:0 0 268px;background:#f7f8fa;border:1px solid var(--line);border-radius:10px;
+    padding:10px;min-height:140px;transition:background .12s,border-color .12s;
+  }
+  .planning-col.drag-over{background:#e8edf5;border-color:var(--pitch-2);}
+  .planning-col-head{
+    font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.04em;
+    font-size:13px;font-weight:700;color:var(--pitch);margin-bottom:8px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .planning-col-count{font-size:11px;color:var(--muted);font-weight:500;}
+  .planning-card{
+    background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;
+    cursor:grab;font-family:'Barlow',sans-serif;
+  }
+  .planning-card.dragging{opacity:.35;}
+  .planning-card.changed{border-left:4px solid var(--pitch-2);}
+  .planning-card-name{font-weight:700;font-size:13.5px;margin-bottom:2px;}
+  .planning-card-manager{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .planning-card-meta{font-size:11px;color:var(--muted);margin-bottom:4px;line-height:1.4;}
+  .planning-card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+  .planning-tag{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:8px;white-space:nowrap;}
+  .planning-tag.intent-confirmed{background:#dcfce7;color:#166534;}
+  .planning-tag.intent-likely{background:#fef3c7;color:#92400e;}
+  .planning-tag.intent-unlikely{background:#fee2e2;color:#991b1b;}
+  .planning-tag.intent-none{background:#e5e7eb;color:#6b7280;}
+  .planning-tag.reason{background:#e0e7ff;color:#3730a3;}
+  .planning-card-select{width:100%;font-size:11.5px;padding:5px;border-radius:5px;border:1px solid var(--line);margin-top:6px;font-family:'Barlow',sans-serif;}
+  .planning-card-id{font-size:10px;color:var(--muted);margin-top:6px;}
+
   /* article list */
   .article-item{
     border:1px solid var(--line);
@@ -497,9 +530,12 @@
   }
   .export-fixture-row:last-child{border-bottom:none;}
   .export-fixture-team{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:16px;font-weight:600;}
-  .export-fixture-team span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Logo stays pinned to the outer edge (left for home, right for away);
+     the name fills the remaining space and hugs the score in the middle —
+     home text-align:right, away text-align:left (below). */
+  .export-fixture-team span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;text-align:right;}
   .export-fixture-team img{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
-  .export-fixture-team.away{justify-content:flex-end;text-align:right;}
+  .export-fixture-team.away span{text-align:left;}
   .export-fixture-score{
     font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;
     min-width:70px;text-align:center;flex-shrink:0;
@@ -587,6 +623,7 @@
       <button type="button" class="admin-section-btn" data-section="rulebook">Rulebook</button>
       <button type="button" class="admin-section-btn" data-section="sideleagues">Side Leagues Hub</button>
       <button type="button" class="admin-section-btn" data-section="wmd">26/27 Leagues</button>
+      <button type="button" class="admin-section-btn" data-section="planning">26/27 Planning Portal</button>
       <button type="button" class="admin-section-btn" data-section="draw">Fixture Draw</button>
       <button type="button" class="admin-section-btn" data-section="exports">Exports</button>
     </div>
@@ -935,6 +972,30 @@
       <div id="wmdLoadingList">Loading whats-my-division.json…</div>
       <div id="wmdEmptyState" style="display:none;">No teams added yet. Add one above — the first save will create whats-my-division.json in the repo.</div>
       <div id="wmdListEl"></div>
+    </div>
+
+    </div>
+
+    <div class="admin-section" id="section-planning">
+    <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">26/27 Planning Portal</h2>
+
+    <div class="card">
+      <h2>How this works</h2>
+      <div class="hint">
+        Team info (name, manager, intention, 25/26 record, contact method) is read live from the <strong>26/27 Conf Pref</strong> tab in the Eliza Admin sheet — this panel never writes back to that sheet. Drag a card between columns (or use the dropdown on a card, which works better on mobile) to plan out where each team should land for 26/27. Moved cards get a highlighted left edge. Nothing is public — this is saved to <code>26-27-planning.json</code> in the repo purely for your own planning, separate from the "26/27 Leagues" tool that drives the public What's My Division page. Once you've finalised a team's division/conference, use "Copy changes" to get a paste-ready list for updating the Google Sheet's 26/27 Division/Conference columns yourself.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="planning-toolbar">
+        <button class="btn btn-primary" id="savePlanningBtn" disabled>Save board</button>
+        <button class="btn btn-ghost" id="copyPlanningBtn">Copy changes</button>
+        <button class="btn btn-ghost" id="resetPlanningBtn">Reset all to sheet</button>
+        <span class="status-msg" id="planningSaveStatus"></span>
+      </div>
+      <div class="hint" id="planningChangeCount" style="margin-bottom:14px;">Loading…</div>
+      <div id="planningStatus" class="hint"></div>
+      <div class="planning-board" id="planningBoard"></div>
     </div>
 
     </div>
@@ -1459,6 +1520,7 @@ function showPanel() {
   loadRulebook();
   loadSlh();
   loadWmd();
+  loadPlanningPortal();
 }
 
 // ---------- Load news.json ----------
@@ -2547,6 +2609,252 @@ function setWmdFormStatus(msg, isError) {
   const el = $("wmdFormStatus");
   el.textContent = msg;
   el.className = "status-msg " + (isError ? "err" : "ok");
+}
+
+// ---------- 26/27 Planning Portal ----------
+// Reads team info live from the "26/27 Conf Pref" tab (read-only — this panel
+// never writes to the sheet). The drag-and-drop board's assignments are saved
+// separately as an overrides list in 26-27-planning.json via the GitHub
+// Contents API, same commit pattern as whats-my-division.json above. Only
+// teams the admin has actually moved get an override entry; everyone else's
+// bucket is derived live from the sheet's current 26/27 Division/Conference
+// columns, so the board naturally stays in sync as Dan updates the sheet.
+const PLANNING_SHEET_ID = "1xe4SAPxoNfy3TtucWt-g7BYhRh98Da1cdRgyt6L7xSI";
+const PLANNING_GID = "1873119820";
+const PLANNING_PATH = "26-27-planning.json";
+const PLANNING_BUCKETS = [
+  { key: "D1", label: "Division 1" },
+  { key: "2A", label: "Division 2A" },
+  { key: "2B", label: "Division 2B" },
+  { key: "3A", label: "Division 3A" },
+  { key: "3B", label: "Division 3B" },
+  { key: "WAITLIST", label: "Waitlist" },
+  { key: "INFILL", label: "Potential Infill" },
+  { key: "UNSORTED", label: "Unsorted" }
+];
+let planningTeams = [];
+let planningOverrides = {}; // elizaId -> bucket
+let planningSha = null;
+
+function planningBucketLabel(key){
+  const b = PLANNING_BUCKETS.find(b => b.key === key);
+  return b ? b.label : key;
+}
+
+// Division 3 doesn't have a Conference value in the sheet yet (3A/3B split
+// hasn't been decided), so those rows land in "Unsorted" until dragged —
+// same for any Division 2 row missing a recognisable 2A/2B conference value.
+function planningBucketFromSheet(divisionRaw, conferenceRaw){
+  const d = (divisionRaw || "").toUpperCase();
+  const c = (conferenceRaw || "").toUpperCase();
+  if(d === "DIVISION 1") return "D1";
+  if(d === "DIVISION 2"){
+    if(c.includes("2A")) return "2A";
+    if(c.includes("2B")) return "2B";
+    return "UNSORTED";
+  }
+  if(d === "DIVISION 3"){
+    if(c.includes("3A")) return "3A";
+    if(c.includes("3B")) return "3B";
+    return "UNSORTED";
+  }
+  if(d === "WAITLIST") return "WAITLIST";
+  if(d === "POTENTIAL INFILL OPTION") return "INFILL";
+  return "UNSORTED";
+}
+
+async function loadPlanningPortal(){
+  $("planningStatus").textContent = "Loading…";
+  try{
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${PLANNING_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${PLANNING_GID}&cachebust=` + Date.now();
+    const [csvText, overridesRes] = await Promise.all([
+      fetch(csvUrl).then(r => r.text()),
+      fetch(`${API_BASE}/contents/${PLANNING_PATH}?ref=${BRANCH}`, { headers: ghHeaders() })
+    ]);
+    const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
+
+    if(overridesRes.status === 404){
+      planningOverrides = {};
+      planningSha = null;
+    } else if(overridesRes.ok){
+      const data = await overridesRes.json();
+      planningSha = data.sha;
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+      const arr = JSON.parse(decoded || "[]");
+      planningOverrides = {};
+      arr.forEach(o => { planningOverrides[o.elizaId] = o.bucket; });
+    } else {
+      throw new Error(`Failed to load ${PLANNING_PATH} (status ${overridesRes.status})`);
+    }
+
+    planningTeams = [];
+    for(let r = 1; r < rows.length; r++){
+      const row = rows[r] || [];
+      const elizaId = cell(row, 0);
+      const name2627 = cell(row, 7);
+      const name2526 = cell(row, 1);
+      const manager = cell(row, 8) || cell(row, 2);
+      if(!elizaId && !name2627 && !name2526 && !manager) continue; // blank spacer row
+
+      const sheetBucket = planningBucketFromSheet(cell(row, 9), cell(row, 10));
+      planningTeams.push({
+        elizaId,
+        name: name2627 || name2526 || (manager ? manager + "'s Team (TBD name)" : "(Unnamed)"),
+        manager,
+        prevDivision: cell(row, 3),
+        prevPos: cell(row, 4),
+        prevOvr: cell(row, 5),
+        changeReason: cell(row, 6),
+        intention: cell(row, 11),
+        comments: cell(row, 12),
+        contact: cell(row, 13),
+        sheetBucket,
+        bucket: planningOverrides.hasOwnProperty(elizaId) ? planningOverrides[elizaId] : sheetBucket
+      });
+    }
+    $("planningStatus").textContent = "";
+    renderPlanningBoard();
+  } catch(err){
+    $("planningStatus").textContent = "Error loading planning data: " + err.message;
+  }
+}
+
+function planningCardHtml(t){
+  const changed = t.bucket !== t.sheetBucket;
+  const intentKey = (t.intention || "").toUpperCase();
+  const intentCls = intentKey === "CONFIRMED" ? "intent-confirmed" : intentKey === "LIKELY" ? "intent-likely" : intentKey === "UNLIKELY" ? "intent-unlikely" : "intent-none";
+  const intentLabel = t.intention || "No Response";
+  const prevLine = (t.prevDivision && t.prevDivision !== "DNP")
+    ? `25/26: ${t.prevDivision}${t.prevPos ? " · " + t.prevPos : ""}${t.prevOvr && t.prevOvr !== "DNP" ? " · OVR " + t.prevOvr : ""}`
+    : "25/26: Did not play";
+  return `<div class="planning-card${changed ? " changed" : ""}" draggable="true" data-eliza-id="${t.elizaId}">
+    <div class="planning-card-name">${t.name}</div>
+    <div class="planning-card-manager">${t.manager || "—"}</div>
+    <div class="planning-card-tags">
+      <span class="planning-tag ${intentCls}">${intentLabel}</span>
+      ${t.changeReason ? `<span class="planning-tag reason">${t.changeReason}</span>` : ""}
+    </div>
+    <div class="planning-card-meta">${prevLine}</div>
+    ${t.contact ? `<div class="planning-card-meta">Contact: ${t.contact}</div>` : ""}
+    ${t.comments ? `<div class="planning-card-meta" style="font-style:italic;">${t.comments}</div>` : ""}
+    <select class="planning-card-select" data-eliza-id="${t.elizaId}">
+      ${PLANNING_BUCKETS.map(b => `<option value="${b.key}" ${b.key === t.bucket ? "selected" : ""}>${b.label}</option>`).join("")}
+    </select>
+    <div class="planning-card-id">ID ${t.elizaId}${changed ? " · was " + planningBucketLabel(t.sheetBucket) : ""}</div>
+  </div>`;
+}
+
+function renderPlanningBoard(){
+  const boardEl = $("planningBoard");
+  boardEl.innerHTML = PLANNING_BUCKETS.map(b => {
+    const teamsInBucket = planningTeams.filter(t => t.bucket === b.key);
+    return `<div class="planning-col" data-bucket="${b.key}">
+      <div class="planning-col-head"><span>${b.label}</span><span class="planning-col-count">${teamsInBucket.length}</span></div>
+      <div class="planning-col-body">
+        ${teamsInBucket.map(t => planningCardHtml(t)).join("") || `<div class="hint" style="text-align:center;padding:14px 0;">No teams</div>`}
+      </div>
+    </div>`;
+  }).join("");
+
+  boardEl.querySelectorAll(".planning-col").forEach(col => {
+    col.addEventListener("dragover", e => { e.preventDefault(); col.classList.add("drag-over"); });
+    col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
+    col.addEventListener("drop", e => {
+      e.preventDefault();
+      col.classList.remove("drag-over");
+      const elizaId = e.dataTransfer.getData("text/plain");
+      if(elizaId) planningMoveTeam(elizaId, col.dataset.bucket);
+    });
+  });
+
+  boardEl.querySelectorAll(".planning-card").forEach(card => {
+    card.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", card.dataset.elizaId);
+      e.dataTransfer.effectAllowed = "move";
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => card.classList.remove("dragging"));
+  });
+
+  boardEl.querySelectorAll(".planning-card-select").forEach(sel => {
+    sel.addEventListener("change", () => planningMoveTeam(sel.dataset.elizaId, sel.value));
+  });
+
+  updatePlanningChangeSummary();
+}
+
+function planningMoveTeam(elizaId, newBucket){
+  const t = planningTeams.find(t => t.elizaId === elizaId);
+  if(!t || t.bucket === newBucket) return;
+  t.bucket = newBucket;
+  renderPlanningBoard();
+}
+
+function resetPlanningToSheet(){
+  planningTeams.forEach(t => { t.bucket = t.sheetBucket; });
+  renderPlanningBoard();
+  $("planningSaveStatus").textContent = "Reset to sheet values — not yet saved.";
+  $("planningSaveStatus").className = "status-msg";
+}
+
+function updatePlanningChangeSummary(){
+  const changed = planningTeams.filter(t => t.bucket !== t.sheetBucket);
+  $("planningChangeCount").textContent = changed.length
+    ? `${changed.length} team${changed.length === 1 ? "" : "s"} moved from their current sheet division/conference`
+    : "No changes yet — drag a card or use its dropdown to plan a move.";
+  $("savePlanningBtn").disabled = changed.length === 0;
+}
+
+async function savePlanningBoard(){
+  $("savePlanningBtn").disabled = true;
+  $("planningSaveStatus").textContent = "Saving…";
+  $("planningSaveStatus").className = "status-msg";
+  try{
+    const overrides = planningTeams
+      .filter(t => t.bucket !== t.sheetBucket)
+      .map(t => ({ elizaId: t.elizaId, bucket: t.bucket }));
+    const jsonStr = JSON.stringify(overrides, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    const body = { message: `Update 26/27 planning board (${overrides.length} change${overrides.length === 1 ? "" : "s"})`, content: b64, branch: BRANCH };
+    if(planningSha) body.sha = planningSha;
+
+    const res = await fetch(`${API_BASE}/contents/${PLANNING_PATH}`, {
+      method: "PUT",
+      headers: ghHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `GitHub API error (status ${res.status})`);
+    }
+    const data = await res.json();
+    planningSha = data.content.sha;
+    $("planningSaveStatus").textContent = "Saved — commit " + data.commit.sha.slice(0, 7) + ".";
+    $("planningSaveStatus").className = "status-msg ok";
+  } catch(err){
+    $("planningSaveStatus").textContent = "Save failed: " + err.message;
+    $("planningSaveStatus").className = "status-msg err";
+  } finally {
+    updatePlanningChangeSummary();
+  }
+}
+
+function copyPlanningChangesSummary(){
+  const changed = planningTeams.filter(t => t.bucket !== t.sheetBucket);
+  if(!changed.length){
+    $("planningSaveStatus").textContent = "No changes to copy.";
+    $("planningSaveStatus").className = "status-msg";
+    return;
+  }
+  const lines = changed.map(t => `${t.name}\t${t.elizaId}\t${planningBucketLabel(t.bucket)}`);
+  const text = "Team\tEliza ID\tNew 26/27 Division/Conference\n" + lines.join("\n");
+  navigator.clipboard.writeText(text).then(() => {
+    $("planningSaveStatus").textContent = `Copied ${changed.length} change${changed.length === 1 ? "" : "s"} to clipboard.`;
+    $("planningSaveStatus").className = "status-msg ok";
+  }).catch(() => {
+    $("planningSaveStatus").textContent = "Couldn't copy — clipboard permission blocked.";
+    $("planningSaveStatus").className = "status-msg err";
+  });
 }
 
 // ---------- What's My Division?: bulk import ----------
@@ -4816,6 +5124,9 @@ $("exportRound").addEventListener("change", exportRenderPreview);
 $("exportImageBtn").addEventListener("click", exportImage);
 $("saveWmdBtn").addEventListener("click", saveWmdEntry);
 $("wmdImportBtn").addEventListener("click", importWmdFromPaste);
+$("savePlanningBtn").addEventListener("click", savePlanningBoard);
+$("copyPlanningBtn").addEventListener("click", copyPlanningChangesSummary);
+$("resetPlanningBtn").addEventListener("click", resetPlanningToSheet);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
 $("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);
 updateSlhCodeFieldVisibility();
