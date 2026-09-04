@@ -7314,14 +7314,14 @@ const FPL_CHIP_LABELS = { TC: "Triple Captain", BB: "Bench Boost", FH: "Free Hit
 function fplLiveScoresCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/${FPL_LIVE_SCORES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${FPL_LIVE_SCORES_GID}&cachebust=` + Date.now();
 }
-// Starting XI: O/P/Q (P1 Player/Pts/Status) through AS/AT/AU (P11) — 11
-// triples, three columns apart, starting at column 14. Bench: AV/AW/AX (B1)
-// through BE/BF/BG (B4) — 4 triples, same pattern, starting at column 47.
-// (Both shifted +1 from their previous starting columns N/13 and AU/46 when
-// the Hits column was inserted at L.)
+// Starting XI: P/Q/R (P1 Player/Pts/Status) through AT/AU/AV (P11) — 11
+// triples, three columns apart, starting at column 15. Bench: AW/AX/AY (B1)
+// through BF/BG/BH (B4) — 4 triples, same pattern, starting at column 48.
+// (All shifted +1 again from their previous starting columns O/14 and AV/47
+// when the Net Points column was inserted at G.)
 const FPL_LIVE_PLAYER_COLS = [
-  ...Array.from({length:11}, (_,i) => ({ nameCol: 14 + i*3, bench: false })),
-  ...Array.from({length:4}, (_,i) => ({ nameCol: 47 + i*3, bench: true }))
+  ...Array.from({length:11}, (_,i) => ({ nameCol: 15 + i*3, bench: false })),
+  ...Array.from({length:4}, (_,i) => ({ nameCol: 48 + i*3, bench: true }))
 ];
 function parseFplLiveScores(rows){
   const teams = {};
@@ -7329,9 +7329,10 @@ function parseFplLiveScores(rows){
     const row = rows[r] || [];
     const team = cell(row, 4); // E
     if(!team) continue;
-    const points = cell(row, 5); // F
-    const hits = cell(row, 11); // L — points deducted for extra transfers this gameweek, blank/0 if none
-    const chip = cell(row, 12); // M — blank if no chip played this gameweek (shifted from L when Hits was inserted)
+    const points = cell(row, 5); // F — raw/gross points before hits
+    const netPoints = cell(row, 6); // G — final total used for the matchup score, already net of hits
+    const hits = cell(row, 12); // M — points deducted for extra transfers this gameweek, blank/0 if none
+    const chip = cell(row, 13); // N — blank if no chip played this gameweek
     const players = FPL_LIVE_PLAYER_COLS.map(pc => {
       const rawName = cell(row, pc.nameCol);
       if(!rawName) return null;
@@ -7340,7 +7341,7 @@ function parseFplLiveScores(rows){
       const name = rawName.replace(/\s*\((C|VC)\)\s*$/i, "").trim();
       return { name, pts: cell(row, pc.nameCol + 1), status: cell(row, pc.nameCol + 2), isCaptain, isVice, bench: pc.bench };
     }).filter(Boolean);
-    teams[team.trim().toUpperCase()] = { points, chip, hits, players };
+    teams[team.trim().toUpperCase()] = { points, netPoints, chip, hits, players };
   }
   return teams;
 }
@@ -7423,10 +7424,10 @@ function fplLiveMatchupCardHtml(f, liveScores, idx){
   const awayLogoName = resolveSideLeagueTeamName(f.away);
   const homeLogoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(homeLogoName)}';}`;
   const awayLogoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(awayLogoName)}';}`;
-  const homePts = home ? home.points : "—";
-  const awayPts = away ? away.points : "—";
-  const homeWin = home && away && parseInt(home.points,10) > parseInt(away.points,10);
-  const awayWin = home && away && parseInt(away.points,10) > parseInt(home.points,10);
+  const homePts = home ? home.netPoints : "—";
+  const awayPts = away ? away.netPoints : "—";
+  const homeWin = home && away && parseInt(home.netPoints,10) > parseInt(away.netPoints,10);
+  const awayWin = home && away && parseInt(away.netPoints,10) > parseInt(home.netPoints,10);
   const homeChipBadge = home && home.chip ? `<span class="fpl-live-h2h-chip-badge">${FPL_CHIP_LABELS[(home.chip||"").trim().toUpperCase()] || home.chip}</span>` : "";
   const awayChipBadge = away && away.chip ? `<span class="fpl-live-h2h-chip-badge">${FPL_CHIP_LABELS[(away.chip||"").trim().toUpperCase()] || away.chip}</span>` : "";
   // Hits (points deducted for extra transfers) — nothing shown at 0/blank,
