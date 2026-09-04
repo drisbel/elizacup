@@ -945,6 +945,11 @@
     text-transform:uppercase;letter-spacing:0.03em;background:var(--amber);color:var(--ink);
     border-radius:20px;padding:2px 8px;margin-top:3px;
   }
+  .fpl-live-h2h-hits-badge{
+    display:inline-block;font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.03em;background:var(--red);color:#fff;
+    border-radius:20px;padding:2px 8px;margin-top:3px;margin-left:4px;
+  }
   .fpl-live-h2h-lineup-grid{display:grid;grid-template-columns:1fr 1fr;}
   .fpl-live-h2h-lineup-col{padding:12px 16px;}
   .fpl-live-h2h-lineup-col:first-child{border-right:1px solid var(--line-light);}
@@ -962,7 +967,7 @@
   /* Bench Boost active: bench points count this gameweek same as starters,
      so drop the usual muted/dimmed treatment and highlight it instead. */
   .fpl-live-h2h-player-row.bench-boosted{color:var(--ink);background:#FFF6CC;border-radius:4px;padding-left:4px;padding-right:4px;margin:1px -4px;}
-  .fpl-live-h2h-bench-boost-tag{
+  .fpl-live-h2h-chip-tag{
     display:inline-block;font-size:9.5px;font-weight:600;text-transform:none;letter-spacing:normal;
     color:#B8930A;background:#FFF6CC;border-radius:20px;padding:1px 7px;vertical-align:middle;white-space:nowrap;
   }
@@ -1004,7 +1009,7 @@
     .fpl-live-h2h-card-score{font-size:17px;padding:0 3px;}
     .fpl-live-h2h-card-score .sep{margin:0 3px;}
     .fpl-live-h2h-chip-badge{font-size:8.5px;padding:1px 5px;}
-    .fpl-live-h2h-bench-boost-tag{font-size:8px;padding:1px 5px;}
+    .fpl-live-h2h-chip-tag{font-size:8px;padding:1px 5px;}
   }
 
   /* Cross-conference promotion playoff (Division 2/3 fixture tabs) */
@@ -7301,15 +7306,22 @@ function sideLeagueOverallTableHtml(overall){
 // themselves, so no name-mapping/resolution needed to match up.
 const FPL_LIVE_SCORES_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk";
 const FPL_LIVE_SCORES_GID = "1398583038";
+// Chip codes as stored in the Live Scores sheet — displayed as their full
+// name everywhere they appear (matchup header badge, and the relevant
+// section tag below), never as the raw 2-letter code.
+const FPL_CHIP_LABELS = { TC: "Triple Captain", BB: "Bench Boost", FH: "Free Hit", WC: "Wildcard" };
+
 function fplLiveScoresCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/${FPL_LIVE_SCORES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${FPL_LIVE_SCORES_GID}&cachebust=` + Date.now();
 }
-// Starting XI: N/O/P (P1 Player/Pts/Status) through AR/AS/AT (P11) — 11
-// triples, three columns apart, starting at column 13. Bench: AU/AV/AW (B1)
-// through BD/BE/BF (B4) — 4 triples, same pattern, starting at column 46.
+// Starting XI: O/P/Q (P1 Player/Pts/Status) through AS/AT/AU (P11) — 11
+// triples, three columns apart, starting at column 14. Bench: AV/AW/AX (B1)
+// through BE/BF/BG (B4) — 4 triples, same pattern, starting at column 47.
+// (Both shifted +1 from their previous starting columns N/13 and AU/46 when
+// the Hits column was inserted at L.)
 const FPL_LIVE_PLAYER_COLS = [
-  ...Array.from({length:11}, (_,i) => ({ nameCol: 13 + i*3, bench: false })),
-  ...Array.from({length:4}, (_,i) => ({ nameCol: 46 + i*3, bench: true }))
+  ...Array.from({length:11}, (_,i) => ({ nameCol: 14 + i*3, bench: false })),
+  ...Array.from({length:4}, (_,i) => ({ nameCol: 47 + i*3, bench: true }))
 ];
 function parseFplLiveScores(rows){
   const teams = {};
@@ -7318,7 +7330,8 @@ function parseFplLiveScores(rows){
     const team = cell(row, 4); // E
     if(!team) continue;
     const points = cell(row, 5); // F
-    const chip = cell(row, 11); // L — blank if no chip played this gameweek
+    const hits = cell(row, 11); // L — points deducted for extra transfers this gameweek, blank/0 if none
+    const chip = cell(row, 12); // M — blank if no chip played this gameweek (shifted from L when Hits was inserted)
     const players = FPL_LIVE_PLAYER_COLS.map(pc => {
       const rawName = cell(row, pc.nameCol);
       if(!rawName) return null;
@@ -7327,7 +7340,7 @@ function parseFplLiveScores(rows){
       const name = rawName.replace(/\s*\((C|VC)\)\s*$/i, "").trim();
       return { name, pts: cell(row, pc.nameCol + 1), status: cell(row, pc.nameCol + 2), isCaptain, isVice, bench: pc.bench };
     }).filter(Boolean);
-    teams[team.trim().toUpperCase()] = { points, chip, players };
+    teams[team.trim().toUpperCase()] = { points, chip, hits, players };
   }
   return teams;
 }
@@ -7388,15 +7401,18 @@ function fplLiveSquadColHtml(teamData, sharedKeys){
   // Bench Boost means the bench's points count toward the total this
   // gameweek same as the starters — so instead of the usual dimmed/muted
   // bench treatment, highlight it to make that clear at a glance.
-  const benchBoostActive = /bboost/i.test(teamData.chip || "");
-  // Triple Captain means the captain's score is tripled instead of the usual
-  // doubled — same FPL API chip-code convention as the Bench Boost check above.
-  const tripleCaptainActive = /3xc/i.test(teamData.chip || "");
+  const chipCode = (teamData.chip || "").trim().toUpperCase();
+  const benchBoostActive = chipCode === "BB";
+  // Triple Captain means the captain's score is tripled instead of the
+  // usual doubled — tagged on Starting XI the same way Bench Boost is
+  // tagged on Bench below, since it's the Starting XI section (specifically
+  // the captain) it affects.
+  const tripleCaptainActive = chipCode === "TC";
   return `<div class="fpl-live-h2h-lineup-col">
-    <div class="fpl-live-h2h-lineup-label">Starting XI</div>
+    <div class="fpl-live-h2h-lineup-label">Starting XI${tripleCaptainActive ? `<span class="fpl-live-h2h-chip-tag">Triple Captain Active</span>` : ""}</div>
     ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false, false, tripleCaptainActive)).join("")}
     ${sharedStarters.map(p => fplLivePlayerRowHtml(p, true, false, tripleCaptainActive)).join("")}
-    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? `<span class="fpl-live-h2h-bench-boost-tag">Bench Boost Active</span>` : ""}</div>
+    ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? `<span class="fpl-live-h2h-chip-tag">Bench Boost Active</span>` : ""}</div>
     ${bench.map(p => fplLivePlayerRowHtml(p, false, benchBoostActive, tripleCaptainActive)).join("")}` : ""}
   </div>`;
 }
@@ -7411,8 +7427,15 @@ function fplLiveMatchupCardHtml(f, liveScores, idx){
   const awayPts = away ? away.points : "—";
   const homeWin = home && away && parseInt(home.points,10) > parseInt(away.points,10);
   const awayWin = home && away && parseInt(away.points,10) > parseInt(home.points,10);
-  const homeChipBadge = home && home.chip ? `<span class="fpl-live-h2h-chip-badge">${home.chip}</span>` : "";
-  const awayChipBadge = away && away.chip ? `<span class="fpl-live-h2h-chip-badge">${away.chip}</span>` : "";
+  const homeChipBadge = home && home.chip ? `<span class="fpl-live-h2h-chip-badge">${FPL_CHIP_LABELS[(home.chip||"").trim().toUpperCase()] || home.chip}</span>` : "";
+  const awayChipBadge = away && away.chip ? `<span class="fpl-live-h2h-chip-badge">${FPL_CHIP_LABELS[(away.chip||"").trim().toUpperCase()] || away.chip}</span>` : "";
+  // Hits (points deducted for extra transfers) — nothing shown at 0/blank,
+  // otherwise a clear "-N Hits" badge so it's obvious the score reflects a
+  // penalty rather than looking like a plain missing/low total.
+  const homeHits = home ? (parseInt(home.hits, 10) || 0) : 0;
+  const awayHits = away ? (parseInt(away.hits, 10) || 0) : 0;
+  const homeHitsBadge = homeHits > 0 ? `<span class="fpl-live-h2h-hits-badge" title="${homeHits} point${homeHits===1?'':'s'} deducted for extra transfers">-${homeHits} Hits</span>` : "";
+  const awayHitsBadge = awayHits > 0 ? `<span class="fpl-live-h2h-hits-badge" title="${awayHits} point${awayHits===1?'':'s'} deducted for extra transfers">-${awayHits} Hits</span>` : "";
 
   const homeStarterKeys = new Set((home ? home.players : []).filter(p=>!p.bench).map(fplPlayerShareKey));
   const awayStarterKeys = new Set((away ? away.players : []).filter(p=>!p.bench).map(fplPlayerShareKey));
@@ -7420,9 +7443,9 @@ function fplLiveMatchupCardHtml(f, liveScores, idx){
 
   return `<div class="fpl-live-h2h-card" id="fpl-live-h2h-${idx}">
     <div class="fpl-live-h2h-card-header">
-      <div class="fpl-live-h2h-card-team home"><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" onerror="${homeLogoOnError}"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.home)}</span>${homeChipBadge}</span></div>
+      <div class="fpl-live-h2h-card-team home"><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(homeLogoName)}.png" alt="" onerror="${homeLogoOnError}"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.home)}</span>${homeChipBadge}${homeHitsBadge}</span></div>
       <div class="fpl-live-h2h-card-score"><span class="${homeWin?'fx-win':''}">${homePts}</span><span class="sep">&ndash;</span><span class="${awayWin?'fx-win':''}">${awayPts}</span></div>
-      <div class="fpl-live-h2h-card-team away"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.away)}</span>${awayChipBadge}</span><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
+      <div class="fpl-live-h2h-card-team away"><span><span class="fpl-live-h2h-team-name">${sideLeagueTeamLink(f.away)}</span>${awayChipBadge}${awayHitsBadge}</span><img class="fpl-live-h2h-team-logo" src="logo/${teamLogoSlug(awayLogoName)}.png" alt="" onerror="${awayLogoOnError}"></div>
     </div>
     <div class="fpl-live-h2h-lineup-grid">
       ${fplLiveSquadColHtml(home, sharedKeys)}
