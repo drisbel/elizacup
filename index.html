@@ -7371,7 +7371,7 @@ function fplLivePlayerRowHtml(p, isShared, benchBoosted, tripleCaptainActive){
   const numPts = parseFloat(rawPts);
   const displayPts = (p.isCaptain && !isNaN(numPts)) ? (numPts * multiplier) : rawPts;
   return `<div class="fpl-live-h2h-player-row${p.bench ? ' bench' : ''}${benchBoosted ? ' bench-boosted' : ''}${isShared ? ' shared' : ''}" ${isShared ? `title="Also starts for the other team this gameweek with the same captain status"` : ''}>
-    <span class="fpl-live-h2h-player-name">${statusDot}${p.name}${badge}</span>
+    <span class="fpl-live-h2h-player-name">${statusDot}${p.name}${badge}${p.isCaptain && tripleCaptainActive ? `<span class="fpl-live-h2h-chip-tag">Triple Captain Active</span>` : ""}</span>
     <span class="fpl-live-h2h-player-pts"${p.isCaptain && !isNaN(numPts) ? ` title="${numPts} × ${multiplier} (Captain${tripleCaptainActive ? ' — Triple Captain' : ''})"` : ''}>${displayPts}</span>
   </div>`;
 }
@@ -7410,7 +7410,7 @@ function fplLiveSquadColHtml(teamData, sharedKeys){
   // the captain) it affects.
   const tripleCaptainActive = chipCode === "TC";
   return `<div class="fpl-live-h2h-lineup-col">
-    <div class="fpl-live-h2h-lineup-label">Starting XI${tripleCaptainActive ? `<span class="fpl-live-h2h-chip-tag">Triple Captain Active</span>` : ""}</div>
+    <div class="fpl-live-h2h-lineup-label">Starting XI</div>
     ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false, false, tripleCaptainActive)).join("")}
     ${sharedStarters.map(p => fplLivePlayerRowHtml(p, true, false, tripleCaptainActive)).join("")}
     ${bench.length ? `<div class="fpl-live-h2h-lineup-label bench">Bench${benchBoostActive ? `<span class="fpl-live-h2h-chip-tag">Bench Boost Active</span>` : ""}</div>
