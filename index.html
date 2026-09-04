@@ -7754,8 +7754,15 @@ function renderSideLeagueContent(){
         ${sideLeagueTableHtml(data.table, { bracketByPosition: true })}
         <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">${label} Fixtures</h2></div>
         <div class="round-tabs" id="sideLeagueRoundTabs"></div>
-        <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>`;
+        <div id="sideLeagueFixtureContainer" class="fixture-grid"></div>
+        <div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Live Scores</h2></div>
+        <div id="sideLeagueLiveScoresContainer" class="state-msg">Loading…</div>`;
       wireSideLeagueRoundTabs(data.fx, "cup");
+      // Same "pinned to the current round regardless of the Fixtures tab"
+      // behaviour as Premier/Championship — reuses the identical functions
+      // since the Cup's fixtures come from the same parseFplFixtures() shape
+      // and live scores are keyed by team name across all FPL competitions.
+      renderFplLiveMatchups(data.fx.gameweeks[fxCurrentRoundIndex(data.fx.gameweeks)]);
       sideLeagueDebug = Object.assign({}, sideLeagueDebug, {
         fplCup: data.table.debug,
         fplCupFixtures: { gameweeksFound: data.fx.gameweeks.map(g=>({name:g.name, fixtures:g.fixtures.length})), rawDump: data.fx.rawDump }
