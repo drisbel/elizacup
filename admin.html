@@ -4756,7 +4756,7 @@ function exportParseOverallTable(rows){
 
 // Trimmed-down port of index.html's parseFplRoddy — same header-search
 // (anchors on "TEAM" in column D, since this table's position has shifted
-// before) and same fixed chip-column offsets (S:V) once the header's found.
+// before) and same fixed chip-column offsets (R:U) once the header's found.
 function exportParseFplRoddy(rows){
   let headerRowIdx = -1;
   for(let r=0; r<Math.min(rows.length, 20); r++){
@@ -4765,7 +4765,7 @@ function exportParseFplRoddy(rows){
   if(headerRowIdx === -1) return { chipHeaders: [], entries: [], debug: { headerRowFound: false } };
 
   const headerRow = rows[headerRowIdx] || [];
-  const chipCols = [18,19,20,21]; // S,T,U,V
+  const chipCols = [17,18,19,20]; // R,S,T,U
   const chipHeaders = chipCols.map(c => cell(headerRow, c));
 
   const entries = [];
@@ -4945,9 +4945,14 @@ function exportRenderPreview(){
       </tr>`;
     }).join("");
     target.style.width = "760px";
-    const formHeaderHtml = exportData.hasForm ? `<th style="width:13%;">Form</th>` : "";
-    const nextWidth = exportData.hasForm ? "17%" : "18%";
-    const teamWidth = exportData.hasForm ? "27%" : "32%";
+    // These must sum to 100% or less — table-layout:fixed plus html2canvas
+    // doesn't gracefully shrink an over-100% row like a normal browser paint
+    // would, it just overlaps the last couple of columns instead. The old
+    // hasForm widths summed to 104%, which is exactly what was pushing Form
+    // into Next; the non-form widths below sum to 94% as a working reference.
+    const formHeaderHtml = exportData.hasForm ? `<th style="width:12%;">Form</th>` : "";
+    const nextWidth = exportData.hasForm ? "15%" : "18%";
+    const teamWidth = exportData.hasForm ? "24%" : "32%";
     const forWidth = exportData.hasForm ? "6%" : "7%";
     target.innerHTML = `
       ${exportCardHeaderHtml("Standings", exportData.label)}
