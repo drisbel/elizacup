@@ -499,13 +499,13 @@
   .export-table .team-cell{display:flex;align-items:center;gap:8px;}
   .export-table .team-cell img{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
   .export-table .pts{font-weight:700;}
-  .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;}
+  .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   /* Same 5-round W/D/L pill system as index.html's .form-pill, but with the
      colours hardcoded rather than pulled from CSS variables — html2canvas
      doesn't reliably resolve var() on the capture target, same reason every
      other colour on this export table is a literal hex value. */
-  .export-form-row{display:inline-flex;gap:3px;}
-  .export-form-pill{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:700;color:#fff;}
+  .export-form-row{display:inline-flex;gap:2px;}
+  .export-form-pill{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;color:#fff;}
   .export-form-pill.form-w{background:#4FAE7E;}
   .export-form-pill.form-l{background:#B95C50;}
   .export-form-pill.form-d{background:#9AA79E;}
@@ -4945,14 +4945,18 @@ function exportRenderPreview(){
       </tr>`;
     }).join("");
     target.style.width = "760px";
-    // These must sum to 100% or less — table-layout:fixed plus html2canvas
-    // doesn't gracefully shrink an over-100% row like a normal browser paint
-    // would, it just overlaps the last couple of columns instead. The old
-    // hasForm widths summed to 104%, which is exactly what was pushing Form
-    // into Next; the non-form widths below sum to 94% as a working reference.
-    const formHeaderHtml = exportData.hasForm ? `<th style="width:12%;">Form</th>` : "";
+    // These must sum to 100% or less. The real bug here wasn't the total sum
+    // (that was a red herring) — it was that 5 form pills at their old 16px
+    // + 3px-gap sizing needed ~92px of content width, but Form's box only
+    // had ~74px left after its own padding, so the pill row itself spilled
+    // into Next regardless of what Next's width was. Fixed at the source by
+    // shrinking the pills (see .export-form-pill) AND giving Form enough
+    // width to comfortably fit them with padding — verified by rendering
+    // this exact table in a real browser and reading back the actual pixel
+    // widths, not just checking the percentages summed correctly.
+    const formHeaderHtml = exportData.hasForm ? `<th style="width:14%;">Form</th>` : "";
     const nextWidth = exportData.hasForm ? "15%" : "18%";
-    const teamWidth = exportData.hasForm ? "24%" : "32%";
+    const teamWidth = exportData.hasForm ? "23%" : "32%";
     const forWidth = exportData.hasForm ? "6%" : "7%";
     target.innerHTML = `
       ${exportCardHeaderHtml("Standings", exportData.label)}
