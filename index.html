@@ -368,6 +368,30 @@
   .lms-overview-cell.eliminated{background:#d1d5db;color:#6b7280;}
   .lms-overview-cell.awaiting{background:#fef3c7;color:#92400e;}
   .lms-overview-cell.locked{background:#f3f4f6;color:#9ca3af;font-size:13px;}
+
+  /* UCL Fantasy — no head-to-head, just a running score per round. Dedicated
+     table styling (not .standings) for the same reason as the LMS overview
+     table above: .standings bakes in a sticky-first-TWO-columns pattern
+     built for Pos+Team tables, which doesn't fit here — only Team should
+     stick, and there's no Pos-specific treatment needed. */
+  .ucl-fantasy-table{border-collapse:collapse;width:100%;min-width:900px;}
+  .ucl-fantasy-table th, .ucl-fantasy-table td{padding:8px;border-bottom:1px solid var(--line-light);white-space:nowrap;text-align:center;}
+  .ucl-fantasy-table thead th{
+    background:var(--pitch);color:var(--chalk);font-family:'Barlow',sans-serif;
+    font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;position:sticky;top:0;z-index:2;
+  }
+  .ucl-fantasy-table tbody tr{background:#fff;}
+  .ucl-fantasy-table th:nth-child(2), .ucl-fantasy-table td:nth-child(2){
+    position:sticky;left:0;z-index:3;background:#fff;text-align:left;
+  }
+  .ucl-fantasy-table thead th:nth-child(2){background:var(--pitch);z-index:4;}
+  .ucl-fantasy-table td.pts{font-weight:700;}
+  .ucl-fantasy-table td.ucl-score-cell{font-size:12px;color:#000;}
+  .ucl-hits-badge{
+    display:inline-block;font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:700;
+    text-transform:uppercase;background:var(--red);color:#fff;border-radius:20px;
+    padding:1px 6px;margin-left:5px;vertical-align:middle;
+  }
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
   .facup-bracket-wrap{overflow-x:auto;padding-bottom:14px;}
   .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#000;text-align:center;}
@@ -6582,7 +6606,12 @@ const SIDE_LEAGUES = [
   // change is needed to show/hide either one — see lmsHubSubTabVisible().
   { key: "lms", label: "Last Man Standing", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk",
     lmsGids: { auscup: "590890124", aleague: "922424054" }, isLms: true },
-  { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true }
+  { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true },
+  // No head-to-head at all — teams just accumulate a score each round (17
+  // named rounds through the UCL knockout stages), so this doesn't fit the
+  // fixture/matchup shape every other side league uses. Own loader/renderer
+  // (isUcl branch in loadSideLeague, parseUclFantasy/renderUclFantasy).
+  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "823386870", isUcl: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
@@ -8057,6 +8086,105 @@ function findSideLeagueHonours(honourBoardData, teamName){
   return wins;
 }
 
+// UCL Fantasy — no fixtures/head-to-head at all, just a running score per
+// team across 17 named rounds. Columns are located by searching the header
+// row's text rather than trusting fixed column letters (this sheet already
+// has at least one stray-space label — "R16 -2" — so exact-letter offsets
+// would be fragile here in a way they aren't on the more rigid FPL sheets).
+const UCL_ROUND_LABELS = ["MD1","MD2","MD3","MD4","MD5","MD6","MD7","MD8","PO1","PO2","R16-1","R16-2","QF-1","QF-2","SF-1","SF-2","F"];
+function parseUclFantasy(rows){
+  const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
+
+  // Search a small window of rows for the header row (anchored on POS +
+  // TEAM NAME both appearing in the same row) rather than trusting a fixed
+  // row number, same safety margin used for title-row searches elsewhere.
+  let headerRowIdx = -1;
+  for(let r = 0; r < Math.min(rows.length, 15); r++){
+    const rowNorm = (rows[r] || []).map(normalize);
+    if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
+  }
+  if(headerRowIdx === -1){
+    return { teams: [], rounds: UCL_ROUND_LABELS, debug: { headerRowFound: false } };
+  }
+
+  const headerNorm = (rows[headerRowIdx] || []).map(normalize);
+  const findCol = label => headerNorm.indexOf(normalize(label));
+  const posCol = findCol("POS"), teamCol = findCol("TEAM NAME"), playerCol = findCol("PLAYER"),
+        totalCol = findCol("TOTAL"), hitsCol = findCol("HITS");
+  const roundCols = UCL_ROUND_LABELS.map(label => ({ label, col: findCol(label) }));
+
+  const teams = [];
+  const rawDump = [];
+  for(let r = headerRowIdx + 1; r < rows.length; r++){
+    const row = rows[r] || [];
+    const pos = cell(row, posCol), team = cell(row, teamCol);
+    if(!pos && !team) continue; // stop at the first blank row after the roster
+    const totalRaw = totalCol !== -1 ? cell(row, totalCol) : "";
+    const hitsRaw = hitsCol !== -1 ? cell(row, hitsCol) : "";
+    const hits = parseInt(hitsRaw, 10) || 0;
+    const total = parseInt(totalRaw, 10) || 0;
+    teams.push({
+      pos, team, player: playerCol !== -1 ? cell(row, playerCol) : "",
+      total, hits, netTotal: total - hits,
+      scores: roundCols.map(rc => ({ label: rc.label, value: rc.col !== -1 ? cell(row, rc.col) : "" }))
+    });
+    rawDump.push({ row: r + 1, pos, team, total: totalRaw, hits: hitsRaw });
+  }
+
+  return {
+    teams, rounds: UCL_ROUND_LABELS,
+    debug: {
+      headerRowFound: headerRowIdx + 1,
+      colsAsLetters: {
+        pos: posCol !== -1 ? colIndexToLetter(posCol) : "NOT FOUND",
+        team: teamCol !== -1 ? colIndexToLetter(teamCol) : "NOT FOUND",
+        player: playerCol !== -1 ? colIndexToLetter(playerCol) : "NOT FOUND",
+        total: totalCol !== -1 ? colIndexToLetter(totalCol) : "NOT FOUND",
+        hits: hitsCol !== -1 ? colIndexToLetter(hitsCol) : "NOT FOUND"
+      },
+      roundCols: roundCols.map(rc => ({ label: rc.label, col: rc.col !== -1 ? colIndexToLetter(rc.col) : "NOT FOUND" })),
+      teamsFound: teams.length,
+      rawDump: rawDump.slice(0, 10)
+    }
+  };
+}
+
+function renderUclFantasy(data){
+  const el = document.getElementById('sideLeaguesContainer');
+  if(!data.teams.length){
+    el.className = "state-msg";
+    el.innerHTML = "No UCL Fantasy data found. Check the Debug panel below.";
+    return;
+  }
+  el.className = "";
+  const sorted = [...data.teams].sort((a,b) => (parseInt(a.pos,10)||999) - (parseInt(b.pos,10)||999));
+
+  const headHtml = `<th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th><th>Total</th>` +
+    data.rounds.map(r => `<th>${r}</th>`).join("");
+
+  const rowsHtml = sorted.map(t => {
+    const logoName = resolveSideLeagueTeamName(t.team);
+    const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+    const hitsBadge = t.hits > 0 ? `<span class="ucl-hits-badge" title="${t.hits} point${t.hits===1?'':'s'} deducted for hits">-${t.hits}</span>` : "";
+    const scoresHtml = t.scores.map(s => `<td class="ucl-score-cell">${s.value || "—"}</td>`).join("");
+    return `<tr>
+      <td>${t.pos}</td>
+      <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td>
+      <td style="text-align:left;">${t.player || "—"}</td>
+      <td class="pts">${t.netTotal}${hitsBadge}</td>
+      ${scoresHtml}
+    </tr>`;
+  }).join("");
+
+  el.innerHTML = `${sideLeagueWinnersBannerHtml("#sideleagues=uclfantasy")}
+    <div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">UCL Fantasy</h2></div>
+    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;opacity:0.7;margin:0 0 14px;max-width:520px;">Scores are entered after each round — Total already has any Hits deducted.</p>
+    <div class="table-wrap"><table class="ucl-fantasy-table">
+      <thead><tr>${headHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>`;
+}
+
 function renderHonourBoard(data){
   const el = document.getElementById('sideLeaguesContainer');
   if(!data.competitions.length){
@@ -9190,6 +9318,24 @@ async function loadSideLeague(leagueKey){
       console.error(err);
       el.className = "state-msg error";
       el.innerHTML = "Couldn't load Honour Board data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(league.isUcl){
+    try{
+      const res = await cachedFetch(sideLeagueCsvUrlFor(league));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const data = parseUclFantasy(rows);
+      renderUclFantasy(data);
+      sideLeagueDebug = { uclFantasy: data.debug };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load UCL Fantasy data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
