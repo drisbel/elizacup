@@ -6655,7 +6655,7 @@ const SIDE_LEAGUE_TEAM_MAP_GID = "1831804785";
 const SIDE_LEAGUE_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
 const SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL = 2; // column C onward: one league per column
 // Maps each SIDE_LEAGUES key to that column's header text on the mapping sheet.
-const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH" };
+const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", uclfantasy: "UCL" };
 
 let sideLeagueTeamMap = {};       // { "FPL": { "SIDE LEAGUE NAME": "Eliza Team Name" }, ... }
 let sideLeagueTeamMapLoaded = false;
@@ -8178,7 +8178,6 @@ function renderUclFantasy(data){
 
   el.innerHTML = `${sideLeagueWinnersBannerHtml("#sideleagues=uclfantasy")}
     <div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">UCL Fantasy</h2></div>
-    <p style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;opacity:0.7;margin:0 0 14px;max-width:520px;">Scores are entered after each round — Total already has any Hits deducted.</p>
     <div class="table-wrap"><table class="ucl-fantasy-table">
       <thead><tr>${headHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>

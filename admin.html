@@ -500,6 +500,14 @@
   .export-table .team-cell img{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
   .export-table .pts{font-weight:700;}
   .export-table td.next-opp{font-size:11.5px;color:#6b7686;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* UCL Fantasy export — no fixtures, just a running score per round. */
+  .export-ucl-table th, .export-ucl-table td{font-size:11px;}
+  .export-ucl-table td.ucl-score{color:#6b7686;}
+  .export-ucl-hits-badge{
+    display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;
+    background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;margin-left:4px;vertical-align:middle;
+  }
   /* Same 5-round W/D/L pill system as index.html's .form-pill, but with the
      colours hardcoded rather than pulled from CSS variables — html2canvas
      doesn't reliably resolve var() on the capture target, same reason every
@@ -1155,6 +1163,7 @@
           <option value="afl">AFL Supercoach</option>
           <option value="nrl">NRL Supercoach</option>
           <option value="eplsc">EPL Supercoach</option>
+          <option value="ucl-fantasy">UCL Fantasy</option>
         </select>
         <div class="hint">More competitions (divisions) can be added here later.</div>
       </div>
@@ -1166,6 +1175,7 @@
           <option value="results">Round Results</option>
         </select>
         <div class="hint" id="exportRoddyHint" style="display:none;">Roddy is a single leaderboard, so there's no Content choice for it.</div>
+        <div class="hint" id="exportUclHint" style="display:none;">UCL Fantasy is a single leaderboard, so there's no Content choice for it.</div>
       </div>
 
       <div class="field" id="exportRoundField" style="max-width:320px;display:none;">
@@ -4553,6 +4563,15 @@ drawRenderWheel(); // wheel is the only draw mode now, so render its empty-state
 // parseFplFixtures cover all three there too), just with different title
 // text, fixture columns, and round-label formats.
 function cell(row, i){ return (row[i] || "").toString().trim(); }
+function colIndexToLetter(idx){
+  let s = "", n = idx + 1;
+  while(n > 0){
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
 
 const EXPORT_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk"; // shared by every competition below
 // Same column map as index.html's FPL_COL — kept as its own local constant
@@ -4576,6 +4595,15 @@ const EXPORT_COMPETITIONS = {
 // — handled as its own branch below rather than through EXPORT_COMPETITIONS.
 const EXPORT_RODDY_GID = "638425443";
 const EXPORT_RODDY_COLOR = "#3D195B", EXPORT_RODDY_TEXT_COLOR = "#fff";
+// UCL Fantasy — also a single leaderboard (no fixtures/results), same as
+// Roddy above, handled as its own branch rather than through
+// EXPORT_COMPETITIONS. Ported from index.html's parseUclFantasy/UCL_ROUND_LABELS —
+// columns are located by searching the header row's text rather than fixed
+// column letters, since this sheet already has at least one stray-space
+// label ("R16 -2") that would make hardcoded letters fragile.
+const EXPORT_UCL_GID = "823386870";
+const EXPORT_UCL_COLOR = "#0E1B3D", EXPORT_UCL_TEXT_COLOR = "#fff";
+const EXPORT_UCL_ROUND_LABELS = ["MD1","MD2","MD3","MD4","MD5","MD6","MD7","MD8","PO1","PO2","R16-1","R16-2","QF-1","QF-2","SF-1","SF-2","F"];
 
 // FPL/Supercoach managers pick their own fantasy team name (e.g. "Le Fee &
 // Foo"), which isn't a real Eliza Cup club and has no logo file of its own —
@@ -4784,23 +4812,73 @@ function exportParseFplRoddy(rows){
   return { chipHeaders, entries, debug: { headerFetchedRowIndex: headerRowIdx+1, chipHeaders, entriesFound: entries.length } };
 }
 
+function exportParseUclFantasy(rows){
+  const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
+  let headerRowIdx = -1;
+  for(let r = 0; r < Math.min(rows.length, 15); r++){
+    const rowNorm = (rows[r] || []).map(normalize);
+    if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
+  }
+  if(headerRowIdx === -1){
+    return { teams: [], rounds: EXPORT_UCL_ROUND_LABELS, debug: { headerRowFound: false } };
+  }
+  const headerNorm = (rows[headerRowIdx] || []).map(normalize);
+  const findCol = label => headerNorm.indexOf(normalize(label));
+  const posCol = findCol("POS"), teamCol = findCol("TEAM NAME"), playerCol = findCol("PLAYER"),
+        totalCol = findCol("TOTAL"), hitsCol = findCol("HITS");
+  const roundCols = EXPORT_UCL_ROUND_LABELS.map(label => ({ label, col: findCol(label) }));
+
+  const teams = [];
+  for(let r = headerRowIdx + 1; r < rows.length; r++){
+    const row = rows[r] || [];
+    const pos = cell(row, posCol), team = cell(row, teamCol);
+    if(!pos && !team) continue;
+    const totalRaw = totalCol !== -1 ? cell(row, totalCol) : "";
+    const hitsRaw = hitsCol !== -1 ? cell(row, hitsCol) : "";
+    const hits = parseInt(hitsRaw, 10) || 0;
+    const total = parseInt(totalRaw, 10) || 0;
+    teams.push({
+      pos, team, player: playerCol !== -1 ? cell(row, playerCol) : "",
+      total, hits, netTotal: total - hits,
+      scores: roundCols.map(rc => ({ label: rc.label, value: rc.col !== -1 ? cell(row, rc.col) : "" }))
+    });
+  }
+  return {
+    teams, rounds: EXPORT_UCL_ROUND_LABELS,
+    debug: {
+      headerRowFound: headerRowIdx + 1,
+      colsAsLetters: {
+        pos: posCol !== -1 ? colIndexToLetter(posCol) : "NOT FOUND",
+        team: teamCol !== -1 ? colIndexToLetter(teamCol) : "NOT FOUND",
+        player: playerCol !== -1 ? colIndexToLetter(playerCol) : "NOT FOUND",
+        total: totalCol !== -1 ? colIndexToLetter(totalCol) : "NOT FOUND",
+        hits: hitsCol !== -1 ? colIndexToLetter(hitsCol) : "NOT FOUND"
+      },
+      roundCols: roundCols.map(rc => ({ label: rc.label, col: rc.col !== -1 ? colIndexToLetter(rc.col) : "NOT FOUND" })),
+      teamsFound: teams.length
+    }
+  };
+}
+
 // Swaps the Content dropdown's options to match whichever competition is
 // selected — Roddy has no content choice (single leaderboard), LMS gets
 // Round Picks/Survivors instead of Standings Table/Round Results.
 function exportSyncContentOptions(){
   const competition = $("exportCompetition").value;
   const isRoddy = competition === "fpl-roddy";
+  const isUcl = competition === "ucl-fantasy";
   const cfg = EXPORT_COMPETITIONS[competition];
   const typeSel = $("exportContentType");
 
   $("exportRoddyHint").style.display = isRoddy ? "block" : "none";
-  typeSel.style.display = isRoddy ? "none" : "block";
+  $("exportUclHint").style.display = isUcl ? "block" : "none";
+  typeSel.style.display = (isRoddy || isUcl) ? "none" : "block";
 
-  if(!isRoddy){
+  if(!isRoddy && !isUcl){
     typeSel.innerHTML = `<option value="table">Standings Table</option><option value="results">Round Results</option>${cfg && cfg.hasOverall ? '<option value="overall">Overall</option>' : ''}`;
   }
 
-  const needsRound = !isRoddy && (typeSel.value === "results" || typeSel.value === "picks");
+  const needsRound = !isRoddy && !isUcl && (typeSel.value === "results" || typeSel.value === "picks");
   $("exportRoundField").style.display = needsRound ? "block" : "none";
 }
 
@@ -4827,6 +4905,32 @@ async function exportLoadData(){
 
       statusEl.textContent = `Loaded — ${roddy.entries.length} entries found.`;
       if(!roddy.entries.length) statusEl.textContent += " Check Debug below.";
+      if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks.";
+      exportRenderPreview();
+    }catch(err){
+      console.error("Export load failed", err);
+      statusEl.textContent = "Couldn't load: " + err.message;
+    }finally{
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  if(competition === "ucl-fantasy"){
+    try{
+      const [csvRes, teamMap] = await Promise.all([
+        fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_UCL_GID}&cachebust=` + Date.now()),
+        exportLoadTeamMap("UCL").catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
+      ]);
+      if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
+      const rows = Papa.parse(await csvRes.text(), { skipEmptyLines: false }).data;
+      const ucl = exportParseUclFantasy(rows);
+      exportData = { competition, label: "UCL Fantasy", ucl, teamMap, color: EXPORT_UCL_COLOR, textColor: EXPORT_UCL_TEXT_COLOR };
+
+      $("exportDebugOut").textContent = JSON.stringify({ ucl: ucl.debug, teamMapEntriesFound: Object.keys(teamMap).length }, null, 2);
+
+      statusEl.textContent = `Loaded — ${ucl.teams.length} teams found.`;
+      if(!ucl.teams.length) statusEl.textContent += " Check Debug below.";
       if(!Object.keys(teamMap).length) statusEl.textContent += " Team name map came back empty — logos will show fallbacks.";
       exportRenderPreview();
     }catch(err){
@@ -4891,6 +4995,11 @@ function exportRenderPreview(){
 
   if(exportData.roddy){
     exportRenderRoddyPreview();
+    return;
+  }
+
+  if(exportData.ucl){
+    exportRenderUclPreview();
     return;
   }
 
@@ -5081,6 +5190,63 @@ function exportRoddyHeaderCellsHtml(chipLabels){
     `<th class="num" style="width:${fixed.pts}%;">Pts</th>` +
     `<th class="num roddy-pts-divider" style="width:${fixed.ovrRank}%;">Ovr Rank</th>` +
     chipLabels.map(l => `<th class="num" style="width:${chipColWidth}%;">${l}</th>`).join("");
+}
+
+function exportRenderUclPreview(){
+  const target = $("exportPreviewTarget");
+  const data = exportData.ucl;
+  // Wider than the standard 760px export card — up to 17 round columns is far
+  // more than any other export table here handles (Roddy tops out around 10
+  // total columns), so 760px would squeeze each round column far too narrow.
+  target.style.width = "1200px";
+  if(!data.teams.length){
+    target.innerHTML = `
+      ${exportCardHeaderHtml("UCL", "Fantasy")}
+      <div class="export-card-body"><p class="hint">No UCL Fantasy data found. Check Debug below.</p></div>
+      <div class="export-card-footer">elizacup.com</div>`;
+    return;
+  }
+
+  // Only include rounds that actually have a score entered somewhere —
+  // future rounds that haven't started yet would just be empty columns.
+  const activeRounds = data.rounds.filter(label => data.teams.some(t => {
+    const s = t.scores.find(sc => sc.label === label);
+    return s && s.value !== "";
+  }));
+
+  const sorted = [...data.teams].sort((a,b) => (parseInt(a.pos,10)||999) - (parseInt(b.pos,10)||999));
+  const fixedTotal = 4 + 18 + 12 + 8; // Pos + Team + Player + Total
+  const roundColWidth = activeRounds.length ? (100 - fixedTotal) / activeRounds.length : 0;
+
+  const headHtml = `<th class="num" style="width:4%;">Pos</th><th style="width:18%;">Team</th><th style="width:12%;">Player</th><th class="num" style="width:8%;">Total</th>` +
+    activeRounds.map(label => `<th class="num" style="width:${roundColWidth}%;">${label}</th>`).join("");
+
+  const rowsHtml = sorted.map(t => {
+    const logoName = exportResolveTeamName(t.team);
+    const hitsBadge = t.hits > 0 ? `<span class="export-ucl-hits-badge">-${t.hits}</span>` : "";
+    const scoresHtml = activeRounds.map(label => {
+      const s = t.scores.find(sc => sc.label === label);
+      return `<td class="num ucl-score">${(s && s.value) || "—"}</td>`;
+    }).join("");
+    return `
+      <tr>
+        <td class="num pos">${t.pos}</td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
+        <td>${t.player || "—"}</td>
+        <td class="num pts">${t.netTotal}${hitsBadge}</td>
+        ${scoresHtml}
+      </tr>`;
+  }).join("");
+
+  target.innerHTML = `
+    ${exportCardHeaderHtml("UCL", "Fantasy")}
+    <div class="export-card-body">
+      <table class="export-table export-ucl-table">
+        <thead><tr>${headHtml}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
+    <div class="export-card-footer">elizacup.com</div>`;
 }
 
 function exportImage(){
