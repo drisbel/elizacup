@@ -175,6 +175,36 @@
   .mobile-nav-sublink:hover{background:rgba(255,255,255,0.06);}
   .mobile-nav-sublink.active{color:var(--amber);}
 
+  /* ---------- "Get the App" install button (mobile drawer footer) ---------- */
+  .mobile-nav-drawer-footer{
+    flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(255,255,255,0.1);
+  }
+  .mobile-install-btn{
+    display:none; /* toggled by JS: hidden once running standalone */
+    align-items:center;justify-content:center;gap:8px;width:100%;
+    background:var(--amber);color:var(--pitch);border:none;border-radius:8px;
+    font-family:'Barlow',sans-serif;font-weight:700;font-size:14px;
+    padding:12px;cursor:pointer;
+  }
+  .mobile-install-btn:hover{opacity:0.9;}
+  .install-instructions-overlay{
+    display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);
+    align-items:center;justify-content:center;padding:20px;
+  }
+  .install-instructions-overlay.open{display:flex;}
+  .install-instructions-panel{
+    background:var(--chalk);color:var(--pitch);border-radius:12px;padding:22px;
+    max-width:340px;width:100%;font-family:'Barlow',sans-serif;
+  }
+  .install-instructions-panel h3{
+    font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;
+  }
+  .install-instructions-panel p{font-size:14px;line-height:1.5;margin:0 0 14px;}
+  .install-instructions-close{
+    background:var(--pitch);color:var(--chalk);border:none;border-radius:8px;
+    padding:10px 16px;font-weight:700;cursor:pointer;width:100%;
+  }
+
   /* ---------- Header ---------- */
   header.top{
     background:radial-gradient(120% 160% at 15% 0%, var(--pitch-2) 0%, var(--pitch) 55%, #0c2019 100%);
@@ -1445,6 +1475,17 @@
     <button id="mobileNavCloseBtn" class="mobile-nav-close-btn" type="button" aria-label="Close menu">×</button>
   </div>
   <nav id="mobileNavLinks" class="mobile-nav-links"></nav>
+  <div class="mobile-nav-drawer-footer">
+    <button id="installAppBtn" class="mobile-install-btn" type="button">📲 Get the App</button>
+  </div>
+</div>
+
+<div id="installInstructionsOverlay" class="install-instructions-overlay">
+  <div class="install-instructions-panel">
+    <h3>Add Eliza Cup to your Home Screen</h3>
+    <p id="installInstructionsText"></p>
+    <button id="installInstructionsClose" class="install-instructions-close" type="button">Got it</button>
+  </div>
 </div>
 
 <!-- The classic header is permanently hidden now (see header.top{display:none}
@@ -9823,6 +9864,70 @@ loadSiteBannerData().then(()=> applySiteBanner());
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+// "Get the App" button, mobile drawer footer only. Lives here rather than
+// in the main script above since it's a standalone PWA concern, not page
+// rendering. closeMobileNav() below is defined in the main script but sits
+// in shared global scope, so it's safely callable from here.
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('installAppBtn');
+const installInstructionsOverlay = document.getElementById('installInstructionsOverlay');
+const installInstructionsText = document.getElementById('installInstructionsText');
+const installInstructionsClose = document.getElementById('installInstructionsClose');
+
+function isRunningStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function isIOSDevice(){
+  // iPadOS reports itself as "MacIntel" in the UA string, hence the touch-points check.
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function updateInstallBtnVisibility(){
+  if(!installBtn) return;
+  installBtn.style.display = isRunningStandalone() ? 'none' : 'flex';
+}
+updateInstallBtnVisibility();
+
+// Chrome/Edge/Android: capture the real install prompt instead of letting
+// the browser show its own UI immediately, so our button can trigger it later.
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  updateInstallBtnVisibility();
+});
+
+if(installBtn){
+  installBtn.addEventListener('click', async () => {
+    closeMobileNav();
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if(choice.outcome === 'accepted') updateInstallBtnVisibility();
+      return;
+    }
+    // No native prompt available (iOS Safari, or a browser that doesn't
+    // support beforeinstallprompt) — show manual instructions instead.
+    installInstructionsText.textContent = isIOSDevice()
+      ? 'Tap the Share icon in Safari\u2019s toolbar, then choose \u201cAdd to Home Screen.\u201d'
+      : 'Open your browser\u2019s menu and look for \u201cAdd to Home Screen\u201d or \u201cInstall App.\u201d';
+    installInstructionsOverlay.classList.add('open');
+  });
+}
+if(installInstructionsClose){
+  installInstructionsClose.addEventListener('click', () => {
+    installInstructionsOverlay.classList.remove('open');
+  });
+}
+if(installInstructionsOverlay){
+  installInstructionsOverlay.addEventListener('click', (e) => {
+    if(e.target === installInstructionsOverlay) installInstructionsOverlay.classList.remove('open');
   });
 }
 </script>
