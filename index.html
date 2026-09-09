@@ -426,6 +426,17 @@
     text-transform:uppercase;background:var(--red);color:#fff;border-radius:20px;
     padding:1px 6px;margin-left:5px;vertical-align:middle;
   }
+  /* Leader row (1st place) — same green language as .standings' tier-champion,
+     ported over by hand since .ucl-fantasy-table is deliberately its own class
+     (see note above) rather than sharing .standings' row-tier system. Needs its
+     own override for the sticky Team column specifically, since that column
+     hardcodes a white background (td:nth-child(2) above) regardless of row. */
+  .ucl-fantasy-table tbody tr.ucl-leader-row{background:#DCF2E3;}
+  .ucl-fantasy-table tbody tr.ucl-leader-row td:first-child{color:#1F8A4C;font-weight:700;}
+  .ucl-fantasy-table tbody tr.ucl-leader-row td:nth-child(2){background:#DCF2E3;color:#1F8A4C;font-weight:700;}
+  /* Top score in a given round — a ring rather than a fill, so it stays
+     visible whether or not the cell is also in a green leader row. */
+  .ucl-fantasy-table td.ucl-top-score{font-weight:700;box-shadow:inset 0 0 0 2px var(--amber);}
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
   .facup-bracket-wrap{overflow-x:auto;padding-bottom:14px;}
   .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#000;text-align:center;}
@@ -1830,7 +1841,8 @@ const SIDE_LEAGUE_THEME_COLORS = {
   "fpl:cup": "#963CFF",
   "afl": "#d90a30",
   "nrl": "#01c36b",
-  "eplsc": "#7cb648"
+  "eplsc": "#7cb648",
+  "uclfantasy": "#010056"
 };
 function sideLeagueThemeColor(key, subTab){
   const lookupKey = key === "fpl" ? ("fpl:" + (subTab || "premier")) : key;
@@ -6720,16 +6732,24 @@ function loadSideLeagueTeamMap(){
     const headerRow = rows[0];
     const leagueCols = [];
     for(let c = SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL; c < headerRow.length; c++){
-      const label = cell(headerRow, c);
+      // Trimmed only here — case is preserved as typed, since the label itself
+      // becomes the storage key below and callers look it up case-insensitively
+      // (see findSideLeagueTeamMap). Trimming alone fixes the far more common
+      // copy-paste artefact: a stray trailing/leading space on the header cell.
+      const label = (cell(headerRow, c) || "").trim();
       if(label) leagueCols.push({ label, colIndex: c });
     }
     leagueCols.forEach(col => { sideLeagueTeamMap[col.label] = {}; });
 
     for(let r = 1; r < rows.length; r++){
-      const elizaTeam = cell(rows[r], SIDE_LEAGUE_TEAM_MAP_NAME_COL);
+      const elizaTeam = (cell(rows[r], SIDE_LEAGUE_TEAM_MAP_NAME_COL) || "").trim();
       if(!elizaTeam) continue;
       leagueCols.forEach(col => {
-        const name = cell(rows[r], col.colIndex);
+        // Trimmed before uppercasing — an untrimmed key here would silently
+        // stop matching the (trimmed) name pulled from that league's own
+        // sheet, exactly the kind of single-team, works-for-everyone-else bug
+        // a stray space in one spreadsheet cell causes.
+        const name = (cell(rows[r], col.colIndex) || "").trim();
         if(name) sideLeagueTeamMap[col.label][name.toUpperCase()] = elizaTeam;
       });
     }
@@ -6743,6 +6763,18 @@ function loadSideLeagueTeamMap(){
   return sideLeagueTeamMapPromise;
 }
 
+// colLabel (from SIDE_LEAGUE_MAP_COLUMN_LABEL, e.g. "UCL") is a hardcoded
+// literal in code, but the actual header text on the sheet is free-typed by
+// hand — so this matches case-insensitively/trimmed rather than doing a
+// direct object-key lookup, which would silently break on "Ucl" or "UCL "
+// even though the header is obviously "the UCL column" to a person reading it.
+function findSideLeagueTeamMap(colLabel){
+  if(!colLabel) return null;
+  const target = colLabel.trim().toUpperCase();
+  const key = Object.keys(sideLeagueTeamMap).find(k => k.trim().toUpperCase() === target);
+  return key ? sideLeagueTeamMap[key] : null;
+}
+
 // Resolves a side-league team name to its real Eliza team name (for logo
 // lookup only — the side-league name is still what's displayed) using
 // whichever league is currently active. Falls back to the name as given if
@@ -6751,7 +6783,7 @@ function loadSideLeagueTeamMap(){
 function resolveSideLeagueTeamName(name){
   const leagueKey = currentDivision && currentDivision.sideLeagueKey;
   const colLabel = SIDE_LEAGUE_MAP_COLUMN_LABEL[leagueKey];
-  const map = colLabel && sideLeagueTeamMap[colLabel];
+  const map = findSideLeagueTeamMap(colLabel);
   if(!map) return name;
   const upper = (name || "").trim().toUpperCase();
   return map[upper] || name;
@@ -6771,7 +6803,7 @@ function sideLeagueTeamLink(name){
   if(!colLabel){
     return `<a href="#team=${encodeURIComponent(name)}" class="team-link">${name}</a>`;
   }
-  const map = sideLeagueTeamMap[colLabel];
+  const map = findSideLeagueTeamMap(colLabel);
   const elizaName = map && map[name.trim().toUpperCase()];
   if(!elizaName) return name;
   return `<a href="#team=${encodeURIComponent(elizaName)}" class="team-link">${name}</a>`;
@@ -8202,17 +8234,35 @@ function renderUclFantasy(data){
     return;
   }
   el.className = "";
+  const themeColor = sideLeagueThemeColor("uclfantasy");
+  if(themeColor) applyDivisionTheme({ color: themeColor });
   const sorted = [...data.teams].sort((a,b) => (parseInt(a.pos,10)||999) - (parseInt(b.pos,10)||999));
+
+  // Top score for each round column, across all teams — used to ring the
+  // matching cell(s) below. A round with no scores entered anywhere yet
+  // (future round) naturally gets no highlight, since there's no max to find.
+  const topScoreByRound = data.rounds.map((_, i) => {
+    let max = -Infinity;
+    data.teams.forEach(t => {
+      const num = parseInt(t.scores[i] && t.scores[i].value, 10);
+      if(!isNaN(num) && num > max) max = num;
+    });
+    return isFinite(max) ? max : null;
+  });
 
   const headHtml = `<th>Pos</th><th style="text-align:left;">Team</th><th style="text-align:left;">Player</th><th>Total</th>` +
     data.rounds.map(r => `<th>${r}</th>`).join("");
 
-  const rowsHtml = sorted.map(t => {
+  const rowsHtml = sorted.map((t, idx) => {
     const logoName = resolveSideLeagueTeamName(t.team);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
     const hitsBadge = t.hits > 0 ? `<span class="ucl-hits-badge" title="${t.hits} point${t.hits===1?'':'s'} deducted for hits">-${t.hits}</span>` : "";
-    const scoresHtml = t.scores.map(s => `<td class="ucl-score-cell">${s.value || "—"}</td>`).join("");
-    return `<tr>
+    const scoresHtml = t.scores.map((s, i) => {
+      const num = parseInt(s.value, 10);
+      const isTop = topScoreByRound[i] !== null && !isNaN(num) && num === topScoreByRound[i];
+      return `<td class="ucl-score-cell${isTop ? ' ucl-top-score' : ''}">${s.value || "—"}</td>`;
+    }).join("");
+    return `<tr${idx === 0 ? ' class="ucl-leader-row"' : ''}>
       <td>${t.pos}</td>
       <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td>
       <td style="text-align:left;">${t.player || "—"}</td>
@@ -9368,7 +9418,10 @@ async function loadSideLeague(leagueKey){
 
   if(league.isUcl){
     try{
-      const res = await cachedFetch(sideLeagueCsvUrlFor(league));
+      const [res] = await Promise.all([
+        cachedFetch(sideLeagueCsvUrlFor(league)),
+        loadSideLeagueTeamMap()
+      ]);
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
