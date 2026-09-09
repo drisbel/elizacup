@@ -9816,5 +9816,14 @@ loadPageVisibilityData().then(()=> applyPageVisibility());
 // fetch resolves, if enabled and in scope for the current page.
 loadSiteBannerData().then(()=> applySiteBanner());
 </script>
+<script>
+// PWA install support. Kept in its own block, separate from the main
+// script above, since it's unrelated to page rendering logic.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
 </body>
 </html>
