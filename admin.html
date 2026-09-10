@@ -503,7 +503,16 @@
 
   /* UCL Fantasy export — no fixtures, just a running score per round. */
   .export-ucl-table th, .export-ucl-table td{font-size:11px;}
+  /* border-box only for this table: it uses fixed px column widths (below)
+     rather than the shared .export-table's percentage widths, since the
+     card's own width now varies with how many rounds are active. Scoped
+     here rather than added to .export-table itself, so the other exports
+     (FPL, Roddy, AFL/NRL/Supercoach — all still fixed at 760px with %
+     widths) aren't affected by this. */
+  .export-ucl-table th, .export-ucl-table td{box-sizing:border-box;}
   .export-ucl-table td.ucl-score{color:#6b7686;}
+  .export-ucl-table tr.ucl-leader-row{background:#DCF2E3;}
+  .export-ucl-table tr.ucl-leader-row td{color:#1F8A4C;font-weight:700;}
   .export-ucl-hits-badge{
     display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;
     background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;margin-left:4px;vertical-align:middle;
@@ -5195,11 +5204,8 @@ function exportRoddyHeaderCellsHtml(chipLabels){
 function exportRenderUclPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.ucl;
-  // Wider than the standard 760px export card — up to 17 round columns is far
-  // more than any other export table here handles (Roddy tops out around 10
-  // total columns), so 760px would squeeze each round column far too narrow.
-  target.style.width = "1200px";
   if(!data.teams.length){
+    target.style.width = "760px";
     target.innerHTML = `
       ${exportCardHeaderHtml("UCL", "Fantasy")}
       <div class="export-card-body"><p class="hint">No UCL Fantasy data found. Check Debug below.</p></div>
@@ -5215,13 +5221,20 @@ function exportRenderUclPreview(){
   }));
 
   const sorted = [...data.teams].sort((a,b) => (parseInt(a.pos,10)||999) - (parseInt(b.pos,10)||999));
-  const fixedTotal = 4 + 18 + 12 + 8; // Pos + Team + Player + Total
-  const roundColWidth = activeRounds.length ? (100 - fixedTotal) / activeRounds.length : 0;
 
-  const headHtml = `<th class="num" style="width:4%;">Pos</th><th style="width:18%;">Team</th><th style="width:12%;">Player</th><th class="num" style="width:8%;">Total</th>` +
-    activeRounds.map(label => `<th class="num" style="width:${roundColWidth}%;">${label}</th>`).join("");
+  // Fixed px widths rather than the shared .export-table's percentage
+  // widths, so the card's overall width can scale with round count without
+  // the Pos/Team/Player/Total columns getting squeezed and wrapping —
+  // verified in a headless-browser pass across 1 to 17 active rounds before
+  // shipping (see html2canvas note above .export-card in the CSS).
+  const COL = { pos: 40, team: 172, player: 82, total: 58, round: 46 };
+  const bodyPadding = 52; // .export-card-body's 26px left + 26px right
+  target.style.width = (COL.pos + COL.team + COL.player + COL.total + bodyPadding + activeRounds.length * COL.round) + "px";
 
-  const rowsHtml = sorted.map(t => {
+  const headHtml = `<th class="num" style="width:${COL.pos}px;">Pos</th><th style="width:${COL.team}px;">Team</th><th style="width:${COL.player}px;">Player</th><th class="num" style="width:${COL.total}px;">Total</th>` +
+    activeRounds.map(label => `<th class="num" style="width:${COL.round}px;">${label}</th>`).join("");
+
+  const rowsHtml = sorted.map((t, idx) => {
     const logoName = exportResolveTeamName(t.team);
     const hitsBadge = t.hits > 0 ? `<span class="export-ucl-hits-badge">-${t.hits}</span>` : "";
     const scoresHtml = activeRounds.map(label => {
@@ -5229,7 +5242,7 @@ function exportRenderUclPreview(){
       return `<td class="num ucl-score">${(s && s.value) || "—"}</td>`;
     }).join("");
     return `
-      <tr>
+      <tr${idx === 0 ? ' class="ucl-leader-row"' : ''}>
         <td class="num pos">${t.pos}</td>
         <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
         <td>${t.player || "—"}</td>
