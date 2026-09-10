@@ -5169,10 +5169,9 @@ async function loadTeamProfile(teamName){
     })
   );
 
-  const dataDiv = { gid: "91806689" };
   let h2hRecords = [];
   fetches.push(
-    cachedFetch(csvUrlFor(dataDiv)).then(r => r.text()).then(text => {
+    cachedFetch(h2hRecordCsvUrlFor()).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       h2hRecords = findH2HRecords(rows, teamName);
     })
@@ -5294,62 +5293,49 @@ function historicalRecordHtml(records){
   return html;
 }
 
-// ---------- Head-to-Head Record (same Data tab, cells DI68:ER131) ----------
-// 7 competition blocks of 5 columns each (P/W/L/D/%): Eliza, Div 2, Div 3, FA Cup,
-// ECL, S/Deck Eliminator, Overall. Given the historical-positions table above turned
-// out to have unreliable column math in this exact area of the sheet, this one is
-// found by content (locating "ELIZA" then confirming "DIV 2" a few columns later)
-// rather than trusting fixed letter-derived positions.
-// Confirmed via raw dump: title "WIN RECORDS FROM H2H SHEET" anchors the section,
-// with the P/W/L/D/% sub-header row directly below it, then data starts the row
-// after that. 7 blocks of 5 columns starting at column 113 — verified against real
-// data (a team's Overall P total exactly matched the sum of all 7 blocks' P values).
-const H2H_COMPETITIONS = ["ELIZA", "DIV 2", "DIV 3", "FA CUP", "ECL", "S/DECK ELIMINATOR", "OVERALL"];
-const H2H_TEAM_COL = 112;
-const H2H_BLOCK_START = 113;
-const H2H_BLOCK_WIDTH = 5;
+// ---------- H2H Competition Record ----------
+// Rebuilt by Dan into a long-format tab (one row per team per competition,
+// plus a final TOTAL row per team) on a separate spreadsheet from the main
+// Eliza Admin sheet — replaced the old wide format (one row per team, a
+// repeating 5-column block per competition) this used to read.
+// Columns: KEY, TEAM, COMP, P, W, D, L, DIFF, WIN %
+// DIFF (index 7) is intentionally never read — not shown on the site.
+const H2H_RECORD_SHEET_ID = "1ZJQ2-SM6_uXBj9V5VZdYMdxungkSkrx7mHAy9YJ6_eE";
+const H2H_RECORD_GID = "507977024";
+const H2H_RECORD_COL = { TEAM: 1, COMP: 2, P: 3, W: 4, D: 5, L: 6, WIN_PCT: 8 };
+
+function h2hRecordCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${H2H_RECORD_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${H2H_RECORD_GID}&cachebust=` + Date.now();
+}
 
 let h2hRecordsDebug = {};
 
 function findH2HRecords(rows, teamName){
-  h2hRecordsDebug = { titleRow: -1, rowsScanned: 0, matchedRow: -1 };
-
-  let titleRow = -1;
-  for(let r=0; r<rows.length; r++){
-    if(/WIN RECORDS FROM H2H SHEET/i.test(cell(rows[r]||[], H2H_TEAM_COL))){ titleRow = r; break; }
-  }
-  h2hRecordsDebug.titleRow = titleRow;
-
-  if(titleRow === -1){
-    h2hRecordsDebug.rawRowDump = rows.slice(60, 75).map((row, i) =>
-      "row" + (60+i) + ": " + (row||[]).map((c,ci)=> (ci>=100&&ci<=150&&c) ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
-    );
-    return [];
-  }
-
-  const dataStartRow = titleRow + 2; // skip the P/W/L/D/% sub-header row
-  const competitions = H2H_COMPETITIONS.map((name,i) => ({ name, start: H2H_BLOCK_START + i*H2H_BLOCK_WIDTH }));
-  h2hRecordsDebug.competitions = competitions;
-  h2hRecordsDebug.dataStartRow = dataStartRow;
-
-  for(let r=dataStartRow; r<rows.length; r++){
-    const team = cell(rows[r]||[], H2H_TEAM_COL);
+  h2hRecordsDebug = { rowsScanned: 0, matchedRows: 0 };
+  const target = (teamName || "").trim().toUpperCase();
+  const records = [];
+  for(let r=1; r<rows.length; r++){ // row 0 is the header row
+    const row = rows[r] || [];
+    const team = cell(row, H2H_RECORD_COL.TEAM);
     if(!team) continue;
     h2hRecordsDebug.rowsScanned++;
-    if(team.toUpperCase() === teamName.toUpperCase()){
-      h2hRecordsDebug.matchedRow = r;
-      return competitions.map(comp => ({
-        competition: comp.name,
-        p: cell(rows[r]||[], comp.start),
-        w: cell(rows[r]||[], comp.start+1),
-        l: cell(rows[r]||[], comp.start+2),
-        d: cell(rows[r]||[], comp.start+3),
-        pct: cell(rows[r]||[], comp.start+4)
-      })).filter(rec => rec.p || rec.w || rec.l);
-    }
+    if(team.trim().toUpperCase() !== target) continue;
+    h2hRecordsDebug.matchedRows++;
+    const p = cell(row, H2H_RECORD_COL.P);
+    if(!parseInt(p, 10)) continue; // hide competitions this team has never played, same as before
+    records.push({
+      competition: cell(row, H2H_RECORD_COL.COMP),
+      p,
+      w: cell(row, H2H_RECORD_COL.W),
+      l: cell(row, H2H_RECORD_COL.L),
+      d: cell(row, H2H_RECORD_COL.D),
+      pct: cell(row, H2H_RECORD_COL.WIN_PCT)
+    });
   }
-  return [];
+  return records;
 }
+
+
 
 function h2hRecordHtml(records){
   if(!records || !records.length) return "";
