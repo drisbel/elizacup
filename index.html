@@ -5547,18 +5547,59 @@ async function loadMatchLogTab(){
   }
 }
 
-function matchLogRowHtml(row){
+// Match Log row shading — reuses the exact colors already assigned to each
+// division/competition in DIVISIONS above, rather than inventing new ones.
+// "ELIZA" and plain "DIV 2"/"DIV 3" (pre-2A/2B-split seasons) map to the
+// current top-tier equivalents. SD ELIM (Last Man Standing) has no existing
+// DIVISIONS entry, so it borrows the amber already used for LMS "awaiting" states.
+const MATCH_LOG_COMP_COLOR = {
+  "ELIZA": "#28427c",
+  "DIV 2": "#bc3532",
+  "DIV 2A": "#bc3532",
+  "DIV 2B": "#990000",
+  "DIV 3": "#6aa84f",
+  "DIV 3A": "#6aa84f",
+  "DIV 3B": "#274e13",
+  "FA CUP": "#0a2f85",
+  "ECL": "#111111",
+  "SD ELIM": "#b45309"
+};
+
+function matchLogRowHtml(row, filterTeamRaw){
   const winner = cell(row, MATCH_LOG_COL.WINNER).toUpperCase();
   const team1Raw = cell(row, MATCH_LOG_COL.TEAM1), team2Raw = cell(row, MATCH_LOG_COL.TEAM2);
-  const team1Wins = winner && winner !== "DRAW" && winner === team1Raw.toUpperCase();
-  const team2Wins = winner && winner !== "DRAW" && winner === team2Raw.toUpperCase();
-  const team1Display = lookupTeamDivInfo(team1Raw).display;
-  const team2Display = lookupTeamDivInfo(team2Raw).display;
-  return `<tr>
+  const comp = cell(row, MATCH_LOG_COL.COMP);
+  const compColor = MATCH_LOG_COMP_COLOR[comp.toUpperCase()];
+  const rowStyle = compColor ? ` style="background:${hexToRgba(compColor, 0.10)};"` : "";
+
+  let matchCellHtml;
+  if(filterTeamRaw){
+    // A specific team is selected — show the match from their point of view:
+    // a W/L/D pill (same component as Team Profile's fixture list) plus
+    // "v Opponent", rather than repeating the filtered team's own name on
+    // every row.
+    const upperFilter = filterTeamRaw.toUpperCase();
+    const teamIsTeam1 = team1Raw.toUpperCase() === upperFilter;
+    const oppRaw = teamIsTeam1 ? team2Raw : team1Raw;
+    const forScore = cell(row, teamIsTeam1 ? MATCH_LOG_COL.TEAM1_SCORE : MATCH_LOG_COL.TEAM2_SCORE);
+    const againstScore = cell(row, teamIsTeam1 ? MATCH_LOG_COL.TEAM2_SCORE : MATCH_LOG_COL.TEAM1_SCORE);
+    const result = winner === "DRAW" ? "D" : (winner === upperFilter ? "W" : "L");
+    const cls = result === "W" ? "form-w" : result === "L" ? "form-l" : "form-d";
+    const oppDisplay = lookupTeamDivInfo(oppRaw).display;
+    matchCellHtml = `<span class="form-pill ${cls}">${result}</span> v ${teamLink(oppDisplay)} <span style="font-weight:600;">${forScore} – ${againstScore}</span>`;
+  } else {
+    const team1Wins = winner && winner !== "DRAW" && winner === team1Raw.toUpperCase();
+    const team2Wins = winner && winner !== "DRAW" && winner === team2Raw.toUpperCase();
+    const team1Display = lookupTeamDivInfo(team1Raw).display;
+    const team2Display = lookupTeamDivInfo(team2Raw).display;
+    matchCellHtml = `<span class="${team1Wins?'ml-winner':''}">${teamLink(team1Display)}</span> ${cell(row, MATCH_LOG_COL.TEAM1_SCORE)} – ${cell(row, MATCH_LOG_COL.TEAM2_SCORE)} <span class="${team2Wins?'ml-winner':''}">${teamLink(team2Display)}</span>`;
+  }
+
+  return `<tr${rowStyle}>
     <td>${cell(row, MATCH_LOG_COL.SEASON) || "—"}</td>
-    <td>${cell(row, MATCH_LOG_COL.COMP) || "—"}</td>
+    <td>${comp || "—"}</td>
     <td>${cell(row, MATCH_LOG_COL.ROUND) || "—"}</td>
-    <td class="ml-teams"><span class="${team1Wins?'ml-winner':''}">${teamLink(team1Display)}</span> ${cell(row, MATCH_LOG_COL.TEAM1_SCORE)} – ${cell(row, MATCH_LOG_COL.TEAM2_SCORE)} <span class="${team2Wins?'ml-winner':''}">${teamLink(team2Display)}</span></td>
+    <td class="ml-teams">${matchCellHtml}</td>
   </tr>`;
 }
 
@@ -5607,7 +5648,7 @@ function renderMatchLogTab(){
     <div class="match-log-count">${filtered.length} match${filtered.length===1?'':'es'}${filtered.length ? ` — showing ${visible.length}` : ''}</div>
     ${filtered.length ? `<div class="table-wrap"><table class="match-log-table"><thead><tr>
         <th>Season</th><th>Comp</th><th>Round</th><th>Match</th>
-      </tr></thead><tbody>${visible.map(matchLogRowHtml).join("")}</tbody></table></div>`
+      </tr></thead><tbody>${visible.map(r => matchLogRowHtml(r, matchLogFilters.team)).join("")}</tbody></table></div>`
       : `<p class="sub">No matches found for that combination of filters.</p>`}
     ${visible.length < filtered.length ? `<button type="button" class="match-log-show-more" id="mlShowMore">Show more</button>` : ''}
   `;
