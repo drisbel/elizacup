@@ -1416,6 +1416,34 @@
     width:44px;text-align:center;
   }
 
+  /* Match Log (Statistics page) — deliberately its own table class rather than
+     reusing .standings: no sticky column needed here (every row is self-contained,
+     unlike a standings table where the team name has to stay visible while
+     scrolling through many stat columns), and the shape is different enough
+     that inheriting .standings' sticky-column rules risks the same class of bug
+     noted elsewhere in this file when a new table shape borrows old table CSS. */
+  .match-log-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .match-log-filters select{
+    padding:8px 10px;border:1px solid var(--line-light);border-radius:6px;
+    font-family:'Barlow',sans-serif;font-size:13px;background:#fff;color:var(--ink);
+    flex:1 1 140px;min-width:120px;max-width:220px;
+  }
+  table.match-log-table{width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:13px;}
+  table.match-log-table th{
+    text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.03em;
+    text-transform:uppercase;color:var(--muted);padding:0 8px 8px;border-bottom:2px solid var(--pitch);white-space:nowrap;
+  }
+  table.match-log-table td{padding:8px;border-bottom:1px solid var(--line-light);white-space:nowrap;}
+  table.match-log-table td.ml-teams{white-space:normal;}
+  table.match-log-table .ml-winner{font-weight:700;color:var(--ink);}
+  table.match-log-table tr:last-child td{border-bottom:none;}
+  .match-log-show-more{
+    display:block;margin:14px auto 0;padding:9px 22px;border:1px solid var(--line-light);border-radius:6px;
+    background:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .match-log-show-more:hover{border-color:var(--pitch);}
+  .match-log-count{font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);margin-bottom:10px;}
+
   /* Past Seasons FA Cup / ECL knockout fixture tables — table-layout:fixed guarantees
      identical column widths (so scores land in the same spot) on every single fixture
      table on the page, regardless of what's in each one; team names wrap instead of
@@ -1626,12 +1654,12 @@
   </section>
 
   <section id="statsSection" style="display:none;">
+    <div id="statsViewToggle" class="round-tabs" style="margin-bottom:16px;"></div>
     <div class="section-head" style="margin-top:8px;">
-      <h2 style="font-size:18px;">Win Streaks</h2>
-      <span class="sub">Active 3+ game winning streaks, head-to-head</span>
+      <h2 style="font-size:18px;" id="statsHeading">Win Streaks</h2>
+      <span class="sub" id="statsSubheading">Active 3+ game winning streaks, head-to-head</span>
     </div>
-    <p class="sub" style="margin:-4px 0 12px;">Click a row to see the full head-to-head match history.</p>
-    <div id="statsContainer" class="state-msg">Loading streaks…</div>
+    <div id="statsContainer" class="state-msg">Loading…</div>
   </section>
 
   <section id="historySection" style="display:none;">
@@ -2871,35 +2899,7 @@ async function load(){
   }
 
   if(currentDivision.type === "stats"){
-    document.getElementById('statsContainer').innerHTML = "Loading streaks…";
-    document.getElementById('statsContainer').className = "state-msg";
-    try{
-      const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
-      const roddyRes = await cachedFetch(csvUrlFor(roddyDiv));
-      if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
-      const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
-      parseRoddy(roddyRows); // populates roddyEntries — used for each team's division pill
-
-      const res = await cachedFetch(csvUrlFor(currentDivision));
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-
-      const streaks = findWinStreaks(rows);
-      renderWinStreaks(streaks);
-
-      document.getElementById('debugOut').textContent =
-        "Win streaks debug: " + JSON.stringify(winStreaksDebug, null, 2) + "\n\n" +
-        JSON.stringify(streaks.slice(0,10), null, 2);
-
-      setStatus("Live — updated " + new Date().toLocaleString());
-    }catch(err){
-      console.error(err);
-      setStatus("Couldn't reach the sheet (" + err.message + ")", false);
-      document.getElementById('statsContainer').className = "state-msg error";
-      document.getElementById('statsContainer').innerHTML =
-        "Couldn't load streak data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
-    }
+    renderStatsPage();
     return;
   }
 
@@ -5442,6 +5442,198 @@ function findWinStreaks(rows){
   return streaks;
 }
 
+// ---------- Statistics page: view toggle (Win Streaks / Match Log) ----------
+// Same round-tabs toggle pattern as the About page — one content mount point
+// (#statsContainer) that each tab's loader takes over entirely.
+let statsActiveTab = "streaks"; // "streaks" | "matchlog"
+
+function renderStatsPage(){
+  const toggleEl = document.getElementById('statsViewToggle');
+  toggleEl.innerHTML = `
+    <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Win Streaks</button>
+    <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
+  `;
+  toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      statsActiveTab = btn.dataset.tab;
+      renderStatsPage();
+    });
+  });
+
+  if(statsActiveTab === "matchlog"){
+    document.getElementById('statsHeading').textContent = "Match Log";
+    document.getElementById('statsSubheading').textContent = "Every match on record — filter by season, competition, round, or team";
+    loadMatchLogTab();
+    return;
+  }
+
+  document.getElementById('statsHeading').textContent = "Win Streaks";
+  document.getElementById('statsSubheading').textContent = "Active 3+ game winning streaks, head-to-head";
+  loadWinStreaksTab();
+}
+
+async function loadWinStreaksTab(){
+  document.getElementById('statsContainer').innerHTML = "Loading streaks…";
+  document.getElementById('statsContainer').className = "state-msg";
+  try{
+    const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
+    const roddyRes = await cachedFetch(csvUrlFor(roddyDiv));
+    if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
+    const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
+    parseRoddy(roddyRows); // populates roddyEntries — used for each team's division pill
+
+    const statsDiv = DIVISIONS.find(d => d.id === "stats");
+    const res = await cachedFetch(csvUrlFor(statsDiv));
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const csvText = await res.text();
+    const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+
+    const streaks = findWinStreaks(rows);
+    renderWinStreaks(streaks);
+
+    document.getElementById('debugOut').textContent =
+      "Win streaks debug: " + JSON.stringify(winStreaksDebug, null, 2) + "\n\n" +
+      JSON.stringify(streaks.slice(0,10), null, 2);
+
+    setStatus("Live — updated " + new Date().toLocaleString());
+  }catch(err){
+    console.error(err);
+    setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+    document.getElementById('statsContainer').className = "state-msg error";
+    document.getElementById('statsContainer').innerHTML =
+      "Couldn't load streak data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+  }
+}
+
+// ---------- Match Log (Statistics page) ----------
+// Reads the same flat match-log tab that powers Team Profile's H2H vs Opponent
+// section (matchLogCsvUrlFor(), defined alongside that feature) — one row per
+// real match ever played. Fetched once per page visit; filtering and paging
+// below all happen client-side against the cached rows, no refetching per filter change.
+let matchLogRowsCache = null;
+let matchLogFilters = { season: "", comp: "", round: "", team: "" };
+let matchLogVisibleCount = 50; // "Show more" adds to this rather than re-fetching
+
+async function loadMatchLogTab(){
+  const el = document.getElementById('statsContainer');
+  el.className = "state-msg";
+  el.innerHTML = "Loading match log…";
+  try{
+    if(!roddyEntries.length){
+      const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
+      const roddyRes = await cachedFetch(csvUrlFor(roddyDiv));
+      if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
+      const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
+      parseRoddy(roddyRows); // populates roddyEntries — used to resolve proper-case team names
+    }
+    if(!matchLogRowsCache){
+      const res = await cachedFetch(matchLogCsvUrlFor());
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      matchLogRowsCache = Papa.parse(csvText, {skipEmptyLines:false}).data.slice(1); // drop header row
+      matchLogFilters = { season: "", comp: "", round: "", team: "" };
+      matchLogVisibleCount = 50;
+    }
+    el.className = "";
+    renderMatchLogTab();
+    document.getElementById('debugOut').textContent =
+      "Match log debug: " + JSON.stringify({ totalRows: matchLogRowsCache.length }, null, 2);
+    setStatus("Live — updated " + new Date().toLocaleString());
+  }catch(err){
+    console.error(err);
+    setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+    el.className = "state-msg error";
+    el.innerHTML = "Couldn't load the match log. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+  }
+}
+
+function matchLogRowHtml(row){
+  const winner = cell(row, MATCH_LOG_COL.WINNER).toUpperCase();
+  const team1Raw = cell(row, MATCH_LOG_COL.TEAM1), team2Raw = cell(row, MATCH_LOG_COL.TEAM2);
+  const team1Wins = winner && winner !== "DRAW" && winner === team1Raw.toUpperCase();
+  const team2Wins = winner && winner !== "DRAW" && winner === team2Raw.toUpperCase();
+  const team1Display = lookupTeamDivInfo(team1Raw).display;
+  const team2Display = lookupTeamDivInfo(team2Raw).display;
+  return `<tr>
+    <td>${cell(row, MATCH_LOG_COL.SEASON) || "—"}</td>
+    <td>${cell(row, MATCH_LOG_COL.COMP) || "—"}</td>
+    <td>${cell(row, MATCH_LOG_COL.ROUND) || "—"}</td>
+    <td class="ml-teams"><span class="${team1Wins?'ml-winner':''}">${teamLink(team1Display)}</span> ${cell(row, MATCH_LOG_COL.TEAM1_SCORE)} – ${cell(row, MATCH_LOG_COL.TEAM2_SCORE)} <span class="${team2Wins?'ml-winner':''}">${teamLink(team2Display)}</span></td>
+  </tr>`;
+}
+
+function renderMatchLogTab(){
+  const el = document.getElementById('statsContainer');
+  const rows = matchLogRowsCache || [];
+
+  // Distinct filter option lists are derived from the data itself rather than
+  // hardcoded, so a new season/competition/round just shows up automatically
+  // once it appears in the sheet.
+  const uniqueSorted = (getter) => [...new Set(rows.map(getter).map(v => (v||"").trim()).filter(Boolean))].sort();
+  const seasons = uniqueSorted(r => cell(r, MATCH_LOG_COL.SEASON));
+  const comps = uniqueSorted(r => cell(r, MATCH_LOG_COL.COMP));
+  const rounds = uniqueSorted(r => cell(r, MATCH_LOG_COL.ROUND));
+  const teams = [...new Set(rows.flatMap(r => [cell(r, MATCH_LOG_COL.TEAM1), cell(r, MATCH_LOG_COL.TEAM2)]).filter(Boolean))]
+    .sort((a,b) => lookupTeamDivInfo(a).display.localeCompare(lookupTeamDivInfo(b).display));
+
+  const optionsHtml = (values, selected) => values
+    .map(v => `<option value="${v}"${v===selected?' selected':''}>${v}</option>`).join("");
+  const teamOptionsHtml = (values, selected) => values
+    .map(v => `<option value="${v}"${v===selected?' selected':''}>${lookupTeamDivInfo(v).display}</option>`).join("");
+
+  const filtered = rows.filter(r => {
+    if(matchLogFilters.season && cell(r, MATCH_LOG_COL.SEASON) !== matchLogFilters.season) return false;
+    if(matchLogFilters.comp && cell(r, MATCH_LOG_COL.COMP) !== matchLogFilters.comp) return false;
+    if(matchLogFilters.round && cell(r, MATCH_LOG_COL.ROUND) !== matchLogFilters.round) return false;
+    if(matchLogFilters.team){
+      const t1 = cell(r, MATCH_LOG_COL.TEAM1), t2 = cell(r, MATCH_LOG_COL.TEAM2);
+      if(t1 !== matchLogFilters.team && t2 !== matchLogFilters.team) return false;
+    }
+    return true;
+  });
+
+  // Match IDs are assigned chronologically and the log is scanned in that
+  // order, so reversing gives newest-first without needing a real sort.
+  const newestFirst = [...filtered].reverse();
+  const visible = newestFirst.slice(0, matchLogVisibleCount);
+
+  el.innerHTML = `
+    <div class="match-log-filters">
+      <select id="mlFilterSeason"><option value="">All Seasons</option>${optionsHtml(seasons, matchLogFilters.season)}</select>
+      <select id="mlFilterComp"><option value="">All Competitions</option>${optionsHtml(comps, matchLogFilters.comp)}</select>
+      <select id="mlFilterRound"><option value="">All Rounds</option>${optionsHtml(rounds, matchLogFilters.round)}</select>
+      <select id="mlFilterTeam"><option value="">All Teams</option>${teamOptionsHtml(teams, matchLogFilters.team)}</select>
+    </div>
+    <div class="match-log-count">${filtered.length} match${filtered.length===1?'':'es'}${filtered.length ? ` — showing ${visible.length}` : ''}</div>
+    ${filtered.length ? `<div class="table-wrap"><table class="match-log-table"><thead><tr>
+        <th>Season</th><th>Comp</th><th>Round</th><th>Match</th>
+      </tr></thead><tbody>${visible.map(matchLogRowHtml).join("")}</tbody></table></div>`
+      : `<p class="sub">No matches found for that combination of filters.</p>`}
+    ${visible.length < filtered.length ? `<button type="button" class="match-log-show-more" id="mlShowMore">Show more</button>` : ''}
+  `;
+
+  const bindFilter = (id, key) => {
+    document.getElementById(id).addEventListener('change', (e) => {
+      matchLogFilters[key] = e.target.value;
+      matchLogVisibleCount = 50; // filters changed — restart paging
+      renderMatchLogTab();
+    });
+  };
+  bindFilter('mlFilterSeason', 'season');
+  bindFilter('mlFilterComp', 'comp');
+  bindFilter('mlFilterRound', 'round');
+  bindFilter('mlFilterTeam', 'team');
+
+  const showMoreBtn = document.getElementById('mlShowMore');
+  if(showMoreBtn){
+    showMoreBtn.addEventListener('click', () => {
+      matchLogVisibleCount += 50;
+      renderMatchLogTab();
+    });
+  }
+}
+
+
 function renderWinStreaks(streaks){
   const el = document.getElementById('statsContainer');
   if(streaks.length === 0){
@@ -5470,7 +5662,8 @@ function renderWinStreaks(streaks){
       <tr class="streak-detail-row" data-detail-for="${i}" style="display:none;"><td colspan="2"></td></tr>`;
   });
 
-  el.innerHTML = `<div class="table-wrap" style="max-width:680px;"><table class="standings compact h2h-record-table streaks-table"><thead><tr>
+  el.innerHTML = `<p class="sub" style="margin:-4px 0 12px;">Click a row to see the full head-to-head match history.</p>
+    <div class="table-wrap" style="max-width:680px;"><table class="standings compact h2h-record-table streaks-table"><thead><tr>
       <th style="text-align:left;width:50%;">Team</th><th style="text-align:left;width:50%;">Opponent</th>
     </tr></thead><tbody>
       ${rowsHtml}
