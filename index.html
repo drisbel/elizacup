@@ -5186,12 +5186,15 @@ async function loadTeamProfile(teamName){
     })
   );
 
-  const teamVsTeamDiv = { gid: "1560134779" };
   let teamVsTeamOpponents = [];
   fetches.push(
-    cachedFetch(csvUrlFor(teamVsTeamDiv)).then(r => r.text()).then(text => {
-      const rows = Papa.parse(text, {skipEmptyLines:false}).data;
-      teamVsTeamOpponents = findTeamVsTeamRecords(rows, teamName);
+    Promise.all([
+      cachedFetch(h2hOpponentCsvUrlFor()).then(r => r.text()),
+      cachedFetch(matchLogCsvUrlFor()).then(r => r.text())
+    ]).then(([opponentText, matchLogText]) => {
+      const opponentRows = Papa.parse(opponentText, {skipEmptyLines:false}).data;
+      const matchLogRows = Papa.parse(matchLogText, {skipEmptyLines:false}).data;
+      teamVsTeamOpponents = findTeamVsTeamRecords(opponentRows, matchLogRows, teamName);
     })
   );
 
@@ -5514,41 +5517,75 @@ function lookupTeamDivInfo(rawName){
   };
 }
 
-function findTeamVsTeamRecords(rows, teamName){
-  teamVsTeamDebug = { rowsScanned: 0, opponentsFound: 0 };
-  const upperTeam = teamName.toUpperCase();
+// ---------- Team vs Team Head-to-Head vs Opponent (Team Profile) ----------
+// Rebuilt onto two tabs on the H2H_RECORD spreadsheet: H2H_OPPONENT is a
+// computed per-pairing summary (one row per directed TEAM/OPPONENT pair —
+// P/W/D/L/Scored/Conceded already aggregated, nothing to derive by hand),
+// and MATCH_LOG is the actual flat match log (one row per real match ever
+// played, unique Match ID, entered once). Individual-match history for a
+// given pairing is filtered live from MATCH_LOG rather than stored anywhere
+// per-pairing. NOTE: Win Streaks (Statistics page) is a separate feature
+// still reading the old wide-format sheet (TVT_COL etc. above) — this
+// rebuild only covers Team Profile's H2H vs Opponent section so far.
+const H2H_OPPONENT_GID = "53125416";
+const MATCH_LOG_GID = "1512058230";
+const H2H_OPP_COL = { TEAM: 0, OPPONENT: 1, P: 2, W: 3, D: 4, L: 5, SCORED: 6, CONCEDED: 7 };
+const MATCH_LOG_COL = { ID: 0, SEASON: 1, COMP: 2, ROUND: 3, TEAM1: 4, TEAM1_SCORE: 5, TEAM2: 6, TEAM2_SCORE: 7, WINNER: 8 };
+
+function h2hOpponentCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${H2H_RECORD_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${H2H_OPPONENT_GID}&cachebust=` + Date.now();
+}
+function matchLogCsvUrlFor(){
+  return `https://docs.google.com/spreadsheets/d/${H2H_RECORD_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${MATCH_LOG_GID}&cachebust=` + Date.now();
+}
+
+function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
+  teamVsTeamDebug = { rowsScanned: 0, opponentsFound: 0, matchLogRowCount: Math.max(0, matchLogRows.length - 1) };
+  const upperTeam = (teamName || "").trim().toUpperCase();
   const opponents = [];
 
-  for(let r=0; r<rows.length; r++){
-    const t1 = cell(rows[r]||[], TVT_COL.TEAM1);
+  for(let r=1; r<opponentRows.length; r++){ // row 0 is the header row
+    const row = opponentRows[r] || [];
+    const t1 = cell(row, H2H_OPP_COL.TEAM);
     if(!t1 || t1.toUpperCase() !== upperTeam) continue;
     teamVsTeamDebug.rowsScanned++;
 
-    const t2 = cell(rows[r]||[], TVT_COL.TEAM2);
-    if(!t2) continue;                          // blank-opponent TOTAL row
-    if(t2.toUpperCase() === upperTeam) continue; // self row
+    const t2 = cell(row, H2H_OPP_COL.OPPONENT);
+    if(!t2 || t2.toUpperCase() === upperTeam) continue; // self row, shouldn't occur but guard anyway
 
+    const upperOpp = t2.toUpperCase();
     const matches = [];
-    for(let b=0; b<TVT_MAX_MATCHES; b++){
-      const base = TVT_MATCH_START + b*TVT_MATCH_WIDTH;
-      const comp = cell(rows[r]||[], base);
-      const year = cell(rows[r]||[], base+1);
-      if(!comp && !year) break;
+    for(let m=1; m<matchLogRows.length; m++){
+      const mrow = matchLogRows[m] || [];
+      const mt1 = cell(mrow, MATCH_LOG_COL.TEAM1).toUpperCase();
+      const mt2 = cell(mrow, MATCH_LOG_COL.TEAM2).toUpperCase();
+      const teamIsTeam1 = mt1 === upperTeam && mt2 === upperOpp;
+      const teamIsTeam2 = mt2 === upperTeam && mt1 === upperOpp;
+      if(!teamIsTeam1 && !teamIsTeam2) continue;
+
+      const winner = cell(mrow, MATCH_LOG_COL.WINNER).toUpperCase();
+      const result = winner === "DRAW" ? "DRAW" : (winner === upperTeam ? "WIN" : "LOSS");
       matches.push({
-        comp, year,
-        round: cell(rows[r]||[], base+2),
-        result: cell(rows[r]||[], base+3),
-        for: cell(rows[r]||[], base+4),
-        against: cell(rows[r]||[], base+5)
+        comp: cell(mrow, MATCH_LOG_COL.COMP),
+        year: cell(mrow, MATCH_LOG_COL.SEASON),
+        round: cell(mrow, MATCH_LOG_COL.ROUND),
+        result,
+        for: cell(mrow, teamIsTeam1 ? MATCH_LOG_COL.TEAM1_SCORE : MATCH_LOG_COL.TEAM2_SCORE),
+        against: cell(mrow, teamIsTeam1 ? MATCH_LOG_COL.TEAM2_SCORE : MATCH_LOG_COL.TEAM1_SCORE)
       });
     }
+    // Match IDs (M00001, M00002, ...) are assigned in chronological order and
+    // the log is scanned top-to-bottom, so matches[] comes out oldest-first
+    // with no separate sort needed.
 
-    // A literal "*" typed into a sheet cell breaks that cell's gviz CSV export
-    // entirely (confirmed — it exports blank), so "these two teams played each other
-    // twice in the same round" can't be flagged in the sheet itself. Instead, detect
-    // it here: two back-to-back match blocks for the same opponent, same season, with
-    // an identical scoreline, almost certainly means the same real-world fixture got
-    // entered once under each competition (e.g. league + ECL landing on the same week).
+    // Two matches, same season, identical scoreline, back-to-back in the log —
+    // almost certainly the same real-world fixture entered once per competition
+    // it counted for (e.g. a league game that was also that round's ECL group
+    // match). Match IDs are chronological and matches[] is built in that same
+    // order, so a genuine duplicate-fixture pair is always adjacent. Mirrors the
+    // dagger-marker behaviour the old wide-format sheet used to need for the
+    // same real-world reason, and matches how the opponent-record tab's own P
+    // total already treats such a pair as one meeting, not two.
     for(let i=1; i<matches.length; i++){
       const a = matches[i-1], b2 = matches[i];
       if(a.year && a.year === b2.year && a.for && a.for === b2.for && a.against && a.against === b2.against){
@@ -5557,47 +5594,32 @@ function findTeamVsTeamRecords(rows, teamName){
       }
     }
 
-    // Ongoing health-check: if the sheet's own P total disagrees with how many match
-    // blocks actually got parsed for a row (accounting for detected double-ups above,
-    // which legitimately count as one game across two blocks), flag it for the debug
-    // panel rather than silently under/over-counting.
-    const doubleUpCount = matches.filter(m => m.doubleUp).length / 2;
-    const pVal = cell(rows[r]||[], TVT_COL.P);
-    if(pVal && parseInt(pVal,10) !== (matches.length - doubleUpCount)){
-      if(!teamVsTeamDebug.mismatchRows) teamVsTeamDebug.mismatchRows = [];
-      teamVsTeamDebug.mismatchRows.push({ row: r, opponent: t2, sheetP: pVal, parsedMatchCount: matches.length, detectedDoubleUps: doubleUpCount });
-    }
-
     // Sheet stores every name here in ALL CAPS — prefer the opponent's proper-case
     // name from the Roddy leaderboard (already loaded by this point in loadTeamProfile),
     // falling back to a simple title-case of the raw text if it's ever not found there.
     // A team not found there at all isn't currently entered in any division — flagged
     // as inactive so the dropdown can push it to the bottom instead of mixing it in.
-    const roddyMatch = roddyEntries.find(e => (e.team||"").toUpperCase() === t2.toUpperCase());
+    const roddyMatch = roddyEntries.find(e => (e.team||"").toUpperCase() === upperOpp);
     const display = roddyMatch ? roddyMatch.team : titleCaseFallback(t2);
     const active = !!roddyMatch;
     const divShort = active ? getDivisionShortLabel(roddyMatch.division) : "N/A";
     const divColor = active ? getDivisionColorByLabel(roddyMatch.division) : "#000";
 
     opponents.push({
-      key: t2.toUpperCase(),
+      key: upperOpp,
       display,
       active,
       divShort,
       divColor,
-      p: cell(rows[r]||[], TVT_COL.P),
-      w: cell(rows[r]||[], TVT_COL.W),
-      l: cell(rows[r]||[], TVT_COL.L),
-      d: cell(rows[r]||[], TVT_COL.D),
-      streak: cell(rows[r]||[], TVT_COL.STREAK),
+      p: cell(row, H2H_OPP_COL.P),
+      w: cell(row, H2H_OPP_COL.W),
+      l: cell(row, H2H_OPP_COL.L),
+      d: cell(row, H2H_OPP_COL.D),
       matches
     });
   }
 
   teamVsTeamDebug.opponentsFound = opponents.length;
-  teamVsTeamDebug.rawRowDump = rows.slice(0, 3).map((row, i) =>
-    "row" + i + ": " + (row||[]).map((c,ci)=> (ci<=20&&c) ? `[${ci}]="${(c||"").toString().trim()}"` : "").filter(Boolean).join(" ")
-  );
 
   // Active teams first, grouped by division in league order; inactive (not currently
   // in any division) pushed to the bottom; alphabetical by name within each group.
@@ -5610,6 +5632,8 @@ function findTeamVsTeamRecords(rows, teamName){
   });
   return opponents;
 }
+
+
 
 function tvtStatBox(label, value){
   return `<div style="background:#fff;border:1px solid var(--line-light);border-radius:5px;padding:8px 14px;text-align:center;min-width:52px;">
