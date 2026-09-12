@@ -1656,8 +1656,9 @@
 
   <section id="statsSection" style="display:none;">
     <div id="statsViewToggle" class="round-tabs" style="margin-bottom:16px;"></div>
+    <p class="sub" style="margin:0 0 14px;">All statistics on this page cover the 22/23 season onwards.</p>
     <div class="section-head" style="margin-top:8px;">
-      <h2 style="font-size:18px;" id="statsHeading">Win Streaks</h2>
+      <h2 style="font-size:18px;" id="statsHeading">Streaks</h2>
       <span class="sub" id="statsSubheading">Active 3+ game winning streaks, head-to-head</span>
     </div>
     <div id="statsContainer" class="state-msg">Loading…</div>
@@ -5491,7 +5492,125 @@ function findAllTimeStreaks(streakRows, matchLogRows){
   return streaks;
 }
 
-// ---------- Statistics page: view toggle (Win Streaks / Match Log) ----------
+// ---------- Statistics: Losing Streaks ----------
+// Unlike win streaks, the H2H rebuild's streak tab has no start/end match ID
+// columns for LOSING runs (its "STREAK START/END MATCH ID" columns describe
+// the longest WIN streak specifically, blank whenever a pair has never had
+// one at all) — so there's no pre-computed reference to reconstruct from.
+// Computed directly from the flat match log instead: for every ordered
+// (team, opponent) pairing that's actually played, walk their full
+// chronological history once to find both the longest-ever losing run and
+// the current trailing run (which may be a different, shorter occurrence
+// than the historic longest, or the same one still ongoing).
+let losingStreaksDebug = {};
+
+function findLosingStreaks(matchLogRows){
+  const pairs = new Map(); // "TEAM||OPPONENT" -> that pairing's matches, chronological
+  matchLogRows.forEach(mrow => {
+    const t1 = cell(mrow, MATCH_LOG_COL.TEAM1), t2 = cell(mrow, MATCH_LOG_COL.TEAM2);
+    if(!t1 || !t2) return;
+    const key1 = t1.toUpperCase() + "||" + t2.toUpperCase();
+    const key2 = t2.toUpperCase() + "||" + t1.toUpperCase();
+    if(!pairs.has(key1)) pairs.set(key1, []);
+    if(!pairs.has(key2)) pairs.set(key2, []);
+    pairs.get(key1).push(mrow);
+    pairs.get(key2).push(mrow);
+  });
+  // matchLogRows is scanned top-to-bottom in match-ID order, so every pair's
+  // array comes out chronological already — no separate sort needed.
+
+  const activeList = [];
+  const allTimeList = [];
+
+  const buildEntry = (teamRaw, oppRaw, matches, results, startIdx, endIdx, streakLen, stillActive) => {
+    const streakMatches = matches.slice(startIdx, endIdx + 1).map((mrow, i) => {
+      const r = results[startIdx + i];
+      return {
+        comp: cell(mrow, MATCH_LOG_COL.COMP),
+        year: cell(mrow, MATCH_LOG_COL.SEASON),
+        round: cell(mrow, MATCH_LOG_COL.ROUND),
+        result: r.outcome,
+        for: cell(mrow, r.teamIsTeam1 ? MATCH_LOG_COL.TEAM1_SCORE : MATCH_LOG_COL.TEAM2_SCORE),
+        against: cell(mrow, r.teamIsTeam1 ? MATCH_LOG_COL.TEAM2_SCORE : MATCH_LOG_COL.TEAM1_SCORE)
+      };
+    });
+    for(let i=1; i<streakMatches.length; i++){
+      const a = streakMatches[i-1], b2 = streakMatches[i];
+      if(a.year && a.year === b2.year && a.for && a.for === b2.for && a.against && a.against === b2.against){
+        a.doubleUp = true; b2.doubleUp = true;
+      }
+    }
+    const team1Info = lookupTeamDivInfo(teamRaw);
+    const team2Info = lookupTeamDivInfo(oppRaw);
+    return {
+      team1: team1Info.display, team1Active: team1Info.active, team1DivShort: team1Info.divShort, team1DivColor: team1Info.divColor,
+      team2: team2Info.display, team2Active: team2Info.active, team2DivShort: team2Info.divShort, team2DivColor: team2Info.divColor,
+      streak: streakLen, matches: streakMatches, stillActive
+    };
+  };
+
+  pairs.forEach((matches, key) => {
+    const [teamRaw, oppRaw] = key.split("||");
+    const results = matches.map(mrow => {
+      const teamIsTeam1 = cell(mrow, MATCH_LOG_COL.TEAM1).toUpperCase() === teamRaw;
+      const winner = cell(mrow, MATCH_LOG_COL.WINNER).toUpperCase();
+      const outcome = winner === "DRAW" ? "DRAW" : (winner === teamRaw ? "WIN" : "LOSS");
+      return {
+        outcome, teamIsTeam1,
+        year: cell(mrow, MATCH_LOG_COL.SEASON),
+        for: cell(mrow, teamIsTeam1 ? MATCH_LOG_COL.TEAM1_SCORE : MATCH_LOG_COL.TEAM2_SCORE),
+        against: cell(mrow, teamIsTeam1 ? MATCH_LOG_COL.TEAM2_SCORE : MATCH_LOG_COL.TEAM1_SCORE)
+      };
+    });
+    // Same "same fixture, two competitions" case as everywhere else in this
+    // rebuild — flag it here too so it only counts once toward streak length,
+    // not just when marking it for display later. Missing this undercounts by
+    // one exactly whenever a streak happens to span one of these pairs
+    // (confirmed against real data: found 2 such cases before this fix).
+    for(let i=1; i<results.length; i++){
+      const a = results[i-1], b = results[i];
+      if(a.year && a.year === b.year && a.for && a.for === b.for && a.against && a.against === b.against){
+        a.doubleUp = true; b.doubleUp = true; b.isDuplicateOfPrev = true;
+      }
+    }
+
+    let longestLen = 0, longestStart = -1, longestEnd = -1, curLen = 0, curStart = -1;
+    results.forEach((r, i) => {
+      if(r.outcome === "LOSS"){
+        if(curLen === 0) curStart = i;
+        if(!r.isDuplicateOfPrev) curLen++;
+        if(curLen > longestLen){ longestLen = curLen; longestStart = curStart; longestEnd = i; }
+      } else {
+        curLen = 0;
+      }
+    });
+
+    let trailingLen = 0, trailingStart = results.length;
+    for(let i = results.length - 1; i >= 0; i--){
+      if(results[i].outcome === "LOSS"){
+        if(!results[i].isDuplicateOfPrev) trailingLen++;
+        trailingStart = i;
+      } else break;
+    }
+    const trailingEnd = results.length - 1;
+
+    if(trailingLen >= 3){
+      activeList.push(buildEntry(teamRaw, oppRaw, matches, results, trailingStart, trailingEnd, trailingLen, true));
+    }
+    if(longestLen >= 3){
+      const isSameAsTrailing = longestStart === trailingStart && longestEnd === trailingEnd;
+      allTimeList.push(buildEntry(teamRaw, oppRaw, matches, results, longestStart, longestEnd, longestLen, isSameAsTrailing));
+    }
+  });
+
+  activeList.sort((a,b)=> b.streak - a.streak || a.team1.localeCompare(b.team1));
+  allTimeList.sort((a,b)=> b.streak - a.streak || a.team1.localeCompare(b.team1));
+  losingStreaksDebug = { pairsScanned: pairs.size, activeFound: activeList.length, allTimeFound: allTimeList.length };
+  return { active: activeList, allTime: allTimeList };
+}
+
+
+// ---------- Statistics page: view toggle (Streaks / Match Log) ----------
 // Same round-tabs toggle pattern as the About page — one content mount point
 // (#statsContainer) that each tab's loader takes over entirely.
 let statsActiveTab = "streaks"; // "streaks" | "matchlog"
@@ -5499,7 +5618,7 @@ let statsActiveTab = "streaks"; // "streaks" | "matchlog"
 function renderStatsPage(){
   const toggleEl = document.getElementById('statsViewToggle');
   toggleEl.innerHTML = `
-    <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Win Streaks</button>
+    <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
@@ -5516,8 +5635,8 @@ function renderStatsPage(){
     return;
   }
 
-  document.getElementById('statsHeading').textContent = "Win Streaks";
-  document.getElementById('statsSubheading').textContent = "Active 3+ game winning streaks, head-to-head";
+  document.getElementById('statsHeading').textContent = "Streaks";
+  document.getElementById('statsSubheading').textContent = "Active and all-time 3+ game runs, head-to-head";
   loadWinStreaksTab();
 }
 
@@ -5548,11 +5667,13 @@ async function loadWinStreaksTab(){
 
     const activeStreaks = findWinStreaks(rows, matchLogRowsCache);
     const allTimeStreaks = findAllTimeStreaks(rows, matchLogRowsCache);
-    renderWinStreaks(activeStreaks, allTimeStreaks);
+    const losingStreaks = findLosingStreaks(matchLogRowsCache);
+    renderWinStreaks(activeStreaks, allTimeStreaks, losingStreaks.active, losingStreaks.allTime);
 
     document.getElementById('debugOut').textContent =
       "Active win streaks debug: " + JSON.stringify(winStreaksDebug, null, 2) + "\n\n" +
       "All-time win streaks debug: " + JSON.stringify(allTimeStreaksDebug, null, 2) + "\n\n" +
+      "Losing streaks debug: " + JSON.stringify(losingStreaksDebug, null, 2) + "\n\n" +
       JSON.stringify(activeStreaks.slice(0,5), null, 2);
 
     setStatus("Live — updated " + new Date().toLocaleString());
@@ -5735,7 +5856,7 @@ function renderMatchLogTab(){
 }
 
 
-function streakSectionHtml(title, subtitle, streaks, groupId){
+function streakSectionHtml(title, subtitle, streaks, groupId, noun){
   const divPill = (short, color) => `<span class="roddy-div-tag" style="background:${color};">${short}</span>`;
   const TIER_COLORS = ['#000000', '#bc3532', '#6aa84f', '#8B6914', '#0a2f85'];
   const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">${title}</h2><span class="sub">${subtitle}</span></div>`;
@@ -5751,7 +5872,7 @@ function streakSectionHtml(title, subtitle, streaks, groupId){
     if(s.streak !== lastStreak){
       tierIndex++;
       const tierColor = TIER_COLORS[tierIndex % TIER_COLORS.length];
-      rowsHtml += `<tr class="streak-tier-row"><td colspan="2" style="background:${hexToRgba(tierColor,0.14)};color:${tierColor};border-top:2px solid ${tierColor};">${s.streak} game win streaks</td></tr>`;
+      rowsHtml += `<tr class="streak-tier-row"><td colspan="2" style="background:${hexToRgba(tierColor,0.14)};color:${tierColor};border-top:2px solid ${tierColor};">${s.streak} game ${noun} streaks</td></tr>`;
       lastStreak = s.streak;
     }
     const activeBadge = s.stillActive ? ` <span style="font-size:10px;font-weight:700;color:var(--turf);text-transform:uppercase;">current</span>` : "";
@@ -5791,15 +5912,19 @@ function wireStreakSectionClicks(container, streaks, groupId){
   });
 }
 
-function renderWinStreaks(activeStreaks, allTimeStreaks){
+function renderWinStreaks(activeStreaks, allTimeStreaks, activeLosingStreaks, allTimeLosingStreaks){
   const el = document.getElementById('statsContainer');
   el.className = "";
   el.innerHTML = `<p class="sub" style="margin:-4px 0 12px;">Click a row to see the full head-to-head match history.</p>`
-    + streakSectionHtml("Active Win Streaks", "Currently ongoing 3+ game runs", activeStreaks, "active")
-    + streakSectionHtml("All-Time Longest Win Streaks", "The longest run either team has ever had against this opponent — active or since ended", allTimeStreaks, "alltime");
+    + streakSectionHtml("Active Win Streaks", "Currently ongoing 3+ game runs", activeStreaks, "active", "win")
+    + streakSectionHtml("Active Losing Streaks", "Currently ongoing 3+ game losing runs", activeLosingStreaks, "losing", "losing")
+    + streakSectionHtml("All-Time Longest Win Streaks", "The longest run either team has ever had against this opponent — active or since ended", allTimeStreaks, "alltime", "win")
+    + streakSectionHtml("All-Time Longest Losing Streaks", "The worst run either team has ever had against this opponent — active or since ended", allTimeLosingStreaks, "alltimelosing", "losing");
 
   wireStreakSectionClicks(el, activeStreaks, "active");
+  wireStreakSectionClicks(el, activeLosingStreaks, "losing");
   wireStreakSectionClicks(el, allTimeStreaks, "alltime");
+  wireStreakSectionClicks(el, allTimeLosingStreaks, "alltimelosing");
 }
 
 let teamVsTeamDebug = {};
