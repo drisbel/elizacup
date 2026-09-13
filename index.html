@@ -1448,6 +1448,14 @@
   }
   .match-log-show-more:hover{border-color:var(--pitch);}
   .match-log-count{font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);margin-bottom:10px;}
+  /* Flags a Streaks/Records entry whose underlying match is from the most
+     recently completed round for its competition — turf green, distinct from
+     the amber already used for an active chip elsewhere, so the two aren't
+     visually confused. */
+  .record-new-badge{
+    display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    background:var(--turf);color:#fff;border-radius:10px;padding:1px 6px;margin-left:5px;vertical-align:middle;
+  }
 
   /* Past Seasons FA Cup / ECL knockout fixture tables — table-layout:fixed guarantees
      identical column widths (so scores land in the same spot) on every single fixture
@@ -5387,6 +5395,27 @@ function activeStreaksCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/${H2H_RECORD_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${ACTIVE_STREAKS_GID}&cachebust=` + Date.now();
 }
 
+// ---------- Shared: is this the most recently completed round, per competition? ----------
+// Flags a record/streak entry as NEW when the match behind it belongs to the
+// latest round entered for its specific competition. Computed live from the
+// match log itself — no separate "current round" tracking needed anywhere —
+// by taking, for each competition, the (season, round) of whichever match has
+// the highest match ID. Season+round together, not round alone, since a label
+// like "R1" recurs every season.
+function getLatestRoundByComp(matchLogRows){
+  const latest = {};
+  matchLogRows.forEach(mrow => {
+    const comp = cell(mrow, MATCH_LOG_COL.COMP).toUpperCase();
+    if(!comp) return;
+    latest[comp] = { season: cell(mrow, MATCH_LOG_COL.SEASON), round: cell(mrow, MATCH_LOG_COL.ROUND) };
+  });
+  return latest;
+}
+function isLatestRoundMatch(comp, season, round, latestRoundByComp){
+  const latest = latestRoundByComp[(comp||"").toUpperCase()];
+  return !!latest && !!season && latest.season === season && latest.round === round;
+}
+
 // Shared by both streak lists below: given a pair and a start/end match ID,
 // filters the match log to just this pairing and slices between the two IDs
 // to reconstruct the actual match-by-match list. Returns null if either ID
@@ -5427,7 +5456,7 @@ function reconstructStreakMatches(team1Raw, team2Raw, startId, endId, matchLogRo
 
 let winStreaksDebug = {};
 
-function findWinStreaks(streakRows, matchLogRows){
+function findWinStreaks(streakRows, matchLogRows, latestRoundByComp){
   const streaks = [];
   let reconstructFailures = 0;
 
@@ -5443,12 +5472,15 @@ function findWinStreaks(streakRows, matchLogRows){
     const matches = reconstructStreakMatches(team1Raw, team2Raw, cell(row, ACTIVE_STREAK_COL.START_ID), cell(row, ACTIVE_STREAK_COL.END_ID), matchLogRows);
     if(!matches) reconstructFailures++;
 
+    const lastMatch = matches && matches.length ? matches[matches.length-1] : null;
+    const isNew = lastMatch ? isLatestRoundMatch(lastMatch.comp, lastMatch.year, lastMatch.round, latestRoundByComp) : false;
+
     const team1Info = lookupTeamDivInfo(team1Raw);
     const team2Info = lookupTeamDivInfo(team2Raw);
     streaks.push({
       team1: team1Info.display, team1Active: team1Info.active, team1DivShort: team1Info.divShort, team1DivColor: team1Info.divColor,
       team2: team2Info.display, team2Active: team2Info.active, team2DivShort: team2Info.divShort, team2DivColor: team2Info.divColor,
-      streak: streakLen, matches: matches || []
+      streak: streakLen, matches: matches || [], isNew
     });
   }
 
@@ -5459,7 +5491,7 @@ function findWinStreaks(streakRows, matchLogRows){
 
 let allTimeStreaksDebug = {};
 
-function findAllTimeStreaks(streakRows, matchLogRows){
+function findAllTimeStreaks(streakRows, matchLogRows, latestRoundByComp){
   const streaks = [];
   let reconstructFailures = 0;
 
@@ -5482,12 +5514,15 @@ function findAllTimeStreaks(streakRows, matchLogRows){
     const matches = reconstructStreakMatches(team1Raw, team2Raw, cell(row, ALL_TIME_STREAK_COL.START_ID), cell(row, ALL_TIME_STREAK_COL.END_ID), matchLogRows);
     if(!matches) reconstructFailures++;
 
+    const lastMatch = matches && matches.length ? matches[matches.length-1] : null;
+    const isNew = lastMatch ? isLatestRoundMatch(lastMatch.comp, lastMatch.year, lastMatch.round, latestRoundByComp) : false;
+
     const team1Info = lookupTeamDivInfo(team1Raw);
     const team2Info = lookupTeamDivInfo(team2Raw);
     streaks.push({
       team1: team1Info.display, team1Active: team1Info.active, team1DivShort: team1Info.divShort, team1DivColor: team1Info.divColor,
       team2: team2Info.display, team2Active: team2Info.active, team2DivShort: team2Info.divShort, team2DivColor: team2Info.divColor,
-      streak: streakLen, matches: matches || [], stillActive
+      streak: streakLen, matches: matches || [], stillActive, isNew
     });
   }
 
@@ -5508,7 +5543,7 @@ function findAllTimeStreaks(streakRows, matchLogRows){
 // than the historic longest, or the same one still ongoing).
 let losingStreaksDebug = {};
 
-function findLosingStreaks(matchLogRows){
+function findLosingStreaks(matchLogRows, latestRoundByComp){
   const pairs = new Map(); // "TEAM||OPPONENT" -> that pairing's matches, chronological
   matchLogRows.forEach(mrow => {
     const t1 = cell(mrow, MATCH_LOG_COL.TEAM1), t2 = cell(mrow, MATCH_LOG_COL.TEAM2);
@@ -5544,12 +5579,14 @@ function findLosingStreaks(matchLogRows){
         a.doubleUp = true; b2.doubleUp = true;
       }
     }
+    const lastMatch = streakMatches.length ? streakMatches[streakMatches.length-1] : null;
+    const isNew = lastMatch ? isLatestRoundMatch(lastMatch.comp, lastMatch.year, lastMatch.round, latestRoundByComp) : false;
     const team1Info = lookupTeamDivInfo(teamRaw);
     const team2Info = lookupTeamDivInfo(oppRaw);
     return {
       team1: team1Info.display, team1Active: team1Info.active, team1DivShort: team1Info.divShort, team1DivColor: team1Info.divColor,
       team2: team2Info.display, team2Active: team2Info.active, team2DivShort: team2Info.divShort, team2DivColor: team2Info.divColor,
-      streak: streakLen, matches: streakMatches, stillActive
+      streak: streakLen, matches: streakMatches, stillActive, isNew
     };
   };
 
@@ -5677,9 +5714,10 @@ async function loadWinStreaksTab(){
     const csvText = await res.text();
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
-    const activeStreaks = findWinStreaks(rows, matchLogRowsCache);
-    const allTimeStreaks = findAllTimeStreaks(rows, matchLogRowsCache);
-    const losingStreaks = findLosingStreaks(matchLogRowsCache);
+    const latestRoundByComp = getLatestRoundByComp(matchLogRowsCache);
+    const activeStreaks = findWinStreaks(rows, matchLogRowsCache, latestRoundByComp);
+    const allTimeStreaks = findAllTimeStreaks(rows, matchLogRowsCache, latestRoundByComp);
+    const losingStreaks = findLosingStreaks(matchLogRowsCache, latestRoundByComp);
     renderWinStreaks(activeStreaks, allTimeStreaks, losingStreaks.active, losingStreaks.allTime);
 
     document.getElementById('debugOut').textContent =
@@ -5758,7 +5796,7 @@ const MATCH_LOG_COMP_COLOR = {
   "SD ELIM": "#b45309"
 };
 
-function matchLogRowHtml(row, filterTeamRaw){
+function matchLogRowHtml(row, filterTeamRaw, extraColumnHtml, isNew){
   const winner = cell(row, MATCH_LOG_COL.WINNER).toUpperCase();
   const team1Raw = cell(row, MATCH_LOG_COL.TEAM1), team2Raw = cell(row, MATCH_LOG_COL.TEAM2);
   const comp = cell(row, MATCH_LOG_COL.COMP);
@@ -5791,8 +5829,8 @@ function matchLogRowHtml(row, filterTeamRaw){
   return `<tr${rowStyle}>
     <td>${cell(row, MATCH_LOG_COL.SEASON) || "—"}</td>
     <td>${comp || "—"}</td>
-    <td>${cell(row, MATCH_LOG_COL.ROUND) || "—"}</td>
-    <td class="ml-teams">${matchCellHtml}</td>
+    <td>${cell(row, MATCH_LOG_COL.ROUND) || "—"}${isNew ? `<span class="record-new-badge">NEW</span>` : ""}</td>
+    <td class="ml-teams">${matchCellHtml}</td>${extraColumnHtml || ""}
   </tr>`;
 }
 
@@ -5873,16 +5911,20 @@ function renderMatchLogTab(){
 // the page stays a reasonable length as the match log keeps growing.
 const RECORD_TOP_N = 10;
 
-function findRecords(matchLogRows){
+function findRecords(matchLogRows, latestRoundByComp){
+  const isRowNew = (mrow) => isLatestRoundMatch(cell(mrow,MATCH_LOG_COL.COMP), cell(mrow,MATCH_LOG_COL.SEASON), cell(mrow,MATCH_LOG_COL.ROUND), latestRoundByComp);
+
   const decisive = matchLogRows.filter(r => cell(r, MATCH_LOG_COL.WINNER).toUpperCase() !== "DRAW");
 
   const biggestWins = [...decisive]
     .sort((a,b) => parseInt(cell(b,MATCH_LOG_COL.MARGIN),10) - parseInt(cell(a,MATCH_LOG_COL.MARGIN),10))
-    .slice(0, RECORD_TOP_N);
+    .slice(0, RECORD_TOP_N)
+    .map(row => ({ row, isNew: isRowNew(row) }));
 
   const closestMatches = [...decisive]
     .sort((a,b) => parseInt(cell(a,MATCH_LOG_COL.MARGIN),10) - parseInt(cell(b,MATCH_LOG_COL.MARGIN),10))
-    .slice(0, RECORD_TOP_N);
+    .slice(0, RECORD_TOP_N)
+    .map(row => ({ row, isNew: isRowNew(row) }));
 
   const highestScoring = [...matchLogRows]
     .sort((a,b) => {
@@ -5890,7 +5932,24 @@ function findRecords(matchLogRows){
       const totalB = (parseInt(cell(b,MATCH_LOG_COL.TEAM1_SCORE),10)||0) + (parseInt(cell(b,MATCH_LOG_COL.TEAM2_SCORE),10)||0);
       return totalB - totalA;
     })
-    .slice(0, RECORD_TOP_N);
+    .slice(0, RECORD_TOP_N)
+    .map(row => ({ row, isNew: isRowNew(row) }));
+
+  // Biggest/lowest individual score — one team's own total in a single match,
+  // as distinct from Highest-Scoring Matches above (which is the combined
+  // total of both teams). Each match contributes two entries here, one per team.
+  const teamScoreEntries = [];
+  matchLogRows.forEach(mrow => {
+    const t1 = cell(mrow, MATCH_LOG_COL.TEAM1), t2 = cell(mrow, MATCH_LOG_COL.TEAM2);
+    const s1 = parseInt(cell(mrow, MATCH_LOG_COL.TEAM1_SCORE), 10);
+    const s2 = parseInt(cell(mrow, MATCH_LOG_COL.TEAM2_SCORE), 10);
+    if(t1 && !isNaN(s1)) teamScoreEntries.push({ row: mrow, team: t1, score: s1 });
+    if(t2 && !isNaN(s2)) teamScoreEntries.push({ row: mrow, team: t2, score: s2 });
+  });
+  const biggestScores = [...teamScoreEntries].sort((a,b) => b.score - a.score).slice(0, RECORD_TOP_N)
+    .map(e => ({ ...e, isNew: isRowNew(e.row) }));
+  const lowestScores = [...teamScoreEntries].sort((a,b) => a.score - b.score).slice(0, RECORD_TOP_N)
+    .map(e => ({ ...e, isNew: isRowNew(e.row) }));
 
   // Longest rivalries — undirected: how many times have these two teams met,
   // regardless of who's listed as Team 1 vs Team 2 in any given match.
@@ -5905,10 +5964,12 @@ function findRecords(matchLogRows){
   const rivalries = [];
   rivalryMap.forEach((matches, key) => {
     const [team1, team2] = key.split("|||");
+    const lastMatch = matches[matches.length-1];
     rivalries.push({
       team1, team2, count: matches.length,
       firstSeason: cell(matches[0], MATCH_LOG_COL.SEASON),
-      lastSeason: cell(matches[matches.length-1], MATCH_LOG_COL.SEASON)
+      lastSeason: cell(lastMatch, MATCH_LOG_COL.SEASON),
+      isNew: isRowNew(lastMatch)
     });
   });
   rivalries.sort((a,b) => b.count - a.count);
@@ -5926,38 +5987,57 @@ function findRecords(matchLogRows){
     [[t1,t2],[t2,t1]].forEach(([team,opp]) => {
       const upperTeam = team.toUpperCase();
       const key = upperTeam + "||" + opp.toUpperCase();
-      if(!directedMap.has(key)) directedMap.set(key, { team: upperTeam, opp: opp.toUpperCase(), w:0, d:0, l:0 });
+      if(!directedMap.has(key)) directedMap.set(key, { team: upperTeam, opp: opp.toUpperCase(), w:0, d:0, l:0, lastMatch: null });
       const rec = directedMap.get(key);
       if(winner === "DRAW") rec.d++;
       else if(winner === upperTeam) rec.w++;
       else rec.l++;
+      rec.lastMatch = mrow; // overwritten as we go — ends up the last chronologically
     });
   });
   const dominances = [];
   directedMap.forEach(rec => {
     const p = rec.w + rec.d + rec.l;
     if(p < 5) return;
-    dominances.push({ ...rec, p, pct: Math.round((rec.w/p)*1000)/10 });
+    dominances.push({ team: rec.team, opp: rec.opp, w: rec.w, d: rec.d, l: rec.l, p, pct: Math.round((rec.w/p)*1000)/10, isNew: isRowNew(rec.lastMatch) });
   });
   dominances.sort((a,b) => b.pct - a.pct || b.p - a.p);
   const biggestDominance = dominances.slice(0, RECORD_TOP_N);
 
-  return { biggestWins, closestMatches, highestScoring, longestRivalries, biggestDominance };
+  return { biggestWins, closestMatches, highestScoring, biggestScores, lowestScores, longestRivalries, biggestDominance };
 }
 
-function recordMatchSectionHtml(title, subtitle, rows){
+function recordMatchSectionHtml(title, subtitle, entries, extraColumn){
   const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">${title}</h2><span class="sub">${subtitle}</span></div>`;
-  if(!rows.length) return heading + `<p class="sub">None found.</p>`;
+  if(!entries.length) return heading + `<p class="sub">None found.</p>`;
+  const extraHeader = extraColumn ? `<th>${extraColumn.label}</th>` : "";
+  const rowsHtml = entries.map(e => {
+    const extraTd = extraColumn ? `<td style="text-align:center;font-weight:700;">${extraColumn.value(e.row)}</td>` : "";
+    return matchLogRowHtml(e.row, null, extraTd, e.isNew);
+  }).join("");
   return heading + `<div class="table-wrap"><table class="match-log-table"><thead><tr>
-      <th>Season</th><th>Comp</th><th>Round</th><th>Match</th>
-    </tr></thead><tbody>${rows.map(r => matchLogRowHtml(r, null)).join("")}</tbody></table></div>`;
+      <th>Season</th><th>Comp</th><th>Round</th><th>Match</th>${extraHeader}
+    </tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+}
+
+function recordTeamScoreSectionHtml(title, subtitle, entries){
+  const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">${title}</h2><span class="sub">${subtitle}</span></div>`;
+  if(!entries.length) return heading + `<p class="sub">None found.</p>`;
+  const rowsHtml = entries.map(e => {
+    const teamDisplay = lookupTeamDivInfo(e.team).display;
+    const extraTd = `<td style="text-align:center;font-weight:700;">${teamLink(teamDisplay)}: ${e.score}</td>`;
+    return matchLogRowHtml(e.row, null, extraTd, e.isNew);
+  }).join("");
+  return heading + `<div class="table-wrap"><table class="match-log-table"><thead><tr>
+      <th>Season</th><th>Comp</th><th>Round</th><th>Match</th><th>Score</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
 }
 
 function recordRivalrySectionHtml(rivalries){
   const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">Longest Rivalries</h2><span class="sub">Most times two teams have met, across all competitions</span></div>`;
   if(!rivalries.length) return heading + `<p class="sub">None found.</p>`;
   const rowsHtml = rivalries.map(r => `<tr>
-      <td style="text-align:left;">${teamLink(lookupTeamDivInfo(r.team1).display)} <span style="color:var(--muted);">v</span> ${teamLink(lookupTeamDivInfo(r.team2).display)}</td>
+      <td style="text-align:left;">${teamLink(lookupTeamDivInfo(r.team1).display)} <span style="color:var(--muted);">v</span> ${teamLink(lookupTeamDivInfo(r.team2).display)}${r.isNew ? `<span class="record-new-badge">NEW</span>` : ""}</td>
       <td style="text-align:center;font-weight:700;">${r.count}</td>
       <td style="text-align:center;">${r.firstSeason}</td>
       <td style="text-align:center;">${r.lastSeason}</td>
@@ -5971,7 +6051,7 @@ function recordDominanceSectionHtml(dominances){
   const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">Biggest Head-to-Head Dominance</h2><span class="sub">Best win rate against a specific opponent (minimum 5 meetings)</span></div>`;
   if(!dominances.length) return heading + `<p class="sub">None found.</p>`;
   const rowsHtml = dominances.map(d => `<tr>
-      <td style="text-align:left;">${teamLink(lookupTeamDivInfo(d.team).display)} <span style="color:var(--muted);">v</span> ${teamLink(lookupTeamDivInfo(d.opp).display)}</td>
+      <td style="text-align:left;">${teamLink(lookupTeamDivInfo(d.team).display)} <span style="color:var(--muted);">v</span> ${teamLink(lookupTeamDivInfo(d.opp).display)}${d.isNew ? `<span class="record-new-badge">NEW</span>` : ""}</td>
       <td style="text-align:center;font-weight:700;">${d.pct}%</td>
       <td style="text-align:center;">${d.w}-${d.d}-${d.l}</td>
     </tr>`).join("");
@@ -5984,9 +6064,11 @@ function renderRecordsPage(records){
   const el = document.getElementById('statsContainer');
   el.className = "";
   el.innerHTML =
-    recordMatchSectionHtml("Biggest Wins", "Largest winning margins on record", records.biggestWins) +
+    recordMatchSectionHtml("Biggest Wins", "Largest winning margins on record", records.biggestWins, { label: "Margin", value: r => cell(r, MATCH_LOG_COL.MARGIN) }) +
     recordMatchSectionHtml("Closest Matches", "Smallest winning margins on record", records.closestMatches) +
     recordMatchSectionHtml("Highest-Scoring Matches", "Most combined points in a single match", records.highestScoring) +
+    recordTeamScoreSectionHtml("Biggest Score", "Highest points total by a single team in a match", records.biggestScores) +
+    recordTeamScoreSectionHtml("Lowest Score", "Lowest points total by a single team in a match", records.lowestScores) +
     recordRivalrySectionHtml(records.longestRivalries) +
     recordDominanceSectionHtml(records.biggestDominance);
 }
@@ -6008,7 +6090,8 @@ async function loadRecordsTab(){
       if(!logRes.ok) throw new Error("HTTP " + logRes.status);
       matchLogRowsCache = Papa.parse(await logRes.text(), {skipEmptyLines:false}).data.slice(1);
     }
-    const records = findRecords(matchLogRowsCache);
+    const latestRoundByComp = getLatestRoundByComp(matchLogRowsCache);
+    const records = findRecords(matchLogRowsCache, latestRoundByComp);
     renderRecordsPage(records);
     setStatus("Live — updated " + new Date().toLocaleString());
   }catch(err){
@@ -6040,9 +6123,10 @@ function streakSectionHtml(title, subtitle, streaks, groupId, noun){
       lastStreak = s.streak;
     }
     const activeBadge = s.stillActive ? ` <span style="font-size:10px;font-weight:700;color:var(--turf);text-transform:uppercase;">current</span>` : "";
+    const newBadge = s.isNew ? `<span class="record-new-badge">NEW</span>` : "";
     rowsHtml += `<tr class="streak-row${(!s.team1Active || !s.team2Active) ? " inactive" : ""}" data-group="${groupId}" data-idx="${i}" style="cursor:pointer;">
         <td style="text-align:left;white-space:nowrap;">${divPill(s.team1DivShort, s.team1DivColor)} ${teamLink(s.team1)}</td>
-        <td style="text-align:left;white-space:nowrap;">${divPill(s.team2DivShort, s.team2DivColor)} ${teamLink(s.team2)}${activeBadge}</td>
+        <td style="text-align:left;white-space:nowrap;">${divPill(s.team2DivShort, s.team2DivColor)} ${teamLink(s.team2)}${activeBadge}${newBadge}</td>
       </tr>
       <tr class="streak-detail-row" data-detail-group="${groupId}" data-detail-for="${i}" style="display:none;"><td colspan="2"></td></tr>`;
   });
