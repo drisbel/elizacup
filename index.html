@@ -1068,6 +1068,10 @@
     font-size:9px;font-weight:700;margin-left:5px;vertical-align:middle;
   }
   .fpl-live-h2h-cap-badge.vice{background:#a8a296;}
+  /* Same amber used elsewhere for an active chip (.fpl-live-h2h-chip-tag) —
+     gives the Triple Captain badge its own distinct look from a plain
+     captaincy, rather than both showing as the same black circle. */
+  .fpl-live-h2h-cap-badge.triple{background:#B8930A;width:auto;padding:0 4px;border-radius:7px;}
   /* Per-player live status (finished/live/unplayed) — colour dot before the
      name, distinct from the captain badge which sits after it. */
   .fpl-live-h2h-status-dot{
@@ -5620,6 +5624,7 @@ function renderStatsPage(){
   toggleEl.innerHTML = `
     <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
+    <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -5632,6 +5637,13 @@ function renderStatsPage(){
     document.getElementById('statsHeading').textContent = "Match Log";
     document.getElementById('statsSubheading').textContent = "Every match on record — filter by season, competition, round, or team";
     loadMatchLogTab();
+    return;
+  }
+
+  if(statsActiveTab === "records"){
+    document.getElementById('statsHeading').textContent = "Records";
+    document.getElementById('statsSubheading').textContent = "All-time highs, lows, and rivalries";
+    loadRecordsTab();
     return;
   }
 
@@ -5855,6 +5867,158 @@ function renderMatchLogTab(){
   }
 }
 
+// ---------- Records (Statistics page) ----------
+// All derived from the same flat match log already cached for Match Log and
+// Streaks — no new sheet data needed. RECORD_TOP_N caps each leaderboard so
+// the page stays a reasonable length as the match log keeps growing.
+const RECORD_TOP_N = 10;
+
+function findRecords(matchLogRows){
+  const decisive = matchLogRows.filter(r => cell(r, MATCH_LOG_COL.WINNER).toUpperCase() !== "DRAW");
+
+  const biggestWins = [...decisive]
+    .sort((a,b) => parseInt(cell(b,MATCH_LOG_COL.MARGIN),10) - parseInt(cell(a,MATCH_LOG_COL.MARGIN),10))
+    .slice(0, RECORD_TOP_N);
+
+  const closestMatches = [...decisive]
+    .sort((a,b) => parseInt(cell(a,MATCH_LOG_COL.MARGIN),10) - parseInt(cell(b,MATCH_LOG_COL.MARGIN),10))
+    .slice(0, RECORD_TOP_N);
+
+  const highestScoring = [...matchLogRows]
+    .sort((a,b) => {
+      const totalA = (parseInt(cell(a,MATCH_LOG_COL.TEAM1_SCORE),10)||0) + (parseInt(cell(a,MATCH_LOG_COL.TEAM2_SCORE),10)||0);
+      const totalB = (parseInt(cell(b,MATCH_LOG_COL.TEAM1_SCORE),10)||0) + (parseInt(cell(b,MATCH_LOG_COL.TEAM2_SCORE),10)||0);
+      return totalB - totalA;
+    })
+    .slice(0, RECORD_TOP_N);
+
+  // Longest rivalries — undirected: how many times have these two teams met,
+  // regardless of who's listed as Team 1 vs Team 2 in any given match.
+  const rivalryMap = new Map();
+  matchLogRows.forEach(mrow => {
+    const t1 = cell(mrow, MATCH_LOG_COL.TEAM1), t2 = cell(mrow, MATCH_LOG_COL.TEAM2);
+    if(!t1 || !t2) return;
+    const key = [t1.toUpperCase(), t2.toUpperCase()].sort().join("|||");
+    if(!rivalryMap.has(key)) rivalryMap.set(key, []);
+    rivalryMap.get(key).push(mrow);
+  });
+  const rivalries = [];
+  rivalryMap.forEach((matches, key) => {
+    const [team1, team2] = key.split("|||");
+    rivalries.push({
+      team1, team2, count: matches.length,
+      firstSeason: cell(matches[0], MATCH_LOG_COL.SEASON),
+      lastSeason: cell(matches[matches.length-1], MATCH_LOG_COL.SEASON)
+    });
+  });
+  rivalries.sort((a,b) => b.count - a.count);
+  const longestRivalries = rivalries.slice(0, RECORD_TOP_N);
+
+  // Biggest head-to-head dominance — directed (Team A's record specifically
+  // against Team B), minimum 5 meetings so a 2-0 record doesn't rank above a
+  // genuinely proven 15-1 one. Sorting by win% descending naturally surfaces
+  // the dominant side of a lopsided rivalry rather than both sides of it.
+  const directedMap = new Map();
+  matchLogRows.forEach(mrow => {
+    const t1 = cell(mrow, MATCH_LOG_COL.TEAM1), t2 = cell(mrow, MATCH_LOG_COL.TEAM2);
+    if(!t1 || !t2) return;
+    const winner = cell(mrow, MATCH_LOG_COL.WINNER).toUpperCase();
+    [[t1,t2],[t2,t1]].forEach(([team,opp]) => {
+      const upperTeam = team.toUpperCase();
+      const key = upperTeam + "||" + opp.toUpperCase();
+      if(!directedMap.has(key)) directedMap.set(key, { team: upperTeam, opp: opp.toUpperCase(), w:0, d:0, l:0 });
+      const rec = directedMap.get(key);
+      if(winner === "DRAW") rec.d++;
+      else if(winner === upperTeam) rec.w++;
+      else rec.l++;
+    });
+  });
+  const dominances = [];
+  directedMap.forEach(rec => {
+    const p = rec.w + rec.d + rec.l;
+    if(p < 5) return;
+    dominances.push({ ...rec, p, pct: Math.round((rec.w/p)*1000)/10 });
+  });
+  dominances.sort((a,b) => b.pct - a.pct || b.p - a.p);
+  const biggestDominance = dominances.slice(0, RECORD_TOP_N);
+
+  return { biggestWins, closestMatches, highestScoring, longestRivalries, biggestDominance };
+}
+
+function recordMatchSectionHtml(title, subtitle, rows){
+  const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">${title}</h2><span class="sub">${subtitle}</span></div>`;
+  if(!rows.length) return heading + `<p class="sub">None found.</p>`;
+  return heading + `<div class="table-wrap"><table class="match-log-table"><thead><tr>
+      <th>Season</th><th>Comp</th><th>Round</th><th>Match</th>
+    </tr></thead><tbody>${rows.map(r => matchLogRowHtml(r, null)).join("")}</tbody></table></div>`;
+}
+
+function recordRivalrySectionHtml(rivalries){
+  const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">Longest Rivalries</h2><span class="sub">Most times two teams have met, across all competitions</span></div>`;
+  if(!rivalries.length) return heading + `<p class="sub">None found.</p>`;
+  const rowsHtml = rivalries.map(r => `<tr>
+      <td style="text-align:left;">${teamLink(lookupTeamDivInfo(r.team1).display)} <span style="color:var(--muted);">v</span> ${teamLink(lookupTeamDivInfo(r.team2).display)}</td>
+      <td style="text-align:center;font-weight:700;">${r.count}</td>
+      <td style="text-align:center;">${r.firstSeason}</td>
+      <td style="text-align:center;">${r.lastSeason}</td>
+    </tr>`).join("");
+  return heading + `<div class="table-wrap"><table class="match-log-table"><thead><tr>
+      <th style="text-align:left;">Rivalry</th><th>Meetings</th><th>First</th><th>Last</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+}
+
+function recordDominanceSectionHtml(dominances){
+  const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">Biggest Head-to-Head Dominance</h2><span class="sub">Best win rate against a specific opponent (minimum 5 meetings)</span></div>`;
+  if(!dominances.length) return heading + `<p class="sub">None found.</p>`;
+  const rowsHtml = dominances.map(d => `<tr>
+      <td style="text-align:left;">${teamLink(lookupTeamDivInfo(d.team).display)} <span style="color:var(--muted);">v</span> ${teamLink(lookupTeamDivInfo(d.opp).display)}</td>
+      <td style="text-align:center;font-weight:700;">${d.pct}%</td>
+      <td style="text-align:center;">${d.w}-${d.d}-${d.l}</td>
+    </tr>`).join("");
+  return heading + `<div class="table-wrap"><table class="match-log-table"><thead><tr>
+      <th style="text-align:left;">Rivalry</th><th>Win Rate</th><th>W-D-L</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+}
+
+function renderRecordsPage(records){
+  const el = document.getElementById('statsContainer');
+  el.className = "";
+  el.innerHTML =
+    recordMatchSectionHtml("Biggest Wins", "Largest winning margins on record", records.biggestWins) +
+    recordMatchSectionHtml("Closest Matches", "Smallest winning margins on record", records.closestMatches) +
+    recordMatchSectionHtml("Highest-Scoring Matches", "Most combined points in a single match", records.highestScoring) +
+    recordRivalrySectionHtml(records.longestRivalries) +
+    recordDominanceSectionHtml(records.biggestDominance);
+}
+
+async function loadRecordsTab(){
+  const el = document.getElementById('statsContainer');
+  el.className = "state-msg";
+  el.innerHTML = "Loading records…";
+  try{
+    if(!roddyEntries.length){
+      const roddyDiv = DIVISIONS.find(d => d.id === "roddy");
+      const roddyRes = await cachedFetch(csvUrlFor(roddyDiv));
+      if(!roddyRes.ok) throw new Error("HTTP " + roddyRes.status);
+      const roddyRows = Papa.parse(await roddyRes.text(), {skipEmptyLines:false}).data;
+      parseRoddy(roddyRows);
+    }
+    if(!matchLogRowsCache){
+      const logRes = await cachedFetch(matchLogCsvUrlFor());
+      if(!logRes.ok) throw new Error("HTTP " + logRes.status);
+      matchLogRowsCache = Papa.parse(await logRes.text(), {skipEmptyLines:false}).data.slice(1);
+    }
+    const records = findRecords(matchLogRowsCache);
+    renderRecordsPage(records);
+    setStatus("Live — updated " + new Date().toLocaleString());
+  }catch(err){
+    console.error(err);
+    setStatus("Couldn't reach the sheet (" + err.message + ")", false);
+    el.className = "state-msg error";
+    el.innerHTML = "Couldn't load records. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+  }
+}
+
 
 function streakSectionHtml(title, subtitle, streaks, groupId, noun){
   const divPill = (short, color) => `<span class="roddy-div-tag" style="background:${color};">${short}</span>`;
@@ -5960,7 +6124,7 @@ function lookupTeamDivInfo(rawName){
 const H2H_OPPONENT_GID = "53125416";
 const MATCH_LOG_GID = "1512058230";
 const H2H_OPP_COL = { TEAM: 0, OPPONENT: 1, P: 2, W: 3, D: 4, L: 5, SCORED: 6, CONCEDED: 7 };
-const MATCH_LOG_COL = { ID: 0, SEASON: 1, COMP: 2, ROUND: 3, TEAM1: 4, TEAM1_SCORE: 5, TEAM2: 6, TEAM2_SCORE: 7, WINNER: 8 };
+const MATCH_LOG_COL = { ID: 0, SEASON: 1, COMP: 2, ROUND: 3, TEAM1: 4, TEAM1_SCORE: 5, TEAM2: 6, TEAM2_SCORE: 7, WINNER: 8, MARGIN: 10 };
 
 function h2hOpponentCsvUrlFor(){
   return `https://docs.google.com/spreadsheets/d/${H2H_RECORD_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${H2H_OPPONENT_GID}&cachebust=` + Date.now();
@@ -7901,10 +8065,19 @@ function parseFplLiveScores(rows){
     const players = FPL_LIVE_PLAYER_COLS.map(pc => {
       const rawName = cell(row, pc.nameCol);
       if(!rawName) return null;
-      const isCaptain = /\(C\)\s*$/i.test(rawName);
+      // (TC) now appears directly on the captain's name in the sheet, same
+      // as (C)/(VC), when that player specifically is the Triple Captain
+      // pick — rather than only being inferable from the team-level chip
+      // column below. A Triple Captain is still the captain, so isCaptain
+      // must also recognise (TC), not just (C) — missing this meant a
+      // Triple Captain player wasn't being detected as captain at all,
+      // so their name wouldn't get cleaned up and their score wouldn't
+      // get the captaincy multiplier applied.
+      const isCaptain = /\((C|TC)\)\s*$/i.test(rawName);
       const isVice = /\(VC\)\s*$/i.test(rawName);
-      const name = rawName.replace(/\s*\((C|VC)\)\s*$/i, "").trim();
-      return { name, pts: cell(row, pc.nameCol + 1), status: cell(row, pc.nameCol + 2), isCaptain, isVice, bench: pc.bench };
+      const isTripleCaptainPlayer = /\(TC\)\s*$/i.test(rawName);
+      const name = rawName.replace(/\s*\((C|VC|TC)\)\s*$/i, "").trim();
+      return { name, pts: cell(row, pc.nameCol + 1), status: cell(row, pc.nameCol + 2), isCaptain, isVice, isTripleCaptainPlayer, bench: pc.bench };
     }).filter(Boolean);
     teams[team.trim().toUpperCase()] = { points, netPoints, chip, hits, players };
   }
@@ -7922,7 +8095,7 @@ async function fetchFplLiveScores(){
   }
 }
 function fplLivePlayerRowHtml(p, isShared, benchBoosted, tripleCaptainActive){
-  const badge = p.isCaptain ? `<span class="fpl-live-h2h-cap-badge">C</span>` : p.isVice ? `<span class="fpl-live-h2h-cap-badge vice">V</span>` : "";
+  const badge = p.isTripleCaptainPlayer ? `<span class="fpl-live-h2h-cap-badge triple" title="Triple Captain">TC</span>` : p.isCaptain ? `<span class="fpl-live-h2h-cap-badge">C</span>` : p.isVice ? `<span class="fpl-live-h2h-cap-badge vice">V</span>` : "";
   const statusKey = (p.status||"").trim().toLowerCase();
   const statusCls = statusKey === "live" ? "status-live" : statusKey === "finished" ? "status-finished" : "status-unplayed";
   const statusTitle = p.status || "Unplayed";
@@ -7936,7 +8109,7 @@ function fplLivePlayerRowHtml(p, isShared, benchBoosted, tripleCaptainActive){
   const numPts = parseFloat(rawPts);
   const displayPts = (p.isCaptain && !isNaN(numPts)) ? (numPts * multiplier) : rawPts;
   return `<div class="fpl-live-h2h-player-row${p.bench ? ' bench' : ''}${benchBoosted ? ' bench-boosted' : ''}${isShared ? ' shared' : ''}" ${isShared ? `title="Also starts for the other team this gameweek with the same captain status"` : ''}>
-    <span class="fpl-live-h2h-player-name">${statusDot}${p.name}${badge}${p.isCaptain && tripleCaptainActive ? `<span class="fpl-live-h2h-chip-tag">Triple Captain Active</span>` : ""}</span>
+    <span class="fpl-live-h2h-player-name">${statusDot}${p.name}${badge}${p.isTripleCaptainPlayer ? `<span class="fpl-live-h2h-chip-tag">Triple Captain Active</span>` : ""}</span>
     <span class="fpl-live-h2h-player-pts"${p.isCaptain && !isNaN(numPts) ? ` title="${numPts} × ${multiplier} (Captain${tripleCaptainActive ? ' — Triple Captain' : ''})"` : ''}>${displayPts}</span>
   </div>`;
 }
@@ -7949,7 +8122,7 @@ function fplLivePlayerRowHtml(p, isShared, benchBoosted, tripleCaptainActive){
 // starter for the other isn't really the "same pick" strategically, so
 // they shouldn't be treated as cancelling each other out.
 function fplPlayerShareKey(p){
-  return p.name.trim().toUpperCase() + "|" + (p.isCaptain ? "C" : p.isVice ? "V" : "");
+  return p.name.trim().toUpperCase() + "|" + (p.isTripleCaptainPlayer ? "TC" : p.isCaptain ? "C" : p.isVice ? "V" : "");
 }
 function fplLiveSquadColHtml(teamData, sharedKeys){
   if(!teamData){
@@ -7972,8 +8145,11 @@ function fplLiveSquadColHtml(teamData, sharedKeys){
   // Triple Captain means the captain's score is tripled instead of the
   // usual doubled — tagged on Starting XI the same way Bench Boost is
   // tagged on Bench below, since it's the Starting XI section (specifically
-  // the captain) it affects.
-  const tripleCaptainActive = chipCode === "TC";
+  // the captain) it affects. Trusts the per-player (TC) marker on the
+  // captain's own name as the primary signal now that the sheet sets it
+  // there directly, falling back to the team-level chip column too in case
+  // only one of the two ever ends up set for a given gameweek.
+  const tripleCaptainActive = chipCode === "TC" || teamData.players.some(p => p.isTripleCaptainPlayer);
   return `<div class="fpl-live-h2h-lineup-col">
     <div class="fpl-live-h2h-lineup-label">Starting XI</div>
     ${uniqueStarters.map(p => fplLivePlayerRowHtml(p, false, false, tripleCaptainActive)).join("")}
