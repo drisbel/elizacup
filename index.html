@@ -7121,7 +7121,7 @@ function formatNewsDate(iso){
 function newsCardHtml(item){
   const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
   return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
-    ${item.image ? `<img src="${item.image}" alt="" style="width:100%;max-height:280px;object-fit:cover;display:block;" onerror="this.style.display='none';">` : ""}
+    ${item.image ? `<img src="${item.image}" alt="" style="width:100%;height:auto;display:block;" onerror="this.style.display='none';">` : ""}
     <div style="padding:16px 18px;">
       <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
