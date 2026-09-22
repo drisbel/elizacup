@@ -902,6 +902,52 @@
     <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;">26/27 Leagues (What's My Division?)</h2>
 
     <div class="card">
+      <h2>Roddy code &amp; join link</h2>
+      <div class="hint" style="margin-bottom:10px;">
+        One code and one link, shown to every team alongside their own league code — for the Roddy Rodriguez Cup, which everyone joins the same way regardless of division.
+      </div>
+      <div class="field">
+        <label for="wmdRoddyCode">Roddy code</label>
+        <input type="text" id="wmdRoddyCode" placeholder="e.g. ABC123">
+      </div>
+      <div class="field">
+        <label for="wmdRoddyLink">Roddy join link</label>
+        <input type="text" id="wmdRoddyLink" placeholder="https://...">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveWmdRoddyCodeBtn">Save Roddy code &amp; link</button>
+        <span class="status-msg" id="wmdRoddyCodeStatus"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Set league code for a whole division</h2>
+      <div class="hint" style="margin-bottom:10px;">
+        Applies one code to every team currently listed in the chosen division, overwriting whatever code each of them had — for divisions where everyone shares the same league rather than needing an individual code per team.
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="wmdBulkDivision">Division</label>
+          <select id="wmdBulkDivision">
+            <option value="D1">Division 1 (Eliza Cup)</option>
+            <option value="2A">Division 2A</option>
+            <option value="2B">Division 2B</option>
+            <option value="3A">Division 3A</option>
+            <option value="3B">Division 3B</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="wmdBulkCode">League code</label>
+          <input type="text" id="wmdBulkCode" placeholder="e.g. ABC123">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="applyWmdBulkCodeBtn">Apply to division</button>
+        <span class="status-msg" id="wmdBulkCodeStatus"></span>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Bulk import from sheet</h2>
       <div class="hint" style="margin-bottom:10px;">
         In your sheet, select a range with columns in this order — Team | Division | Code | Link | Deadline — then copy (Ctrl+C / Cmd+C) and paste below. Code, Link, and Deadline are optional; leave those columns out if you're only importing Team + Division for now. Division should be D1, 2A, 2B, 3A, or 3B. Teams already in the list (matched by exact name) get updated rather than duplicated.
@@ -2315,6 +2361,8 @@ function setSlhFormStatus(msg, isError) {
 let wmdTeams = [];      // in-memory array of team entries
 let wmdSha = null;      // sha of whats-my-division.json, null if file doesn't exist yet
 let wmdEditingId = null; // id of entry currently being edited, null if new
+let wmdRoddyCode = "";  // single value shared by every team, stored once rather than per-entry
+let wmdRoddyLink = "";  // same idea — one join link for everyone
 
 const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
 
@@ -2327,15 +2375,30 @@ async function loadWmd() {
     const res = await fetch(`${API_BASE}/contents/${WMD_PATH}?ref=${BRANCH}`, { headers: ghHeaders() });
     if (res.status === 404) {
       wmdTeams = [];
+      wmdRoddyCode = "";
+      wmdRoddyLink = "";
       wmdSha = null;
     } else if (res.ok) {
       const data = await res.json();
       wmdSha = data.sha;
       const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
-      wmdTeams = JSON.parse(decoded || "[]");
+      const parsed = JSON.parse(decoded || "[]");
+      // File used to be a bare array of teams; now it's { roddyCode, roddyLink, teams }.
+      // Support both so an old, not-yet-resaved file doesn't break on load.
+      if (Array.isArray(parsed)) {
+        wmdTeams = parsed;
+        wmdRoddyCode = "";
+        wmdRoddyLink = "";
+      } else {
+        wmdTeams = Array.isArray(parsed.teams) ? parsed.teams : [];
+        wmdRoddyCode = parsed.roddyCode || "";
+        wmdRoddyLink = parsed.roddyLink || "";
+      }
     } else {
       throw new Error(`Failed to load whats-my-division.json (status ${res.status})`);
     }
+    $("wmdRoddyCode").value = wmdRoddyCode;
+    $("wmdRoddyLink").value = wmdRoddyLink;
     renderWmdList();
   } catch (err) {
     $("wmdLoadingList").textContent = "Error loading teams: " + err.message;
@@ -2490,6 +2553,36 @@ function deleteWmdEntry(id) {
   });
 }
 
+// ---------- What's My Division?: Roddy code (single value, shared by every team) ----------
+
+async function saveWmdRoddyCode() {
+  wmdRoddyCode = $("wmdRoddyCode").value.trim();
+  wmdRoddyLink = $("wmdRoddyLink").value.trim();
+  await commitWmd("Update Roddy code & link", "saveWmdRoddyCodeBtn", "wmdRoddyCodeStatus");
+}
+
+// ---------- What's My Division?: bulk-set a division's league code ----------
+// Overwrites every team currently in the chosen division with the same code —
+// for divisions where everyone shares one league rather than needing an
+// individual code per team.
+
+async function applyWmdBulkCode() {
+  const division = $("wmdBulkDivision").value;
+  const code = $("wmdBulkCode").value.trim();
+  const statusEl = $("wmdBulkCodeStatus");
+
+  const affected = wmdTeams.filter(t => t.division === division);
+  if (!affected.length) {
+    statusEl.textContent = `No teams currently listed in ${WMD_DIVISION_LABELS[division] || division}.`;
+    statusEl.className = "status-msg err";
+    return;
+  }
+  if (!confirm(`Set the league code to "${code}" for all ${affected.length} team(s) in ${WMD_DIVISION_LABELS[division] || division}? This overwrites any existing code for each of them.`)) return;
+
+  affected.forEach(t => { t.code = code; });
+  await commitWmd(`Bulk-set league code for ${WMD_DIVISION_LABELS[division] || division}`, "applyWmdBulkCodeBtn", "wmdBulkCodeStatus");
+}
+
 // ---------- What's My Division?: add new (top form) ----------
 
 function clearWmdAddForm() {
@@ -2526,12 +2619,16 @@ async function saveWmdEntry() {
 
 // ---------- What's My Division?: commit ----------
 
-async function commitWmd(message) {
-  $("saveWmdBtn").disabled = true;
-  setWmdFormStatus("Saving…", false);
+async function commitWmd(message, btnId, statusId) {
+  btnId = btnId || "saveWmdBtn";
+  statusId = statusId || "wmdFormStatus";
+  const btn = $(btnId), statusEl = $(statusId);
+  btn.disabled = true;
+  statusEl.textContent = "Saving…";
+  statusEl.className = "status-msg";
 
   try {
-    const jsonStr = JSON.stringify(wmdTeams, null, 2);
+    const jsonStr = JSON.stringify({ roddyCode: wmdRoddyCode, roddyLink: wmdRoddyLink, teams: wmdTeams }, null, 2);
     const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
 
     const body = {
@@ -2554,14 +2651,16 @@ async function commitWmd(message) {
 
     const data = await res.json();
     wmdSha = data.content.sha;
-    setWmdFormStatus("Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.", false);
+    statusEl.textContent = "Saved — commit " + data.commit.sha.slice(0, 7) + ". Live in ~30–60s.";
+    statusEl.className = "status-msg ok";
     renderWmdList();
     return true;
   } catch (err) {
-    setWmdFormStatus("Save failed: " + err.message, true);
+    statusEl.textContent = "Save failed: " + err.message;
+    statusEl.className = "status-msg err";
     return false;
   } finally {
-    $("saveWmdBtn").disabled = false;
+    btn.disabled = false;
   }
 }
 
@@ -5006,6 +5105,8 @@ $("exportContentType").addEventListener("change", () => {
 $("exportRound").addEventListener("change", exportRenderPreview);
 $("exportImageBtn").addEventListener("click", exportImage);
 $("saveWmdBtn").addEventListener("click", saveWmdEntry);
+$("saveWmdRoddyCodeBtn").addEventListener("click", saveWmdRoddyCode);
+$("applyWmdBulkCodeBtn").addEventListener("click", applyWmdBulkCode);
 $("wmdImportBtn").addEventListener("click", importWmdFromPaste);
 $("slhStatus").addEventListener("change", updateSlhCodeFieldVisibility);
 $("slhCloseEnabled").addEventListener("change", updateSlhClosingSubFieldsVisibility);
