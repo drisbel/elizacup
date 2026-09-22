@@ -7905,7 +7905,12 @@ function renderWhatsMyDivPage(){
 }
 
 function sideLeagueCsvUrlFor(league){
-  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}&cachebust=` + Date.now();
+  // The NBL workbook has three heading rows before its data. Google Visualization
+  // can otherwise auto-detect the first two standings rows as additional headers,
+  // which drops positions 1 and 2 from the CSV response. Force the correct header
+  // count for NBL only; every existing side league keeps its URL unchanged.
+  const headerParam = league && league.isNbl ? "&headers=3" : "";
+  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}${headerParam}&cachebust=` + Date.now();
 }
 
 let sideLeagueDebug = {};
