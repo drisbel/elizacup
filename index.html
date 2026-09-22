@@ -7351,6 +7351,7 @@ const SIDE_LEAGUES = [
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
   { key: "eplsc", label: "EPL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1980185043", singleTable: true, titleText: "ELIZA SUPERCOACH EPL" },
+  { key: "nbl", label: "NBL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1143509560", singleTable: true, isNbl: true, titleText: "LEAGUE TABLE" },
   // Last Man Standing: one nav entry covering both competitions, toggled via
   // sub-tabs like FPL's Premier/Championship/Roddy/Cup — see lmsGids below and
   // the isLms branch in loadSideLeague. Both live on this same spreadsheet,
@@ -7409,7 +7410,7 @@ const SIDE_LEAGUE_TEAM_MAP_GID = "1831804785";
 const SIDE_LEAGUE_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
 const SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL = 2; // column C onward: one league per column
 // Maps each SIDE_LEAGUES key to that column's header text on the mapping sheet.
-const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", uclfantasy: "UCL" };
+const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", nbl: "NBL", uclfantasy: "UCL" };
 
 let sideLeagueTeamMap = {};       // { "FPL": { "SIDE LEAGUE NAME": "Eliza Team Name" }, ... }
 let sideLeagueTeamMapLoaded = false;
@@ -7773,7 +7774,7 @@ function formatDateOnly(d){
 function wmdJsonUrlFor(){
   return "whats-my-division.json?cachebust=" + Date.now();
 }
-let wmdData = { teams: [], debug: {} };
+let wmdData = { teams: [], roddyCode: "", roddyLink: "", debug: {} };
 let wmdPromise = null;
 async function loadWmdData(){
   if(wmdPromise) return wmdPromise;
@@ -7781,12 +7782,16 @@ async function loadWmdData(){
     if(!r.ok) throw new Error("whats-my-division.json fetch failed: " + r.status);
     return r.json();
   }).then(raw => {
-    const teams = Array.isArray(raw) ? raw : [];
-    wmdData = { teams, debug: { teamCount: teams.length } };
+    // File used to be a bare array of teams; now it's { roddyCode, roddyLink, teams } —
+    // support both so a stale cached copy doesn't briefly break on deploy.
+    const teams = Array.isArray(raw) ? raw : (Array.isArray(raw.teams) ? raw.teams : []);
+    const roddyCode = Array.isArray(raw) ? "" : (raw.roddyCode || "");
+    const roddyLink = Array.isArray(raw) ? "" : (raw.roddyLink || "");
+    wmdData = { teams, roddyCode, roddyLink, debug: { teamCount: teams.length } };
     return wmdData;
   }).catch(err => {
     console.error("whats-my-division.json fetch failed", err);
-    wmdData = { teams: [], debug: { error: err.message } };
+    wmdData = { teams: [], roddyCode: "", roddyLink: "", debug: { error: err.message } };
     return wmdData;
   });
   return wmdPromise;
@@ -7798,11 +7803,19 @@ function wmdTeamCardHtml(t){
   const codeHtml = t.code
     ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>`
     : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`;
+  const roddyCodeHtml = wmdData.roddyCode
+    ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>`
+    : "";
+  const roddyLinkHtml = wmdData.roddyLink
+    ? `<div class="wmd-result-row"><b>Roddy join link:</b> <a class="wmd-result-link" href="${wmdData.roddyLink}" target="_blank" rel="noopener">${wmdData.roddyLink}</a></div>`
+    : "";
   return `<div class="wmd-team-card" data-team-key="${encodeURIComponent(t.team)}">
     <img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="wmd-team-card-logo" onerror="${logoOnError}">
     <div class="wmd-team-card-name">${t.team}</div>
     <div class="wmd-team-card-expand">
       ${codeHtml}
+      ${roddyCodeHtml}
+      ${roddyLinkHtml}
       ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
       ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
     </div>
@@ -7852,6 +7865,8 @@ function wmdSearchResultHtml(t){
       ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-result-div-logo">` : ""}
     </div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
+    ${wmdData.roddyCode ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>` : ""}
+    ${wmdData.roddyLink ? `<div class="wmd-result-row"><b>Roddy join link:</b> <a class="wmd-result-link" href="${wmdData.roddyLink}" target="_blank" rel="noopener">${wmdData.roddyLink}</a></div>` : ""}
     ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
     ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
   </div>`;
@@ -8063,6 +8078,69 @@ function parseFplFixtures(rows, base, labelTest){
     }
   }
   return { gameweeks, rawDump };
+}
+
+// NBL Supercoach uses the reusable side-league workbook template rather than
+// the older AFL/NRL/EPL fixed-column template. These parsers translate that
+// sheet into the same table/fixture/overall objects the existing renderer uses.
+function parseNblSupercoach(rows){
+  const teams = [];
+  for(let r=3; r<rows.length; r++){
+    const pos = cell(rows[r]||[], 6);
+    const team = cell(rows[r]||[], 7);
+    if(!pos || !team) break;
+    teams.push({
+      pos, team, name: "", pts: cell(rows[r]||[],8), w: cell(rows[r]||[],9), d: cell(rows[r]||[],10),
+      l: cell(rows[r]||[],11), for: cell(rows[r]||[],12), aga: cell(rows[r]||[],13), dif: cell(rows[r]||[],14),
+      status: cell(rows[r]||[],24), form: [], next: cell(rows[r]||[],23)
+    });
+  }
+
+  const gameweeks = [], byRound = new Map(), rawDump = [];
+  for(let r=3; r<rows.length; r++){
+    const roundRaw = cell(rows[r]||[],0);
+    const home = cell(rows[r]||[],1), away = cell(rows[r]||[],4);
+    if(!roundRaw || !home || !away) continue;
+    const roundKey = roundRaw.toUpperCase().replace(/\s+/g," ").trim();
+    if(!byRound.has(roundKey)){
+      const gw = { name: roundKey, fixtures: [] };
+      byRound.set(roundKey, gw); gameweeks.push(gw);
+    }
+    const fixture = { home, homeScore: cell(rows[r]||[],2), awayScore: cell(rows[r]||[],3), away };
+    byRound.get(roundKey).fixtures.push(fixture);
+    rawDump.push({ row:r+1, round:roundKey, ...fixture });
+  }
+
+  // Build the same five-result Form array used by the existing Supercoach
+  // renderer. Round 1 is Overall Only in the NBL template, so it is excluded.
+  const formByTeam = new Map();
+  gameweeks.forEach(gw => {
+    if(/NO H2H|OVERALL ONLY/i.test(gw.name)) return;
+    gw.fixtures.forEach(f => {
+      if(f.homeScore==="" || f.awayScore==="") return;
+      const hs=Number(f.homeScore), as=Number(f.awayScore);
+      if(!Number.isFinite(hs) || !Number.isFinite(as)) return;
+      const hr = hs>as ? "W" : hs<as ? "L" : "D";
+      const ar = hs>as ? "L" : hs<as ? "W" : "D";
+      if(!formByTeam.has(f.home)) formByTeam.set(f.home,[]);
+      if(!formByTeam.has(f.away)) formByTeam.set(f.away,[]);
+      formByTeam.get(f.home).push(hr); formByTeam.get(f.away).push(ar);
+    });
+  });
+  teams.forEach(t => { t.form = (formByTeam.get(t.team)||[]).slice(-5); });
+
+  const overallEntries = [];
+  for(let r=3; r<rows.length; r++){
+    const pos=cell(rows[r]||[],26), team=cell(rows[r]||[],27);
+    if(!pos || !team) break;
+    overallEntries.push({ pos, team, pts:cell(rows[r]||[],28) });
+  }
+
+  return {
+    table:{ teams, formRoundLabels:[], debug:{ nblTemplate:true, teamsFound:teams.length } },
+    fx:{ gameweeks, rawDump },
+    overall:{ entries:overallEntries, debug:{ nblTemplate:true, entriesFound:overallEntries.length } }
+  };
 }
 
 // AFL Supercoach round labels: "Round 1".."Round 20", then finals stages — none of
@@ -10170,15 +10248,16 @@ async function loadSideLeague(leagueKey){
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
     if(league.singleTable){
-      const table = parseFplTable(rows, league.titleText);
-      // AFL Supercoach fixtures live in one continuous block: AH=Team1, AI=Team1
-      // score, AJ=Team2 score, AK=Team2 — 20 rounds followed by Quarter/Semi/
-      // Preliminary/Final, not the GW-labelled two-block layout FPL uses.
-      const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
-      // "Overall" table — same marker-anchored convention (OVERALL_TABLE_START
-      // in column AN, POS/Team/Pts at fixed offsets from it) now used across
-      // AFL, NRL and EPL Supercoach. Shown underneath the Fixtures section.
-      const overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
+      let table, fx, overall;
+      if(league.isNbl){
+        const parsed = parseNblSupercoach(rows);
+        table = parsed.table; fx = parsed.fx; overall = parsed.overall;
+      }else{
+        table = parseFplTable(rows, league.titleText);
+        // AFL/NRL/EPL Supercoach fixtures use the established AH:AK block.
+        fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
+        overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
+      }
 
       sideLeagueData = { singleTable: true, table, fx, overall, label: league.label, key: league.key };
       sideLeagueActiveRound = {};
