@@ -76,20 +76,6 @@
     "rules": "<strong><u>NRL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official NRL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
   },
   {
-    "id": "nblsupercoach",
-    "label": "NBL Supercoach",
-    "status": "active",
-    "code": "",
-    "notes": "",
-    "link": "#sideleagues=nbl",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "roundInfo": "",
-    "winners": [],
-    "rules": ""
-  },
-  {
     "id": "msbhvee7",
     "label": "AFL Supercoach",
     "status": "complete",
@@ -107,5 +93,19 @@
       "Ladder Predictor - Sauce FC"
     ],
     "rules": "<strong><u>AFL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official AFL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
+  },
+  {
+    "id": "nblsupercoach",
+    "label": "NBL Supercoach",
+    "status": "active",
+    "code": "",
+    "notes": "",
+    "link": "#sideleagues=nbl",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "roundInfo": "",
+    "winners": [],
+    "rules": ""
   }
 ]
