@@ -8090,10 +8090,13 @@ function parseFplFixtures(rows, base, labelTest){
 // sheet into the same table/fixture/overall objects the existing renderer uses.
 function parseNblSupercoach(rows){
   const teams = [];
-  for(let r=3; r<rows.length; r++){
+  // gviz may return a different number of leading header rows depending on how
+  // it interprets the merged NBL headings. Do not rely on a fixed row offset:
+  // collect every row whose League Table position is numeric and has a team.
+  for(let r=0; r<rows.length; r++){
     const pos = cell(rows[r]||[], 6);
     const team = cell(rows[r]||[], 7);
-    if(!pos || !team) break;
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
     teams.push({
       pos, team, name: "", pts: cell(rows[r]||[],8), w: cell(rows[r]||[],9), d: cell(rows[r]||[],10),
       l: cell(rows[r]||[],11), for: cell(rows[r]||[],12), aga: cell(rows[r]||[],13), dif: cell(rows[r]||[],14),
@@ -8102,7 +8105,7 @@ function parseNblSupercoach(rows){
   }
 
   const gameweeks = [], byRound = new Map(), rawDump = [];
-  for(let r=3; r<rows.length; r++){
+  for(let r=0; r<rows.length; r++){
     const roundRaw = cell(rows[r]||[],0);
     const home = cell(rows[r]||[],1), away = cell(rows[r]||[],4);
     if(!roundRaw || !home || !away) continue;
@@ -8135,9 +8138,11 @@ function parseNblSupercoach(rows){
   teams.forEach(t => { t.form = (formByTeam.get(t.team)||[]).slice(-5); });
 
   const overallEntries = [];
-  for(let r=3; r<rows.length; r++){
+  // Same treatment for the Overall Table: identify standings rows by their
+  // numeric position rather than assuming a fixed CSV header offset.
+  for(let r=0; r<rows.length; r++){
     const pos=cell(rows[r]||[],26), team=cell(rows[r]||[],27);
-    if(!pos || !team) break;
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
     overallEntries.push({ pos, team, pts:cell(rows[r]||[],28) });
   }
 
