@@ -8162,12 +8162,14 @@ const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*F
 function sideLeagueTableHtml(table, opts){
   opts = opts || {};
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
+  const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
+  const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   const formLabels = table.formRoundLabels || [];
   const formHeaderHtml = opts.showForm
     ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
     : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
@@ -8181,7 +8183,7 @@ function sideLeagueTableHtml(table, opts){
             }).join("")}</span></td>`
           : "";
         return `<tr style="${rowStyle}">
-        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
+        <td${nblKeyColStyle}>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts"${nblKeyColStyle}>${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
@@ -8192,14 +8194,16 @@ function sideLeagueTableHtml(table, opts){
 
 function sideLeagueOverallTableHtml(overall){
   if(!overall || !overall.entries.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
+  const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
+  const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   return `<div class="table-wrap overall-table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th>
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th>
     </tr></thead><tbody>
       ${overall.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
-        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts">${e.pts}</td>
+        <td${nblKeyColStyle}>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts"${nblKeyColStyle}>${e.pts}</td>
       </tr>`;
       }).join("")}
     </tbody></table></div>`;
