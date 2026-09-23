@@ -833,6 +833,53 @@
   .draw-fixture-pending-slot{color:var(--muted);font-style:italic;font-weight:600;}
   .draw-fixture-row .num{font-size:11px;color:var(--muted);flex-shrink:0;}
   .draw-fixture-logo{width:22px;height:22px;object-fit:contain;flex-shrink:0;}
+
+  /* Roddy has the same 28-team field as FPL Cup: use the same canvas-filling
+     row density while retaining Roddy's additional columns. */
+  .side-square-export.roddy-square.roddy-dense .export-card-body{
+    justify-content:flex-start !important;
+    padding:10px 30px 6px !important;
+    overflow:hidden;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table{
+    font-size:13px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table th{
+    font-size:10.5px;padding:0 4px 4px;height:auto;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table td{
+    height:29px;padding:3px 4px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table .team-cell{
+    gap:5px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table .team-cell img{
+    width:20px !important;height:20px !important;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-chip-pill{
+    min-width:27px;padding:2px 4px;font-size:9px;
+  }
+
+  /* FPL Cup bracket qualification bands. */
+  .side-square-export.social-standings tr.fplcup-winners{
+    background:rgba(40,66,124,.16) !important;
+  }
+  .side-square-export.social-standings tr.fplcup-winners td:first-child{
+    border-left:5px solid #28427c !important;
+  }
+  .side-square-export.social-standings tr.fplcup-losers{
+    background:rgba(234,179,8,.18) !important;
+  }
+  .side-square-export.social-standings tr.fplcup-losers td:first-child{
+    border-left:5px solid #eab308 !important;
+  }
+  .side-square-export.social-standings tr.fplcup-eliminated{
+    background:rgba(185,60,50,.13) !important;
+  }
+  .side-square-export.social-standings tr.fplcup-eliminated td:first-child{
+    border-left:5px solid #b93c32 !important;
+  }
+
 </style>
 </head>
 <body>
@@ -5510,8 +5557,15 @@ function exportRenderPreview(){
       const played = (parseInt(t.w,10)||0) + (parseInt(t.d,10)||0) + (parseInt(t.l,10)||0);
       const diffNum = parseInt(String(t.dif||"0").replace(/[^\-\d]/g,""),10) || 0;
       const diffText = diffNum > 0 ? `+${diffNum}` : `${diffNum}`;
+      const posNum = parseInt(t.pos,10) || 0;
+      let rowClass = statusInfo ? statusInfo.cls : "";
+      if(compKey === "fpl-cup"){
+        rowClass = posNum >= 1 && posNum <= 8 ? "fplcup-winners" :
+                   posNum >= 9 && posNum <= 16 ? "fplcup-losers" :
+                   posNum >= 17 && posNum <= 28 ? "fplcup-eliminated" : rowClass;
+      }
       return `
-      <tr${statusInfo ? ` class="${statusInfo.cls}"` : ""}>
+      <tr${rowClass ? ` class="${rowClass}"` : ""}>
         <td class="num pos">${t.pos}</td>
         <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
         <td class="num">${played}</td>
@@ -5539,7 +5593,13 @@ function exportRenderPreview(){
             </tr></thead>
             <tbody>${rowsHtml || `<tr><td colspan="8" class="hint">No teams found.</td></tr>`}</tbody>
           </table>
-          ${exportStatusLegendHtml(teams)}
+          ${compKey === "fpl-cup"
+            ? `<div class="export-legend">
+                 <span><i style="background:#28427c;"></i>Winners Bracket (1–8)</span>
+                 <span><i style="background:#eab308;"></i>Losers Bracket (9–16)</span>
+                 <span><i style="background:#b93c32;"></i>Eliminated (17–28)</span>
+               </div>`
+            : exportStatusLegendHtml(teams)}
         </div>
       </div>
       <div class="export-card-footer">elizacup.com</div>`;
