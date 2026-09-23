@@ -440,7 +440,7 @@
     min-height:190px;box-sizing:border-box;padding:34px 54px;
     display:flex;align-items:center;gap:26px;color:#fff;
   }
-  .ig-export-header img{width:112px;height:112px;object-fit:contain;flex-shrink:0;}
+  .ig-export-header img{width:112px;height:112px;object-fit:contain;object-position:center;flex-shrink:0;}
   .ig-export-kicker{font-size:24px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9;margin-bottom:5px;}
   .ig-export-title{font-family:'Barlow Condensed',sans-serif;font-size:58px;font-weight:800;line-height:1;text-transform:uppercase;}
   .ig-export-subtitle{font-family:'Barlow Condensed',sans-serif;font-size:31px;font-weight:600;margin-top:8px;text-transform:uppercase;}
@@ -456,7 +456,7 @@
   .ig-export-table .pos{font-family:'Barlow Condensed',sans-serif;font-size:27px;font-weight:800;color:#68737d;}
   .ig-export-table .pts{font-weight:800;font-size:28px;}
   .ig-export-team{display:flex;align-items:center;gap:14px;min-width:0;font-weight:700;}
-  .ig-export-team img{width:40px;height:40px;object-fit:contain;flex-shrink:0;}
+  .ig-export-team img{width:40px;height:40px;object-fit:contain;object-position:center;flex-shrink:0;}
   .ig-export-team span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ig-export-footer{
     min-height:70px;box-sizing:border-box;padding:18px 48px;
@@ -471,7 +471,7 @@
   }
   .ig-result-team{display:flex;align-items:center;gap:14px;font-size:25px;font-weight:700;min-width:0;}
   .ig-result-team.away{justify-content:flex-end;text-align:right;}
-  .ig-result-team img{width:52px;height:52px;object-fit:contain;flex-shrink:0;}
+  .ig-result-team img{width:52px;height:52px;object-fit:contain;object-position:center;flex-shrink:0;}
   .ig-result-team span{line-height:1.08;}
   .ig-result-score{
     font-family:'Barlow Condensed',sans-serif;font-size:45px;font-weight:800;text-align:center;white-space:nowrap;
@@ -492,6 +492,42 @@
     width:760px;flex-shrink:0;background:#fff;border:1px solid var(--line);
     font-family:'Barlow',sans-serif;overflow:hidden;color:#1a1a1a;
   }
+  /* Side League social exports: fixed Instagram square canvas. */
+  .export-card.side-square-export{
+    width:1080px !important;height:1080px !important;box-sizing:border-box;
+    display:flex;flex-direction:column;background:#fff;
+  }
+  .side-square-export .export-card-header{padding:30px 38px;min-height:120px;box-sizing:border-box;}
+  .side-square-export .export-card-header img{height:72px;max-width:110px;object-fit:contain;}
+  .side-square-export .export-card-kicker{font-size:16px;}
+  .side-square-export .export-card-title{font-size:42px;}
+  .side-square-export .export-card-body{padding:24px 38px;flex:1;min-height:0;overflow:hidden;}
+  .side-square-export .export-card-footer{padding:14px 38px;font-size:14px;flex-shrink:0;}
+  .side-square-export .export-table{font-size:15px;}
+  .side-square-export .export-table th{font-size:13px;padding:0 7px 7px;}
+  .side-square-export .export-table td{padding:6px 7px;height:34px;box-sizing:border-box;}
+  .side-square-export .export-table .team-cell img{width:26px !important;height:26px !important;object-fit:contain;}
+  .side-square-export .export-legend{margin-top:10px;font-size:12px;}
+  .side-square-export .export-fixtures-grid{display:grid;grid-template-columns:1fr;gap:0;}
+  .side-square-export .export-fixtures-grid.many{grid-template-columns:1fr 1fr;column-gap:30px;align-content:start;}
+  .side-square-export .export-fixture-row{padding:9px 0;min-height:48px;box-sizing:border-box;}
+  .side-square-export .export-fixtures-grid.many .export-fixture-row{padding:5px 0;min-height:39px;gap:5px;}
+  .side-square-export .export-fixtures-grid.many .export-fixture-team{font-size:12px;gap:5px;}
+  .side-square-export .export-fixtures-grid.many .export-fixture-team img{width:20px !important;height:20px !important;}
+  .side-square-export .export-fixtures-grid.many .export-fixture-score{font-size:16px;min-width:48px;}
+  .side-square-export .export-fixture-team{font-size:18px;}
+  .side-square-export .export-fixture-team img{width:30px !important;height:30px !important;object-fit:contain;}
+  .side-square-export .export-fixture-score{font-size:23px;min-width:76px;}
+  .side-square-export .export-ucl-table th,
+  .side-square-export .export-ucl-table td{font-size:10px;padding:5px 3px;}
+  .side-square-export .export-ucl-table .team-cell{gap:4px;}
+  .side-square-export .export-ucl-table .team-cell img{width:18px !important;height:18px !important;}
+  .side-square-export.roddy-square .export-table{font-size:11.5px;}
+  .side-square-export.roddy-square .export-table th{font-size:10px;padding:0 4px 5px;}
+  .side-square-export.roddy-square .export-table td{padding:3px 4px;height:27px;}
+  .side-square-export.roddy-square .export-table .team-cell img{width:19px !important;height:19px !important;}
+  .side-square-export.roddy-square .export-chip-pill{min-width:28px;padding:2px 4px;font-size:9px;}
+
   /* Preview wrapper scrolls horizontally on narrow screens instead of the
      card itself shrinking — .export-card must stay at its real 760px width
      at all times, since html2canvas captures the element's actual layout
@@ -1211,8 +1247,8 @@
       <p class="hint">Generates a shareable graphic — pulls the sheet data itself and renders its own version for the image, so nothing needs to change on the public site pages. Same html2canvas approach as the wheel's Complete Draw export.</p>
 
       <div class="card" style="margin-top:18px;">
-        <h2>26/27 Main Leagues — Instagram</h2>
-        <p class="hint">1080 × 1350 portrait exports for Instagram. League tables use the compact columns POS, TEAM, P, W, D, L, +/− and PTS.</p>
+        <h2>26/27 Main Leagues</h2>
+        <p class="hint">1080 × 1350 portrait exports. League tables use the compact columns POS, TEAM, P, W, D, L, +/− and PTS.</p>
 
         <div class="row">
           <div class="field" style="max-width:320px;">
@@ -1245,14 +1281,16 @@
           <div class="export-preview-scroll">
             <div class="ig-export-card" id="mainExportPreviewTarget"></div>
           </div>
-          <p class="hint" style="margin-top:8px;">The preview is full Instagram portrait size (1080 × 1350), so on smaller screens you can scroll sideways to inspect it.</p>
+          <p class="hint" style="margin-top:8px;">The preview is full portrait export size (1080 × 1350), so on smaller screens you can scroll sideways to inspect it.</p>
           <div style="margin-top:14px;">
-            <button type="button" class="btn btn-primary" id="mainExportImageBtn">Export Instagram Image</button>
+            <button type="button" class="btn btn-primary" id="mainExportImageBtn">Export Image</button>
           </div>
         </div>
       </div>
 
-      <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:30px 0 12px;">Side Leagues</h2>
+      <div class="card" style="margin-top:18px;">
+        <h2>Side Leagues</h2>
+        <p class="hint">Create 1080 × 1080 square exports for the Side Leagues using the competition, content and round options.</p>
 
       <div class="field" style="max-width:320px;">
         <label for="exportCompetition">Competition</label>
@@ -1264,6 +1302,7 @@
           <option value="afl">AFL Supercoach</option>
           <option value="nrl">NRL Supercoach</option>
           <option value="eplsc">EPL Supercoach</option>
+          <option value="nbl">NBL Supercoach</option>
           <option value="ucl-fantasy">UCL Fantasy</option>
         </select>
         <div class="hint">More competitions (divisions) can be added here later.</div>
@@ -1291,7 +1330,7 @@
         <div class="export-preview-scroll">
           <div class="export-card" id="exportPreviewTarget"></div>
         </div>
-        <p class="hint" style="margin-top:8px;">On a narrow screen, scroll sideways to see the full preview — the exported image always includes everything regardless of what's currently visible on screen.</p>
+        <p class="hint" style="margin-top:8px;">Preview is shown at the full 1080 × 1080 square export size. On a narrow screen, scroll sideways to inspect it.</p>
         <div style="margin-top:14px;">
           <button type="button" class="btn btn-primary" id="exportImageBtn">Export as Image</button>
         </div>
@@ -1301,6 +1340,7 @@
         <summary style="cursor:pointer;font-family:'Barlow',sans-serif;font-size:13px;color:var(--muted);">Debug</summary>
         <pre id="exportDebugOut" style="font-size:11px;background:#f5f7fa;padding:10px;border-radius:6px;overflow:auto;max-height:300px;white-space:pre-wrap;"></pre>
       </details>
+      </div>
     </div>
 
   </div>
@@ -3122,7 +3162,13 @@ function exportWheelResultsImage(){
   btn.disabled = true;
   btn.textContent = "Exporting…";
 
-  html2canvas(target, { backgroundColor: "#ffffff", scale: 2, useCORS: true }).then(canvas => {
+  // Side League exports are deliberately captured at the exact 1080 × 1080 square size.
+  target.querySelectorAll("img").forEach(img => {
+    if(!img.naturalWidth || !img.naturalHeight) return;
+    img.style.objectFit = "contain";
+    img.style.objectPosition = "center";
+  });
+  html2canvas(target, { backgroundColor: "#ffffff", scale: 1, width: 1080, height: 1080, useCORS: true }).then(canvas => {
     const titleText = $("wheelTitleInput").value.trim();
     const slug = titleText
       ? titleText.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "")
@@ -4690,6 +4736,22 @@ function mainExportImage(){
   const btn = $("mainExportImageBtn");
   const target = $("mainExportPreviewTarget");
   if(!btn || !target || typeof html2canvas !== "function" || !mainExportData) return;
+
+  // Preserve every logo's original proportions in the exported PNG.
+  // The CSS box controls the maximum footprint; these dimensions make the
+  // rendered image itself fit inside that box without stretching.
+  target.querySelectorAll("img").forEach(img => {
+    if(!img.naturalWidth || !img.naturalHeight) return;
+    const cs = getComputedStyle(img);
+    const maxW = parseFloat(cs.width) || img.clientWidth;
+    const maxH = parseFloat(cs.height) || img.clientHeight;
+    if(!maxW || !maxH) return;
+    const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+    img.style.width = Math.round(img.naturalWidth * scale) + "px";
+    img.style.height = Math.round(img.naturalHeight * scale) + "px";
+    img.style.objectFit = "contain";
+  });
+
   const old = btn.textContent;
   btn.disabled = true;
   btn.textContent = "Exporting…";
@@ -4732,7 +4794,8 @@ const EXPORT_COMPETITIONS = {
   "fpl-cup": { label: "Eliza FPL Cup", gid: "154493860", titleText: "ELIZA FPL CUP", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "FPL", color: "#963CFF", textColor: "#fff" },
   "afl": { label: "Eliza Supercoach AFL", gid: "568428898", titleText: "ELIZA SUPERCOACH AFL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "AFL", color: "#d90a30", textColor: "#fff", hasOverall: true, hasForm: true },
   "nrl": { label: "Eliza Supercoach NRL", gid: "1214968514", titleText: "ELIZA SUPERCOACH NRL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "NRL", color: "#01c36b", textColor: "#fff", hasOverall: true, hasForm: true },
-  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#7cb648", textColor: "#fff", hasOverall: true, hasForm: true }
+  "eplsc": { label: "Eliza Supercoach EPL", gid: "1980185043", titleText: "ELIZA SUPERCOACH EPL", fixturesBase: 33, roundTest: v => EXPORT_ROUND_RE.test(v), mapColumnLabel: "EPL SUPERCOACH", color: "#7cb648", textColor: "#fff", hasOverall: true, hasForm: true },
+  "nbl": { label: "NBL Supercoach", gid: "1143509560", titleText: "LEAGUE TABLE", mapColumnLabel: "NBL", color: "#FF7900", textColor: "#000", hasOverall: true, hasForm: true, isNbl: true }
 };
 // FPL Roddy isn't a standings+fixtures competition like the others — it's a
 // single leaderboard (same shape as index.html's parseFplTable/fplRoddyTableHtml)
@@ -5026,6 +5089,67 @@ function exportSyncContentOptions(){
   $("exportRoundField").style.display = needsRound ? "block" : "none";
 }
 
+
+function exportParseNblSupercoach(rows){
+  const teams = [];
+  for(let r=0; r<rows.length; r++){
+    const pos = cell(rows[r]||[], 6);
+    const team = cell(rows[r]||[], 7);
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+    teams.push({
+      pos, team, name:"",
+      pts:cell(rows[r]||[],8), w:cell(rows[r]||[],9), d:cell(rows[r]||[],10), l:cell(rows[r]||[],11),
+      for:cell(rows[r]||[],12), aga:cell(rows[r]||[],13), dif:cell(rows[r]||[],14),
+      status:cell(rows[r]||[],24), form:[], next:cell(rows[r]||[],23)
+    });
+  }
+
+  const gameweeks = [], byRound = new Map(), rawDump = [];
+  for(let r=0; r<rows.length; r++){
+    const roundRaw = cell(rows[r]||[],0);
+    const home = cell(rows[r]||[],1), away = cell(rows[r]||[],4);
+    if(!roundRaw || !home || !away) continue;
+    const roundKey = roundRaw.toUpperCase().replace(/\s+/g," ").trim();
+    if(!byRound.has(roundKey)){
+      const gw = {name:roundKey, fixtures:[]};
+      byRound.set(roundKey, gw);
+      gameweeks.push(gw);
+    }
+    const fixture = {home, homeScore:cell(rows[r]||[],2), awayScore:cell(rows[r]||[],3), away};
+    byRound.get(roundKey).fixtures.push(fixture);
+    rawDump.push({row:r+1, round:roundKey, ...fixture});
+  }
+
+  const formByTeam = new Map();
+  gameweeks.forEach(gw => {
+    if(/NO H2H|OVERALL ONLY/i.test(gw.name)) return;
+    gw.fixtures.forEach(f => {
+      if(f.homeScore==="" || f.awayScore==="") return;
+      const hs=Number(f.homeScore), as=Number(f.awayScore);
+      if(!Number.isFinite(hs) || !Number.isFinite(as)) return;
+      const hr=hs>as?"W":hs<as?"L":"D", ar=hs>as?"L":hs<as?"W":"D";
+      if(!formByTeam.has(f.home)) formByTeam.set(f.home,[]);
+      if(!formByTeam.has(f.away)) formByTeam.set(f.away,[]);
+      formByTeam.get(f.home).push(hr);
+      formByTeam.get(f.away).push(ar);
+    });
+  });
+  teams.forEach(t => { t.form=(formByTeam.get(t.team)||[]).slice(-5); });
+
+  const entries = [];
+  for(let r=0; r<rows.length; r++){
+    const pos=cell(rows[r]||[],26), team=cell(rows[r]||[],27);
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+    entries.push({pos, team, pts:cell(rows[r]||[],28)});
+  }
+
+  return {
+    table:{teams, debug:{nblTemplate:true, teamsFound:teams.length}},
+    fixtures:{gameweeks, rawDump},
+    overall:{entries, debug:{nblTemplate:true, entriesFound:entries.length}}
+  };
+}
+
 async function exportLoadData(){
   const statusEl = $("exportLoadStatus");
   const btn = $("exportLoadBtn");
@@ -5095,15 +5219,23 @@ async function exportLoadData(){
 
   try{
     const [csvRes, teamMap] = await Promise.all([
-      fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${cfg.gid}&cachebust=` + Date.now()),
+      fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${cfg.gid}${cfg.isNbl ? "&headers=3" : ""}&cachebust=` + Date.now()),
       exportLoadTeamMap(cfg.mapColumnLabel).catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
     ]);
     if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
     const csvText = await csvRes.text();
     const rows = Papa.parse(csvText, { skipEmptyLines: false }).data;
-    const table = exportParseFplTable(rows, cfg.titleText);
-    const fixtures = exportParseFplFixtures(rows, cfg.fixturesBase, cfg.roundTest);
-    const overall = cfg.hasOverall ? exportParseOverallTable(rows) : null;
+    let table, fixtures, overall;
+    if(cfg.isNbl){
+      const parsed = exportParseNblSupercoach(rows);
+      table = parsed.table;
+      fixtures = parsed.fixtures;
+      overall = parsed.overall;
+    }else{
+      table = exportParseFplTable(rows, cfg.titleText);
+      fixtures = exportParseFplFixtures(rows, cfg.fixturesBase, cfg.roundTest);
+      overall = cfg.hasOverall ? exportParseOverallTable(rows) : null;
+    }
     exportData = { competition, label: cfg.label, table, fixtures, overall, teamMap, color: cfg.color, textColor: cfg.textColor, hasForm: !!cfg.hasForm };
 
     $("exportDebugOut").textContent = JSON.stringify({
@@ -5135,6 +5267,9 @@ async function exportLoadData(){
 function exportRenderPreview(){
   if(!exportData) return;
   const target = $("exportPreviewTarget");
+  target.className = "export-card side-square-export";
+  target.style.width = "1080px";
+  target.style.height = "1080px";
   $("exportPreviewWrap").style.display = "block";
 
   if(exportData.roddy){
@@ -5159,7 +5294,6 @@ function exportRenderPreview(){
         <td class="num pts">${e.pts||0}</td>
       </tr>`;
     }).join("");
-    target.style.width = "760px";
     target.innerHTML = `
       ${exportCardHeaderHtml("Overall", exportData.label)}
       <div class="export-card-body">
@@ -5197,7 +5331,6 @@ function exportRenderPreview(){
         ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>
       </tr>`;
     }).join("");
-    target.style.width = "760px";
     // These must sum to 100% or less. The real bug here wasn't the total sum
     // (that was a red herring) — it was that 5 form pills at their old 16px
     // + 3px-gap sizing needed ~92px of content width, but Form's box only
@@ -5224,7 +5357,8 @@ function exportRenderPreview(){
   } else {
     const roundName = $("exportRound").value;
     const gw = exportData.fixtures.gameweeks.find(g => g.name === roundName);
-    const fixturesHtml = (gw ? gw.fixtures : []).map(f => {
+    const fixtureList = gw ? gw.fixtures : [];
+    const fixturesHtml = fixtureList.map(f => {
       const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
       const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
       const homeWin = hasScore && homeNum > awayNum;
@@ -5246,10 +5380,11 @@ function exportRenderPreview(){
     // Round Results has far less content than the 10-column Standings Table
     // (which needs the full 760px) — narrower card so there's no leftover
     // empty space down the sides once the team blocks stop stretching wide.
-    target.style.width = "560px";
     target.innerHTML = `
       ${exportCardHeaderHtml(exportData.label, roundName || "Round Results")}
-      <div class="export-card-body">${fixturesHtml || `<p class="hint">No fixtures found for this round.</p>`}</div>
+      <div class="export-card-body">
+        ${fixturesHtml ? `<div class="export-fixtures-grid${fixtureList.length > 12 ? " many" : ""}">${fixturesHtml}</div>` : `<p class="hint">No fixtures found for this round.</p>`}
+      </div>
       <div class="export-card-footer">elizacup.com</div>`;
   }
 }
@@ -5260,7 +5395,9 @@ function exportRenderPreview(){
 function exportRenderRoddyPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.roddy;
-  target.style.width = "760px";
+  target.className = "export-card side-square-export roddy-square";
+  target.style.width = "1080px";
+  target.style.height = "1080px";
   if(!data.entries.length){
     target.innerHTML = `
       ${exportCardHeaderHtml("FPL", "Roddy")}
@@ -5339,8 +5476,10 @@ function exportRoddyHeaderCellsHtml(chipLabels){
 function exportRenderUclPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.ucl;
+  target.className = "export-card side-square-export";
+  target.style.width = "1080px";
+  target.style.height = "1080px";
   if(!data.teams.length){
-    target.style.width = "760px";
     target.innerHTML = `
       ${exportCardHeaderHtml("UCL", "Fantasy")}
       <div class="export-card-body"><p class="hint">No UCL Fantasy data found. Check Debug below.</p></div>
@@ -5362,12 +5501,12 @@ function exportRenderUclPreview(){
   // the Pos/Team/Player/Total columns getting squeezed and wrapping —
   // verified in a headless-browser pass across 1 to 17 active rounds before
   // shipping (see html2canvas note above .export-card in the CSS).
-  const COL = { pos: 40, team: 172, player: 82, total: 58, round: 46 };
-  const bodyPadding = 52; // .export-card-body's 26px left + 26px right
-  target.style.width = (COL.pos + COL.team + COL.player + COL.total + bodyPadding + activeRounds.length * COL.round) + "px";
+  const availableWidth = 1004; // 1080 minus square export body's 38px side padding
+  const COL = { pos: 42, team: 160, player: 80, total: 62 };
+  const roundWidth = activeRounds.length ? Math.max(28, Math.floor((availableWidth - COL.pos - COL.team - COL.player - COL.total) / activeRounds.length)) : 0;
 
   const headHtml = `<th class="num" style="width:${COL.pos}px;">Pos</th><th style="width:${COL.team}px;">Team</th><th style="width:${COL.player}px;">Player</th><th class="num" style="width:${COL.total}px;">Total</th>` +
-    activeRounds.map(label => `<th class="num" style="width:${COL.round}px;">${label}</th>`).join("");
+    activeRounds.map(label => `<th class="num" style="width:${roundWidth}px;">${label}</th>`).join("");
 
   const rowsHtml = sorted.map((t, idx) => {
     const logoName = exportResolveTeamName(t.team);
