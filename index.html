@@ -510,10 +510,19 @@
   .home-hero-banner-text{
     color:#fff;font-weight:700;font-size:52px;line-height:1;letter-spacing:0.02em;white-space:nowrap;
   }
+  .home-division-find-banner{
+    display:flex;align-items:center;justify-content:center;width:100%;
+    background:#28427c;color:#fff;text-decoration:none;
+    font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;
+    letter-spacing:.02em;line-height:1.1;padding:15px 20px;margin:-16px 0 28px;
+    transition:filter .15s,transform .15s;
+  }
+  .home-division-find-banner:hover{filter:brightness(1.08);transform:translateY(-1px);}
   @media (max-width:600px){
     .home-hero-banner{padding:16px 18px;gap:14px;}
     .home-hero-banner img{height:52px;}
     .home-hero-banner-text{font-size:32px;}
+    .home-division-find-banner{font-size:20px;padding:13px 14px;margin:-12px 0 24px;}
   }
   .home-hero-sub{font-family:'Barlow',sans-serif;font-size:15px;color:#5a6a63;width:100%;margin:0 auto;text-align:center;line-height:1.6;}
   .home-hero-sub p{margin:0 0 12px;}
@@ -1173,6 +1182,13 @@
   .slh-winner .trophy{font-size:17px;}
   .slh-winners-wrap{display:flex;flex-direction:column;gap:6px;}
 
+  .wmd-notice{
+    max-width:760px;margin:0 auto 20px;padding:14px 18px;
+    background:#fff7d6;border:1px solid #e1c45b;border-radius:8px;
+    font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:#332b0b;
+    text-align:center;
+  }
+  .wmd-notice strong{font-weight:800;}
   .wmd-search-wrap{max-width:520px;margin:0 auto 40px;}
   .wmd-search-input{
     width:100%;padding:14px 18px;font-size:16px;font-family:'Barlow',sans-serif;
@@ -1709,6 +1725,7 @@
     <div class="section-head">
       <span class="sub">26/27 Leagues — find your division, league code, and join deadline</span>
     </div>
+    <div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="#" onclick="goToContact();return false;">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.</div>
     <div class="wmd-search-wrap">
       <input type="text" id="wmdSearchInput" class="wmd-search-input" placeholder="Search your team name…" autocomplete="off">
       <div id="wmdSearchResult"></div>
@@ -7770,8 +7787,8 @@ document.addEventListener('keydown', (e) => {
 // 2A, 2B, 3A, 3B) matching the same convention used everywhere else on the
 // site. Deadline uses the same DD-MM-YYYY / AM-PM-aware parser as everything
 // else (parseLmsDeadline / formatAestDateTime).
-const WMD_DIVISION_ORDER = ["D1","2A","2B","3TBC","3A","3B"];
-const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3TBC": "Div 3 - TBC", "3A": "Division 3A", "3B": "Division 3B" };
+const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
 
 // Join deadlines are a date only (no time) — separate from parseLmsDeadline,
 // which requires a time + AM/PM and would reject a bare date entirely.
@@ -10472,6 +10489,7 @@ function renderHome(){
         <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
         <div class="home-hero-banner-text">ELIZA CUP</div>
       </div>
+      <a href="#whatsmydiv" class="home-division-find-banner">26/27 LEAGUES - FIND MY DIVISION</a>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
