@@ -1811,14 +1811,6 @@ const DIVISIONS = [
   // launches: swap the real D1-D3/Roddy/FA Cup/ECL entries above to these
   // same gids (removing their sheetId override), then delete this whole
   // test block and its NAV_LAYOUT group.
-  { id: "d1-test",  label: "Division 1 (26/27 Test)", pill: "D1 Test",  gid: "1124941542", teams: 14, color: "#28427c", type: "division", isTest: true },
-  { id: "d2a-test", label: "Division 2A (26/27 Test)", pill: "D2A Test", gid: "919912875",  teams: 12, color: "#bc3532", type: "division", isTest: true },
-  { id: "d2b-test", label: "Division 2B (26/27 Test)", pill: "D2B Test", gid: "1047201294", teams: 12, color: "#990000", type: "division", isTest: true },
-  { id: "d3a-test", label: "Division 3A (26/27 Test)", pill: "D3A Test", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division", isTest: true },
-  { id: "d3b-test", label: "Division 3B (26/27 Test)", pill: "D3B Test", gid: "2079252892", teams: 12, color: "#274e13", type: "division", isTest: true },
-  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)", pill: "Roddy Test", gid: "418105482", teams: 62, color: "#000000", type: "roddy", isTest: true },
-  { id: "facup-test", label: "Eliza FA Cup (26/27 Test)",        pill: "FA Cup Test", gid: "2398203",   teams: 64, color: "#0a2f85", type: "facup", isTest: true },
-  { id: "ecl-test",   label: "Eliza Champions League (26/27 Test)", pill: "ECL Test", gid: "1490882074", teams: 12, color: "#111111", type: "ecl", isTest: true },
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#000000", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#000000", type: "history" },
@@ -1898,16 +1890,6 @@ function getDivisionFromHash(){
     const teamName = decodeURIComponent(raw.slice(5));
     return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#000000", gid: null };
   }
-  // Live Roddy now deliberately resolves from the exact same 26/27
-  // configuration as Roddy Test.
-  if(raw === "roddy"){
-    const testRoddy = DIVISIONS.find(d => d.id === "roddy-test");
-    const liveRoddy = DIVISIONS.find(d => d.id === "roddy");
-    if(testRoddy && liveRoddy){
-      return { ...testRoddy, ...liveRoddy, gid: testRoddy.gid, sheetId: testRoddy.sheetId || SHEET_ID, isTest: false };
-    }
-  }
-
   if(raw.startsWith("sideleagues=")){
     const value = decodeURIComponent(raw.slice("sideleagues=".length));
     // Optional ":<subtab>" suffix deep-links straight into one of FPL's 4
@@ -2019,7 +2001,6 @@ const NAV_LAYOUT = [
   { type: "single", id: "bilbbet" },
   { type: "single", id: "whatsmydiv" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" },
-  { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
 
 // ---------- Desktop top nav bar ----------
@@ -3365,7 +3346,7 @@ function render(){
   if((currentDivision.id === "d3a" || currentDivision.id === "d3b") && standings.length === 0){
     const tableEl = document.getElementById('tableContainer');
     tableEl.className = "state-msg";
-    tableEl.innerHTML = `Division 3 conference structures are yet to be finalised. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
+    tableEl.innerHTML = `Division 3 conference structures are yet to be finalised. These will be confirmed shortly, please check again at a later date.`;
 
     document.getElementById('tableLegend').innerHTML = "";
     document.getElementById('tickerTrack').innerHTML = "";
@@ -7155,7 +7136,7 @@ function formatNewsDate(iso){
 function newsCardHtml(item){
   const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
   return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
-    ${item.image ? `<img src="${item.image}" alt="" style="width:100%;height:auto;display:block;" onerror="this.style.display='none';">` : ""}
+    ${item.image ? `<div style="padding:16px 18px 0;"><img src="${item.image}" alt="" style="width:180px;height:120px;object-fit:cover;display:block;border-radius:6px;" onerror="this.parentElement.style.display='none';"></div>` : ""}
     <div style="padding:16px 18px;">
       <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
@@ -7789,8 +7770,8 @@ document.addEventListener('keydown', (e) => {
 // 2A, 2B, 3A, 3B) matching the same convention used everywhere else on the
 // site. Deadline uses the same DD-MM-YYYY / AM-PM-aware parser as everything
 // else (parseLmsDeadline / formatAestDateTime).
-const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
-const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
+const WMD_DIVISION_ORDER = ["D1","2A","2B","3TBC","3A","3B"];
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3TBC": "Div 3 - TBC", "3A": "Division 3A", "3B": "Division 3B" };
 
 // Join deadlines are a date only (no time) — separate from parseLmsDeadline,
 // which requires a time + AM/PM and would reject a bare date entirely.
