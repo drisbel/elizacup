@@ -504,6 +504,37 @@
   .side-square-export .export-card-body{padding:24px 38px;flex:1;min-height:0;overflow:hidden;}
   .side-square-export .export-card-footer{padding:14px 38px;font-size:14px;flex-shrink:0;}
   .side-square-export .export-table{font-size:15px;}
+  /* Social standings tables use the same compact columns as the Main Leagues:
+     POS | TEAM | P | W | D | L | +/- | PTS. */
+  .side-square-export.social-standings .export-card-body{
+    display:flex;align-items:center;padding-top:24px;padding-bottom:24px;
+  }
+  .side-square-export.social-standings .export-table{
+    font-size:18px;
+  }
+  .side-square-export.social-standings .export-table th{
+    font-size:15px;padding:0 8px 9px;
+  }
+  .side-square-export.social-standings .export-table td{
+    padding:8px;height:42px;
+  }
+  .side-square-export.social-standings .export-table .team-cell{
+    gap:10px;font-weight:600;
+  }
+  .side-square-export.social-standings .export-table .team-cell img{
+    width:30px !important;height:30px !important;object-fit:contain;object-position:center;
+  }
+  /* Small tables (for example a six-team NBL Overall table) deliberately
+     use taller rows and larger type so the square post feels designed rather
+     than leaving a large unused white block underneath the data. */
+  .side-square-export.social-standings.few-rows .export-card-body{align-items:center;}
+  .side-square-export.social-standings.few-rows .export-table{font-size:23px;}
+  .side-square-export.social-standings.few-rows .export-table th{font-size:18px;padding-bottom:14px;}
+  .side-square-export.social-standings.few-rows .export-table td{height:68px;padding:12px 10px;}
+  .side-square-export.social-standings.few-rows .export-table .team-cell img{
+    width:38px !important;height:38px !important;
+  }
+
   .side-square-export .export-table th{font-size:13px;padding:0 7px 7px;}
   .side-square-export .export-table td{padding:6px 7px;height:34px;box-sizing:border-box;}
   .side-square-export .export-table .team-cell img{width:26px !important;height:26px !important;object-fit:contain;}
@@ -5285,12 +5316,14 @@ function exportRenderPreview(){
   const contentType = $("exportContentType").value;
 
   if(contentType === "overall"){
-    const rowsHtml = (exportData.overall ? exportData.overall.entries : []).map(e => {
+    const entries = exportData.overall ? exportData.overall.entries : [];
+    target.className = "export-card side-square-export social-standings" + (entries.length <= 8 ? " few-rows" : "");
+    const rowsHtml = entries.map(e => {
       const logoName = exportResolveTeamName(e.team);
       return `
       <tr>
         <td class="num pos">${e.pos}</td>
-        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${e.team}</div></td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${e.team}</div></td>
         <td class="num pts">${e.pts||0}</td>
       </tr>`;
     }).join("");
@@ -5307,54 +5340,49 @@ function exportRenderPreview(){
   }
 
   if(contentType === "table"){
-    const rowsHtml = exportData.table.teams.map(t => {
+    const teams = exportData.table.teams;
+    target.className = "export-card side-square-export social-standings" + (teams.length <= 8 ? " few-rows" : "");
+    const rowsHtml = teams.map(t => {
       const logoName = exportResolveTeamName(t.team);
       const statusInfo = exportStatusInfo(t.status);
-      const formCellHtml = exportData.hasForm
-        ? `<td><span class="export-form-row">${(t.form||[]).map(f=>{
-            const up = (f||"").toUpperCase();
-            const cls = up==="W" ? "form-w" : up==="L" ? "form-l" : up==="D" ? "form-d" : "form-blank";
-            return `<span class="export-form-pill ${cls}">${up || "–"}</span>`;
-          }).join("")}</span></td>`
-        : "";
+      const played = (parseInt(t.w,10)||0) + (parseInt(t.d,10)||0) + (parseInt(t.l,10)||0);
+      const diffNum = parseInt(String(t.dif||"0").replace(/[^\-\d]/g,""),10) || 0;
+      const diffText = diffNum > 0 ? `+${diffNum}` : `${diffNum}`;
       return `
       <tr${statusInfo ? ` class="${statusInfo.cls}"` : ""}>
         <td class="num pos">${t.pos}</td>
-        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" style="width:22px;height:22px;object-fit:contain;" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
-        <td class="num pts">${t.pts||0}</td>
+        <td><div class="team-cell"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${t.team}</div></td>
+        <td class="num">${played}</td>
         <td class="num">${t.w||0}</td>
         <td class="num">${t.d||0}</td>
         <td class="num">${t.l||0}</td>
-        <td class="num">${t.for||0}</td>
-        <td class="num">${t.aga||0}</td>
-        <td class="num">${t.dif||0}</td>
-        ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>
+        <td class="num">${diffText}</td>
+        <td class="num pts">${t.pts||0}</td>
       </tr>`;
     }).join("");
-    // These must sum to 100% or less. The real bug here wasn't the total sum
-    // (that was a red herring) — it was that 5 form pills at their old 16px
-    // + 3px-gap sizing needed ~92px of content width, but Form's box only
-    // had ~74px left after its own padding, so the pill row itself spilled
-    // into Next regardless of what Next's width was. Fixed at the source by
-    // shrinking the pills (see .export-form-pill) AND giving Form enough
-    // width to comfortably fit them with padding — verified by rendering
-    // this exact table in a real browser and reading back the actual pixel
-    // widths, not just checking the percentages summed correctly.
-    const formHeaderHtml = exportData.hasForm ? `<th style="width:14%;">Form</th>` : "";
-    const nextWidth = exportData.hasForm ? "15%" : "18%";
-    const teamWidth = exportData.hasForm ? "23%" : "32%";
-    const forWidth = exportData.hasForm ? "6%" : "7%";
     target.innerHTML = `
       ${exportCardHeaderHtml("Standings", exportData.label)}
       <div class="export-card-body">
-        <table class="export-table">
-          <thead><tr><th class="num" style="width:5%;">Pos</th><th style="width:${teamWidth};">Team</th><th class="num" style="width:6%;">Pts</th><th class="num" style="width:6%;">W</th><th class="num" style="width:6%;">D</th><th class="num" style="width:6%;">L</th><th class="num" style="width:${forWidth};">For</th><th class="num" style="width:${forWidth};">Aga</th><th class="num" style="width:${forWidth};">Diff</th>${formHeaderHtml}<th style="width:${nextWidth};">Next</th></tr></thead>
-          <tbody>${rowsHtml || `<tr><td colspan="${exportData.hasForm ? 11 : 10}" class="hint">No teams found.</td></tr>`}</tbody>
-        </table>
-        ${exportStatusLegendHtml(exportData.table.teams)}
+        <div style="width:100%;">
+          <table class="export-table">
+            <thead><tr>
+              <th class="num" style="width:7%;">Pos</th>
+              <th style="width:39%;">Team</th>
+              <th class="num" style="width:8%;">P</th>
+              <th class="num" style="width:8%;">W</th>
+              <th class="num" style="width:8%;">D</th>
+              <th class="num" style="width:8%;">L</th>
+              <th class="num" style="width:10%;">+/−</th>
+              <th class="num" style="width:12%;">Pts</th>
+            </tr></thead>
+            <tbody>${rowsHtml || `<tr><td colspan="8" class="hint">No teams found.</td></tr>`}</tbody>
+          </table>
+          ${exportStatusLegendHtml(teams)}
+        </div>
       </div>
       <div class="export-card-footer">elizacup.com</div>`;
   } else {
+    target.className = "export-card side-square-export";
     const roundName = $("exportRound").value;
     const gw = exportData.fixtures.gameweeks.find(g => g.name === roundName);
     const fixtureList = gw ? gw.fixtures : [];
