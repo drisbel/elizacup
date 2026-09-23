@@ -861,7 +861,7 @@
   .form-pill.form-d{background:#9AA79E;}
   .form-pill.form-blank{background:#E4DFD0;color:#B0A890;}
 
-  /* Roddy chip columns (BB/UC/FH/WC) — reuse the same tint palette as the division
+  /* Roddy chip columns (TC/FH) — reuse the same tint palette as the division
      table tiers, so it feels consistent with the rest of the site. Text stays muted
      rather than bold white, matching the existing "greyed out" look for played chips. */
   .chip-pill{
@@ -870,7 +870,7 @@
     font-family:'Barlow',sans-serif;
   }
   .chip-pill.chip-bb{background:#E1E9F7;color:#28427c;}
-  .chip-pill.chip-uc{background:#FFF6CC;color:#B8930A;}
+  .chip-pill.chip-tc{background:#FFF6CC;color:#B8930A;}
   .chip-pill.chip-fh{background:#F9E0DC;color:#A8443A;}
   .chip-pill.chip-wc{background:#DCF2E3;color:#1F8A4C;}
   .chip-pill.chip-blank{background:#E4DFD0;color:#B0A890;font-weight:400;}
@@ -3670,8 +3670,8 @@ function parseRoddy(rows){
   roddyDebug = {};
 
   // Confirmed exact columns: POS=F(5), TEAM=H(7), DIVISION=Q(16), ROUND=T(19), CHIP=V(21),
-  // TOTAL=W(22), chip-play indicators=AA:AD(26-29), OVERALL=AE(30).
-  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27,28,29], OVERALL:30 };
+  // TOTAL=W(22), TC=AA(26), FH=AB(27), OVERALL=AC:AD merged (value exported from AC=28).
+  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27], OVERALL:28 };
 
   // Find the header row by locating "POS" at column F, restricted to the top of the
   // sheet (first 30 rows) so we don't accidentally match the broken #REF! table further down.
@@ -3786,7 +3786,7 @@ function renderRoddy(){
   el.className = "";
   let html = `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
     <th>Pos</th><th>Team</th><th>Division</th><th>Round</th><th>Chip</th><th>Total</th>
-    <th>BB Chip</th><th>UC Chip</th><th>FH Chip</th><th>WC Chip</th><th>Overall</th>
+    <th>TC</th><th>FH</th><th>Overall</th>
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
     const divColor = getDivisionColorByLabel(e.division);
@@ -3798,8 +3798,8 @@ function renderRoddy(){
       <td>${e.chip || "—"}</td>
       <td class="pts">${e.total}</td>
       ${e.chips.map((c,i) => {
-        const chipName = ["BB","UC","FH","WC"][i];
-        const chipType = ["bb","uc","fh","wc"][i];
+        const chipName = ["TC","FH"][i];
+        const chipType = ["tc","fh"][i];
         if(!c) return `<td>—</td>`;
         // Unused chips display their own name (e.g. "BB") — show as a colored pill.
         // Used chips display the round they were played — show as plain text.
