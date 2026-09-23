@@ -1796,11 +1796,11 @@ const DIVISIONS = [
   { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", sheetId: SHEET_ID, teams: 14, color: "#28427c", type: "division" },
   { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  sheetId: SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
   { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", sheetId: SHEET_ID, teams: 12, color: "#990000", type: "division" },
-  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "352017161",  sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
-  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "1085366243", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
-  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "267705899",  sheetId: SEASON_2526_SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
-  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "2092692043", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
+  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  sheetId: SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
+  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", sheetId: SHEET_ID, teams: 12, color: "#274e13", type: "division" },
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482", sheetId: SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
+  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",   sheetId: SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
+  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", sheetId: SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
 
   // ---- 26/27 TEST PAGES ----
   // Point at the main sheet's original gids, freed up now that D1-D3/Roddy/
@@ -1828,7 +1828,7 @@ const DIVISIONS = [
   { id: "whatsmydiv", label: "26/27 Leagues",         pill: "26/27 Leagues", gid: null, teams: 0, color: "#000000", type: "whatsmydiv" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagues" },
   { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagueshub" },
-  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#000000", type: "teams" }
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "223348569", sheetId: SHEET_ID, teams: 0, color: "#000000", type: "teams" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1898,6 +1898,16 @@ function getDivisionFromHash(){
     const teamName = decodeURIComponent(raw.slice(5));
     return { id: "team:" + teamName, type: "teamprofile", teamName, label: teamName, pill: teamName, color: "#000000", gid: null };
   }
+  // Live Roddy now deliberately resolves from the exact same 26/27
+  // configuration as Roddy Test.
+  if(raw === "roddy"){
+    const testRoddy = DIVISIONS.find(d => d.id === "roddy-test");
+    const liveRoddy = DIVISIONS.find(d => d.id === "roddy");
+    if(testRoddy && liveRoddy){
+      return { ...testRoddy, ...liveRoddy, gid: testRoddy.gid, sheetId: testRoddy.sheetId || SHEET_ID, isTest: false };
+    }
+  }
+
   if(raw.startsWith("sideleagues=")){
     const value = decodeURIComponent(raw.slice("sideleagues=".length));
     // Optional ":<subtab>" suffix deep-links straight into one of FPL's 4
@@ -3350,6 +3360,24 @@ function parseFixtures(rows){
 }
 
 function render(){
+  // Division 3 conference structure is not final until at least one team
+  // appears in the league table. Until then, show a clean holding message.
+  if((currentDivision.id === "d3a" || currentDivision.id === "d3b") && standings.length === 0){
+    const tableEl = document.getElementById('tableContainer');
+    tableEl.className = "state-msg";
+    tableEl.innerHTML = `Division 3 conference structures are yet to be finalised. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
+
+    document.getElementById('tableLegend').innerHTML = "";
+    document.getElementById('tickerTrack').innerHTML = "";
+    document.getElementById('roundTabs').innerHTML = "";
+    const fixtureEl = document.getElementById('fixtureContainer');
+    fixtureEl.className = "state-msg";
+    fixtureEl.innerHTML = "";
+    const h2hEl = document.getElementById('h2hContainer');
+    if(h2hEl){ h2hEl.innerHTML = ""; h2hEl.className = ""; }
+    return;
+  }
+
   renderTable();
   renderTicker();
   renderRoundTabs();
@@ -4307,9 +4335,14 @@ function eclKnockoutHtml(){
 
 function renderECL(){
   const container = document.getElementById('eclContainer');
-  if(eclGroups.length === 0){
-    container.className = "state-msg error";
-    container.innerHTML = "Couldn't find the ECL group tables. Check the Debug panel below.";
+  const eclStarted = eclFixtures.some(f =>
+    f.matchday === "MD1" &&
+    f.home && f.away &&
+    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD"
+  );
+  if(!eclStarted){
+    container.className = "state-msg";
+    container.innerHTML = `The Eliza Champions League is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
     document.getElementById('eclUpdated').textContent = "";
     return;
   }
@@ -10534,11 +10567,17 @@ let facupBracketSelectedTeam = null;
 function renderFACup(){
   const tabsEl = document.getElementById('facupRoundTabs');
   const toggleEl = document.getElementById('facupViewToggle');
-  if(facupRounds.length === 0){
+  const firstRound = facupRounds[0];
+  const facupStarted = !!(firstRound && firstRound.fixtures.some(f =>
+    f.home && f.away &&
+    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD" &&
+    f.home.toUpperCase() !== "BYE" && f.away.toUpperCase() !== "BYE"
+  ));
+  if(!facupStarted){
     toggleEl.innerHTML = "";
     tabsEl.innerHTML = "";
-    document.getElementById('facupContainer').className = "state-msg error";
-    document.getElementById('facupContainer').innerHTML = "Couldn't find the FA Cup bracket. Check the Debug panel below.";
+    document.getElementById('facupContainer').className = "state-msg";
+    document.getElementById('facupContainer').innerHTML = `The Eliza FA Cup is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
     document.getElementById('facupUpdated').textContent = "";
     return;
   }
