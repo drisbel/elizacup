@@ -510,19 +510,10 @@
   .home-hero-banner-text{
     color:#fff;font-weight:700;font-size:52px;line-height:1;letter-spacing:0.02em;white-space:nowrap;
   }
-  .home-division-find-banner{
-    display:flex;align-items:center;justify-content:center;width:100%;
-    background:#28427c;color:#fff;text-decoration:none;
-    font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;
-    letter-spacing:.02em;line-height:1.1;padding:15px 20px;margin:-16px 0 28px;
-    transition:filter .15s,transform .15s;
-  }
-  .home-division-find-banner:hover{filter:brightness(1.08);transform:translateY(-1px);}
   @media (max-width:600px){
     .home-hero-banner{padding:16px 18px;gap:14px;}
     .home-hero-banner img{height:52px;}
     .home-hero-banner-text{font-size:32px;}
-    .home-division-find-banner{font-size:20px;padding:13px 14px;margin:-12px 0 24px;}
   }
   .home-hero-sub{font-family:'Barlow',sans-serif;font-size:15px;color:#5a6a63;width:100%;margin:0 auto;text-align:center;line-height:1.6;}
   .home-hero-sub p{margin:0 0 12px;}
@@ -1182,13 +1173,6 @@
   .slh-winner .trophy{font-size:17px;}
   .slh-winners-wrap{display:flex;flex-direction:column;gap:6px;}
 
-  .wmd-notice{
-    max-width:760px;margin:0 auto 20px;padding:14px 18px;
-    background:#fff7d6;border:1px solid #e1c45b;border-radius:8px;
-    font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:#332b0b;
-    text-align:center;
-  }
-  .wmd-notice strong{font-weight:800;}
   .wmd-search-wrap{max-width:520px;margin:0 auto 40px;}
   .wmd-search-input{
     width:100%;padding:14px 18px;font-size:16px;font-family:'Barlow',sans-serif;
@@ -1725,7 +1709,6 @@
     <div class="section-head">
       <span class="sub">26/27 Leagues — find your division, league code, and join deadline</span>
     </div>
-    <div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="#" onclick="goToContact();return false;">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.</div>
     <div class="wmd-search-wrap">
       <input type="text" id="wmdSearchInput" class="wmd-search-input" placeholder="Search your team name…" autocomplete="off">
       <div id="wmdSearchResult"></div>
@@ -1810,14 +1793,14 @@ const SEASON_2526_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
 const DIVISIONS = [
   { id: "home", label: "Home",                    pill: "Home",    gid: null,         teams: 0,  color: "#000000", type: "home" },
   { id: "calendar", label: "Calendar",            pill: "Calendar", gid: "2066314959", teams: 0, color: "#000000", type: "calendar" },
-  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", sheetId: SHEET_ID, teams: 14, color: "#28427c", type: "division" },
-  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  sheetId: SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
-  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", sheetId: SHEET_ID, teams: 12, color: "#990000", type: "division" },
-  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  sheetId: SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
-  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", sheetId: SHEET_ID, teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482", sheetId: SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
-  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",   sheetId: SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
-  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", sheetId: SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
+  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1032423540", sheetId: SEASON_2526_SHEET_ID, teams: 14, color: "#28427c", type: "division" },
+  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "1011989388", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
+  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1025912239", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#990000", type: "division" },
+  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "352017161",  sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
+  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "1085366243", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#274e13", type: "division" },
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
+  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "267705899",  sheetId: SEASON_2526_SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
+  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "2092692043", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
 
   // ---- 26/27 TEST PAGES ----
   // Point at the main sheet's original gids, freed up now that D1-D3/Roddy/
@@ -1828,6 +1811,14 @@ const DIVISIONS = [
   // launches: swap the real D1-D3/Roddy/FA Cup/ECL entries above to these
   // same gids (removing their sheetId override), then delete this whole
   // test block and its NAV_LAYOUT group.
+  { id: "d1-test",  label: "Division 1 (26/27 Test)", pill: "D1 Test",  gid: "1124941542", teams: 14, color: "#28427c", type: "division", isTest: true },
+  { id: "d2a-test", label: "Division 2A (26/27 Test)", pill: "D2A Test", gid: "919912875",  teams: 12, color: "#bc3532", type: "division", isTest: true },
+  { id: "d2b-test", label: "Division 2B (26/27 Test)", pill: "D2B Test", gid: "1047201294", teams: 12, color: "#990000", type: "division", isTest: true },
+  { id: "d3a-test", label: "Division 3A (26/27 Test)", pill: "D3A Test", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division", isTest: true },
+  { id: "d3b-test", label: "Division 3B (26/27 Test)", pill: "D3B Test", gid: "2079252892", teams: 12, color: "#274e13", type: "division", isTest: true },
+  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)", pill: "Roddy Test", gid: "418105482", teams: 62, color: "#000000", type: "roddy", isTest: true },
+  { id: "facup-test", label: "Eliza FA Cup (26/27 Test)",        pill: "FA Cup Test", gid: "2398203",   teams: 64, color: "#0a2f85", type: "facup", isTest: true },
+  { id: "ecl-test",   label: "Eliza Champions League (26/27 Test)", pill: "ECL Test", gid: "1490882074", teams: 12, color: "#111111", type: "ecl", isTest: true },
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#000000", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#000000", type: "history" },
@@ -1837,7 +1828,7 @@ const DIVISIONS = [
   { id: "whatsmydiv", label: "26/27 Leagues",         pill: "26/27 Leagues", gid: null, teams: 0, color: "#000000", type: "whatsmydiv" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagues" },
   { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagueshub" },
-  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "223348569", sheetId: SHEET_ID, teams: 0, color: "#000000", type: "teams" }
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#000000", type: "teams" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1893,7 +1884,6 @@ const SIDE_LEAGUE_THEME_COLORS = {
   "afl": "#d90a30",
   "nrl": "#01c36b",
   "eplsc": "#7cb648",
-  "nbl": "#FF7900",
   "uclfantasy": "#010056"
 };
 function sideLeagueThemeColor(key, subTab){
@@ -2018,6 +2008,7 @@ const NAV_LAYOUT = [
   { type: "single", id: "bilbbet" },
   { type: "single", id: "whatsmydiv" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" },
+  { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
 
 // ---------- Desktop top nav bar ----------
@@ -3358,24 +3349,6 @@ function parseFixtures(rows){
 }
 
 function render(){
-  // Division 3 conference structure is not final until at least one team
-  // appears in the league table. Until then, show a clean holding message.
-  if((currentDivision.id === "d3a" || currentDivision.id === "d3b") && standings.length === 0){
-    const tableEl = document.getElementById('tableContainer');
-    tableEl.className = "state-msg";
-    tableEl.innerHTML = `Division 3 conference structures are yet to be finalised. These will be confirmed shortly, please check again at a later date.`;
-
-    document.getElementById('tableLegend').innerHTML = "";
-    document.getElementById('tickerTrack').innerHTML = "";
-    document.getElementById('roundTabs').innerHTML = "";
-    const fixtureEl = document.getElementById('fixtureContainer');
-    fixtureEl.className = "state-msg";
-    fixtureEl.innerHTML = "";
-    const h2hEl = document.getElementById('h2hContainer');
-    if(h2hEl){ h2hEl.innerHTML = ""; h2hEl.className = ""; }
-    return;
-  }
-
   renderTable();
   renderTicker();
   renderRoundTabs();
@@ -4333,14 +4306,9 @@ function eclKnockoutHtml(){
 
 function renderECL(){
   const container = document.getElementById('eclContainer');
-  const eclStarted = eclFixtures.some(f =>
-    f.matchday === "MD1" &&
-    f.home && f.away &&
-    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD"
-  );
-  if(!eclStarted){
-    container.className = "state-msg";
-    container.innerHTML = `The Eliza Champions League is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
+  if(eclGroups.length === 0){
+    container.className = "state-msg error";
+    container.innerHTML = "Couldn't find the ECL group tables. Check the Debug panel below.";
     document.getElementById('eclUpdated').textContent = "";
     return;
   }
@@ -7137,6 +7105,48 @@ function renderHistorySeason(data){
   });
 }
 
+<style>
+  /* News page: compact fixed image on the left, article content on the right. */
+  .news-card{
+    border:1px solid var(--line-light);
+    border-radius:8px;
+    background:#fff;
+    padding:16px 18px;
+    display:flex;
+    align-items:flex-start;
+    gap:20px;
+  }
+  .news-card-image-wrap{
+    width:180px;
+    height:120px;
+    flex:0 0 180px;
+    overflow:hidden;
+    border-radius:6px;
+    background:#f3f4f5;
+  }
+  .news-card-image{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+    object-position:center;
+  }
+  .news-card-content{flex:1;min-width:0;padding-top:1px;}
+  .news-card-date{font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;}
+  .news-card-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);}
+  .news-card-body{font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);}
+  @media (max-width:600px){
+    .news-card{gap:14px;padding:14px;}
+    .news-card-image-wrap{width:110px;height:90px;flex-basis:110px;}
+    .news-card-title{font-size:18px;}
+    .news-card-body{font-size:13px;}
+  }
+  @media (max-width:430px){
+    .news-card{display:block;}
+    .news-card-image-wrap{width:100%;height:150px;margin-bottom:12px;}
+  }
+</style>
+
 // ---------- News ----------
 // Formats a stored ISO date (YYYY-MM-DD) as "Wednesday, August 5 2026" for
 // display on news cards — parsed as a plain calendar date (no time zone
@@ -7152,12 +7162,12 @@ function formatNewsDate(iso){
 
 function newsCardHtml(item){
   const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
-  return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
-    ${item.image ? `<div style="padding:16px 18px 0;"><img src="${item.image}" alt="" style="width:180px;height:120px;object-fit:cover;display:block;border-radius:6px;" onerror="this.parentElement.style.display='none';"></div>` : ""}
-    <div style="padding:16px 18px;">
-      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
-      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
-      <div style="font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);">${paragraphs}</div>
+  return `<article class="news-card">
+    ${item.image ? `<div class="news-card-image-wrap"><img src="${item.image}" alt="" class="news-card-image" onerror="this.parentElement.style.display='none';"></div>` : ""}
+    <div class="news-card-content">
+      <div class="news-card-date">${formatNewsDate(item.date)}</div>
+      <h3 class="news-card-title">${item.title}</h3>
+      <div class="news-card-body">${paragraphs}</div>
     </div>
   </article>`;
 }
@@ -7193,7 +7203,7 @@ function renderNewsPage(){
       return;
     }
     container.className = "";
-    container.innerHTML = `<div style="display:flex;flex-direction:column;gap:20px;max-width:640px;">
+    container.innerHTML = `<div style="display:flex;flex-direction:column;gap:20px;max-width:900px;">
       ${data.newsItems.map(newsCardHtml).join("")}
     </div>`;
   });
@@ -7383,7 +7393,6 @@ const SIDE_LEAGUES = [
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
   { key: "eplsc", label: "EPL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1980185043", singleTable: true, titleText: "ELIZA SUPERCOACH EPL" },
-  { key: "nbl", label: "NBL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1143509560", singleTable: true, isNbl: true, titleText: "LEAGUE TABLE" },
   // Last Man Standing: one nav entry covering both competitions, toggled via
   // sub-tabs like FPL's Premier/Championship/Roddy/Cup — see lmsGids below and
   // the isLms branch in loadSideLeague. Both live on this same spreadsheet,
@@ -7442,7 +7451,7 @@ const SIDE_LEAGUE_TEAM_MAP_GID = "1831804785";
 const SIDE_LEAGUE_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
 const SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL = 2; // column C onward: one league per column
 // Maps each SIDE_LEAGUES key to that column's header text on the mapping sheet.
-const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", nbl: "NBL", uclfantasy: "UCL" };
+const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", uclfantasy: "UCL" };
 
 let sideLeagueTeamMap = {};       // { "FPL": { "SIDE LEAGUE NAME": "Eliza Team Name" }, ... }
 let sideLeagueTeamMapLoaded = false;
@@ -7937,13 +7946,7 @@ function renderWhatsMyDivPage(){
 }
 
 function sideLeagueCsvUrlFor(league){
-  // NBL uses merged/multi-row headings. Google Visualization's automatic header
-  // detection can incorrectly consume the first two standings rows (positions 1
-  // and 2) as headers. Force ZERO headers for NBL so every physical sheet row is
-  // returned; parseNblSupercoach() already identifies the real data rows itself.
-  // Every existing side league keeps its URL unchanged.
-  const headerParam = league && league.isNbl ? "&headers=0" : "";
-  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}${headerParam}&cachebust=` + Date.now();
+  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}&cachebust=` + Date.now();
 }
 
 let sideLeagueDebug = {};
@@ -8118,74 +8121,6 @@ function parseFplFixtures(rows, base, labelTest){
   return { gameweeks, rawDump };
 }
 
-// NBL Supercoach uses the reusable side-league workbook template rather than
-// the older AFL/NRL/EPL fixed-column template. These parsers translate that
-// sheet into the same table/fixture/overall objects the existing renderer uses.
-function parseNblSupercoach(rows){
-  const teams = [];
-  // gviz may return a different number of leading header rows depending on how
-  // it interprets the merged NBL headings. Do not rely on a fixed row offset:
-  // collect every row whose League Table position is numeric and has a team.
-  for(let r=0; r<rows.length; r++){
-    const pos = cell(rows[r]||[], 6);
-    const team = cell(rows[r]||[], 7);
-    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
-    teams.push({
-      pos, team, name: "", pts: cell(rows[r]||[],8), w: cell(rows[r]||[],9), d: cell(rows[r]||[],10),
-      l: cell(rows[r]||[],11), for: cell(rows[r]||[],12), aga: cell(rows[r]||[],13), dif: cell(rows[r]||[],14),
-      status: cell(rows[r]||[],24), form: [], next: cell(rows[r]||[],23)
-    });
-  }
-
-  const gameweeks = [], byRound = new Map(), rawDump = [];
-  for(let r=0; r<rows.length; r++){
-    const roundRaw = cell(rows[r]||[],0);
-    const home = cell(rows[r]||[],1), away = cell(rows[r]||[],4);
-    if(!roundRaw || !home || !away) continue;
-    const roundKey = roundRaw.toUpperCase().replace(/\s+/g," ").trim();
-    if(!byRound.has(roundKey)){
-      const gw = { name: roundKey, fixtures: [] };
-      byRound.set(roundKey, gw); gameweeks.push(gw);
-    }
-    const fixture = { home, homeScore: cell(rows[r]||[],2), awayScore: cell(rows[r]||[],3), away };
-    byRound.get(roundKey).fixtures.push(fixture);
-    rawDump.push({ row:r+1, round:roundKey, ...fixture });
-  }
-
-  // Build the same five-result Form array used by the existing Supercoach
-  // renderer. Round 1 is Overall Only in the NBL template, so it is excluded.
-  const formByTeam = new Map();
-  gameweeks.forEach(gw => {
-    if(/NO H2H|OVERALL ONLY/i.test(gw.name)) return;
-    gw.fixtures.forEach(f => {
-      if(f.homeScore==="" || f.awayScore==="") return;
-      const hs=Number(f.homeScore), as=Number(f.awayScore);
-      if(!Number.isFinite(hs) || !Number.isFinite(as)) return;
-      const hr = hs>as ? "W" : hs<as ? "L" : "D";
-      const ar = hs>as ? "L" : hs<as ? "W" : "D";
-      if(!formByTeam.has(f.home)) formByTeam.set(f.home,[]);
-      if(!formByTeam.has(f.away)) formByTeam.set(f.away,[]);
-      formByTeam.get(f.home).push(hr); formByTeam.get(f.away).push(ar);
-    });
-  });
-  teams.forEach(t => { t.form = (formByTeam.get(t.team)||[]).slice(-5); });
-
-  const overallEntries = [];
-  // Same treatment for the Overall Table: identify standings rows by their
-  // numeric position rather than assuming a fixed CSV header offset.
-  for(let r=0; r<rows.length; r++){
-    const pos=cell(rows[r]||[],26), team=cell(rows[r]||[],27);
-    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
-    overallEntries.push({ pos, team, pts:cell(rows[r]||[],28) });
-  }
-
-  return {
-    table:{ teams, formRoundLabels:[], debug:{ nblTemplate:true, teamsFound:teams.length } },
-    fx:{ gameweeks, rawDump },
-    overall:{ entries:overallEntries, debug:{ nblTemplate:true, entriesFound:overallEntries.length } }
-  };
-}
-
 // AFL Supercoach round labels: "Round 1".."Round 20", then finals stages — none of
 // which use the "GW" prefix the FPL blocks use.
 const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
@@ -8193,14 +8128,12 @@ const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*F
 function sideLeagueTableHtml(table, opts){
   opts = opts || {};
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
-  const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
-  const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   const formLabels = table.formRoundLabels || [];
   const formHeaderHtml = opts.showForm
     ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
     : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
@@ -8214,7 +8147,7 @@ function sideLeagueTableHtml(table, opts){
             }).join("")}</span></td>`
           : "";
         return `<tr style="${rowStyle}">
-        <td${nblKeyColStyle}>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts"${nblKeyColStyle}>${t.pts}</td>
+        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
@@ -8225,16 +8158,14 @@ function sideLeagueTableHtml(table, opts){
 
 function sideLeagueOverallTableHtml(overall){
   if(!overall || !overall.entries.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
-  const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
-  const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   return `<div class="table-wrap overall-table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th>
+      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th>
     </tr></thead><tbody>
       ${overall.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
-        <td${nblKeyColStyle}>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts"${nblKeyColStyle}>${e.pts}</td>
+        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts">${e.pts}</td>
       </tr>`;
       }).join("")}
     </tbody></table></div>`;
@@ -10295,16 +10226,15 @@ async function loadSideLeague(leagueKey){
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
     if(league.singleTable){
-      let table, fx, overall;
-      if(league.isNbl){
-        const parsed = parseNblSupercoach(rows);
-        table = parsed.table; fx = parsed.fx; overall = parsed.overall;
-      }else{
-        table = parseFplTable(rows, league.titleText);
-        // AFL/NRL/EPL Supercoach fixtures use the established AH:AK block.
-        fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
-        overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
-      }
+      const table = parseFplTable(rows, league.titleText);
+      // AFL Supercoach fixtures live in one continuous block: AH=Team1, AI=Team1
+      // score, AJ=Team2 score, AK=Team2 — 20 rounds followed by Quarter/Semi/
+      // Preliminary/Final, not the GW-labelled two-block layout FPL uses.
+      const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
+      // "Overall" table — same marker-anchored convention (OVERALL_TABLE_START
+      // in column AN, POS/Team/Pts at fixed offsets from it) now used across
+      // AFL, NRL and EPL Supercoach. Shown underneath the Fixtures section.
+      const overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
 
       sideLeagueData = { singleTable: true, table, fx, overall, label: league.label, key: league.key };
       sideLeagueActiveRound = {};
@@ -10489,7 +10419,6 @@ function renderHome(){
         <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
         <div class="home-hero-banner-text">ELIZA CUP</div>
       </div>
-      <a href="#whatsmydiv" class="home-division-find-banner">26/27 LEAGUES - FIND MY DIVISION</a>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
@@ -10566,17 +10495,11 @@ let facupBracketSelectedTeam = null;
 function renderFACup(){
   const tabsEl = document.getElementById('facupRoundTabs');
   const toggleEl = document.getElementById('facupViewToggle');
-  const firstRound = facupRounds[0];
-  const facupStarted = !!(firstRound && firstRound.fixtures.some(f =>
-    f.home && f.away &&
-    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD" &&
-    f.home.toUpperCase() !== "BYE" && f.away.toUpperCase() !== "BYE"
-  ));
-  if(!facupStarted){
+  if(facupRounds.length === 0){
     toggleEl.innerHTML = "";
     tabsEl.innerHTML = "";
-    document.getElementById('facupContainer').className = "state-msg";
-    document.getElementById('facupContainer').innerHTML = `The Eliza FA Cup is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
+    document.getElementById('facupContainer').className = "state-msg error";
+    document.getElementById('facupContainer').innerHTML = "Couldn't find the FA Cup bracket. Check the Debug panel below.";
     document.getElementById('facupUpdated').textContent = "";
     return;
   }
