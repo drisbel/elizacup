@@ -7843,11 +7843,18 @@ document.addEventListener('keydown', (e) => {
 // ---------- What's My Division? (26/27 Leagues) ----------
 // Managed via admin.html (whats-my-division.json) — one entry per team:
 // { team, division, code, link, deadline }. Division is a short label (D1,
-// 2A, 2B, 3A, 3B) matching the same convention used everywhere else on the
+// 2A, 2B, 3TBC / Div 3 - TBC, 3A, 3B) matching the same convention used everywhere else on the
 // site. Deadline uses the same DD-MM-YYYY / AM-PM-aware parser as everything
 // else (parseLmsDeadline / formatAestDateTime).
-const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
-const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
+const WMD_DIVISION_ORDER = ["D1","2A","2B","3TBC","3A","3B"];
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3TBC": "Div 3 - TBC", "3A": "Division 3A", "3B": "Division 3B" };
+
+function normaliseWmdDivision(value){
+  const raw = (value||"").trim().toUpperCase();
+  const compact = raw.replace(/[^A-Z0-9]/g,"");
+  if(raw === "3TBC" || compact === "3TBC" || compact === "DIV3TBC" || compact === "DIVISION3TBC") return "3TBC";
+  return raw;
+}
 
 // Join deadlines are a date only (no time) — separate from parseLmsDeadline,
 // which requires a time + AM/PM and would reject a bare date entirely.
@@ -7922,11 +7929,11 @@ function renderWmdDivisions(teams){
   }
   container.className = "";
   container.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
-    const divTeams = teams.filter(t => (t.division||"").toUpperCase() === divKey);
+    const divTeams = teams.filter(t => normaliseWmdDivision(t.division) === divKey);
     if(!divTeams.length) return "";
     const divLogo = divisionLogoForShortLabel(divKey);
     return `<div class="wmd-div-section">
-      <h3 class="wmd-div-heading" style="color:${getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
+      <h3 class="wmd-div-heading" style="color:${divKey === "3TBC" ? "#6aa84f" : getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
       <div class="wmd-team-grid">${divTeams.map(wmdTeamCardHtml).join("")}</div>
     </div>`;
   }).join("");
@@ -7941,9 +7948,10 @@ function renderWmdDivisions(teams){
 }
 
 function wmdSearchResultHtml(t){
-  const divColor = getDivisionColorByLabel(t.division);
-  const divLabel = WMD_DIVISION_LABELS[(t.division||"").toUpperCase()] || t.division;
-  const divLogo = divisionLogoForShortLabel(t.division);
+  const normalisedDivision = normaliseWmdDivision(t.division);
+  const divColor = normalisedDivision === "3TBC" ? "#6aa84f" : getDivisionColorByLabel(t.division);
+  const divLabel = WMD_DIVISION_LABELS[normalisedDivision] || t.division;
+  const divLogo = normalisedDivision === "3TBC" ? "" : divisionLogoForShortLabel(t.division);
   const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
   return `<div class="wmd-result-card">
