@@ -542,6 +542,42 @@
   .side-square-export.social-standings.many-rows .export-table th{font-size:13px;padding-bottom:7px;}
   .side-square-export.social-standings.many-rows .export-table td{height:36px;padding:5px 7px;}
   .side-square-export.social-standings.many-rows .export-table .team-cell img{width:25px !important;height:25px !important;}
+  .side-square-export.social-standings.many-rows .export-card-body{
+    justify-content:flex-start;align-items:stretch;padding-top:14px;padding-bottom:10px;
+  }
+  .side-square-export.social-standings.many-rows .export-table{
+    font-size:14px;
+  }
+  .side-square-export.social-standings.many-rows .export-table th{
+    font-size:12px;padding:0 5px 5px;
+  }
+  .side-square-export.social-standings.many-rows .export-table td{
+    height:31px;padding:3px 5px;
+  }
+  .side-square-export.social-standings.many-rows .export-table .team-cell{
+    gap:6px;
+  }
+  .side-square-export.social-standings.many-rows .export-table .team-cell img{
+    width:21px !important;height:21px !important;
+  }
+  .side-square-export.social-standings.many-rows .export-legend{
+    margin-top:5px;font-size:10px;gap:7px;
+  }
+  .side-square-export.social-standings.cup-large .export-card-body{
+    justify-content:flex-start;padding:10px 30px 6px;
+  }
+  .side-square-export.social-standings.cup-large .export-table{font-size:12px;}
+  .side-square-export.social-standings.cup-large .export-table th{font-size:10px;padding:0 4px 3px;}
+  .side-square-export.social-standings.cup-large .export-table td{height:25px;padding:2px 4px;}
+  .side-square-export.social-standings.cup-large .export-table .team-cell{gap:5px;}
+  .side-square-export.social-standings.cup-large .export-table .team-cell img{
+    width:17px !important;height:17px !important;
+  }
+  .side-square-export.social-standings.cup-large .export-legend{
+    margin-top:3px;font-size:9px;gap:5px;
+  }
+
+
 
 
   .side-square-export .export-table th{font-size:13px;padding:0 7px 7px;}
@@ -575,7 +611,7 @@
   .side-square-export.results-square .export-card-body{justify-content:center;}
   .side-square-export.results-square .export-fixtures-grid{
     display:flex !important;flex-direction:column;justify-content:center;
-    gap:0;width:100%;height:100%;
+    gap:0;width:100%;height:100%;max-width:960px;margin:0 auto;
   }
   /* Never split a Cup/league round into two columns. Density is calculated
      in JS from the actual number of fixtures so the whole round stays in one list. */
@@ -596,6 +632,33 @@
   .side-square-export.results-square.density-ultra .export-fixture-team{font-size:12px;gap:4px;}
   .side-square-export.results-square.density-ultra .export-fixture-team img{width:18px !important;height:18px !important;}
   .side-square-export.results-square.density-ultra .export-fixture-score{font-size:15px;min-width:48px;}
+  /* Stronger square-fill sizing: few-fixture rounds should look intentionally large,
+     while 13–16 fixture Cup rounds still remain a single readable column. */
+  .side-square-export.results-square.density-hero .export-fixture-row{
+    min-height:150px;padding:24px 4px;border-bottom:2px solid var(--line);
+  }
+  .side-square-export.results-square.density-hero .export-fixture-team{
+    font-size:30px;gap:16px;font-weight:700;
+  }
+  .side-square-export.results-square.density-hero .export-fixture-team img{
+    width:64px !important;height:64px !important;
+  }
+  .side-square-export.results-square.density-hero .export-fixture-score{
+    font-size:38px;min-width:110px;
+  }
+  .side-square-export.results-square.density-cup .export-fixture-row{
+    min-height:53px;padding:7px 2px;
+  }
+  .side-square-export.results-square.density-cup .export-fixture-team{
+    font-size:17px;gap:8px;font-weight:650;
+  }
+  .side-square-export.results-square.density-cup .export-fixture-team img{
+    width:27px !important;height:27px !important;
+  }
+  .side-square-export.results-square.density-cup .export-fixture-score{
+    font-size:21px;min-width:66px;
+  }
+
 
   /* Roddy uses the whole square rather than a compact old-style table. */
   .side-square-export.roddy-square .export-card-body{
@@ -5360,9 +5423,11 @@ function exportStandingsDensityClass(count){
   return " many-rows";
 }
 function exportResultsDensityClass(count){
+  if(count <= 4) return " density-hero";
   if(count <= 8) return " density-roomy";
   if(count <= 12) return " density-normal";
-  if(count <= 18) return " density-tight";
+  if(count <= 16) return " density-cup";
+  if(count <= 20) return " density-tight";
   return " density-ultra";
 }
 
@@ -5412,7 +5477,9 @@ function exportRenderPreview(){
 
   if(contentType === "table"){
     const teams = exportData.table.teams;
-    target.className = "export-card side-square-export social-standings" + exportStandingsDensityClass(teams.length);
+    target.className = "export-card side-square-export social-standings" +
+      exportStandingsDensityClass(teams.length) +
+      (teams.length > 22 ? " cup-large" : "");
     const rowsHtml = teams.map(t => {
       const logoName = exportResolveTeamName(t.team);
       const statusInfo = exportStatusInfo(t.status);
