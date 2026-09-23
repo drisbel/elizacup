@@ -921,9 +921,9 @@
     </div>
 
     <div class="card">
-      <h2>Set league code for a whole division</h2>
+      <h2>Set league code / deadline for a whole division</h2>
       <div class="hint" style="margin-bottom:10px;">
-        Applies one code to every team currently listed in the chosen division, overwriting whatever code each of them had — for divisions where everyone shares the same league rather than needing an individual code per team.
+        Apply a shared league code and/or join deadline to every team currently listed in the chosen division. Leave either field blank if you do not want to change that field.
       </div>
       <div class="row">
         <div class="field">
@@ -932,13 +932,18 @@
             <option value="D1">Division 1 (Eliza Cup)</option>
             <option value="2A">Division 2A</option>
             <option value="2B">Division 2B</option>
+            <option value="3TBC">Div 3 - TBC</option>
             <option value="3A">Division 3A</option>
             <option value="3B">Division 3B</option>
           </select>
         </div>
         <div class="field">
           <label for="wmdBulkCode">League code</label>
-          <input type="text" id="wmdBulkCode" placeholder="e.g. ABC123">
+          <input type="text" id="wmdBulkCode" placeholder="Leave blank to keep existing codes">
+        </div>
+        <div class="field">
+          <label for="wmdBulkDeadline">Join deadline</label>
+          <input type="text" id="wmdBulkDeadline" placeholder="DD/MM/YYYY — leave blank to keep existing">
         </div>
       </div>
       <div class="form-actions">
@@ -950,7 +955,7 @@
     <div class="card">
       <h2>Bulk import from sheet</h2>
       <div class="hint" style="margin-bottom:10px;">
-        In your sheet, select a range with columns in this order — Team | Division | Code | Link | Deadline — then copy (Ctrl+C / Cmd+C) and paste below. Code, Link, and Deadline are optional; leave those columns out if you're only importing Team + Division for now. Division should be D1, 2A, 2B, 3A, or 3B. Teams already in the list (matched by exact name) get updated rather than duplicated.
+        In your sheet, select a range with columns in this order — Team | Division | Code | Link | Deadline — then copy (Ctrl+C / Cmd+C) and paste below. Code, Link, and Deadline are optional; leave those columns out if you're only importing Team + Division for now. Division should be D1, 2A, 2B, 3TBC, 3A, or 3B. Teams already in the list (matched by exact name) get updated rather than duplicated.
       </div>
       <textarea id="wmdImportText" rows="8" placeholder="Paste copied cells here…"></textarea>
       <div class="form-actions" style="margin-top:10px;">
@@ -972,6 +977,7 @@
             <option value="D1">Division 1 (Eliza Cup)</option>
             <option value="2A">Division 2A</option>
             <option value="2B">Division 2B</option>
+            <option value="3TBC">Div 3 - TBC</option>
             <option value="3A">Division 3A</option>
             <option value="3B">Division 3B</option>
           </select>
@@ -1285,18 +1291,6 @@ const PAGE_VISIBILITY_PAGES = [
   // check both resolve correctly.
   { id: "sideleagues=lms:auscup", label: "Last Man Standing: Australia Cup" },
   { id: "sideleagues=lms:aleague", label: "Last Man Standing: A-League" },
-  // 26/27 Test pages — point at the freed-up main sheet gids. Hidden by
-  // default is recommended until the new season's ready to go live; delete
-  // these rows (and the matching NAV_LAYOUT group in index.html) once the
-  // real pages are switched over and the test pages are removed.
-  { id: "d1-test", label: "Division 1 (26/27 Test)" },
-  { id: "d2a-test", label: "Division 2A (26/27 Test)" },
-  { id: "d2b-test", label: "Division 2B (26/27 Test)" },
-  { id: "d3a-test", label: "Division 3A (26/27 Test)" },
-  { id: "d3b-test", label: "Division 3B (26/27 Test)" },
-  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)" },
-  { id: "facup-test", label: "Eliza FA Cup (26/27 Test)" },
-  { id: "ecl-test", label: "Eliza Champions League (26/27 Test)" }
 ];
 
 let pvMap = {};   // { pageId: false } for hidden; absent/true = visible
@@ -2364,7 +2358,7 @@ let wmdEditingId = null; // id of entry currently being edited, null if new
 let wmdRoddyCode = "";  // single value shared by every team, stored once rather than per-entry
 let wmdRoddyLink = "";  // same idea — one join link for everyone
 
-const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3TBC": "Div 3 - TBC", "3A": "Division 3A", "3B": "Division 3B" };
 
 async function loadWmd() {
   $("wmdLoadingList").style.display = "block";
@@ -2416,7 +2410,7 @@ function renderWmdList() {
   }
   $("wmdEmptyState").style.display = "none";
 
-  const WMD_DIVISION_ORDER = ["D1", "2A", "2B", "3A", "3B"];
+  const WMD_DIVISION_ORDER = ["D1", "2A", "2B", "3TBC", "3A", "3B"];
   list.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
     const group = wmdTeams.filter(t => t.division === divKey);
     if (!group.length) return "";
@@ -2484,7 +2478,7 @@ function moveWmdEntry(id, direction) {
 // ---------- What's My Division?: inline edit ----------
 
 function wmdInlineEditFormHtml(t) {
-  const divOptions = ["D1", "2A", "2B", "3A", "3B"].map(d =>
+  const divOptions = ["D1", "2A", "2B", "3TBC", "3A", "3B"].map(d =>
     `<option value="${d}" ${t.division === d ? "selected" : ""}>${WMD_DIVISION_LABELS[d]}</option>`
   ).join("");
   return `
@@ -2569,7 +2563,14 @@ async function saveWmdRoddyCode() {
 async function applyWmdBulkCode() {
   const division = $("wmdBulkDivision").value;
   const code = $("wmdBulkCode").value.trim();
+  const deadline = $("wmdBulkDeadline").value.trim();
   const statusEl = $("wmdBulkCodeStatus");
+
+  if (!code && !deadline) {
+    statusEl.textContent = "Enter a league code and/or a join deadline to apply.";
+    statusEl.className = "status-msg err";
+    return;
+  }
 
   const affected = wmdTeams.filter(t => t.division === division);
   if (!affected.length) {
@@ -2577,10 +2578,17 @@ async function applyWmdBulkCode() {
     statusEl.className = "status-msg err";
     return;
   }
-  if (!confirm(`Set the league code to "${code}" for all ${affected.length} team(s) in ${WMD_DIVISION_LABELS[division] || division}? This overwrites any existing code for each of them.`)) return;
 
-  affected.forEach(t => { t.code = code; });
-  await commitWmd(`Bulk-set league code for ${WMD_DIVISION_LABELS[division] || division}`, "applyWmdBulkCodeBtn", "wmdBulkCodeStatus");
+  const changes = [];
+  if (code) changes.push(`league code to "${code}"`);
+  if (deadline) changes.push(`join deadline to "${deadline}"`);
+  if (!confirm(`Set ${changes.join(" and ")} for all ${affected.length} team(s) in ${WMD_DIVISION_LABELS[division] || division}? Any existing values for the fields being changed will be overwritten.`)) return;
+
+  affected.forEach(t => {
+    if (code) t.code = code;
+    if (deadline) t.deadline = deadline;
+  });
+  await commitWmd(`Bulk-set division details for ${WMD_DIVISION_LABELS[division] || division}`, "applyWmdBulkCodeBtn", "wmdBulkCodeStatus");
 }
 
 // ---------- What's My Division?: add new (top form) ----------
@@ -2677,7 +2685,7 @@ function setWmdFormStatus(msg, isError) {
 // codes/links/deadlines are decided) works fine — those fields are simply
 // left blank and can be filled in later via the normal edit form.
 
-const WMD_VALID_DIVISIONS = ["D1", "2A", "2B", "3A", "3B"];
+const WMD_VALID_DIVISIONS = ["D1", "2A", "2B", "3TBC", "3A", "3B"];
 
 function parseWmdImportText(text) {
   return text.split("\n")
