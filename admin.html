@@ -534,6 +534,15 @@
   .side-square-export.social-standings.few-rows .export-table .team-cell img{
     width:38px !important;height:38px !important;
   }
+  .side-square-export.social-standings.medium-rows .export-table{font-size:20px;}
+  .side-square-export.social-standings.medium-rows .export-table th{font-size:16px;padding-bottom:10px;}
+  .side-square-export.social-standings.medium-rows .export-table td{height:52px;padding:9px 8px;}
+  .side-square-export.social-standings.medium-rows .export-table .team-cell img{width:33px !important;height:33px !important;}
+  .side-square-export.social-standings.many-rows .export-table{font-size:16px;}
+  .side-square-export.social-standings.many-rows .export-table th{font-size:13px;padding-bottom:7px;}
+  .side-square-export.social-standings.many-rows .export-table td{height:36px;padding:5px 7px;}
+  .side-square-export.social-standings.many-rows .export-table .team-cell img{width:25px !important;height:25px !important;}
+
 
   .side-square-export .export-table th{font-size:13px;padding:0 7px 7px;}
   .side-square-export .export-table td{padding:6px 7px;height:34px;box-sizing:border-box;}
@@ -558,6 +567,55 @@
   .side-square-export.roddy-square .export-table td{padding:3px 4px;height:27px;}
   .side-square-export.roddy-square .export-table .team-cell img{width:19px !important;height:19px !important;}
   .side-square-export.roddy-square .export-chip-pill{min-width:28px;padding:2px 4px;font-size:9px;}
+  /* Canvas-fill optimisation shared by every Side League export. */
+  .side-square-export .export-card-body{
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  .side-square-export.social-standings .export-card-body > div{width:100%;}
+  .side-square-export.results-square .export-card-body{justify-content:center;}
+  .side-square-export.results-square .export-fixtures-grid{
+    display:flex !important;flex-direction:column;justify-content:center;
+    gap:0;width:100%;height:100%;
+  }
+  /* Never split a Cup/league round into two columns. Density is calculated
+     in JS from the actual number of fixtures so the whole round stays in one list. */
+  .side-square-export.results-square .export-fixtures-grid.many{display:flex !important;}
+  .side-square-export.results-square.density-roomy .export-fixture-row{min-height:68px;padding:12px 0;}
+  .side-square-export.results-square.density-roomy .export-fixture-team{font-size:20px;}
+  .side-square-export.results-square.density-roomy .export-fixture-team img{width:34px !important;height:34px !important;}
+  .side-square-export.results-square.density-roomy .export-fixture-score{font-size:25px;min-width:82px;}
+  .side-square-export.results-square.density-normal .export-fixture-row{min-height:55px;padding:8px 0;}
+  .side-square-export.results-square.density-normal .export-fixture-team{font-size:17px;}
+  .side-square-export.results-square.density-normal .export-fixture-team img{width:28px !important;height:28px !important;}
+  .side-square-export.results-square.density-normal .export-fixture-score{font-size:21px;min-width:72px;}
+  .side-square-export.results-square.density-tight .export-fixture-row{min-height:43px;padding:4px 0;}
+  .side-square-export.results-square.density-tight .export-fixture-team{font-size:14px;gap:6px;}
+  .side-square-export.results-square.density-tight .export-fixture-team img{width:22px !important;height:22px !important;}
+  .side-square-export.results-square.density-tight .export-fixture-score{font-size:18px;min-width:58px;}
+  .side-square-export.results-square.density-ultra .export-fixture-row{min-height:34px;padding:2px 0;}
+  .side-square-export.results-square.density-ultra .export-fixture-team{font-size:12px;gap:4px;}
+  .side-square-export.results-square.density-ultra .export-fixture-team img{width:18px !important;height:18px !important;}
+  .side-square-export.results-square.density-ultra .export-fixture-score{font-size:15px;min-width:48px;}
+
+  /* Roddy uses the whole square rather than a compact old-style table. */
+  .side-square-export.roddy-square .export-card-body{
+    justify-content:center;padding-top:20px;padding-bottom:20px;
+  }
+  .side-square-export.roddy-square .export-table{font-size:14px;}
+  .side-square-export.roddy-square .export-table th{font-size:12px;padding:0 5px 7px;}
+  .side-square-export.roddy-square .export-table td{height:34px;padding:5px;}
+  .side-square-export.roddy-square .export-table .team-cell{gap:6px;font-weight:600;}
+  .side-square-export.roddy-square .export-table .team-cell img{width:23px !important;height:23px !important;}
+  .side-square-export.roddy-square .export-chip-pill{min-width:30px;padding:3px 5px;font-size:10px;}
+  .side-square-export.roddy-square.roddy-roomy .export-table{font-size:15px;}
+  .side-square-export.roddy-square.roddy-roomy .export-table th{font-size:13px;padding-bottom:9px;}
+  .side-square-export.roddy-square.roddy-roomy .export-table td{height:42px;padding:7px 5px;}
+  .side-square-export.roddy-square.roddy-roomy .export-table .team-cell img{width:27px !important;height:27px !important;}
+
+
+  /* UCL and other leaderboard/table exports centre themselves vertically too. */
+  .side-square-export.ucl-square .export-card-body{justify-content:center;}
+
 
   /* Preview wrapper scrolls horizontally on narrow screens instead of the
      card itself shrinking — .export-card must stay at its real 760px width
@@ -5295,6 +5353,19 @@ async function exportLoadData(){
   }
 }
 
+
+function exportStandingsDensityClass(count){
+  if(count <= 8) return " few-rows";
+  if(count <= 12) return " medium-rows";
+  return " many-rows";
+}
+function exportResultsDensityClass(count){
+  if(count <= 8) return " density-roomy";
+  if(count <= 12) return " density-normal";
+  if(count <= 18) return " density-tight";
+  return " density-ultra";
+}
+
 function exportRenderPreview(){
   if(!exportData) return;
   const target = $("exportPreviewTarget");
@@ -5317,7 +5388,7 @@ function exportRenderPreview(){
 
   if(contentType === "overall"){
     const entries = exportData.overall ? exportData.overall.entries : [];
-    target.className = "export-card side-square-export social-standings" + (entries.length <= 8 ? " few-rows" : "");
+    target.className = "export-card side-square-export social-standings" + exportStandingsDensityClass(entries.length);
     const rowsHtml = entries.map(e => {
       const logoName = exportResolveTeamName(e.team);
       return `
@@ -5341,7 +5412,7 @@ function exportRenderPreview(){
 
   if(contentType === "table"){
     const teams = exportData.table.teams;
-    target.className = "export-card side-square-export social-standings" + (teams.length <= 8 ? " few-rows" : "");
+    target.className = "export-card side-square-export social-standings" + exportStandingsDensityClass(teams.length);
     const rowsHtml = teams.map(t => {
       const logoName = exportResolveTeamName(t.team);
       const statusInfo = exportStatusInfo(t.status);
@@ -5382,10 +5453,10 @@ function exportRenderPreview(){
       </div>
       <div class="export-card-footer">elizacup.com</div>`;
   } else {
-    target.className = "export-card side-square-export";
     const roundName = $("exportRound").value;
     const gw = exportData.fixtures.gameweeks.find(g => g.name === roundName);
     const fixtureList = gw ? gw.fixtures : [];
+    target.className = "export-card side-square-export results-square" + exportResultsDensityClass(fixtureList.length);
     const fixturesHtml = fixtureList.map(f => {
       const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
       const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
@@ -5411,7 +5482,7 @@ function exportRenderPreview(){
     target.innerHTML = `
       ${exportCardHeaderHtml(exportData.label, roundName || "Round Results")}
       <div class="export-card-body">
-        ${fixturesHtml ? `<div class="export-fixtures-grid${fixtureList.length > 12 ? " many" : ""}">${fixturesHtml}</div>` : `<p class="hint">No fixtures found for this round.</p>`}
+        ${fixturesHtml ? `<div class="export-fixtures-grid">${fixturesHtml}</div>` : `<p class="hint">No fixtures found for this round.</p>`}
       </div>
       <div class="export-card-footer">elizacup.com</div>`;
   }
@@ -5423,7 +5494,7 @@ function exportRenderPreview(){
 function exportRenderRoddyPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.roddy;
-  target.className = "export-card side-square-export roddy-square";
+  target.className = "export-card side-square-export roddy-square" + (data.entries.length <= 16 ? " roddy-roomy" : "");
   target.style.width = "1080px";
   target.style.height = "1080px";
   if(!data.entries.length){
@@ -5504,7 +5575,7 @@ function exportRoddyHeaderCellsHtml(chipLabels){
 function exportRenderUclPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.ucl;
-  target.className = "export-card side-square-export";
+  target.className = "export-card side-square-export ucl-square";
   target.style.width = "1080px";
   target.style.height = "1080px";
   if(!data.teams.length){
