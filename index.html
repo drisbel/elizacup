@@ -1520,6 +1520,39 @@
     .news-card-image{width:100%;height:auto;}
   }
 
+
+  /* Calendar mobile fit: Round, Date and all five competition columns remain
+     visible together without horizontal scrolling. */
+  @media (max-width:600px){
+    #calendarContainer .table-wrap{overflow-x:visible !important;width:100%;}
+    #calendarContainer table.calendar-table{
+      width:100% !important;min-width:0 !important;table-layout:fixed;
+    }
+    #calendarContainer table.calendar-table th,
+    #calendarContainer table.calendar-table td{
+      min-width:0 !important;max-width:none !important;
+      white-space:normal !important;word-break:normal;overflow-wrap:anywhere;
+      padding:5px 2px !important;font-size:9px !important;line-height:1.12;
+      text-align:center;
+    }
+    #calendarContainer table.calendar-table th{font-size:8px !important;}
+    #calendarContainer table.calendar-table th:nth-child(1),
+    #calendarContainer table.calendar-table td:nth-child(1){width:7%;}
+    #calendarContainer table.calendar-table th:nth-child(2),
+    #calendarContainer table.calendar-table td:nth-child(2){width:15%;}
+    #calendarContainer table.calendar-table th:nth-child(n+3),
+    #calendarContainer table.calendar-table td:nth-child(n+3){width:15.6%;}
+    #calendarContainer table.calendar-table td.next-opp{font-size:8px !important;}
+  }
+  @media (max-width:420px){
+    #calendarContainer table.calendar-table th,
+    #calendarContainer table.calendar-table td{
+      padding:4px 1px !important;font-size:8px !important;line-height:1.08;
+    }
+    #calendarContainer table.calendar-table th{font-size:7.5px !important;}
+    #calendarContainer table.calendar-table td.next-opp{font-size:7.5px !important;}
+  }
+
 </style>
 </head>
 <body>
@@ -4677,8 +4710,8 @@ function renderHonourRoll(){
 // Bye rounds (5, 6) and double rounds (12, 16) are called out per instruction rather
 // than detected from cell color, since background fills don't survive CSV export.
 const CAL_COL = { ROUND: 1, DATE: 3, ELIZA_CUP: 5, DIV2: 7, DIV3: 9, FA_CUP: 11, ECL: 13 };
-const BYE_ROUNDS = [5, 6];
-const DOUBLE_ROUNDS = [12, 16];
+const BYE_ROUNDS = [1, 5, 6];
+const DOUBLE_ROUNDS = [7, 12, 16];
 
 let calendarRounds = [];
 let calendarDebug = {};
