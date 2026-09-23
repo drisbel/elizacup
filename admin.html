@@ -429,6 +429,60 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
   }
 
+
+  /* ---------- 26/27 Main League Instagram exports ---------- */
+  .ig-export-card{
+    width:1080px;height:1350px;box-sizing:border-box;flex-shrink:0;
+    background:#f5f6f7;color:#111;overflow:hidden;
+    font-family:'Barlow',sans-serif;display:flex;flex-direction:column;
+  }
+  .ig-export-header{
+    min-height:190px;box-sizing:border-box;padding:34px 54px;
+    display:flex;align-items:center;gap:26px;color:#fff;
+  }
+  .ig-export-header img{width:112px;height:112px;object-fit:contain;flex-shrink:0;}
+  .ig-export-kicker{font-size:24px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.9;margin-bottom:5px;}
+  .ig-export-title{font-family:'Barlow Condensed',sans-serif;font-size:58px;font-weight:800;line-height:1;text-transform:uppercase;}
+  .ig-export-subtitle{font-family:'Barlow Condensed',sans-serif;font-size:31px;font-weight:600;margin-top:8px;text-transform:uppercase;}
+  .ig-export-body{flex:1;box-sizing:border-box;padding:34px 48px 28px;display:flex;flex-direction:column;}
+  .ig-export-table{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;font-size:25px;}
+  .ig-export-table th{
+    height:54px;box-sizing:border-box;padding:9px 9px;border-bottom:4px solid #111;
+    font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;text-transform:uppercase;color:#5e6873;
+  }
+  .ig-export-table td{height:64px;box-sizing:border-box;padding:8px 9px;border-bottom:1px solid #d9dde1;}
+  .ig-export-table tr:last-child td{border-bottom:none;}
+  .ig-export-table .num{text-align:center;}
+  .ig-export-table .pos{font-family:'Barlow Condensed',sans-serif;font-size:27px;font-weight:800;color:#68737d;}
+  .ig-export-table .pts{font-weight:800;font-size:28px;}
+  .ig-export-team{display:flex;align-items:center;gap:14px;min-width:0;font-weight:700;}
+  .ig-export-team img{width:40px;height:40px;object-fit:contain;flex-shrink:0;}
+  .ig-export-team span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ig-export-footer{
+    min-height:70px;box-sizing:border-box;padding:18px 48px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-top:1px solid #d5d9dd;background:#fff;color:#68737d;
+    font-size:18px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  }
+  .ig-results-list{display:flex;flex-direction:column;gap:18px;justify-content:center;flex:1;}
+  .ig-result-row{
+    min-height:112px;box-sizing:border-box;background:#fff;border:1px solid #d9dde1;border-radius:12px;
+    display:grid;grid-template-columns:1fr 180px 1fr;align-items:center;padding:16px 24px;
+  }
+  .ig-result-team{display:flex;align-items:center;gap:14px;font-size:25px;font-weight:700;min-width:0;}
+  .ig-result-team.away{justify-content:flex-end;text-align:right;}
+  .ig-result-team img{width:52px;height:52px;object-fit:contain;flex-shrink:0;}
+  .ig-result-team span{line-height:1.08;}
+  .ig-result-score{
+    font-family:'Barlow Condensed',sans-serif;font-size:45px;font-weight:800;text-align:center;white-space:nowrap;
+  }
+  .ig-result-score.pending{font-size:25px;color:#7a848d;text-transform:uppercase;}
+  .ig-result-team.winner{font-weight:800;}
+  .ig-result-team.loser{opacity:.62;}
+  .ig-result-score .winner{font-weight:900;}
+  .ig-result-score .loser{opacity:.55;}
+  .ig-export-empty{margin:auto;text-align:center;font-size:28px;color:#68737d;}
+
   /* ---------- Exports section (shareable graphics, html2canvas) ---------- */
   /* Card is a fixed pixel width rather than percentage/responsive — it's the
      literal html2canvas capture target, so its on-screen size is the
@@ -1155,6 +1209,50 @@
     <div class="admin-section" id="section-exports">
       <h2>Exports</h2>
       <p class="hint">Generates a shareable graphic — pulls the sheet data itself and renders its own version for the image, so nothing needs to change on the public site pages. Same html2canvas approach as the wheel's Complete Draw export.</p>
+
+      <div class="card" style="margin-top:18px;">
+        <h2>26/27 Main Leagues — Instagram</h2>
+        <p class="hint">1080 × 1350 portrait exports for Instagram. League tables use the compact columns POS, TEAM, P, W, D, L, +/− and PTS.</p>
+
+        <div class="row">
+          <div class="field" style="max-width:320px;">
+            <label for="mainExportDivision">Division</label>
+            <select id="mainExportDivision">
+              <option value="d1">Division 1 (Eliza Cup)</option>
+              <option value="d2a">Division 2A</option>
+              <option value="d2b">Division 2B</option>
+              <option value="d3a">Division 3A</option>
+              <option value="d3b">Division 3B</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:320px;">
+            <label for="mainExportType">Content</label>
+            <select id="mainExportType">
+              <option value="table">League Table</option>
+              <option value="results">Round Results</option>
+            </select>
+          </div>
+          <div class="field" id="mainExportRoundField" style="max-width:320px;display:none;">
+            <label for="mainExportRound">Round</label>
+            <select id="mainExportRound"></select>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="mainExportLoadBtn">Load Data</button>
+        <span id="mainExportStatus" class="hint" style="margin-left:10px;"></span>
+
+        <div id="mainExportPreviewWrap" style="margin-top:22px;display:none;">
+          <div class="export-preview-scroll">
+            <div class="ig-export-card" id="mainExportPreviewTarget"></div>
+          </div>
+          <p class="hint" style="margin-top:8px;">The preview is full Instagram portrait size (1080 × 1350), so on smaller screens you can scroll sideways to inspect it.</p>
+          <div style="margin-top:14px;">
+            <button type="button" class="btn btn-primary" id="mainExportImageBtn">Export Instagram Image</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.6px;color:var(--muted);margin:30px 0 12px;">Side Leagues</h2>
 
       <div class="field" style="max-width:320px;">
         <label for="exportCompetition">Competition</label>
@@ -4384,6 +4482,241 @@ function colIndexToLetter(idx){
   return s;
 }
 
+
+// ---------- 26/27 Main League Instagram exports ----------
+const MAIN_EXPORT_SHEET_ID = "1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY";
+const MAIN_EXPORT_DIVISIONS = {
+  d1:  { label:"Division 1 (Eliza Cup)", short:"DIVISION 1", gid:"1124941542", teams:14, color:"#28427c", logo:"logo/eliza-logo.png" },
+  d2a: { label:"Division 2A", short:"DIVISION 2A", gid:"919912875", teams:12, color:"#bc3532", logo:"logo/eliza-logo.png" },
+  d2b: { label:"Division 2B", short:"DIVISION 2B", gid:"1047201294", teams:12, color:"#990000", logo:"logo/eliza-logo.png" },
+  d3a: { label:"Division 3A", short:"DIVISION 3A", gid:"688700661", teams:12, color:"#6aa84f", logo:"logo/eliza-logo.png" },
+  d3b: { label:"Division 3B", short:"DIVISION 3B", gid:"2079252892", teams:12, color:"#274e13", logo:"logo/eliza-logo.png" }
+};
+const MAIN_EXPORT_COL = { TEAM:3, PTS:8, W:9, D:10, L:11, DIFF:14 };
+const MAIN_EXPORT_TABLE_START = 4; // same row offset as the public 26/27 division pages
+const MAIN_EXPORT_FIXTURE_START = 33; // AH
+const MAIN_EXPORT_FIXTURE_END = 43;   // AR
+let mainExportData = null;
+
+function mainExportCsvUrl(cfg){
+  return `https://docs.google.com/spreadsheets/d/${MAIN_EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${cfg.gid}&cachebust=${Date.now()}`;
+}
+
+function mainExportParseTable(rows, cfg){
+  const teams = [];
+  for(let r=MAIN_EXPORT_TABLE_START; r<MAIN_EXPORT_TABLE_START + cfg.teams && r<rows.length; r++){
+    const row = rows[r] || [];
+    const team = cell(row, MAIN_EXPORT_COL.TEAM);
+    if(!team) continue;
+    const w = parseInt(cell(row, MAIN_EXPORT_COL.W),10) || 0;
+    const d = parseInt(cell(row, MAIN_EXPORT_COL.D),10) || 0;
+    const l = parseInt(cell(row, MAIN_EXPORT_COL.L),10) || 0;
+    const pts = parseInt(cell(row, MAIN_EXPORT_COL.PTS),10) || 0;
+    const diff = parseInt((cell(row, MAIN_EXPORT_COL.DIFF)||"0").replace(/[^\-\d]/g,""),10) || 0;
+    teams.push({ team, w, d, l, played:w+d+l, pts, diff, sheetOrder:r });
+  }
+  teams.sort((a,b) => (b.pts-a.pts) || (b.diff-a.diff) || (a.sheetOrder-b.sheetOrder));
+  teams.forEach((t,i)=>t.pos=i+1);
+  return teams;
+}
+
+function mainExportParseFixtures(rows, knownTeamNames){
+  const known = new Set(knownTeamNames.map(n => (n||"").trim().toUpperCase()));
+  const rounds = {};
+  let currentRound = null;
+
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    const window = row.slice(MAIN_EXPORT_FIXTURE_START, MAIN_EXPORT_FIXTURE_END + 1);
+    const nonEmpty = window.map(v => (v||"").toString().trim()).filter(Boolean);
+    if(!nonEmpty.length) continue;
+
+    const roundCell = nonEmpty.find(v => /^ROUND\s*\d+$/i.test(v));
+    if(roundCell){
+      currentRound = roundCell.match(/\d+/)[0];
+      if(!rounds[currentRound]) rounds[currentRound] = [];
+      continue;
+    }
+    if(currentRound === null) continue;
+
+    const hits = [];
+    nonEmpty.forEach((v,i) => {
+      if(known.has(v.toUpperCase())) hits.push({name:v, idx:i});
+    });
+    if(hits.length < 2) continue;
+
+    const homeHit = hits[0], awayHit = hits[1];
+    const between = nonEmpty.slice(homeHit.idx+1, awayHit.idx).filter(v => /^\d{1,4}$/.test(v));
+    const fixture = {
+      home:homeHit.name, away:awayHit.name,
+      homeScore: between.length >= 1 ? between[0] : "",
+      awayScore: between.length >= 2 ? between[between.length-1] : ""
+    };
+    const key = `${fixture.home}|${fixture.away}|${fixture.homeScore}|${fixture.awayScore}`;
+    if(!rounds[currentRound].some(f => f._key === key)){
+      fixture._key = key;
+      rounds[currentRound].push(fixture);
+    }
+  }
+  Object.values(rounds).forEach(arr => arr.forEach(f => delete f._key));
+  return rounds;
+}
+
+function mainExportHeaderHtml(cfg, subtitle){
+  return `<div class="ig-export-header" style="background:${cfg.color};">
+    <img src="${cfg.logo}" alt="" onerror="this.style.display='none';">
+    <div>
+      <div class="ig-export-kicker">ELIZA CUP · 2026/27</div>
+      <div class="ig-export-title">${cfg.short}</div>
+      <div class="ig-export-subtitle">${subtitle}</div>
+    </div>
+  </div>`;
+}
+
+function mainExportFooterHtml(){
+  return `<div class="ig-export-footer"><span>ELIZA CUP</span><span>elizacup.com</span></div>`;
+}
+
+function mainExportRender(){
+  if(!mainExportData) return;
+  const target = $("mainExportPreviewTarget");
+  const cfg = mainExportData.cfg;
+  const type = $("mainExportType").value;
+  $("mainExportPreviewWrap").style.display = "block";
+
+  if(type === "table"){
+    const rowsHtml = mainExportData.teams.map(t => {
+      const diffText = t.diff > 0 ? `+${t.diff}` : `${t.diff}`;
+      return `<tr>
+        <td class="num pos">${t.pos}</td>
+        <td><div class="ig-export-team"><img src="logo/${teamLogoSlug(t.team)}.png" alt="" onerror="${teamLogoOnErrorAttr(t.team)}"><span>${t.team}</span></div></td>
+        <td class="num">${t.played}</td>
+        <td class="num">${t.w}</td>
+        <td class="num">${t.d}</td>
+        <td class="num">${t.l}</td>
+        <td class="num">${diffText}</td>
+        <td class="num pts">${t.pts}</td>
+      </tr>`;
+    }).join("");
+    target.innerHTML = `
+      ${mainExportHeaderHtml(cfg, "LEAGUE TABLE")}
+      <div class="ig-export-body">
+        ${rowsHtml ? `<table class="ig-export-table">
+          <thead><tr>
+            <th class="num" style="width:7%;">Pos</th>
+            <th style="width:39%;text-align:left;">Team</th>
+            <th class="num" style="width:8%;">P</th>
+            <th class="num" style="width:8%;">W</th>
+            <th class="num" style="width:8%;">D</th>
+            <th class="num" style="width:8%;">L</th>
+            <th class="num" style="width:10%;">+/−</th>
+            <th class="num" style="width:12%;">Pts</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>` : `<div class="ig-export-empty">No league table data found.</div>`}
+      </div>
+      ${mainExportFooterHtml()}`;
+    return;
+  }
+
+  const round = $("mainExportRound").value;
+  const fixtures = mainExportData.rounds[round] || [];
+  const fixturesHtml = fixtures.map(f => {
+    const hs = parseInt(f.homeScore,10), as = parseInt(f.awayScore,10);
+    const scored = !isNaN(hs) && !isNaN(as);
+    const draw = scored && hs === as;
+    const homeWin = scored && hs > as, awayWin = scored && as > hs;
+    const score = scored
+      ? `<span class="${homeWin?'winner':(!draw?'loser':'')}">${hs}</span> &ndash; <span class="${awayWin?'winner':(!draw?'loser':'')}">${as}</span>`
+      : "VS";
+    return `<div class="ig-result-row">
+      <div class="ig-result-team${homeWin?' winner':(scored&&!draw?' loser':'')}">
+        <img src="logo/${teamLogoSlug(f.home)}.png" alt="" onerror="${teamLogoOnErrorAttr(f.home)}"><span>${f.home}</span>
+      </div>
+      <div class="ig-result-score${scored?'':' pending'}">${score}</div>
+      <div class="ig-result-team away${awayWin?' winner':(scored&&!draw?' loser':'')}">
+        <span>${f.away}</span><img src="logo/${teamLogoSlug(f.away)}.png" alt="" onerror="${teamLogoOnErrorAttr(f.away)}">
+      </div>
+    </div>`;
+  }).join("");
+
+  target.innerHTML = `
+    ${mainExportHeaderHtml(cfg, `ROUND ${round || "—"} · RESULTS`)}
+    <div class="ig-export-body">
+      <div class="ig-results-list">${fixturesHtml || `<div class="ig-export-empty">No fixtures found for this round.</div>`}</div>
+    </div>
+    ${mainExportFooterHtml()}`;
+}
+
+async function mainExportLoadData(){
+  const btn = $("mainExportLoadBtn");
+  const status = $("mainExportStatus");
+  const cfg = MAIN_EXPORT_DIVISIONS[$("mainExportDivision").value];
+  if(!cfg) return;
+  btn.disabled = true;
+  status.textContent = "Loading…";
+  $("mainExportPreviewWrap").style.display = "none";
+  try{
+    const res = await fetch(mainExportCsvUrl(cfg));
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const rows = Papa.parse(await res.text(), {skipEmptyLines:false}).data;
+    const teams = mainExportParseTable(rows, cfg);
+    const rounds = mainExportParseFixtures(rows, teams.map(t=>t.team));
+    mainExportData = {cfg, teams, rounds};
+
+    const roundSel = $("mainExportRound");
+    const roundKeys = Object.keys(rounds).sort((a,b)=>(parseInt(a,10)||0)-(parseInt(b,10)||0));
+    roundSel.innerHTML = roundKeys.map(r=>`<option value="${r}">Round ${r}</option>`).join("");
+    const lastScored = [...roundKeys].reverse().find(r => (rounds[r]||[]).some(f => f.homeScore !== "" || f.awayScore !== ""));
+    if(lastScored) roundSel.value = lastScored;
+
+    status.textContent = `Loaded — ${teams.length} teams, ${roundKeys.length} rounds found.`;
+    mainExportRender();
+  }catch(err){
+    console.error("Main league export load failed", err);
+    status.textContent = "Couldn't load: " + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function mainExportSyncType(){
+  const results = $("mainExportType").value === "results";
+  $("mainExportRoundField").style.display = results ? "block" : "none";
+  if(mainExportData) mainExportRender();
+}
+
+function mainExportImage(){
+  const btn = $("mainExportImageBtn");
+  const target = $("mainExportPreviewTarget");
+  if(!btn || !target || typeof html2canvas !== "function" || !mainExportData) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Exporting…";
+  html2canvas(target, {
+    backgroundColor:"#f5f6f7",
+    scale:1,
+    width:1080,
+    height:1350,
+    useCORS:true
+  }).then(canvas => {
+    const div = $("mainExportDivision").value;
+    const type = $("mainExportType").value;
+    const suffix = type === "results" ? `round-${$("mainExportRound").value}-results` : "league-table";
+    const link = document.createElement("a");
+    link.download = `eliza-cup-2627-${div}-${suffix}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }).catch(err => {
+    console.error("Instagram export failed", err);
+    alert("Couldn't export the image: " + err.message);
+  }).finally(() => {
+    btn.disabled = false;
+    btn.textContent = old;
+  });
+}
+
+
 const EXPORT_SHEET_ID = "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk"; // shared by every competition below
 // Same column map as index.html's FPL_COL — kept as its own local constant
 // rather than shared between the two files, since they're separate pages.
@@ -5103,6 +5436,15 @@ $("saveSlhBtn").addEventListener("click", saveSlhCard);
 $("slhAddWinnerBtn").addEventListener("click", addSlhWinner);
 $("slhWinnerInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSlhWinner(); } });
 $("cancelSlhEditBtn").addEventListener("click", cancelEditSlh);
+$("mainExportLoadBtn").addEventListener("click", mainExportLoadData);
+$("mainExportDivision").addEventListener("change", () => {
+  mainExportData = null;
+  $("mainExportPreviewWrap").style.display = "none";
+  $("mainExportStatus").textContent = "";
+});
+$("mainExportType").addEventListener("change", mainExportSyncType);
+$("mainExportRound").addEventListener("change", mainExportRender);
+$("mainExportImageBtn").addEventListener("click", mainExportImage);
 $("exportLoadBtn").addEventListener("click", exportLoadData);
 $("exportCompetition").addEventListener("change", exportSyncContentOptions);
 $("exportContentType").addEventListener("change", () => {
