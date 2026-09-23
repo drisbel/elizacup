@@ -566,12 +566,12 @@
   .side-square-export.social-standings.cup-large .export-card-body{
     justify-content:flex-start;padding:10px 30px 6px;
   }
-  .side-square-export.social-standings.cup-large .export-table{font-size:12px;}
-  .side-square-export.social-standings.cup-large .export-table th{font-size:10px;padding:0 4px 3px;}
-  .side-square-export.social-standings.cup-large .export-table td{height:25px;padding:2px 4px;}
-  .side-square-export.social-standings.cup-large .export-table .team-cell{gap:5px;}
+  .side-square-export.social-standings.cup-large .export-table{font-size:13.5px;}
+  .side-square-export.social-standings.cup-large .export-table th{font-size:11px;padding:0 5px 5px;}
+  .side-square-export.social-standings.cup-large .export-table td{height:29px;padding:3px 5px;}
+  .side-square-export.social-standings.cup-large .export-table .team-cell{gap:6px;}
   .side-square-export.social-standings.cup-large .export-table .team-cell img{
-    width:17px !important;height:17px !important;
+    width:20px !important;height:20px !important;
   }
   .side-square-export.social-standings.cup-large .export-legend{
     margin-top:3px;font-size:9px;gap:5px;
@@ -674,6 +674,30 @@
   .side-square-export.roddy-square.roddy-roomy .export-table th{font-size:13px;padding-bottom:9px;}
   .side-square-export.roddy-square.roddy-roomy .export-table td{height:42px;padding:7px 5px;}
   .side-square-export.roddy-square.roddy-roomy .export-table .team-cell img{width:27px !important;height:27px !important;}
+  .side-square-export.roddy-square.roddy-dense .export-card-body{
+    justify-content:flex-start !important;
+    padding:5px 34px 3px !important;
+    overflow:hidden;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table{
+    font-size:11.5px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table th{
+    font-size:9.5px;padding:0 3px 2px;height:17px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table td{
+    height:26px;padding:1px 3px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table .team-cell{
+    gap:5px;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-table .team-cell img{
+    width:18px !important;height:18px !important;
+  }
+  .side-square-export.roddy-square.roddy-dense .export-chip-pill{
+    min-width:25px;padding:2px 3px;font-size:8.5px;
+  }
+
 
 
   /* UCL and other leaderboard/table exports centre themselves vertically too. */
@@ -5561,7 +5585,8 @@ function exportRenderPreview(){
 function exportRenderRoddyPreview(){
   const target = $("exportPreviewTarget");
   const data = exportData.roddy;
-  target.className = "export-card side-square-export roddy-square" + (data.entries.length <= 16 ? " roddy-roomy" : "");
+  target.className = "export-card side-square-export roddy-square" +
+    (data.entries.length <= 16 ? " roddy-roomy" : (data.entries.length >= 24 ? " roddy-dense" : "")); // dense mode safely fits the full 28-team Roddy field
   target.style.width = "1080px";
   target.style.height = "1080px";
   if(!data.entries.length){
