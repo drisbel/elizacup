@@ -1553,6 +1553,70 @@
     #calendarContainer table.calendar-table td.next-opp{font-size:7.5px !important;}
   }
 
+
+  /* Home: primary competition cards */
+  .home-card-grid .home-card{
+    min-height:230px;
+    padding:22px 18px 20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    text-align:center;
+  }
+  .home-card-grid .home-card-top{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:8px;
+    width:100%;
+  }
+  .home-card-grid .home-card-icon{
+    width:72px;
+    height:72px;
+    object-fit:contain;
+  }
+  .home-card-grid .home-card-title{
+    font-size:21px;
+    line-height:1.1;
+  }
+  .home-card-grid .home-card-sub{
+    font-size:12.5px;
+    line-height:1.35;
+    max-width:220px;
+    margin:0 auto;
+  }
+
+  /* Divisions: pyramid/tier layout — D1 / D2A+D2B / D3A+D3B */
+  .home-card-grid .home-divisions-card .home-mini-pills{
+    display:grid;
+    grid-template-columns:repeat(2,max-content);
+    justify-content:center;
+    gap:6px 8px;
+    margin-top:14px;
+  }
+  .home-card-grid .home-divisions-card .home-mini-pill:first-child{
+    grid-column:1 / -1;
+    justify-self:center;
+  }
+
+  /* Side League pills use each competition's own theme colour. */
+  .home-sideleagues-pill{
+    color:#fff;
+    border-color:transparent;
+  }
+  .home-sideleagues-pill:hover{
+    filter:brightness(1.08);
+    border-color:transparent;
+  }
+
+  @media (max-width:700px){
+    .home-card-grid .home-card{min-height:210px;padding:18px 14px;}
+    .home-card-grid .home-card-icon{width:62px;height:62px;}
+  }
+
 </style>
 </head>
 <body>
@@ -10450,7 +10514,7 @@ function homeCardCompactHtml({id, title, subtitle, color, logo, icon}){
 function homeDivisionsCardHtml(){
   const divs = DIVISIONS.filter(d => d.type === "division" && !d.isTest);
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
-  return `<div class="home-card" data-id="d1" style="border-left:5px solid #000000;cursor:pointer;">
+  return `<div class="home-card home-divisions-card" data-id="d1" style="border-left:5px solid #000000;cursor:pointer;">
     <div class="home-card-top">
       <img src="logo/eliza-logo.png" alt="" class="home-card-icon" onerror="this.style.display='none';">
       <div class="home-card-title" style="color:#000000;">Divisions</div>
@@ -10469,7 +10533,18 @@ function homeDivisionsCardHtml(){
 // order/no exclusions until then, then refreshes in place.
 function homeSideLeaguesCardHtml(){
   const activeLeagues = sideLeaguesInDisplayOrder().filter(s => !completedSideLeagueKeys.has(s.key));
-  const pills = activeLeagues.map(s => `<a href="#sideleagues=${s.key}" class="home-sideleagues-pill">${s.label}</a>`).join("");
+  const homeSideLeagueColor = key => ({
+    fpl: "#28427c",
+    afl: "#d90a30",
+    nrl: "#01c36b",
+    eplsc: "#7cb648",
+    nbl: "#FF7900",
+    uclfantasy: "#010056",
+    lms: "#111111",
+    honourboard: "#8B6914"
+  })[key] || "#111111";
+  const homeSideLeagueTextColor = key => key === "nbl" ? "#000000" : "#ffffff";
+  const pills = activeLeagues.map(sl => `<a href="#sideleagues=${sl.key}" class="home-sideleagues-pill" style="background:${homeSideLeagueColor(sl.key)};color:${homeSideLeagueTextColor(sl.key)};">${sl.label}</a>`).join("");
   return `<div class="home-sideleagues-card" data-id="sideleagueshub">
     <a href="#sideleagueshub" class="home-sideleagues-card-head">
       <div class="home-card-top">
@@ -10571,8 +10646,6 @@ function renderHome(){
       ${homeCardHtml({id:"ecl", title:"Eliza Champions League", subtitle:"Group &amp; Knockout competition featuring last season's trophy winners", color:"#111111", logo:"logo/ecl-logo.png"})}
     </div>
 
-    ${homeSideLeaguesCardHtml()}
-
     <div class="home-card-grid-compact">
       ${homeCardCompactHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#000000", icon:HOME_ICON_CALENDAR})}
       ${homeCardCompactHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914", icon:HOME_ICON_TROPHY})}
@@ -10581,6 +10654,8 @@ function renderHome(){
       ${homeCardCompactHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#000000", icon:HOME_ICON_HISTORY})}
       ${homeCardCompactHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#000000", icon:HOME_ICON_NEWS})}
     </div>
+
+    ${homeSideLeaguesCardHtml()}
 
     <div id="homeLatestNewsSection" style="display:none;">
       <div class="section-head" style="margin-top:40px;">
