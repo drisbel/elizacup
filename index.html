@@ -1627,6 +1627,86 @@
     .home-card-grid .home-card-icon{width:60px;height:60px;}
   }
 
+
+  /* Mobile home: return the four primary competition cards to the original
+     compact horizontal treatment to reduce vertical scrolling. Desktop keeps
+     the new large centred feature-card design. */
+  @media (max-width:700px){
+    .home-card-grid{
+      grid-template-columns:1fr !important;
+      gap:10px !important;
+    }
+    .home-card-grid .home-card{
+      min-height:0 !important;
+      padding:13px 14px !important;
+      display:block !important;
+      text-align:left !important;
+    }
+    .home-card-grid .home-card-top{
+      display:flex !important;
+      flex-direction:row !important;
+      align-items:center !important;
+      justify-content:flex-start !important;
+      gap:10px !important;
+      margin-bottom:4px !important;
+      width:100% !important;
+    }
+    .home-card-grid .home-card-icon{
+      width:28px !important;
+      height:28px !important;
+      flex:0 0 28px !important;
+    }
+    .home-card-grid .home-card-title{
+      font-size:19px !important;
+      line-height:1.1 !important;
+      text-align:left !important;
+    }
+    .home-card-grid .home-card-sub{
+      font-size:12.5px !important;
+      line-height:1.3 !important;
+      max-width:none !important;
+      margin:0 !important;
+      text-align:left !important;
+    }
+
+    /* Divisions also returns to the compact mobile pill row. */
+    .home-card-grid .home-divisions-card .home-mini-pills{
+      display:flex !important;
+      flex-wrap:wrap !important;
+      justify-content:flex-start !important;
+      gap:6px !important;
+      margin-top:10px !important;
+    }
+    .home-card-grid .home-divisions-card .home-mini-pill:first-child{
+      grid-column:auto !important;
+      justify-self:auto !important;
+    }
+
+    /* Mobile browsers can override link backgrounds in touch/visited states,
+       so explicitly retain each Side League's theme colour. */
+    .home-sideleagues-pill,
+    .home-sideleagues-pill:visited{
+      color:#fff !important;
+      border-color:transparent !important;
+    }
+    .home-sideleagues-fpl,
+    .home-sideleagues-fpl:visited{background:#28427c !important;color:#fff !important;}
+    .home-sideleagues-afl,
+    .home-sideleagues-afl:visited{background:#d90a30 !important;color:#fff !important;}
+    .home-sideleagues-nrl,
+    .home-sideleagues-nrl:visited{background:#01c36b !important;color:#07150d !important;}
+    .home-sideleagues-eplsc,
+    .home-sideleagues-eplsc:visited{background:#7cb648 !important;color:#102006 !important;}
+    .home-sideleagues-nbl,
+    .home-sideleagues-nbl:visited{background:#FF7900 !important;color:#000 !important;}
+    .home-sideleagues-uclfantasy,
+    .home-sideleagues-uclfantasy:visited{background:#010056 !important;color:#fff !important;}
+    .home-sideleagues-lms,
+    .home-sideleagues-lms:visited{background:#111 !important;color:#fff !important;}
+    .home-sideleagues-honourboard,
+    .home-sideleagues-honourboard:visited{background:#8B6914 !important;color:#fff !important;}
+  }
+
 </style>
 </head>
 <body>
