@@ -1554,10 +1554,15 @@
   }
 
 
-  /* Home: primary competition cards */
+  /* Home: primary competition cards — compact centred feature cards.
+     Logos remain prominent, but cards size to their content instead of leaving
+     a large empty lower half. */
+  .home-card-grid{
+    align-items:start;
+  }
   .home-card-grid .home-card{
-    min-height:230px;
-    padding:22px 18px 20px;
+    min-height:0;
+    padding:18px 16px 17px;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -1569,22 +1574,22 @@
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:10px;
-    margin-bottom:8px;
+    gap:8px;
+    margin-bottom:7px;
     width:100%;
   }
   .home-card-grid .home-card-icon{
-    width:72px;
-    height:72px;
+    width:68px;
+    height:68px;
     object-fit:contain;
   }
   .home-card-grid .home-card-title{
-    font-size:21px;
+    font-size:20px;
     line-height:1.1;
   }
   .home-card-grid .home-card-sub{
     font-size:12.5px;
-    line-height:1.35;
+    line-height:1.3;
     max-width:220px;
     margin:0 auto;
   }
@@ -1603,18 +1608,23 @@
   }
 
   /* Side League pills use each competition's own theme colour. */
-  .home-sideleagues-pill{
-    color:#fff;
-    border-color:transparent;
-  }
+  .home-sideleagues-pill{border-color:transparent !important;color:#fff !important;}
+  .home-sideleagues-fpl{background:#28427c !important;}
+  .home-sideleagues-afl{background:#d90a30 !important;}
+  .home-sideleagues-nrl{background:#01c36b !important;color:#07150d !important;}
+  .home-sideleagues-eplsc{background:#7cb648 !important;color:#102006 !important;}
+  .home-sideleagues-nbl{background:#FF7900 !important;color:#000 !important;}
+  .home-sideleagues-uclfantasy{background:#010056 !important;}
+  .home-sideleagues-lms{background:#111 !important;}
+  .home-sideleagues-honourboard{background:#8B6914 !important;}
   .home-sideleagues-pill:hover{
-    filter:brightness(1.08);
-    border-color:transparent;
+    filter:brightness(1.10);
+    border-color:transparent !important;
   }
 
   @media (max-width:700px){
-    .home-card-grid .home-card{min-height:210px;padding:18px 14px;}
-    .home-card-grid .home-card-icon{width:62px;height:62px;}
+    .home-card-grid .home-card{min-height:0;padding:16px 13px;}
+    .home-card-grid .home-card-icon{width:60px;height:60px;}
   }
 
 </style>
@@ -10533,18 +10543,7 @@ function homeDivisionsCardHtml(){
 // order/no exclusions until then, then refreshes in place.
 function homeSideLeaguesCardHtml(){
   const activeLeagues = sideLeaguesInDisplayOrder().filter(s => !completedSideLeagueKeys.has(s.key));
-  const homeSideLeagueColor = key => ({
-    fpl: "#28427c",
-    afl: "#d90a30",
-    nrl: "#01c36b",
-    eplsc: "#7cb648",
-    nbl: "#FF7900",
-    uclfantasy: "#010056",
-    lms: "#111111",
-    honourboard: "#8B6914"
-  })[key] || "#111111";
-  const homeSideLeagueTextColor = key => key === "nbl" ? "#000000" : "#ffffff";
-  const pills = activeLeagues.map(sl => `<a href="#sideleagues=${sl.key}" class="home-sideleagues-pill" style="background:${homeSideLeagueColor(sl.key)};color:${homeSideLeagueTextColor(sl.key)};">${sl.label}</a>`).join("");
+  const pills = activeLeagues.map(sl => `<a href="#sideleagues=${sl.key}" class="home-sideleagues-pill home-sideleagues-${sl.key}">${sl.label}</a>`).join("");
   return `<div class="home-sideleagues-card" data-id="sideleagueshub">
     <a href="#sideleagueshub" class="home-sideleagues-card-head">
       <div class="home-card-top">
