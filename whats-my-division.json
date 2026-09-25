@@ -491,20 +491,20 @@
       "deadline": ""
     },
     {
-      "id": "msfw9lr8oqxo",
-      "team": "VICTORY",
-      "division": "3TBC",
-      "code": "",
-      "link": "",
-      "deadline": "09/10/2026"
-    },
-    {
       "id": "mug9lv63",
       "team": "GARNY  - *NEW*",
       "division": "3TBC",
       "code": "",
       "link": "",
       "deadline": ""
+    },
+    {
+      "id": "msfw9lr8oqxo",
+      "team": "VICTORY",
+      "division": "3TBC",
+      "code": "",
+      "link": "",
+      "deadline": "09/10/2026"
     },
     {
       "id": "mug9m719",
