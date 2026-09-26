@@ -1236,7 +1236,7 @@
     <div class="card">
       <h2>Set league code / deadline for a whole division</h2>
       <div class="hint" style="margin-bottom:10px;">
-        Apply a shared league code and/or join deadline to every team currently listed in the chosen division. Leave either field blank if you do not want to change that field.
+        Apply a shared league code, league join link and/or join deadline to every team currently listed in the chosen division. Leave any field blank if you do not want to change that field.
       </div>
       <div class="row">
         <div class="field">
@@ -1253,6 +1253,10 @@
         <div class="field">
           <label for="wmdBulkCode">League code</label>
           <input type="text" id="wmdBulkCode" placeholder="Leave blank to keep existing codes">
+        </div>
+        <div class="field">
+          <label for="wmdBulkLink">League join link</label>
+          <input type="text" id="wmdBulkLink" placeholder="https://... — leave blank to keep existing">
         </div>
         <div class="field">
           <label for="wmdBulkDeadline">Join deadline</label>
@@ -2924,11 +2928,12 @@ async function saveWmdRoddyCode() {
 async function applyWmdBulkCode() {
   const division = $("wmdBulkDivision").value;
   const code = $("wmdBulkCode").value.trim();
+  const link = $("wmdBulkLink").value.trim();
   const deadline = $("wmdBulkDeadline").value.trim();
   const statusEl = $("wmdBulkCodeStatus");
 
-  if (!code && !deadline) {
-    statusEl.textContent = "Enter a league code and/or a join deadline to apply.";
+  if (!code && !link && !deadline) {
+    statusEl.textContent = "Enter a league code, league join link and/or a join deadline to apply.";
     statusEl.className = "status-msg err";
     return;
   }
@@ -2942,11 +2947,13 @@ async function applyWmdBulkCode() {
 
   const changes = [];
   if (code) changes.push(`league code to "${code}"`);
+  if (link) changes.push(`league join link to "${link}"`);
   if (deadline) changes.push(`join deadline to "${deadline}"`);
   if (!confirm(`Set ${changes.join(" and ")} for all ${affected.length} team(s) in ${WMD_DIVISION_LABELS[division] || division}? Any existing values for the fields being changed will be overwritten.`)) return;
 
   affected.forEach(t => {
     if (code) t.code = code;
+    if (link) t.link = link;
     if (deadline) t.deadline = deadline;
   });
   await commitWmd(`Bulk-set division details for ${WMD_DIVISION_LABELS[division] || division}`, "applyWmdBulkCodeBtn", "wmdBulkCodeStatus");
