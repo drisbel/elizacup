@@ -1737,6 +1737,22 @@
   opacity:.95;
 }
 
+
+/* 26/27 Leagues: warning belongs inside each team card/search result. */
+.wmd-card-join-both{
+  background:#28427c;
+  color:#fff;
+  border-radius:6px;
+  padding:7px 9px;
+  margin:8px 0 10px;
+  text-align:center;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.04em;
+  line-height:1.1;
+}
+
 </style>
 </head>
 <body>
@@ -1972,8 +1988,7 @@
     <div class="section-head">
       <span class="sub">26/27 Leagues — find your division, league code, and join deadline</span>
     </div>
-    <div class="wmd-join-both-alert">JOIN BOTH LEAGUES<span>You must join both your head-to-head league and the Roddy.</span></div>
-<div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You are required to join <strong>BOTH</strong> the Roddy and your head-to-head league. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="https://elizacup.com/#">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.<br><br>Division 3 head-to-head league codes will be provided at a later date, these will be communicated when available.</div>
+    <div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You are required to join <strong>BOTH</strong> the Roddy and your head-to-head league. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="https://elizacup.com/#">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.<br><br>Division 3 head-to-head league codes will be provided at a later date, these will be communicated when available.</div>
     <div class="wmd-search-wrap">
       <input type="text" id="wmdSearchInput" class="wmd-search-input" placeholder="Search your team name…" autocomplete="off">
       <div id="wmdSearchResult"></div>
@@ -8086,6 +8101,9 @@ function wmdTeamCardHtml(t){
   const codeHtml = t.code
     ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>`
     : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`;
+  const leagueLinkHtml = t.link
+    ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>`
+    : "";
   const roddyCodeHtml = wmdData.roddyCode
     ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>`
     : "";
@@ -8096,10 +8114,12 @@ function wmdTeamCardHtml(t){
     <img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="wmd-team-card-logo" onerror="${logoOnError}">
     <div class="wmd-team-card-name">${t.team}</div>
     <div class="wmd-team-card-expand">
+      <div class="wmd-card-join-both">JOIN BOTH LEAGUES</div>
       ${codeHtml}
+      ${leagueLinkHtml}
+      <div class="wmd-league-divider"></div>
       ${roddyCodeHtml}
       ${roddyLinkHtml}
-      ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
       ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
     </div>
   </div>`;
@@ -8148,6 +8168,7 @@ function wmdSearchResultHtml(t){
       </div>
       ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-result-div-logo">` : ""}
     </div>
+    <div class="wmd-card-join-both">JOIN BOTH LEAGUES</div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
     ${t.link ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
     <div class="wmd-league-divider"></div>
