@@ -1707,6 +1707,36 @@
     .home-sideleagues-honourboard:visited{background:#8B6914 !important;color:#fff !important;}
   }
 
+
+/* 26/27 Leagues: clearly separate the required H2H and Roddy league details. */
+.wmd-league-divider{
+  height:1px;
+  background:rgba(40,66,124,.24);
+  margin:10px 0;
+}
+.wmd-join-both-alert{
+  background:#28427c;
+  color:#fff;
+  border-radius:8px;
+  padding:11px 14px;
+  margin:0 0 14px;
+  text-align:center;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:.04em;
+  line-height:1.15;
+}
+.wmd-join-both-alert span{
+  display:block;
+  margin-top:3px;
+  font-family:inherit;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:0;
+  opacity:.95;
+}
+
 </style>
 </head>
 <body>
@@ -1942,7 +1972,8 @@
     <div class="section-head">
       <span class="sub">26/27 Leagues — find your division, league code, and join deadline</span>
     </div>
-    <div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You are required to join <strong>BOTH</strong> the Roddy and your head-to-head league. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="https://elizacup.com/#">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.<br><br>Division 3 head-to-head league codes will be provided at a later date, these will be communicated when available.</div>
+    <div class="wmd-join-both-alert">JOIN BOTH LEAGUES<span>You must join both your head-to-head league and the Roddy.</span></div>
+<div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You are required to join <strong>BOTH</strong> the Roddy and your head-to-head league. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="https://elizacup.com/#">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.<br><br>Division 3 head-to-head league codes will be provided at a later date, these will be communicated when available.</div>
     <div class="wmd-search-wrap">
       <input type="text" id="wmdSearchInput" class="wmd-search-input" placeholder="Search your team name…" autocomplete="off">
       <div id="wmdSearchResult"></div>
@@ -8118,9 +8149,10 @@ function wmdSearchResultHtml(t){
       ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-result-div-logo">` : ""}
     </div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
+    ${t.link ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
+    <div class="wmd-league-divider"></div>
     ${wmdData.roddyCode ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>` : ""}
     ${wmdData.roddyLink ? `<div class="wmd-result-row"><b>Roddy join link:</b> <a class="wmd-result-link" href="${wmdData.roddyLink}" target="_blank" rel="noopener">${wmdData.roddyLink}</a></div>` : ""}
-    ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
     ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
   </div>`;
 }
