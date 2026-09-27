@@ -523,20 +523,20 @@
       "deadline": "09/10/2026"
     },
     {
-      "id": "msfw9lr8oqxo",
-      "team": "VICTORY",
-      "division": "3TBC",
-      "code": "",
-      "link": "",
-      "deadline": "09/10/2026"
-    },
-    {
       "id": "muji0mgs",
       "team": "GEOJOSH",
       "division": "3TBC",
       "code": "",
       "link": "",
       "deadline": ""
+    },
+    {
+      "id": "msfw9lr8oqxo",
+      "team": "VICTORY",
+      "division": "3TBC",
+      "code": "",
+      "link": "",
+      "deadline": "09/10/2026"
     }
   ]
 }
