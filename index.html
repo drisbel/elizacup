@@ -510,19 +510,10 @@
   .home-hero-banner-text{
     color:#fff;font-weight:700;font-size:52px;line-height:1;letter-spacing:0.02em;white-space:nowrap;
   }
-  .home-division-find-banner{
-    display:flex;align-items:center;justify-content:center;width:100%;
-    background:#28427c;color:#fff;text-decoration:none;
-    font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;
-    letter-spacing:.02em;line-height:1.1;padding:15px 20px;margin:-16px 0 28px;
-    transition:filter .15s,transform .15s;
-  }
-  .home-division-find-banner:hover{filter:brightness(1.08);transform:translateY(-1px);}
   @media (max-width:600px){
     .home-hero-banner{padding:16px 18px;gap:14px;}
     .home-hero-banner img{height:52px;}
     .home-hero-banner-text{font-size:32px;}
-    .home-division-find-banner{font-size:20px;padding:13px 14px;margin:-12px 0 24px;}
   }
   .home-hero-sub{font-family:'Barlow',sans-serif;font-size:15px;color:#5a6a63;width:100%;margin:0 auto;text-align:center;line-height:1.6;}
   .home-hero-sub p{margin:0 0 12px;}
@@ -861,7 +852,7 @@
   .form-pill.form-d{background:#9AA79E;}
   .form-pill.form-blank{background:#E4DFD0;color:#B0A890;}
 
-  /* Roddy chip columns (TC/FH) — reuse the same tint palette as the division
+  /* Roddy chip columns (BB/UC/FH/WC) — reuse the same tint palette as the division
      table tiers, so it feels consistent with the rest of the site. Text stays muted
      rather than bold white, matching the existing "greyed out" look for played chips. */
   .chip-pill{
@@ -870,7 +861,7 @@
     font-family:'Barlow',sans-serif;
   }
   .chip-pill.chip-bb{background:#E1E9F7;color:#28427c;}
-  .chip-pill.chip-tc{background:#FFF6CC;color:#B8930A;}
+  .chip-pill.chip-uc{background:#FFF6CC;color:#B8930A;}
   .chip-pill.chip-fh{background:#F9E0DC;color:#A8443A;}
   .chip-pill.chip-wc{background:#DCF2E3;color:#1F8A4C;}
   .chip-pill.chip-blank{background:#E4DFD0;color:#B0A890;font-weight:400;}
@@ -1182,13 +1173,6 @@
   .slh-winner .trophy{font-size:17px;}
   .slh-winners-wrap{display:flex;flex-direction:column;gap:6px;}
 
-  .wmd-notice{
-    max-width:760px;margin:0 auto 20px;padding:14px 18px;
-    background:#fff7d6;border:1px solid #e1c45b;border-radius:8px;
-    font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:#332b0b;
-    text-align:center;
-  }
-  .wmd-notice strong{font-weight:800;}
   .wmd-search-wrap{max-width:520px;margin:0 auto 40px;}
   .wmd-search-input{
     width:100%;padding:14px 18px;font-size:16px;font-family:'Barlow',sans-serif;
@@ -1490,269 +1474,6 @@
     table.hist-fixture-table tbody td.hist-fx-pill{width:26px;}
     table.hist-fixture-table tbody td.hist-fx-score{width:24px;}
   }
-
-  /* News page: fixed-size image left, article content right. */
-  .news-card{
-    border:1px solid var(--line-light);border-radius:8px;background:#fff;
-    padding:16px 18px;display:flex;align-items:flex-start;gap:20px;
-  }
-  .news-card-image-wrap{
-    width:260px;flex:0 0 260px;
-    border-radius:6px;overflow:hidden;background:transparent;
-  }
-  .news-card-image{
-    width:100%;height:auto;display:block;
-    object-fit:contain;object-position:center;
-  }
-  .news-card-content{flex:1;min-width:0;padding-top:1px;}
-  .news-card-date{font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;}
-  .news-card-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);}
-  .news-card-body{font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);}
-  @media (max-width:700px){
-    .news-card{gap:14px;padding:14px;}
-    .news-card-image-wrap{width:200px;flex-basis:200px;}
-    .news-card-title{font-size:18px;}
-    .news-card-body{font-size:13px;}
-  }
-  @media (max-width:520px){
-    .news-card{display:block;}
-    .news-card-image-wrap{width:100%;margin-bottom:12px;}
-    .news-card-image{width:100%;height:auto;}
-  }
-
-
-  /* Calendar mobile fit: Round, Date and all five competition columns remain
-     visible together without horizontal scrolling. */
-  @media (max-width:600px){
-    #calendarContainer .table-wrap{overflow-x:visible !important;width:100%;}
-    #calendarContainer table.calendar-table{
-      width:100% !important;min-width:0 !important;table-layout:fixed;
-    }
-    #calendarContainer table.calendar-table th,
-    #calendarContainer table.calendar-table td{
-      min-width:0 !important;max-width:none !important;
-      white-space:normal !important;word-break:normal;overflow-wrap:anywhere;
-      padding:5px 2px !important;font-size:9px !important;line-height:1.12;
-      text-align:center;
-    }
-    #calendarContainer table.calendar-table th{font-size:8px !important;}
-    #calendarContainer table.calendar-table th:nth-child(1),
-    #calendarContainer table.calendar-table td:nth-child(1){width:7%;}
-    #calendarContainer table.calendar-table th:nth-child(2),
-    #calendarContainer table.calendar-table td:nth-child(2){width:15%;}
-    #calendarContainer table.calendar-table th:nth-child(n+3),
-    #calendarContainer table.calendar-table td:nth-child(n+3){width:15.6%;}
-    #calendarContainer table.calendar-table td.next-opp{font-size:8px !important;}
-  }
-  @media (max-width:420px){
-    #calendarContainer table.calendar-table th,
-    #calendarContainer table.calendar-table td{
-      padding:4px 1px !important;font-size:8px !important;line-height:1.08;
-    }
-    #calendarContainer table.calendar-table th{font-size:7.5px !important;}
-    #calendarContainer table.calendar-table td.next-opp{font-size:7.5px !important;}
-  }
-
-
-  /* Home: primary competition cards — compact centred feature cards.
-     Logos remain prominent, but cards size to their content instead of leaving
-     a large empty lower half. */
-  .home-card-grid{
-    align-items:start;
-  }
-  .home-card-grid .home-card{
-    min-height:0;
-    padding:18px 16px 17px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
-    text-align:center;
-  }
-  .home-card-grid .home-card-top{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    margin-bottom:7px;
-    width:100%;
-  }
-  .home-card-grid .home-card-icon{
-    width:68px;
-    height:68px;
-    object-fit:contain;
-  }
-  .home-card-grid .home-card-title{
-    font-size:20px;
-    line-height:1.1;
-  }
-  .home-card-grid .home-card-sub{
-    font-size:12.5px;
-    line-height:1.3;
-    max-width:220px;
-    margin:0 auto;
-  }
-
-  /* Divisions: pyramid/tier layout — D1 / D2A+D2B / D3A+D3B */
-  .home-card-grid .home-divisions-card .home-mini-pills{
-    display:grid;
-    grid-template-columns:repeat(2,max-content);
-    justify-content:center;
-    gap:6px 8px;
-    margin-top:14px;
-  }
-  .home-card-grid .home-divisions-card .home-mini-pill:first-child{
-    grid-column:1 / -1;
-    justify-self:center;
-  }
-
-  /* Side League pills use each competition's own theme colour. */
-  .home-sideleagues-pill{border-color:transparent !important;color:#fff !important;}
-  .home-sideleagues-fpl{background:#28427c !important;}
-  .home-sideleagues-afl{background:#d90a30 !important;}
-  .home-sideleagues-nrl{background:#01c36b !important;color:#07150d !important;}
-  .home-sideleagues-eplsc{background:#7cb648 !important;color:#102006 !important;}
-  .home-sideleagues-nbl{background:#FF7900 !important;color:#000 !important;}
-  .home-sideleagues-uclfantasy{background:#010056 !important;}
-  .home-sideleagues-lms{background:#111 !important;}
-  .home-sideleagues-honourboard{background:#8B6914 !important;}
-  .home-sideleagues-pill:hover{
-    filter:brightness(1.10);
-    border-color:transparent !important;
-  }
-
-  @media (max-width:700px){
-    .home-card-grid .home-card{min-height:0;padding:16px 13px;}
-    .home-card-grid .home-card-icon{width:60px;height:60px;}
-  }
-
-
-  /* Mobile home: return the four primary competition cards to the original
-     compact horizontal treatment to reduce vertical scrolling. Desktop keeps
-     the new large centred feature-card design. */
-  @media (max-width:700px){
-    .home-card-grid{
-      grid-template-columns:1fr !important;
-      gap:10px !important;
-    }
-    .home-card-grid .home-card{
-      min-height:0 !important;
-      padding:13px 14px !important;
-      display:block !important;
-      text-align:left !important;
-    }
-    .home-card-grid .home-card-top{
-      display:flex !important;
-      flex-direction:row !important;
-      align-items:center !important;
-      justify-content:flex-start !important;
-      gap:10px !important;
-      margin-bottom:4px !important;
-      width:100% !important;
-    }
-    .home-card-grid .home-card-icon{
-      width:28px !important;
-      height:28px !important;
-      flex:0 0 28px !important;
-    }
-    .home-card-grid .home-card-title{
-      font-size:19px !important;
-      line-height:1.1 !important;
-      text-align:left !important;
-    }
-    .home-card-grid .home-card-sub{
-      font-size:12.5px !important;
-      line-height:1.3 !important;
-      max-width:none !important;
-      margin:0 !important;
-      text-align:left !important;
-    }
-
-    /* Divisions also returns to the compact mobile pill row. */
-    .home-card-grid .home-divisions-card .home-mini-pills{
-      display:flex !important;
-      flex-wrap:wrap !important;
-      justify-content:flex-start !important;
-      gap:6px !important;
-      margin-top:10px !important;
-    }
-    .home-card-grid .home-divisions-card .home-mini-pill:first-child{
-      grid-column:auto !important;
-      justify-self:auto !important;
-    }
-
-    /* Mobile browsers can override link backgrounds in touch/visited states,
-       so explicitly retain each Side League's theme colour. */
-    .home-sideleagues-pill,
-    .home-sideleagues-pill:visited{
-      color:#fff !important;
-      border-color:transparent !important;
-    }
-    .home-sideleagues-fpl,
-    .home-sideleagues-fpl:visited{background:#28427c !important;color:#fff !important;}
-    .home-sideleagues-afl,
-    .home-sideleagues-afl:visited{background:#d90a30 !important;color:#fff !important;}
-    .home-sideleagues-nrl,
-    .home-sideleagues-nrl:visited{background:#01c36b !important;color:#07150d !important;}
-    .home-sideleagues-eplsc,
-    .home-sideleagues-eplsc:visited{background:#7cb648 !important;color:#102006 !important;}
-    .home-sideleagues-nbl,
-    .home-sideleagues-nbl:visited{background:#FF7900 !important;color:#000 !important;}
-    .home-sideleagues-uclfantasy,
-    .home-sideleagues-uclfantasy:visited{background:#010056 !important;color:#fff !important;}
-    .home-sideleagues-lms,
-    .home-sideleagues-lms:visited{background:#111 !important;color:#fff !important;}
-    .home-sideleagues-honourboard,
-    .home-sideleagues-honourboard:visited{background:#8B6914 !important;color:#fff !important;}
-  }
-
-
-/* 26/27 Leagues: clearly separate the required H2H and Roddy league details. */
-.wmd-league-divider{
-  height:1px;
-  background:rgba(40,66,124,.24);
-  margin:10px 0;
-}
-.wmd-join-both-alert{
-  background:#28427c;
-  color:#fff;
-  border-radius:8px;
-  padding:11px 14px;
-  margin:0 0 14px;
-  text-align:center;
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:20px;
-  font-weight:800;
-  letter-spacing:.04em;
-  line-height:1.15;
-}
-.wmd-join-both-alert span{
-  display:block;
-  margin-top:3px;
-  font-family:inherit;
-  font-size:13px;
-  font-weight:600;
-  letter-spacing:0;
-  opacity:.95;
-}
-
-
-/* 26/27 Leagues: warning belongs inside each team card/search result. */
-.wmd-card-join-both{
-  background:#28427c;
-  color:#fff;
-  border-radius:6px;
-  padding:7px 9px;
-  margin:8px 0 10px;
-  text-align:center;
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:15px;
-  font-weight:800;
-  letter-spacing:.04em;
-  line-height:1.1;
-}
-
 </style>
 </head>
 <body>
@@ -1988,7 +1709,6 @@
     <div class="section-head">
       <span class="sub">26/27 Leagues — find your division, league code, and join deadline</span>
     </div>
-    <div class="wmd-notice"><strong>Important:</strong> Only join the league codes listed under your team name. You are required to join <strong>BOTH</strong> the Roddy and your head-to-head league. You must join by your listed deadline date to avoid the risk of your spot being replaced.<br><br>If you don't see your team listed, please also check any previous team names if you have changed your team name. If you still cannot locate your team, or you are a new player having trouble, please reach out via <a href="https://discord.gg/rcMnMWGRsm" target="_blank" rel="noopener">Discord</a> or the <a href="https://elizacup.com/#">contact form</a>.<br><br>Please note that there may be some circumstances where teams need to change divisions prior to the season starting. If this affects you, someone will reach out to let you know.<br><br>Division 3 head-to-head league codes will be provided at a later date, these will be communicated when available.</div>
     <div class="wmd-search-wrap">
       <input type="text" id="wmdSearchInput" class="wmd-search-input" placeholder="Search your team name…" autocomplete="off">
       <div id="wmdSearchResult"></div>
@@ -3870,8 +3590,8 @@ function parseRoddy(rows){
   roddyDebug = {};
 
   // Confirmed exact columns: POS=F(5), TEAM=H(7), DIVISION=Q(16), ROUND=T(19), CHIP=V(21),
-  // TOTAL=W(22), TC=AA(26), FH=AB(27), OVERALL=AC:AD merged (value exported from AC=28).
-  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27], OVERALL:28 };
+  // TOTAL=W(22), chip-play indicators=AA:AD(26-29), OVERALL=AE(30).
+  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27,28,29], OVERALL:30 };
 
   // Find the header row by locating "POS" at column F, restricted to the top of the
   // sheet (first 30 rows) so we don't accidentally match the broken #REF! table further down.
@@ -3986,7 +3706,7 @@ function renderRoddy(){
   el.className = "";
   let html = `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
     <th>Pos</th><th>Team</th><th>Division</th><th>Round</th><th>Chip</th><th>Total</th>
-    <th>TC</th><th>FH</th><th>Overall</th>
+    <th>BB Chip</th><th>UC Chip</th><th>FH Chip</th><th>WC Chip</th><th>Overall</th>
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
     const divColor = getDivisionColorByLabel(e.division);
@@ -3998,8 +3718,8 @@ function renderRoddy(){
       <td>${e.chip || "—"}</td>
       <td class="pts">${e.total}</td>
       ${e.chips.map((c,i) => {
-        const chipName = ["TC","FH"][i];
-        const chipType = ["tc","fh"][i];
+        const chipName = ["BB","UC","FH","WC"][i];
+        const chipType = ["bb","uc","fh","wc"][i];
         if(!c) return `<td>—</td>`;
         // Unused chips display their own name (e.g. "BB") — show as a colored pill.
         // Used chips display the round they were played — show as plain text.
@@ -4910,8 +4630,8 @@ function renderHonourRoll(){
 // Bye rounds (5, 6) and double rounds (12, 16) are called out per instruction rather
 // than detected from cell color, since background fills don't survive CSV export.
 const CAL_COL = { ROUND: 1, DATE: 3, ELIZA_CUP: 5, DIV2: 7, DIV3: 9, FA_CUP: 11, ECL: 13 };
-const BYE_ROUNDS = [1, 5, 6];
-const DOUBLE_ROUNDS = [7, 12, 16];
+const BYE_ROUNDS = [5, 6];
+const DOUBLE_ROUNDS = [12, 16];
 
 let calendarRounds = [];
 let calendarDebug = {};
@@ -7415,15 +7135,19 @@ function formatNewsDate(iso){
 
 function newsCardHtml(item){
   const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
-  return `<article class="news-card">
-    ${item.image ? `<div class="news-card-image-wrap"><img src="${item.image}" alt="" class="news-card-image" onerror="this.parentElement.style.display='none';"></div>` : ""}
-    <div class="news-card-content">
-      <div class="news-card-date">${formatNewsDate(item.date)}</div>
-      <h3 class="news-card-title">${item.title}</h3>
-      <div class="news-card-body">${paragraphs}</div>
+  return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
+    ${item.image ? `<div style="padding:16px 18px 0;"><img src="${item.image}" alt="" style="width:180px;height:120px;object-fit:cover;display:block;border-radius:6px;" onerror="this.parentElement.style.display='none';"></div>` : ""}
+    <div style="padding:16px 18px;">
+      <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
+      <div style="font-family:'Barlow',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);">${paragraphs}</div>
     </div>
   </article>`;
 }
+
+// Shortened version for the home page — first paragraph only, capped length,
+// with a "Read more" link through to the full News page rather than dumping
+// the whole article on the home page.
 function newsExcerptCardHtml(item){
   const firstPara = (item.body.split("\n").map(p=>p.trim()).filter(Boolean)[0]) || "";
   const excerpt = firstPara.length > 220 ? firstPara.slice(0, 220).trim() + "…" : firstPara;
@@ -7452,7 +7176,7 @@ function renderNewsPage(){
       return;
     }
     container.className = "";
-    container.innerHTML = `<div style="display:flex;flex-direction:column;gap:20px;max-width:900px;">
+    container.innerHTML = `<div style="display:flex;flex-direction:column;gap:20px;max-width:640px;">
       ${data.newsItems.map(newsCardHtml).join("")}
     </div>`;
   });
@@ -7657,7 +7381,7 @@ const SIDE_LEAGUES = [
   // named rounds through the UCL knockout stages), so this doesn't fit the
   // fixture/matchup shape every other side league uses. Own loader/renderer
   // (isUcl branch in loadSideLeague, parseUclFantasy/renderUclFantasy).
-  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "823386870", isUcl: true }
+  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "957438595", isUcl: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
@@ -8043,18 +7767,11 @@ document.addEventListener('keydown', (e) => {
 // ---------- What's My Division? (26/27 Leagues) ----------
 // Managed via admin.html (whats-my-division.json) — one entry per team:
 // { team, division, code, link, deadline }. Division is a short label (D1,
-// 2A, 2B, 3TBC / Div 3 - TBC, 3A, 3B) matching the same convention used everywhere else on the
+// 2A, 2B, 3A, 3B) matching the same convention used everywhere else on the
 // site. Deadline uses the same DD-MM-YYYY / AM-PM-aware parser as everything
 // else (parseLmsDeadline / formatAestDateTime).
-const WMD_DIVISION_ORDER = ["D1","2A","2B","3TBC","3A","3B"];
-const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3TBC": "Div 3 - TBC", "3A": "Division 3A", "3B": "Division 3B" };
-
-function normaliseWmdDivision(value){
-  const raw = (value||"").trim().toUpperCase();
-  const compact = raw.replace(/[^A-Z0-9]/g,"");
-  if(raw === "3TBC" || compact === "3TBC" || compact === "DIV3TBC" || compact === "DIVISION3TBC") return "3TBC";
-  return raw;
-}
+const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
 
 // Join deadlines are a date only (no time) — separate from parseLmsDeadline,
 // which requires a time + AM/PM and would reject a bare date entirely.
@@ -8101,9 +7818,6 @@ function wmdTeamCardHtml(t){
   const codeHtml = t.code
     ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>`
     : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`;
-  const leagueLinkHtml = t.link
-    ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>`
-    : "";
   const roddyCodeHtml = wmdData.roddyCode
     ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>`
     : "";
@@ -8114,12 +7828,10 @@ function wmdTeamCardHtml(t){
     <img src="logo/${teamLogoSlug(t.team)}.png" alt="" class="wmd-team-card-logo" onerror="${logoOnError}">
     <div class="wmd-team-card-name">${t.team}</div>
     <div class="wmd-team-card-expand">
-      <div class="wmd-card-join-both">JOIN BOTH LEAGUES</div>
       ${codeHtml}
-      ${leagueLinkHtml}
-      <div class="wmd-league-divider"></div>
       ${roddyCodeHtml}
       ${roddyLinkHtml}
+      ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
       ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
     </div>
   </div>`;
@@ -8134,11 +7846,11 @@ function renderWmdDivisions(teams){
   }
   container.className = "";
   container.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
-    const divTeams = teams.filter(t => normaliseWmdDivision(t.division) === divKey);
+    const divTeams = teams.filter(t => (t.division||"").toUpperCase() === divKey);
     if(!divTeams.length) return "";
     const divLogo = divisionLogoForShortLabel(divKey);
     return `<div class="wmd-div-section">
-      <h3 class="wmd-div-heading" style="color:${divKey === "3TBC" ? "#6aa84f" : getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
+      <h3 class="wmd-div-heading" style="color:${getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
       <div class="wmd-team-grid">${divTeams.map(wmdTeamCardHtml).join("")}</div>
     </div>`;
   }).join("");
@@ -8153,10 +7865,9 @@ function renderWmdDivisions(teams){
 }
 
 function wmdSearchResultHtml(t){
-  const normalisedDivision = normaliseWmdDivision(t.division);
-  const divColor = normalisedDivision === "3TBC" ? "#6aa84f" : getDivisionColorByLabel(t.division);
-  const divLabel = WMD_DIVISION_LABELS[normalisedDivision] || t.division;
-  const divLogo = normalisedDivision === "3TBC" ? "" : divisionLogoForShortLabel(t.division);
+  const divColor = getDivisionColorByLabel(t.division);
+  const divLabel = WMD_DIVISION_LABELS[(t.division||"").toUpperCase()] || t.division;
+  const divLogo = divisionLogoForShortLabel(t.division);
   const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
   return `<div class="wmd-result-card">
@@ -8168,12 +7879,10 @@ function wmdSearchResultHtml(t){
       </div>
       ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-result-div-logo">` : ""}
     </div>
-    <div class="wmd-card-join-both">JOIN BOTH LEAGUES</div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
-    ${t.link ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
-    <div class="wmd-league-divider"></div>
     ${wmdData.roddyCode ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>` : ""}
     ${wmdData.roddyLink ? `<div class="wmd-result-row"><b>Roddy join link:</b> <a class="wmd-result-link" href="${wmdData.roddyLink}" target="_blank" rel="noopener">${wmdData.roddyLink}</a></div>` : ""}
+    ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
     ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
   </div>`;
 }
@@ -9272,7 +8981,7 @@ function findSideLeagueHonours(honourBoardData, teamName){
 }
 
 // UCL Fantasy — no fixtures/head-to-head at all, just a running score per
-// team across 17 named rounds. Columns are located by searching the header
+// team across the G:Y source range of the current UCL Fantasy tab. Columns are located by searching the header
 // row's text rather than trusting fixed column letters (this sheet already
 // has at least one stray-space label — "R16 -2" — so exact-letter offsets
 // would be fragile here in a way they aren't on the more rigid FPL sheets).
@@ -10657,7 +10366,7 @@ function homeCardCompactHtml({id, title, subtitle, color, logo, icon}){
 function homeDivisionsCardHtml(){
   const divs = DIVISIONS.filter(d => d.type === "division" && !d.isTest);
   const pills = divs.map(d => `<a href="#${d.id}" class="home-mini-pill" style="background:${d.color};">${d.pill}</a>`).join("");
-  return `<div class="home-card home-divisions-card" data-id="d1" style="border-left:5px solid #000000;cursor:pointer;">
+  return `<div class="home-card" data-id="d1" style="border-left:5px solid #000000;cursor:pointer;">
     <div class="home-card-top">
       <img src="logo/eliza-logo.png" alt="" class="home-card-icon" onerror="this.style.display='none';">
       <div class="home-card-title" style="color:#000000;">Divisions</div>
@@ -10676,7 +10385,7 @@ function homeDivisionsCardHtml(){
 // order/no exclusions until then, then refreshes in place.
 function homeSideLeaguesCardHtml(){
   const activeLeagues = sideLeaguesInDisplayOrder().filter(s => !completedSideLeagueKeys.has(s.key));
-  const pills = activeLeagues.map(sl => `<a href="#sideleagues=${sl.key}" class="home-sideleagues-pill home-sideleagues-${sl.key}">${sl.label}</a>`).join("");
+  const pills = activeLeagues.map(s => `<a href="#sideleagues=${s.key}" class="home-sideleagues-pill">${s.label}</a>`).join("");
   return `<div class="home-sideleagues-card" data-id="sideleagueshub">
     <a href="#sideleagueshub" class="home-sideleagues-card-head">
       <div class="home-card-top">
@@ -10763,7 +10472,6 @@ function renderHome(){
         <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
         <div class="home-hero-banner-text">ELIZA CUP</div>
       </div>
-      <a href="#whatsmydiv" class="home-division-find-banner">26/27 LEAGUES - FIND MY DIVISION</a>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
@@ -10778,6 +10486,8 @@ function renderHome(){
       ${homeCardHtml({id:"ecl", title:"Eliza Champions League", subtitle:"Group &amp; Knockout competition featuring last season's trophy winners", color:"#111111", logo:"logo/ecl-logo.png"})}
     </div>
 
+    ${homeSideLeaguesCardHtml()}
+
     <div class="home-card-grid-compact">
       ${homeCardCompactHtml({id:"calendar", title:"Calendar", subtitle:"Every round, bye &amp; double week", color:"#000000", icon:HOME_ICON_CALENDAR})}
       ${homeCardCompactHtml({id:"honour", title:"Hall of Fame", subtitle:"Every champion since 2012-13", color:"#8B6914", icon:HOME_ICON_TROPHY})}
@@ -10786,8 +10496,6 @@ function renderHome(){
       ${homeCardCompactHtml({id:"history", title:"Past Seasons", subtitle:"Tables, results &amp; brackets from previous years", color:"#000000", icon:HOME_ICON_HISTORY})}
       ${homeCardCompactHtml({id:"news", title:"News", subtitle:"Latest updates from around the league", color:"#000000", icon:HOME_ICON_NEWS})}
     </div>
-
-    ${homeSideLeaguesCardHtml()}
 
     <div id="homeLatestNewsSection" style="display:none;">
       <div class="section-head" style="margin-top:40px;">
