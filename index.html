@@ -8988,20 +8988,24 @@ function findSideLeagueHonours(honourBoardData, teamName){
 const UCL_ROUND_LABELS = ["MD1","MD2","MD3","MD4","MD5","MD6","MD7","MD8","PO1","PO2","R16-1","R16-2","QF-1","QF-2","SF-1","SF-2","F"];
 function parseUclFantasy(rows){
   const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
-  const FIXED = { POS:3, TEAM:4, PLAYER:5, TOTAL:6, HITS:24 };
-  const ROUND_COLS = UCL_ROUND_LABELS.map((label, i) => ({ label, col: 7 + i }));
-  let dataStart = 3;
-  let headerRowIdx = 2;
-  const fixedHeaderNorm = (rows[headerRowIdx] || []).map(normalize);
-  if(!(fixedHeaderNorm.includes("POS") && fixedHeaderNorm.includes("TEAMparseUclFantasy"))){
-    headerRowIdx = -1;
-    for(let r=0; r<Math.min(rows.length,15); r++){
-      const rowNorm = (rows[r] || []).map(normalize);
-      if(rowNorm.includes("POS") && rowNorm.includes("TEAMparseUclFantasy")){ headerRowIdx=r; break; }
-    }
-    if(headerRowIdx !== -1) dataStart = headerRowIdx + 1;
+
+  // Confirmed UCL Fantasy layout:
+  // G=POS, H=TEAM NAME, I=PLAYER, J=TOTAL, K:Y=MD1 through F.
+  // There is no HITS column in the current sheet.
+  const FIXED = { POS:6, TEAM:7, PLAYER:8, TOTAL:9 };
+  const ROUND_COLS = UCL_ROUND_LABELS.map((label, i) => ({ label, col: 10 + i }));
+
+  // Google Sheets CSV output can either retain the blank/title rows or consume
+  // the leading rows depending on how the published range is returned. Prefer
+  // the confirmed row-3 header when it is present, otherwise treat the first
+  // returned row as data and use the fixed G:Y layout above.
+  let headerRowIdx = -1;
+  for(let r = 0; r < Math.min(rows.length, 15); r++){
+    const rowNorm = (rows[r] || []).map(normalize);
+    if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
   }
-  if(headerRowIdx === -1) dataStart = 0;
+  const dataStart = headerRowIdx === -1 ? 0 : headerRowIdx + 1;
+
   const teams = [];
   const rawDump = [];
   for(let r=dataStart; r<rows.length; r++){
@@ -9009,31 +9013,29 @@ function parseUclFantasy(rows){
     const pos = cell(row, FIXED.POS), team = cell(row, FIXED.TEAM);
     if(!pos && !team) continue;
     if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+
     const totalRaw = cell(row, FIXED.TOTAL);
-    const hitsRaw = cell(row, FIXED.HITS);
-    const hits = parseInt(hitsRaw,10) || 0;
     const total = parseInt(totalRaw,10) || 0;
     teams.push({
       pos, team, player: cell(row,FIXED.PLAYER),
-      total, hits, netTotal: total-hits,
+      total, hits:0, netTotal:total,
       scores: ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) }))
     });
-    rawDump.push({ row:r+1, pos, team, player:cell(row,FIXED.PLAYER), total:totalRaw, hits:hitsRaw });
+    rawDump.push({ row:r+1, pos, team, player:cell(row,FIXED.PLAYER), total:totalRaw });
   }
   return {
     teams, rounds:UCL_ROUND_LABELS,
     debug:{
       headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed row layout used" : headerRowIdx+1,
       dataStartRow:dataStart+1,
-      sourceRange:"D:Y (scores G:Y)",
-      colsAsLetters:{ pos:"D", team:"E", player:"F", total:"G", hits:"Y" },
+      sourceRange:"G:Y",
+      colsAsLetters:{ pos:"G", team:"H", player:"I", total:"J", hits:"none" },
       roundCols:ROUND_COLS.map(rc => ({ label:rc.label, col:colIndexToLetter(rc.col) })),
       teamsFound:teams.length,
       rawDump:rawDump.slice(0,10)
     }
   };
 }
-
 function renderUclFantasy(data){
   const el = document.getElementById('sideLeaguesContainer');
   if(!data.teams.length){
