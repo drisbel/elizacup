@@ -5251,48 +5251,48 @@ function exportParseFplRoddy(rows){
 
 function exportParseUclFantasy(rows){
   const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
-  let headerRowIdx = -1;
-  for(let r = 0; r < Math.min(rows.length, 15); r++){
-    const rowNorm = (rows[r] || []).map(normalize);
-    if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
+  const FIXED = { POS:3, TEAM:4, PLAYER:5, TOTAL:6, HITS:24 };
+  const ROUND_COLS = EXPORT_UCL_ROUND_LABELS.map((label, i) => ({ label, col: 7 + i }));
+  let dataStart = 3;
+  let headerRowIdx = 2;
+  const fixedHeaderNorm = (rows[headerRowIdx] || []).map(normalize);
+  if(!(fixedHeaderNorm.includes("POS") && fixedHeaderNorm.includes("TEAMexportParseUclFantasy"))){
+    headerRowIdx = -1;
+    for(let r=0; r<Math.min(rows.length,15); r++){
+      const rowNorm = (rows[r] || []).map(normalize);
+      if(rowNorm.includes("POS") && rowNorm.includes("TEAMexportParseUclFantasy")){ headerRowIdx=r; break; }
+    }
+    if(headerRowIdx !== -1) dataStart = headerRowIdx + 1;
   }
-  if(headerRowIdx === -1){
-    return { teams: [], rounds: EXPORT_UCL_ROUND_LABELS, debug: { headerRowFound: false } };
-  }
-  const headerNorm = (rows[headerRowIdx] || []).map(normalize);
-  const findCol = label => headerNorm.indexOf(normalize(label));
-  const posCol = findCol("POS"), teamCol = findCol("TEAM NAME"), playerCol = findCol("PLAYER"),
-        totalCol = findCol("TOTAL"), hitsCol = findCol("HITS");
-  const roundCols = EXPORT_UCL_ROUND_LABELS.map(label => ({ label, col: findCol(label) }));
-
+  if(headerRowIdx === -1) dataStart = 0;
   const teams = [];
-  for(let r = headerRowIdx + 1; r < rows.length; r++){
+  const rawDump = [];
+  for(let r=dataStart; r<rows.length; r++){
     const row = rows[r] || [];
-    const pos = cell(row, posCol), team = cell(row, teamCol);
+    const pos = cell(row, FIXED.POS), team = cell(row, FIXED.TEAM);
     if(!pos && !team) continue;
-    const totalRaw = totalCol !== -1 ? cell(row, totalCol) : "";
-    const hitsRaw = hitsCol !== -1 ? cell(row, hitsCol) : "";
-    const hits = parseInt(hitsRaw, 10) || 0;
-    const total = parseInt(totalRaw, 10) || 0;
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+    const totalRaw = cell(row, FIXED.TOTAL);
+    const hitsRaw = cell(row, FIXED.HITS);
+    const hits = parseInt(hitsRaw,10) || 0;
+    const total = parseInt(totalRaw,10) || 0;
     teams.push({
-      pos, team, player: playerCol !== -1 ? cell(row, playerCol) : "",
-      total, hits, netTotal: total - hits,
-      scores: roundCols.map(rc => ({ label: rc.label, value: rc.col !== -1 ? cell(row, rc.col) : "" }))
+      pos, team, player: cell(row,FIXED.PLAYER),
+      total, hits, netTotal: total-hits,
+      scores: ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) }))
     });
+    rawDump.push({ row:r+1, pos, team, player:cell(row,FIXED.PLAYER), total:totalRaw, hits:hitsRaw });
   }
   return {
-    teams, rounds: EXPORT_UCL_ROUND_LABELS,
-    debug: {
-      headerRowFound: headerRowIdx + 1,
-      colsAsLetters: {
-        pos: posCol !== -1 ? colIndexToLetter(posCol) : "NOT FOUND",
-        team: teamCol !== -1 ? colIndexToLetter(teamCol) : "NOT FOUND",
-        player: playerCol !== -1 ? colIndexToLetter(playerCol) : "NOT FOUND",
-        total: totalCol !== -1 ? colIndexToLetter(totalCol) : "NOT FOUND",
-        hits: hitsCol !== -1 ? colIndexToLetter(hitsCol) : "NOT FOUND"
-      },
-      roundCols: roundCols.map(rc => ({ label: rc.label, col: rc.col !== -1 ? colIndexToLetter(rc.col) : "NOT FOUND" })),
-      teamsFound: teams.length
+    teams, rounds:EXPORT_UCL_ROUND_LABELS,
+    debug:{
+      headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed row layout used" : headerRowIdx+1,
+      dataStartRow:dataStart+1,
+      sourceRange:"D:Y (scores G:Y)",
+      colsAsLetters:{ pos:"D", team:"E", player:"F", total:"G", hits:"Y" },
+      roundCols:ROUND_COLS.map(rc => ({ label:rc.label, col:colIndexToLetter(rc.col) })),
+      teamsFound:teams.length,
+      rawDump:rawDump.slice(0,10)
     }
   };
 }
