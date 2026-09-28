@@ -5509,6 +5509,7 @@ function exportResultsDensityClass(count){
 
 function exportRenderPreview(){
   if(!exportData) return;
+  const compKey = exportData.competition;
   const target = $("exportPreviewTarget");
   target.className = "export-card side-square-export";
   target.style.width = "1080px";
