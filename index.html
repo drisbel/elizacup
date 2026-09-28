@@ -1,3 +1,72 @@
+Pasted text(5).txt
+Document
+
+Done. I’ve changed the NBL Supercoach standings export only so that:
+
+Pts For is now shown instead of +/−
+It pulls directly from the NBL table's Pts For column
+The existing Pts, W, D, L and all other export formatting remain unchanged
+Other competitions are untouched
+Updated files
+
+Download updated admin.html
+
+Download admin.html as TXT/code
+
+admin_NBL_pts_for_export.html
+HTML
+admin_NBL_pts_for_export_CODE.txt
+Document
+I now need to fix UCL fantasy again, I've had to make another new sheet
+
+
+https://docs.google.com/spreadsheets/d/19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk/edit?gid=1534273263#gid=1534273263
+the cells with the table that need to go on the site are G27:AA34
+
+Done. I’ve updated the UCL Fantasy setup to use the new sheet tab and only read the exact table range G27:AA34.
+
+Changes made
+New UCL sheet/tab GID: 1534273263
+Source range: G27:AA34
+Within that range:
+G = POS
+H = TEAM NAME
+I = PLAYER
+J = TOTAL
+K:AA = MD1 through F
+Removed the previous dependency on the old sheet layout.
+Updated both:
+Public site UCL Fantasy page
+Admin UCL Fantasy export
+JavaScript syntax checked successfully.
+Files
+
+Download updated index.html
+
+Download updated admin.html
+
+The public UCL loader now specifically requests G27:AA34, so changes elsewhere on that spreadsheet shouldn't interfere with the table.
+
+index_ucl_GY_correct_columns_UCL_G27_AA34_fixed.html
+HTML
+admin_NBL_pts_for_export_UCL_G27_AA34_fixed.html
+HTML
+can you please ensure the highest score highlights only count for rounds with data, ignore 0s
+
+Yes — fixed.
+
+The UCL highest-score highlight now:
+
+Only considers scores greater than 0
+Completely ignores 0 when finding the highest score
+If a round contains only 0s, nothing is highlighted
+Once positive scores are entered, the highest positive score(s) for that round are highlighted
+Ties for the highest positive score are still highlighted
+
+I’ve also syntax-checked the updated JavaScript.
+
+Download updated index.html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7381,7 +7450,7 @@ const SIDE_LEAGUES = [
   // named rounds through the UCL knockout stages), so this doesn't fit the
   // fixture/matchup shape every other side league uses. Own loader/renderer
   // (isUcl branch in loadSideLeague, parseUclFantasy/renderUclFantasy).
-  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "957438595", isUcl: true }
+  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1534273263", isUcl: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
@@ -7926,7 +7995,8 @@ function sideLeagueCsvUrlFor(league){
   // returned; parseNblSupercoach() already identifies the real data rows itself.
   // Every existing side league keeps its URL unchanged.
   const headerParam = league && league.isNbl ? "&headers=0" : "";
-  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}${headerParam}&cachebust=` + Date.now();
+  const rangeParam = league && league.isUcl ? "&range=G27:AA34" : "";
+  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}${headerParam}${rangeParam}&cachebust=` + Date.now();
 }
 
 let sideLeagueDebug = {};
@@ -8988,24 +9058,16 @@ function findSideLeagueHonours(honourBoardData, teamName){
 const UCL_ROUND_LABELS = ["MD1","MD2","MD3","MD4","MD5","MD6","MD7","MD8","PO1","PO2","R16-1","R16-2","QF-1","QF-2","SF-1","SF-2","F"];
 function parseUclFantasy(rows){
   const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
-
-  // Confirmed UCL Fantasy layout:
-  // G=POS, H=TEAM NAME, I=PLAYER, J=TOTAL, K:Y=MD1 through F.
-  // There is no HITS column in the current sheet.
-  const FIXED = { POS:6, TEAM:7, PLAYER:8, TOTAL:9 };
-  const ROUND_COLS = UCL_ROUND_LABELS.map((label, i) => ({ label, col: 10 + i }));
-
-  // Google Sheets CSV output can either retain the blank/title rows or consume
-  // the leading rows depending on how the published range is returned. Prefer
-  // the confirmed row-3 header when it is present, otherwise treat the first
-  // returned row as data and use the fixed G:Y layout above.
+  // UCL Fantasy source is deliberately restricted to G27:AA34.
+  // Within that fetched range: G=POS, H=TEAM NAME, I=PLAYER, J=TOTAL, K:AA=MD1 through F.
+  const FIXED = { POS:0, TEAM:1, PLAYER:2, TOTAL:3 };
+  const ROUND_COLS = UCL_ROUND_LABELS.map((label, i) => ({ label, col: 4 + i }));
   let headerRowIdx = -1;
-  for(let r = 0; r < Math.min(rows.length, 15); r++){
+  for(let r = 0; r < Math.min(rows.length, 3); r++){
     const rowNorm = (rows[r] || []).map(normalize);
     if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
   }
   const dataStart = headerRowIdx === -1 ? 0 : headerRowIdx + 1;
-
   const teams = [];
   const rawDump = [];
   for(let r=dataStart; r<rows.length; r++){
@@ -9013,28 +9075,19 @@ function parseUclFantasy(rows){
     const pos = cell(row, FIXED.POS), team = cell(row, FIXED.TEAM);
     if(!pos && !team) continue;
     if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
-
     const totalRaw = cell(row, FIXED.TOTAL);
     const total = parseInt(totalRaw,10) || 0;
-    teams.push({
-      pos, team, player: cell(row,FIXED.PLAYER),
-      total, hits:0, netTotal:total,
-      scores: ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) }))
-    });
-    rawDump.push({ row:r+1, pos, team, player:cell(row,FIXED.PLAYER), total:totalRaw });
+    teams.push({ pos, team, player:cell(row,FIXED.PLAYER), total, hits:0, netTotal:total,
+      scores:ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) })) });
+    rawDump.push({row:r+1,pos,team,player:cell(row,FIXED.PLAYER),total:totalRaw});
   }
-  return {
-    teams, rounds:UCL_ROUND_LABELS,
-    debug:{
-      headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed row layout used" : headerRowIdx+1,
-      dataStartRow:dataStart+1,
-      sourceRange:"G:Y",
-      colsAsLetters:{ pos:"G", team:"H", player:"I", total:"J", hits:"none" },
-      roundCols:ROUND_COLS.map(rc => ({ label:rc.label, col:colIndexToLetter(rc.col) })),
-      teamsFound:teams.length,
-      rawDump:rawDump.slice(0,10)
-    }
-  };
+  return { teams, rounds:UCL_ROUND_LABELS, debug:{
+    headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed range layout used" : headerRowIdx+1,
+    dataStartRow:dataStart+1, sourceRange:"G27:AA34",
+    colsAsLetters:{pos:"G",team:"H",player:"I",total:"J",hits:"none"},
+    roundCols:ROUND_COLS.map(rc => ({label:rc.label,col:colIndexToLetter(rc.col+6)})),
+    teamsFound:teams.length, rawDump:rawDump.slice(0,10)
+  }};
 }
 function renderUclFantasy(data){
   const el = document.getElementById('sideLeaguesContainer');
@@ -9055,7 +9108,9 @@ function renderUclFantasy(data){
     let max = -Infinity;
     data.teams.forEach(t => {
       const num = parseInt(t.scores[i] && t.scores[i].value, 10);
-      if(!isNaN(num) && num > max) max = num;
+      // Ignore zeroes when determining the highest score. A round with only
+      // zeroes should have no highlighted score until a positive score exists.
+      if(!isNaN(num) && num > 0 && num > max) max = num;
     });
     return isFinite(max) ? max : null;
   });
@@ -10803,3 +10858,5 @@ if(installInstructionsOverlay){
 </script>
 </body>
 </html>
+index_ucl_G27_AA34_ignore_zero_highlights.html
+HTML
