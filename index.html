@@ -1,72 +1,3 @@
-Pasted text(5).txt
-Document
-
-Done. I’ve changed the NBL Supercoach standings export only so that:
-
-Pts For is now shown instead of +/−
-It pulls directly from the NBL table's Pts For column
-The existing Pts, W, D, L and all other export formatting remain unchanged
-Other competitions are untouched
-Updated files
-
-Download updated admin.html
-
-Download admin.html as TXT/code
-
-admin_NBL_pts_for_export.html
-HTML
-admin_NBL_pts_for_export_CODE.txt
-Document
-I now need to fix UCL fantasy again, I've had to make another new sheet
-
-
-https://docs.google.com/spreadsheets/d/19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk/edit?gid=1534273263#gid=1534273263
-the cells with the table that need to go on the site are G27:AA34
-
-Done. I’ve updated the UCL Fantasy setup to use the new sheet tab and only read the exact table range G27:AA34.
-
-Changes made
-New UCL sheet/tab GID: 1534273263
-Source range: G27:AA34
-Within that range:
-G = POS
-H = TEAM NAME
-I = PLAYER
-J = TOTAL
-K:AA = MD1 through F
-Removed the previous dependency on the old sheet layout.
-Updated both:
-Public site UCL Fantasy page
-Admin UCL Fantasy export
-JavaScript syntax checked successfully.
-Files
-
-Download updated index.html
-
-Download updated admin.html
-
-The public UCL loader now specifically requests G27:AA34, so changes elsewhere on that spreadsheet shouldn't interfere with the table.
-
-index_ucl_GY_correct_columns_UCL_G27_AA34_fixed.html
-HTML
-admin_NBL_pts_for_export_UCL_G27_AA34_fixed.html
-HTML
-can you please ensure the highest score highlights only count for rounds with data, ignore 0s
-
-Yes — fixed.
-
-The UCL highest-score highlight now:
-
-Only considers scores greater than 0
-Completely ignores 0 when finding the highest score
-If a round contains only 0s, nothing is highlighted
-Once positive scores are entered, the highest positive score(s) for that round are highlighted
-Ties for the highest positive score are still highlighted
-
-I’ve also syntax-checked the updated JavaScript.
-
-Download updated index.html
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10858,5 +10789,3 @@ if(installInstructionsOverlay){
 </script>
 </body>
 </html>
-index_ucl_G27_AA34_ignore_zero_highlights.html
-HTML
