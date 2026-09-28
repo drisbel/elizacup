@@ -5038,7 +5038,7 @@ const EXPORT_RODDY_COLOR = "#3D195B", EXPORT_RODDY_TEXT_COLOR = "#fff";
 // columns are located by searching the header row's text rather than fixed
 // column letters, since this sheet already has at least one stray-space
 // label ("R16 -2") that would make hardcoded letters fragile.
-const EXPORT_UCL_GID = "957438595";
+const EXPORT_UCL_GID = "1534273263";
 const EXPORT_UCL_COLOR = "#0E1B3D", EXPORT_UCL_TEXT_COLOR = "#fff";
 const EXPORT_UCL_ROUND_LABELS = ["MD1","MD2","MD3","MD4","MD5","MD6","MD7","MD8","PO1","PO2","R16-1","R16-2","QF-1","QF-2","SF-1","SF-2","F"];
 
@@ -5251,20 +5251,16 @@ function exportParseFplRoddy(rows){
 
 function exportParseUclFantasy(rows){
   const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
-
-  // Confirmed UCL Fantasy layout:
-  // G=POS, H=TEAM NAME, I=PLAYER, J=TOTAL, K:Y=MD1 through F.
-  // There is no HITS column in the current sheet.
-  const FIXED = { POS:6, TEAM:7, PLAYER:8, TOTAL:9 };
-  const ROUND_COLS = EXPORT_UCL_ROUND_LABELS.map((label, i) => ({ label, col: 10 + i }));
-
+  // UCL Fantasy source is deliberately restricted to G27:AA34.
+  // Within that fetched range: G=POS, H=TEAM NAME, I=PLAYER, J=TOTAL, K:AA=MD1 through F.
+  const FIXED = { POS:0, TEAM:1, PLAYER:2, TOTAL:3 };
+  const ROUND_COLS = EXPORT_UCL_ROUND_LABELS.map((label, i) => ({ label, col: 4 + i }));
   let headerRowIdx = -1;
-  for(let r = 0; r < Math.min(rows.length, 15); r++){
+  for(let r = 0; r < Math.min(rows.length, 3); r++){
     const rowNorm = (rows[r] || []).map(normalize);
     if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
   }
   const dataStart = headerRowIdx === -1 ? 0 : headerRowIdx + 1;
-
   const teams = [];
   const rawDump = [];
   for(let r=dataStart; r<rows.length; r++){
@@ -5272,28 +5268,19 @@ function exportParseUclFantasy(rows){
     const pos = cell(row, FIXED.POS), team = cell(row, FIXED.TEAM);
     if(!pos && !team) continue;
     if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
-
     const totalRaw = cell(row, FIXED.TOTAL);
     const total = parseInt(totalRaw,10) || 0;
-    teams.push({
-      pos, team, player: cell(row,FIXED.PLAYER),
-      total, hits:0, netTotal:total,
-      scores: ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) }))
-    });
-    rawDump.push({ row:r+1, pos, team, player:cell(row,FIXED.PLAYER), total:totalRaw });
+    teams.push({ pos, team, player:cell(row,FIXED.PLAYER), total, hits:0, netTotal:total,
+      scores:ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) })) });
+    rawDump.push({row:r+1,pos,team,player:cell(row,FIXED.PLAYER),total:totalRaw});
   }
-  return {
-    teams, rounds:EXPORT_UCL_ROUND_LABELS,
-    debug:{
-      headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed row layout used" : headerRowIdx+1,
-      dataStartRow:dataStart+1,
-      sourceRange:"G:Y",
-      colsAsLetters:{ pos:"G", team:"H", player:"I", total:"J", hits:"none" },
-      roundCols:ROUND_COLS.map(rc => ({ label:rc.label, col:colIndexToLetter(rc.col) })),
-      teamsFound:teams.length,
-      rawDump:rawDump.slice(0,10)
-    }
-  };
+  return { teams, rounds:EXPORT_UCL_ROUND_LABELS, debug:{
+    headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed range layout used" : headerRowIdx+1,
+    dataStartRow:dataStart+1, sourceRange:"G27:AA34",
+    colsAsLetters:{pos:"G",team:"H",player:"I",total:"J",hits:"none"},
+    roundCols:ROUND_COLS.map(rc => ({label:rc.label,col:colIndexToLetter(rc.col+6)})),
+    teamsFound:teams.length, rawDump:rawDump.slice(0,10)
+  }};
 }
 // Swaps the Content dropdown's options to match whichever competition is
 // selected — Roddy has no content choice (single leaderboard), LMS gets
@@ -5415,7 +5402,7 @@ async function exportLoadData(){
   if(competition === "ucl-fantasy"){
     try{
       const [csvRes, teamMap] = await Promise.all([
-        fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_UCL_GID}&cachebust=` + Date.now()),
+        fetch(`https://docs.google.com/spreadsheets/d/${EXPORT_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${EXPORT_UCL_GID}&range=G27:AA34&cachebust=` + Date.now()),
         exportLoadTeamMap("UCL").catch(err => { console.error("Team name map failed to load, logos will fall back to placeholders", err); return {}; })
       ]);
       if(!csvRes.ok) throw new Error("HTTP " + csvRes.status);
