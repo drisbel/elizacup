@@ -5561,6 +5561,7 @@ function exportRenderPreview(){
       const logoName = exportResolveTeamName(t.team);
       const statusInfo = exportStatusInfo(t.status);
       const played = (parseInt(t.w,10)||0) + (parseInt(t.d,10)||0) + (parseInt(t.l,10)||0);
+      // NBL export uses the table's Pts For column rather than +/- (Diff).
       const diffNum = parseInt(String(t.dif||"0").replace(/[^\-\d]/g,""),10) || 0;
       const diffText = diffNum > 0 ? `+${diffNum}` : `${diffNum}`;
       const posNum = parseInt(t.pos,10) || 0;
@@ -5578,7 +5579,7 @@ function exportRenderPreview(){
         <td class="num">${t.w||0}</td>
         <td class="num">${t.d||0}</td>
         <td class="num">${t.l||0}</td>
-        <td class="num">${diffText}</td>
+        <td class="num">${t.for||0}</td>
         <td class="num pts">${t.pts||0}</td>
       </tr>`;
     }).join("");
@@ -5594,7 +5595,7 @@ function exportRenderPreview(){
               <th class="num" style="width:8%;">W</th>
               <th class="num" style="width:8%;">D</th>
               <th class="num" style="width:8%;">L</th>
-              <th class="num" style="width:10%;">+/−</th>
+              <th class="num" style="width:10%;">Pts For</th>
               <th class="num" style="width:12%;">Pts</th>
             </tr></thead>
             <tbody>${rowsHtml || `<tr><td colspan="8" class="hint">No teams found.</td></tr>`}</tbody>
