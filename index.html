@@ -1488,25 +1488,23 @@
 
 
 /* ---------- A-League Table Predictor ---------- */
- .alp-page{max-width:1080px;margin:0 auto;padding-bottom:36px;}
+ 
+.alp-page{max-width:1080px;margin:0 auto;padding-bottom:36px;}
 .alp-intro{background:#fff;border:1px solid var(--line-light);border-left:4px solid var(--pitch);border-radius:6px;padding:14px 16px;margin-bottom:18px;}
-.alp-intro h2{margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);}
 .alp-intro p{margin:4px 0;color:#000;line-height:1.45;font-family:'Barlow',sans-serif;font-size:13px;}
 .alp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:18px;align-items:start;}
-.alp-card{background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:16px;}
+.alp-card{background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:16px;min-width:0;}
 .alp-card h3{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--pitch);}
 .alp-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;color:#000;}
-.alp-field select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;background:#fff;font:inherit;}
-.alp-instructions{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;padding:9px 11px;background:#f5f7fa;border-left:3px solid var(--pitch);border-radius:4px;}
-.alp-ladder{display:flex;flex-direction:column;gap:5px;user-select:none;}
-.alp-row{display:grid;grid-template-columns:34px 28px minmax(0,1fr);gap:8px;align-items:center;border:1px solid var(--line-light);border-radius:5px;padding:7px 9px;background:#fff;cursor:grab;touch-action:none;transition:box-shadow .12s,opacity .12s,background .12s;}
-.alp-row:hover{background:#f7f8fa;}
-.alp-row.dragging{opacity:.45;box-shadow:0 4px 12px rgba(0,0,0,.12);}
-.alp-row.drag-over{border-color:var(--pitch);background:#f3f6fb;}
-.alp-rank{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-align:center;color:#555;}
-.alp-drag{font-size:17px;color:#999;text-align:center;line-height:1;}
-.alp-team{font-weight:600;min-width:0;font-family:'Barlow',sans-serif;font-size:14px;}
-.alp-team small{display:block;font-size:10.5px;color:#888;font-weight:400;margin-top:1px;}
+.alp-field select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;background:#fff;font:inherit;color:#111;}
+.alp-instructions{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;padding:9px 11px;background:#f5f7fa;border-left:3px solid var(--pitch);border-radius:4px;line-height:1.45;}
+.alp-ladder{display:flex;flex-direction:column;gap:5px;}
+.alp-pick-row{display:grid;grid-template-columns:minmax(0,1fr) 76px;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line-light);border-radius:5px;background:#fff;transition:background .12s,border-color .12s;}
+.alp-pick-row:hover{border-color:var(--line,#aaa);background:#fafbfc;}
+.alp-pick-team{font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;min-width:0;line-height:1.25;}
+.alp-position{width:100%;box-sizing:border-box;padding:7px 5px;border:1px solid #aaa;border-radius:5px;background:#fff;font:600 13px 'Barlow',sans-serif;color:#111;text-align:center;}
+.alp-position:focus{outline:2px solid var(--pitch,#111);outline-offset:1px;}
+.alp-pick-row:first-child{border-left:4px solid var(--pitch,#111);}
 .alp-submit{width:100%;border:0;border-radius:5px;padding:12px 16px;margin-top:12px;background:var(--pitch);color:#fff;font-weight:700;font-size:15px;cursor:pointer;font-family:'Barlow',sans-serif;}
 .alp-submit:disabled{opacity:.55;cursor:default;}
 .alp-message{margin-top:10px;padding:10px 12px;border-radius:5px;background:#f4f6f8;color:#000;font-size:13px;line-height:1.4;display:none;}
@@ -1525,25 +1523,21 @@
 .alp-current-row{display:grid;grid-template-columns:32px 1fr;gap:7px;padding:5px 0;border-bottom:1px solid #f0f2f4;font-size:13px;font-family:'Barlow',sans-serif;}
 .alp-current-row b{color:#555;}
 .alp-muted{color:#000;font-size:13px;}
-
-  .alp-page{padding:0 2px 30px;}
-  .alp-intro{padding:13px 14px;}
-  .alp-intro h2{font-size:22px;}
-  .alp-card{padding:12px;}
-  .alp-row{grid-template-columns:30px 24px minmax(0,1fr);padding:7px;}
-  .alp-team{font-size:13px;}
+@media(max-width:700px){
+  .alp-page{padding:0 0 30px;}
+  .alp-intro{padding:12px 13px;margin-bottom:12px;}
+  .alp-intro p{font-size:12.5px;}
+  .alp-layout{display:block;}
+  .alp-card{padding:12px;margin-bottom:12px;}
+  .alp-card h3{font-size:19px;margin-bottom:10px;}
+  .alp-pick-row{grid-template-columns:minmax(0,1fr) 68px;gap:8px;padding:7px 8px;}
+  .alp-pick-team{font-size:13px;overflow-wrap:anywhere;}
+  .alp-position{font-size:12px;padding:7px 3px;}
+  .alp-instructions{font-size:12px;}
+  .alp-table{font-size:13px;}
+  .alp-table th,.alp-table td{padding:8px 6px;}
 }
 
-
-/* A-League predictor position-entry styling */
-.alp-pick-row{display:grid;grid-template-columns:42px minmax(0,1fr) 112px;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line-light,#ddd);border-radius:6px;background:#fff;margin-bottom:6px;transition:background .15s,border-color .15s,transform .15s}
-.alp-pick-row:hover{border-color:var(--line,#aaa)}
-.alp-pick-rank{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-align:center}
-.alp-pick-team{font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;min-width:0}
-.alp-position{width:100%;padding:7px 8px;border:1px solid #bbb;border-radius:5px;background:#fff;font:600 13px 'Barlow',sans-serif;color:#111}
-.alp-position:focus{outline:2px solid var(--pitch,#111);outline-offset:1px}
-.alp-pick-row:first-child{border-left:4px solid var(--pitch,#111)}
-@media(max-width:700px){.alp-pick-row{grid-template-columns:36px minmax(0,1fr) 96px;padding:8px}.alp-pick-team{font-size:13px}.alp-position{font-size:12px}}
 </style>
 </head>
 <body>
@@ -10334,29 +10328,25 @@ function alpBuildLadder(teams, picks={}){
     if(Number.isFinite(ap) && Number.isFinite(bp)) return ap-bp;
     if(Number.isFinite(ap)) return -1;
     if(Number.isFinite(bp)) return 1;
+    const aa=Number(a.actualPos), bb=Number(b.actualPos);
+    if(Number.isFinite(aa) && Number.isFinite(bb)) return aa-bb;
     return String(a.name).localeCompare(String(b.name));
   });
-  holder.innerHTML=ordered.map((t,i)=>{
-    const selected=Number.isFinite(Number(picks[t.code])) ? Number(picks[t.code]) : '';
-    return `<div class="alp-pick-row" data-code="${alpEsc(t.code)}">
-      <div class="alp-pick-rank">${i+1}</div>
-      <div class="alp-pick-team">${alpEsc(t.name)}</div>
-      <select class="alp-position" data-code="${alpEsc(t.code)}" aria-label="Predicted position for ${alpEsc(t.name)}">
-        <option value="">Position</option>
-        ${Array.from({length:teams.length},(_,n)=>`<option value="${n+1}"${selected===n+1?' selected':''}>${n+1}${n===0?'st':n===1?'nd':n===2?'rd':'th'}</option>`).join('')}
-      </select>
-    </div>`;
-  }).join('');
+  holder.innerHTML=ordered.map((t,i)=>`<div class="alp-pick-row" data-code="${alpEsc(t.code)}">
+    <div class="alp-pick-team">${alpEsc(t.name)}</div>
+    <select class="alp-position" data-code="${alpEsc(t.code)}" aria-label="Predicted position for ${alpEsc(t.name)}">
+      ${Array.from({length:teams.length},(_,n)=>`<option value="${n+1}"${i===n?' selected':''}>${n+1}</option>`).join('')}
+    </select>
+  </div>`).join('');
   alpWirePositionSelectors();
-  alpRefreshRanks();
 }
 
-function alpRefreshRanks(){
+function alpSetSequentialPositions(){
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
-  holder.querySelectorAll('.alp-pick-row').forEach((row,i)=>{
-    const rank=row.querySelector('.alp-pick-rank');
-    if(rank) rank.textContent=i+1;
+  [...holder.querySelectorAll('.alp-pick-row')].forEach((row,i)=>{
+    const sel=row.querySelector('.alp-position');
+    if(sel) sel.value=String(i+1);
   });
 }
 
@@ -10365,41 +10355,26 @@ function alpWirePositionSelectors(){
   if(!holder) return;
   holder.querySelectorAll('.alp-position').forEach(select=>{
     select.addEventListener('change',()=>{
-      const value=select.value;
       const row=select.closest('.alp-pick-row');
-      if(!row || !value) return;
-
-      // If another club already occupies this position, move the newly selected
-      // club into that position and shift the displaced club down one place.
+      if(!row) return;
       const rows=[...holder.querySelectorAll('.alp-pick-row')];
-      const targetIndex=Math.max(0,Math.min(rows.length-1,Number(value)-1));
+      const targetIndex=Math.max(0,Math.min(rows.length-1,Number(select.value)-1));
       const currentIndex=rows.indexOf(row);
-      if(currentIndex!==targetIndex){
+      if(currentIndex===targetIndex){ alpSetSequentialPositions(); return; }
+      if(targetIndex===0){ holder.prepend(row); }
+      else {
         const target=rows[targetIndex];
-        if(target && target!==row){
-          if(currentIndex<targetIndex) target.after(row);
-          else target.before(row);
-        }
+        if(currentIndex<targetIndex) target.after(row);
+        else target.before(row);
       }
-      alpRefreshRanks();
-
-      // Keep the selected position consistent with the visible order. The
-      // visible order is the prediction; the dropdown is simply the easy way
-      // to move a club there.
-      const ordered=[...holder.querySelectorAll('.alp-pick-row')];
-      ordered.forEach((r,i)=>{
-        const sel=r.querySelector('.alp-position');
-        if(sel) sel.value=String(i+1);
-      });
+      alpSetSequentialPositions();
     });
   });
 }
 
 function alpReadPicks(){
   const picks={};
-  document.querySelectorAll('#alpLadder .alp-pick-row').forEach((row,i)=>{
-    picks[row.dataset.code]=i+1;
-  });
+  document.querySelectorAll('#alpLadder .alp-pick-row').forEach((row,i)=>{ picks[row.dataset.code]=i+1; });
   return picks;
 }
 
