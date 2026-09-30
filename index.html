@@ -1534,6 +1534,16 @@
   .alp-team{font-size:13px;}
 }
 
+
+/* A-League predictor position-entry styling */
+.alp-pick-row{display:grid;grid-template-columns:42px minmax(0,1fr) 112px;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line-light,#ddd);border-radius:6px;background:#fff;margin-bottom:6px;transition:background .15s,border-color .15s,transform .15s}
+.alp-pick-row:hover{border-color:var(--line,#aaa)}
+.alp-pick-rank{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-align:center}
+.alp-pick-team{font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;min-width:0}
+.alp-position{width:100%;padding:7px 8px;border:1px solid #bbb;border-radius:5px;background:#fff;font:600 13px 'Barlow',sans-serif;color:#111}
+.alp-position:focus{outline:2px solid var(--pitch,#111);outline-offset:1px}
+.alp-pick-row:first-child{border-left:4px solid var(--pitch,#111)}
+@media(max-width:700px){.alp-pick-row{grid-template-columns:36px minmax(0,1fr) 96px;padding:8px}.alp-pick-team{font-size:13px}.alp-position{font-size:12px}}
 </style>
 </head>
 <body>
@@ -10319,78 +10329,78 @@ function alpShowMessage(text, type=""){
 function alpBuildLadder(teams, picks={}){
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
-  const ordered = [...teams].sort((a,b)=>{
+  const ordered=[...teams].sort((a,b)=>{
     const ap=Number(picks[a.code]), bp=Number(picks[b.code]);
     if(Number.isFinite(ap) && Number.isFinite(bp)) return ap-bp;
     if(Number.isFinite(ap)) return -1;
     if(Number.isFinite(bp)) return 1;
     return String(a.name).localeCompare(String(b.name));
   });
-  holder.innerHTML=ordered.map((t,i)=>`<div class="alp-row" draggable="true" data-code="${alpEsc(t.code)}" tabindex="0" aria-label="${alpEsc(t.name)}. Predicted position ${i+1}">
-    <div class="alp-rank">${i+1}</div><div class="alp-drag" aria-hidden="true">☷</div><div class="alp-team">${alpEsc(t.name)}<small>Drag to position ${i+1}</small></div>
-  </div>`).join('');
-  alpWireDragDrop();
+  holder.innerHTML=ordered.map((t,i)=>{
+    const selected=Number.isFinite(Number(picks[t.code])) ? Number(picks[t.code]) : '';
+    return `<div class="alp-pick-row" data-code="${alpEsc(t.code)}">
+      <div class="alp-pick-rank">${i+1}</div>
+      <div class="alp-pick-team">${alpEsc(t.name)}</div>
+      <select class="alp-position" data-code="${alpEsc(t.code)}" aria-label="Predicted position for ${alpEsc(t.name)}">
+        <option value="">Position</option>
+        ${Array.from({length:teams.length},(_,n)=>`<option value="${n+1}"${selected===n+1?' selected':''}>${n+1}${n===0?'st':n===1?'nd':n===2?'rd':'th'}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+  alpWirePositionSelectors();
+  alpRefreshRanks();
 }
 
 function alpRefreshRanks(){
-  document.querySelectorAll('#alpLadder .alp-row').forEach((row,i)=>{
-    const rank=row.querySelector('.alp-rank'); if(rank) rank.textContent=i+1;
-    const small=row.querySelector('.alp-team small'); if(small) small.textContent='Drag to position ' + (i+1);
-    row.setAttribute('aria-label', (row.querySelector('.alp-team')?.childNodes[0]?.textContent || '') + '. Predicted position ' + (i+1));
+  const holder=document.getElementById('alpLadder');
+  if(!holder) return;
+  holder.querySelectorAll('.alp-pick-row').forEach((row,i)=>{
+    const rank=row.querySelector('.alp-pick-rank');
+    if(rank) rank.textContent=i+1;
   });
 }
 
-function alpWireDragDrop(){
+function alpWirePositionSelectors(){
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
-  let dragged=null;
-  holder.querySelectorAll('.alp-row').forEach(row=>{
-    row.addEventListener('dragstart',e=>{ dragged=row; row.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',row.dataset.code); });
-    row.addEventListener('dragend',()=>{ row.classList.remove('dragging'); holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); alpRefreshRanks(); });
-    row.addEventListener('dragover',e=>{ e.preventDefault(); if(dragged && dragged!==row){ holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); row.classList.add('drag-over'); } });
-    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
-    row.addEventListener('drop',e=>{ e.preventDefault(); if(!dragged || dragged===row) return; const rect=row.getBoundingClientRect(); const before=e.clientY < rect.top + rect.height/2; row.parentNode.insertBefore(dragged,before?row:row.nextSibling); row.classList.remove('drag-over'); alpRefreshRanks(); });
+  holder.querySelectorAll('.alp-position').forEach(select=>{
+    select.addEventListener('change',()=>{
+      const value=select.value;
+      const row=select.closest('.alp-pick-row');
+      if(!row || !value) return;
 
-    // Pointer-based drag makes the same interaction work on touchscreens/mobile.
-    row.addEventListener('pointerdown',e=>{
-      if(e.pointerType==='mouse') return;
-      dragged=row; row.classList.add('dragging'); row.setPointerCapture?.(e.pointerId);
-    });
-    row.addEventListener('pointermove',e=>{
-      if(!dragged || dragged!==row) return;
-      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#alpLadder .alp-row');
-      if(!target || target===row) return;
-      holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
-      target.classList.add('drag-over');
-      const rect=target.getBoundingClientRect();
-      const before=e.clientY < rect.top + rect.height/2;
-      target.parentNode.insertBefore(row,before?target:target.nextSibling);
+      // If another club already occupies this position, move the newly selected
+      // club into that position and shift the displaced club down one place.
+      const rows=[...holder.querySelectorAll('.alp-pick-row')];
+      const targetIndex=Math.max(0,Math.min(rows.length-1,Number(value)-1));
+      const currentIndex=rows.indexOf(row);
+      if(currentIndex!==targetIndex){
+        const target=rows[targetIndex];
+        if(target && target!==row){
+          if(currentIndex<targetIndex) target.after(row);
+          else target.before(row);
+        }
+      }
       alpRefreshRanks();
+
+      // Keep the selected position consistent with the visible order. The
+      // visible order is the prediction; the dropdown is simply the easy way
+      // to move a club there.
+      const ordered=[...holder.querySelectorAll('.alp-pick-row')];
+      ordered.forEach((r,i)=>{
+        const sel=r.querySelector('.alp-position');
+        if(sel) sel.value=String(i+1);
+      });
     });
-    row.addEventListener('pointerup',()=>{ if(dragged===row){ row.classList.remove('dragging'); holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); dragged=null; alpRefreshRanks(); } });
-    row.addEventListener('pointercancel',()=>{ if(dragged===row){ row.classList.remove('dragging'); holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); dragged=null; alpRefreshRanks(); } });
   });
 }
 
 function alpReadPicks(){
   const picks={};
-  document.querySelectorAll('#alpLadder .alp-row').forEach((row,i)=>{ picks[row.dataset.code]=i+1; });
+  document.querySelectorAll('#alpLadder .alp-pick-row').forEach((row,i)=>{
+    picks[row.dataset.code]=i+1;
+  });
   return picks;
-}
-
-function alpRenderLeaderboard(rows){
-  const body=document.getElementById('alpLeaderboardBody');
-  if(!body) return;
-  if(!rows || !rows.length){ body.innerHTML='<tr><td colspan="3" class="alp-muted">No valid predictions submitted yet.</td></tr>'; return; }
-  body.innerHTML=rows.map(r=>`<tr><td>${alpEsc(r.pos)}</td><td>${alpEsc(r.teamName)}</td><td class="alp-penalty">${alpEsc(r.totalPenalty)}</td></tr>`).join('');
-}
-
-function alpRenderCurrent(pred){
-  const box=document.getElementById('alpCurrent');
-  if(!box) return;
-  if(!pred || !pred.teamName){ box.innerHTML='<div class="alp-muted">Select your team and submit a prediction to see your current selections here.</div>'; return; }
-  const rows=(alpState?.teams||[]).map(t=>`<div class="alp-current-row"><b>${pred.picks?.[t.code] || '—'}</b><span>${alpEsc(t.name)}</span></div>`).join('');
-  box.innerHTML=`<h4>Your current prediction — ${alpEsc(pred.teamName)}</h4>${pred.valid==='YES' ? `<div class="alp-muted" style="margin-bottom:7px;">Current penalty: ${alpEsc(pred.totalPenalty)}</div>` : ''}<div class="alp-current-list">${rows}</div>`;
 }
 
 async function renderALeaguePredictor(){
@@ -10408,7 +10418,7 @@ async function renderALeaguePredictor(){
       <div class="alp-card">
         <h3>Predict the final ladder</h3>
         <div class="alp-field" style="margin-bottom:12px;"><label for="alpTeam">Your team</label><select id="alpTeam"><option value="">Loading teams…</option></select></div>
-        <p class="alp-instructions">Drag and drop the clubs into your predicted finishing order, from <strong>1st</strong> at the top to <strong>last</strong> at the bottom.</p>
+        <p class="alp-instructions">Use the position dropdown beside each club. When you select a position, the list will automatically reorder so your prediction is always shown from <strong>1st</strong> to <strong>last</strong>.</p>
         <div id="alpLadder" class="alp-ladder"></div>
         <button id="alpSubmit" class="alp-submit">Submit Prediction</button>
         <div id="alpMessage" class="alp-message"></div>
@@ -10427,7 +10437,32 @@ async function renderALeaguePredictor(){
   try{
     alpState=await alpApiGet("predictor");
     const teamSelect=document.getElementById('alpTeam');
-    const eligible=alpState.eligibleTeams || [];
+    let eligible=alpState.eligibleTeams || [];
+    // The Roddy competition lives in the main Eliza Cup spreadsheet, not the
+    // Side Leagues spreadsheet used by the predictor backend. Use the same
+    // public Roddy tab directly as a fallback so the selector remains linked
+    // to the live Roddy roster even if the backend roster lookup is unavailable.
+    if(!eligible.length){
+      try{
+        const roddy=DIVISIONS.find(d=>d.id==='roddy');
+        const res=await cachedFetch(csvUrlFor(roddy));
+        if(res.ok){
+          const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data;
+          const set=new Set();
+          let header=-1;
+          for(let r=0;r<Math.min(rows.length,30);r++){ if(cell(rows[r]||[],5).toUpperCase()==='POS'){ header=r; break; } }
+          if(header>=0){
+            for(let r=header+1;r<rows.length;r++){
+              const pos=String(cell(rows[r]||[],5)||'').trim();
+              const name=String(cell(rows[r]||[],7)||'').trim();
+              if(!/^\d+$/.test(pos)) break;
+              if(name) set.add(name);
+            }
+          }
+          eligible=[...set].sort((a,b)=>a.localeCompare(b));
+        }
+      }catch(e){ console.warn('Could not load Roddy roster directly:',e); }
+    }
     teamSelect.innerHTML='<option value="">Select your team…</option>'+eligible.map(t=>`<option value="${alpEsc(t)}">${alpEsc(t)}</option>`).join('');
     alpBuildLadder(alpState.teams || [], {});
     alpRenderLeaderboard(alpState.leaderboard || []);
