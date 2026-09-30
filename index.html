@@ -1485,6 +1485,56 @@
     table.hist-fixture-table tbody td.hist-fx-pill{width:26px;}
     table.hist-fixture-table tbody td.hist-fx-score{width:24px;}
   }
+
+
+/* ---------- A-League Table Predictor ---------- */
+.alp-page{max-width:900px;margin:0 auto;padding-bottom:36px;}
+.alp-intro{background:#fff;border:1px solid var(--line-light);border-left:5px solid #e31b23;border-radius:6px;padding:16px 18px;margin-bottom:18px;}
+.alp-intro h2{margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-size:24px;}
+.alp-intro p{margin:4px 0;color:var(--muted);line-height:1.45;}
+.alp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:18px;align-items:start;}
+.alp-card{background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.alp-card h3{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:20px;}
+.alp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.alp-field label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;color:var(--muted);}
+.alp-field input{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;font:inherit;background:#fff;}
+.alp-ladder{display:flex;flex-direction:column;gap:6px;}
+.alp-row{display:grid;grid-template-columns:38px minmax(0,1fr) 78px;gap:8px;align-items:center;border:1px solid var(--line-light);border-radius:5px;padding:7px 8px;background:#fafbfd;}
+.alp-rank{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-align:center;color:#555;}
+.alp-team{font-weight:600;min-width:0;}
+.alp-team small{display:block;font-size:11px;color:#888;font-weight:400;margin-top:1px;}
+.alp-pos{width:100%;padding:8px 6px;border:1px solid #cfd6df;border-radius:5px;background:#fff;font:inherit;font-weight:700;}
+.alp-submit{width:100%;border:0;border-radius:5px;padding:12px 16px;margin-top:12px;background:#e31b23;color:#fff;font-weight:700;font-size:15px;cursor:pointer;}
+.alp-submit:disabled{opacity:.55;cursor:default;}
+.alp-message{margin-top:10px;padding:10px 12px;border-radius:5px;background:#f4f6f8;color:#4b5563;font-size:13px;line-height:1.4;display:none;}
+.alp-message.show{display:block;}
+.alp-message.error{background:#fff1f1;color:#a40000;border:1px solid #f0caca;}
+.alp-message.success{background:#effaf1;color:#176b2c;border:1px solid #c8e8cf;}
+.alp-table-wrap{overflow-x:auto;}
+.alp-table{width:100%;border-collapse:collapse;font-size:14px;}
+.alp-table th,.alp-table td{padding:9px 8px;border-bottom:1px solid var(--line-light);text-align:left;}
+.alp-table th{font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;}
+.alp-table td:first-child,.alp-table th:first-child{width:42px;text-align:center;font-weight:700;}
+.alp-penalty{font-weight:800;}
+.alp-current{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-light);}
+.alp-current h4{margin:0 0 8px;font-family:'Barlow Condensed',sans-serif;font-size:18px;}
+.alp-current-list{display:flex;flex-direction:column;gap:4px;}
+.alp-current-row{display:grid;grid-template-columns:32px 1fr;gap:7px;padding:5px 0;border-bottom:1px solid #f0f2f4;font-size:13px;}
+.alp-current-row b{color:#555;}
+.alp-muted{color:var(--muted);font-size:13px;}
+@media(max-width:760px){
+  .alp-layout{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .alp-page{padding:0 2px 30px;}
+  .alp-intro{padding:13px 14px;}
+  .alp-intro h2{font-size:22px;}
+  .alp-card{padding:12px;}
+  .alp-form-row{grid-template-columns:1fr;}
+  .alp-row{grid-template-columns:34px minmax(0,1fr) 70px;padding:6px;}
+  .alp-team{font-size:13px;}
+}
+
 </style>
 </head>
 <body>
@@ -1888,7 +1938,8 @@ const SIDE_LEAGUE_THEME_COLORS = {
   "nrl": "#01c36b",
   "eplsc": "#7cb648",
   "nbl": "#FF7900",
-  "uclfantasy": "#010056"
+  "uclfantasy": "#010056",
+  "aleaguepredictor": "#e31b23"
 };
 function sideLeagueThemeColor(key, subTab){
   const lookupKey = key === "fpl" ? ("fpl:" + (subTab || "premier")) : key;
@@ -2725,6 +2776,9 @@ const LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzp-On
 // within that column range, not a whole-sheet append), unlike the Australia
 // Cup script which posts to its own separate sheet.
 const ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqAelD8hY3oZh76ZHTxYAVWO76IjW10OEYTNzPdQyQ5LC8h0oNGotWSHiIxHJ7HkKI1w/exec";
+// Paste the deployed /exec URL of the Eliza Side Leagues Apps Script here.
+// The spreadsheet remains the source of truth for A-League Predictor data.
+const ALEAGUE_PREDICTOR_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1mlX0ZdmvWQe0Odi0fejsqNkUXp82f_PguHElT1dvcQGS6Oq4sU7ET8hf18vcSTWm9w/exec";
 
 async function load(){
   togglePageSections();
@@ -7392,7 +7446,8 @@ const SIDE_LEAGUES = [
   // named rounds through the UCL knockout stages), so this doesn't fit the
   // fixture/matchup shape every other side league uses. Own loader/renderer
   // (isUcl branch in loadSideLeague, parseUclFantasy/renderUclFantasy).
-  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1534273263", isUcl: true }
+  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1534273263", isUcl: true },
+  { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
@@ -7681,7 +7736,18 @@ function renderSideLeaguesHub(){
     // stable sort, so within "still going" and within "complete" the
     // admin-defined order (slh-order, set via the Reorder tool in admin.html)
     // is otherwise preserved exactly.
-    const sortedCards = [...data.cards].sort((a, b) => {
+    const cards = [...data.cards];
+    if(!cards.some(c => c.link === "#sideleagues=aleaguepredictor")){
+      cards.push({
+        key: "aleaguepredictor",
+        label: "A-League Table Predictor",
+        status: "active",
+        roundInfo: "Predict the final A-League Men ladder",
+        notes: "Penalty points are based on the difference between your predicted and actual finishing positions.",
+        link: "#sideleagues=aleaguepredictor"
+      });
+    }
+    const sortedCards = cards.sort((a, b) => {
       const aDone = a.status === "complete" ? 1 : 0;
       const bDone = b.status === "complete" ? 1 : 0;
       return aDone - bDone;
@@ -10208,6 +10274,169 @@ function renderLmsCup(data, containerId){
   wireLmsTipsForm(data);
 }
 
+
+function alpApiUrl(action, params={}){
+  const base = ALEAGUE_PREDICTOR_APPS_SCRIPT_URL;
+  if(!base) throw new Error("The A-League Predictor Apps Script URL has not been configured yet.");
+  const u = new URL(base);
+  u.searchParams.set("action", action);
+  Object.keys(params).forEach(k => { if(params[k] !== undefined && params[k] !== null) u.searchParams.set(k, params[k]); });
+  return u.toString();
+}
+
+function alpApiGet(action, params={}){
+  return new Promise((resolve,reject)=>{
+    const callbackName = "__alpJsonp_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
+    const timeout = setTimeout(()=>{ cleanup(); reject(new Error("The predictor service did not respond.")); },15000);
+    function cleanup(){ clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    window[callbackName] = data => { cleanup(); if(data && data.ok === false) reject(new Error(data.error || "Predictor request failed.")); else resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error("Couldn't reach the predictor service.")); };
+    script.src = alpApiUrl(action, {...params, callback: callbackName});
+    document.head.appendChild(script);
+  });
+}
+
+// Use the JSONP endpoint for submissions as well. This avoids browser CORS
+// problems with Apps Script web-app redirects and, importantly, avoids a
+// POST-then-fallback sequence that could accidentally submit twice.
+async function alpApiSubmit(playerName, teamName, picks){
+  return alpApiGet("submit", {playerName, teamName, picks: JSON.stringify(picks)});
+}
+
+function alpEsc(v){
+  return String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+}
+
+let alpState = null;
+
+function alpShowMessage(text, type=""){
+  const el=document.getElementById('alpMessage');
+  if(!el) return;
+  el.textContent=text;
+  el.className="alp-message show" + (type ? " "+type : "");
+}
+
+function alpBuildLadder(teams, picks={}){
+  const holder=document.getElementById('alpLadder');
+  if(!holder) return;
+  holder.innerHTML=teams.map((t,i)=>{
+    const current = Number(picks[t.code]) || "";
+    const options = ['<option value="">—</option>'].concat(teams.map((_,p)=>`<option value="${p+1}"${current===p+1?' selected':''}>${p+1}</option>`)).join('');
+    return `<div class="alp-row">
+      <div class="alp-rank">${i+1}</div>
+      <div class="alp-team">${alpEsc(t.name)}<small>${alpEsc(t.code)}</small></div>
+      <select class="alp-pos" data-code="${alpEsc(t.code)}" aria-label="Predicted position for ${alpEsc(t.name)}">${options}</select>
+    </div>`;
+  }).join('');
+}
+
+function alpReadPicks(){
+  const picks={};
+  document.querySelectorAll('#alpLadder .alp-pos').forEach(s=>{ if(s.value) picks[s.dataset.code]=Number(s.value); });
+  return picks;
+}
+
+function alpRenderLeaderboard(rows){
+  const body=document.getElementById('alpLeaderboardBody');
+  if(!body) return;
+  if(!rows || !rows.length){ body.innerHTML='<tr><td colspan="4" class="alp-muted">No valid predictions submitted yet.</td></tr>'; return; }
+  body.innerHTML=rows.map(r=>`<tr><td>${alpEsc(r.pos)}</td><td>${alpEsc(r.playerName)}</td><td>${alpEsc(r.teamName)}</td><td class="alp-penalty">${alpEsc(r.totalPenalty)}</td></tr>`).join('');
+}
+
+function alpRenderCurrent(pred){
+  const box=document.getElementById('alpCurrent');
+  if(!box) return;
+  if(!pred || !pred.playerName){
+    box.innerHTML='<div class="alp-muted">Submit a prediction to see your current selections here.</div>';
+    return;
+  }
+  const rows=(alpState?.teams||[]).map((t,i)=>`<div class="alp-current-row"><b>${pred.picks?.[t.code] || '—'}</b><span>${alpEsc(t.name)}</span></div>`).join('');
+  box.innerHTML=`<h4>Your current prediction — ${alpEsc(pred.playerName)}</h4>${pred.teamName ? `<div class="alp-muted" style="margin-bottom:7px;">${alpEsc(pred.teamName)} · ${pred.valid==='YES' ? `Current penalty: ${alpEsc(pred.totalPenalty)}` : 'Prediction not yet scored'}</div>` : ''}<div class="alp-current-list">${rows}</div>`;
+}
+
+async function renderALeaguePredictor(){
+  const el=document.getElementById('sideLeaguesContainer');
+  el.className="";
+  el.innerHTML=`<div class="alp-page">
+    <div class="alp-intro">
+      <h2>A-League Table Predictor</h2>
+      <p>Predict the final A-League Men ladder. Each club scores penalty points equal to the absolute difference between your predicted position and its actual position.</p>
+      <p><strong>Exact position = 0 points.</strong> Your total is the sum across all clubs. Lower totals score better.</p>
+    </div>
+    <div class="alp-layout">
+      <div class="alp-card">
+        <h3>Predict the final ladder</h3>
+        <div class="alp-form-row">
+          <div class="alp-field"><label for="alpPlayer">Player name</label><input id="alpPlayer" autocomplete="name" placeholder="Your name"></div>
+          <div class="alp-field"><label for="alpTeam">Team name</label><input id="alpTeam" placeholder="Your team"></div>
+        </div>
+        <div id="alpLadder" class="alp-ladder"></div>
+        <button id="alpSubmit" class="alp-submit">Submit Prediction</button>
+        <div id="alpMessage" class="alp-message"></div>
+        <div id="alpCurrent" class="alp-current"></div>
+      </div>
+      <div class="alp-card">
+        <h3>Overall leaderboard</h3>
+        <div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Player</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="4">Loading…</td></tr></tbody></table></div>
+        <p class="alp-muted" style="margin:12px 0 0;">Your penalty changes automatically as the actual ladder is updated.</p>
+      </div>
+    </div>
+  </div>`;
+
+  if(!ALEAGUE_PREDICTOR_APPS_SCRIPT_URL){
+    alpShowMessage("The predictor page is installed, but its Apps Script endpoint still needs to be configured.","error");
+    return;
+  }
+
+  try{
+    alpState=await alpApiGet("predictor");
+    alpBuildLadder(alpState.teams || [], {});
+    alpRenderLeaderboard(alpState.leaderboard || []);
+    const savedName=localStorage.getItem('eliza_alp_player_name') || '';
+    const savedTeam=localStorage.getItem('eliza_alp_team_name') || '';
+    document.getElementById('alpPlayer').value=savedName;
+    document.getElementById('alpTeam').value=savedTeam;
+    if(savedName){
+      try{
+        const mine=await alpApiGet("prediction",{playerName:savedName});
+        if(mine && mine.playerName){ alpBuildLadder(alpState.teams,mine.picks||{}); alpRenderCurrent(mine); }
+      }catch(e){ /* no existing prediction is fine */ }
+    }else alpRenderCurrent(null);
+
+    const submit=document.getElementById('alpSubmit');
+    submit.addEventListener('click',async()=>{
+      const playerName=document.getElementById('alpPlayer').value.trim();
+      const teamName=document.getElementById('alpTeam').value.trim();
+      const picks=alpReadPicks();
+      if(!playerName || !teamName){ alpShowMessage("Please enter your player name and team name.","error"); return; }
+      if(Object.keys(picks).length !== alpState.teams.length){ alpShowMessage("Please assign a position to every club.","error"); return; }
+      const positions=Object.values(picks);
+      if(new Set(positions).size !== positions.length){ alpShowMessage("Each ladder position can only be used once.","error"); return; }
+      submit.disabled=true;
+      alpShowMessage("Submitting prediction…");
+      try{
+        const result=await alpApiSubmit(playerName,teamName,picks);
+        localStorage.setItem('eliza_alp_player_name',playerName);
+        localStorage.setItem('eliza_alp_team_name',teamName);
+        alpShowMessage(result.message || "Prediction submitted successfully.","success");
+        const mine=await alpApiGet("prediction",{playerName});
+        alpBuildLadder(alpState.teams,mine.picks||picks);
+        alpRenderCurrent(mine);
+        const fresh=await alpApiGet("predictor");
+        alpState=fresh;
+        alpRenderLeaderboard(fresh.leaderboard||[]);
+      }catch(err){
+        console.error(err);
+        alpShowMessage(err.message || "Couldn't submit the prediction.","error");
+      }finally{ submit.disabled=false; }
+    });
+  }catch(err){
+    console.error(err);
+    alpShowMessage("Couldn't load the A-League Predictor. Check that the Apps Script web app is deployed for public access.","error");
+  }
+}
+
 async function loadSideLeague(leagueKey){
   const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
   const el = document.getElementById('sideLeaguesContainer');
@@ -10222,6 +10451,11 @@ async function loadSideLeague(leagueKey){
   // Same reasoning for the LMS sub-tab visibility check (lmsHubSubTabVisible)
   // — needed before renderLmsHubShell decides which tabs to draw.
   await loadPageVisibilityData();
+
+  if(league.isALeaguePredictor){
+    await renderALeaguePredictor();
+    return;
+  }
 
   if(league.isHonourBoard){
     try{
