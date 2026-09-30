@@ -1488,50 +1488,49 @@
 
 
 /* ---------- A-League Table Predictor ---------- */
-.alp-page{max-width:900px;margin:0 auto;padding-bottom:36px;}
-.alp-intro{background:#fff;border:1px solid var(--line-light);border-left:5px solid #e31b23;border-radius:6px;padding:16px 18px;margin-bottom:18px;}
-.alp-intro h2{margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-size:24px;}
-.alp-intro p{margin:4px 0;color:var(--muted);line-height:1.45;}
+ .alp-page{max-width:1080px;margin:0 auto;padding-bottom:36px;}
+.alp-intro{background:#fff;border:1px solid var(--line-light);border-left:4px solid var(--pitch);border-radius:6px;padding:14px 16px;margin-bottom:18px;}
+.alp-intro h2{margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--pitch);}
+.alp-intro p{margin:4px 0;color:#000;line-height:1.45;font-family:'Barlow',sans-serif;font-size:13px;}
 .alp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:18px;align-items:start;}
-.alp-card{background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
-.alp-card h3{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:20px;}
-.alp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.alp-field label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;color:var(--muted);}
-.alp-field input{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;font:inherit;background:#fff;}
-.alp-ladder{display:flex;flex-direction:column;gap:6px;}
-.alp-row{display:grid;grid-template-columns:38px minmax(0,1fr) 78px;gap:8px;align-items:center;border:1px solid var(--line-light);border-radius:5px;padding:7px 8px;background:#fafbfd;}
+.alp-card{background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:16px;}
+.alp-card h3{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--pitch);}
+.alp-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;color:#000;}
+.alp-field select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;background:#fff;font:inherit;}
+.alp-instructions{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;padding:9px 11px;background:#f5f7fa;border-left:3px solid var(--pitch);border-radius:4px;}
+.alp-ladder{display:flex;flex-direction:column;gap:5px;user-select:none;}
+.alp-row{display:grid;grid-template-columns:34px 28px minmax(0,1fr);gap:8px;align-items:center;border:1px solid var(--line-light);border-radius:5px;padding:7px 9px;background:#fff;cursor:grab;touch-action:none;transition:box-shadow .12s,opacity .12s,background .12s;}
+.alp-row:hover{background:#f7f8fa;}
+.alp-row.dragging{opacity:.45;box-shadow:0 4px 12px rgba(0,0,0,.12);}
+.alp-row.drag-over{border-color:var(--pitch);background:#f3f6fb;}
 .alp-rank{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-align:center;color:#555;}
-.alp-team{font-weight:600;min-width:0;}
-.alp-team small{display:block;font-size:11px;color:#888;font-weight:400;margin-top:1px;}
-.alp-pos{width:100%;padding:8px 6px;border:1px solid #cfd6df;border-radius:5px;background:#fff;font:inherit;font-weight:700;}
-.alp-submit{width:100%;border:0;border-radius:5px;padding:12px 16px;margin-top:12px;background:#e31b23;color:#fff;font-weight:700;font-size:15px;cursor:pointer;}
+.alp-drag{font-size:17px;color:#999;text-align:center;line-height:1;}
+.alp-team{font-weight:600;min-width:0;font-family:'Barlow',sans-serif;font-size:14px;}
+.alp-team small{display:block;font-size:10.5px;color:#888;font-weight:400;margin-top:1px;}
+.alp-submit{width:100%;border:0;border-radius:5px;padding:12px 16px;margin-top:12px;background:var(--pitch);color:#fff;font-weight:700;font-size:15px;cursor:pointer;font-family:'Barlow',sans-serif;}
 .alp-submit:disabled{opacity:.55;cursor:default;}
-.alp-message{margin-top:10px;padding:10px 12px;border-radius:5px;background:#f4f6f8;color:#4b5563;font-size:13px;line-height:1.4;display:none;}
+.alp-message{margin-top:10px;padding:10px 12px;border-radius:5px;background:#f4f6f8;color:#000;font-size:13px;line-height:1.4;display:none;}
 .alp-message.show{display:block;}
 .alp-message.error{background:#fff1f1;color:#a40000;border:1px solid #f0caca;}
 .alp-message.success{background:#effaf1;color:#176b2c;border:1px solid #c8e8cf;}
 .alp-table-wrap{overflow-x:auto;}
 .alp-table{width:100%;border-collapse:collapse;font-size:14px;}
-.alp-table th,.alp-table td{padding:9px 8px;border-bottom:1px solid var(--line-light);text-align:left;}
-.alp-table th{font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;}
+.alp-table th,.alp-table td{padding:9px 8px;border-bottom:1px solid var(--line-light);text-align:left;font-family:'Barlow',sans-serif;}
+.alp-table th{font-size:11px;text-transform:uppercase;color:#000;letter-spacing:.04em;}
 .alp-table td:first-child,.alp-table th:first-child{width:42px;text-align:center;font-weight:700;}
 .alp-penalty{font-weight:800;}
 .alp-current{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-light);}
-.alp-current h4{margin:0 0 8px;font-family:'Barlow Condensed',sans-serif;font-size:18px;}
+.alp-current h4{margin:0 0 8px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--pitch);}
 .alp-current-list{display:flex;flex-direction:column;gap:4px;}
-.alp-current-row{display:grid;grid-template-columns:32px 1fr;gap:7px;padding:5px 0;border-bottom:1px solid #f0f2f4;font-size:13px;}
+.alp-current-row{display:grid;grid-template-columns:32px 1fr;gap:7px;padding:5px 0;border-bottom:1px solid #f0f2f4;font-size:13px;font-family:'Barlow',sans-serif;}
 .alp-current-row b{color:#555;}
-.alp-muted{color:var(--muted);font-size:13px;}
-@media(max-width:760px){
-  .alp-layout{grid-template-columns:1fr;}
-}
-@media(max-width:600px){
+.alp-muted{color:#000;font-size:13px;}
+
   .alp-page{padding:0 2px 30px;}
   .alp-intro{padding:13px 14px;}
   .alp-intro h2{font-size:22px;}
   .alp-card{padding:12px;}
-  .alp-form-row{grid-template-columns:1fr;}
-  .alp-row{grid-template-columns:34px minmax(0,1fr) 70px;padding:6px;}
+  .alp-row{grid-template-columns:30px 24px minmax(0,1fr);padding:7px;}
   .alp-team{font-size:13px;}
 }
 
@@ -10320,57 +10319,96 @@ function alpShowMessage(text, type=""){
 function alpBuildLadder(teams, picks={}){
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
-  holder.innerHTML=teams.map((t,i)=>{
-    const current = Number(picks[t.code]) || "";
-    const options = ['<option value="">—</option>'].concat(teams.map((_,p)=>`<option value="${p+1}"${current===p+1?' selected':''}>${p+1}</option>`)).join('');
-    return `<div class="alp-row">
-      <div class="alp-rank">${i+1}</div>
-      <div class="alp-team">${alpEsc(t.name)}<small>${alpEsc(t.code)}</small></div>
-      <select class="alp-pos" data-code="${alpEsc(t.code)}" aria-label="Predicted position for ${alpEsc(t.name)}">${options}</select>
-    </div>`;
-  }).join('');
+  const ordered = [...teams].sort((a,b)=>{
+    const ap=Number(picks[a.code]), bp=Number(picks[b.code]);
+    if(Number.isFinite(ap) && Number.isFinite(bp)) return ap-bp;
+    if(Number.isFinite(ap)) return -1;
+    if(Number.isFinite(bp)) return 1;
+    return String(a.name).localeCompare(String(b.name));
+  });
+  holder.innerHTML=ordered.map((t,i)=>`<div class="alp-row" draggable="true" data-code="${alpEsc(t.code)}" tabindex="0" aria-label="${alpEsc(t.name)}. Predicted position ${i+1}">
+    <div class="alp-rank">${i+1}</div><div class="alp-drag" aria-hidden="true">☷</div><div class="alp-team">${alpEsc(t.name)}<small>Drag to position ${i+1}</small></div>
+  </div>`).join('');
+  alpWireDragDrop();
+}
+
+function alpRefreshRanks(){
+  document.querySelectorAll('#alpLadder .alp-row').forEach((row,i)=>{
+    const rank=row.querySelector('.alp-rank'); if(rank) rank.textContent=i+1;
+    const small=row.querySelector('.alp-team small'); if(small) small.textContent='Drag to position ' + (i+1);
+    row.setAttribute('aria-label', (row.querySelector('.alp-team')?.childNodes[0]?.textContent || '') + '. Predicted position ' + (i+1));
+  });
+}
+
+function alpWireDragDrop(){
+  const holder=document.getElementById('alpLadder');
+  if(!holder) return;
+  let dragged=null;
+  holder.querySelectorAll('.alp-row').forEach(row=>{
+    row.addEventListener('dragstart',e=>{ dragged=row; row.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',row.dataset.code); });
+    row.addEventListener('dragend',()=>{ row.classList.remove('dragging'); holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); alpRefreshRanks(); });
+    row.addEventListener('dragover',e=>{ e.preventDefault(); if(dragged && dragged!==row){ holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); row.classList.add('drag-over'); } });
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',e=>{ e.preventDefault(); if(!dragged || dragged===row) return; const rect=row.getBoundingClientRect(); const before=e.clientY < rect.top + rect.height/2; row.parentNode.insertBefore(dragged,before?row:row.nextSibling); row.classList.remove('drag-over'); alpRefreshRanks(); });
+
+    // Pointer-based drag makes the same interaction work on touchscreens/mobile.
+    row.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='mouse') return;
+      dragged=row; row.classList.add('dragging'); row.setPointerCapture?.(e.pointerId);
+    });
+    row.addEventListener('pointermove',e=>{
+      if(!dragged || dragged!==row) return;
+      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#alpLadder .alp-row');
+      if(!target || target===row) return;
+      holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+      target.classList.add('drag-over');
+      const rect=target.getBoundingClientRect();
+      const before=e.clientY < rect.top + rect.height/2;
+      target.parentNode.insertBefore(row,before?target:target.nextSibling);
+      alpRefreshRanks();
+    });
+    row.addEventListener('pointerup',()=>{ if(dragged===row){ row.classList.remove('dragging'); holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); dragged=null; alpRefreshRanks(); } });
+    row.addEventListener('pointercancel',()=>{ if(dragged===row){ row.classList.remove('dragging'); holder.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); dragged=null; alpRefreshRanks(); } });
+  });
 }
 
 function alpReadPicks(){
   const picks={};
-  document.querySelectorAll('#alpLadder .alp-pos').forEach(s=>{ if(s.value) picks[s.dataset.code]=Number(s.value); });
+  document.querySelectorAll('#alpLadder .alp-row').forEach((row,i)=>{ picks[row.dataset.code]=i+1; });
   return picks;
 }
 
 function alpRenderLeaderboard(rows){
   const body=document.getElementById('alpLeaderboardBody');
   if(!body) return;
-  if(!rows || !rows.length){ body.innerHTML='<tr><td colspan="4" class="alp-muted">No valid predictions submitted yet.</td></tr>'; return; }
-  body.innerHTML=rows.map(r=>`<tr><td>${alpEsc(r.pos)}</td><td>${alpEsc(r.playerName)}</td><td>${alpEsc(r.teamName)}</td><td class="alp-penalty">${alpEsc(r.totalPenalty)}</td></tr>`).join('');
+  if(!rows || !rows.length){ body.innerHTML='<tr><td colspan="3" class="alp-muted">No valid predictions submitted yet.</td></tr>'; return; }
+  body.innerHTML=rows.map(r=>`<tr><td>${alpEsc(r.pos)}</td><td>${alpEsc(r.teamName)}</td><td class="alp-penalty">${alpEsc(r.totalPenalty)}</td></tr>`).join('');
 }
 
 function alpRenderCurrent(pred){
   const box=document.getElementById('alpCurrent');
   if(!box) return;
-  if(!pred || !pred.playerName){
-    box.innerHTML='<div class="alp-muted">Submit a prediction to see your current selections here.</div>';
-    return;
-  }
-  const rows=(alpState?.teams||[]).map((t,i)=>`<div class="alp-current-row"><b>${pred.picks?.[t.code] || '—'}</b><span>${alpEsc(t.name)}</span></div>`).join('');
-  box.innerHTML=`<h4>Your current prediction — ${alpEsc(pred.playerName)}</h4>${pred.teamName ? `<div class="alp-muted" style="margin-bottom:7px;">${alpEsc(pred.teamName)} · ${pred.valid==='YES' ? `Current penalty: ${alpEsc(pred.totalPenalty)}` : 'Prediction not yet scored'}</div>` : ''}<div class="alp-current-list">${rows}</div>`;
+  if(!pred || !pred.teamName){ box.innerHTML='<div class="alp-muted">Select your team and submit a prediction to see your current selections here.</div>'; return; }
+  const rows=(alpState?.teams||[]).map(t=>`<div class="alp-current-row"><b>${pred.picks?.[t.code] || '—'}</b><span>${alpEsc(t.name)}</span></div>`).join('');
+  box.innerHTML=`<h4>Your current prediction — ${alpEsc(pred.teamName)}</h4>${pred.valid==='YES' ? `<div class="alp-muted" style="margin-bottom:7px;">Current penalty: ${alpEsc(pred.totalPenalty)}</div>` : ''}<div class="alp-current-list">${rows}</div>`;
 }
 
 async function renderALeaguePredictor(){
   const el=document.getElementById('sideLeaguesContainer');
   el.className="";
+  const themeColor=sideLeagueThemeColor('aleaguepredictor');
+  if(themeColor) applyDivisionTheme({color:themeColor});
   el.innerHTML=`<div class="alp-page">
+    <div class="section-head" style="margin-top:0;margin-bottom:10px;"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>
     <div class="alp-intro">
-      <h2>A-League Table Predictor</h2>
       <p>Predict the final A-League Men ladder. Each club scores penalty points equal to the absolute difference between your predicted position and its actual position.</p>
-      <p><strong>Exact position = 0 points.</strong> Your total is the sum across all clubs. Lower totals score better.</p>
+      <p><strong>Exact position = 0 points.</strong> Your total is the sum across all clubs.</p>
     </div>
     <div class="alp-layout">
       <div class="alp-card">
         <h3>Predict the final ladder</h3>
-        <div class="alp-form-row">
-          <div class="alp-field"><label for="alpPlayer">Player name</label><input id="alpPlayer" autocomplete="name" placeholder="Your name"></div>
-          <div class="alp-field"><label for="alpTeam">Team name</label><input id="alpTeam" placeholder="Your team"></div>
-        </div>
+        <div class="alp-field" style="margin-bottom:12px;"><label for="alpTeam">Your team</label><select id="alpTeam"><option value="">Loading teams…</option></select></div>
+        <p class="alp-instructions">Drag and drop the clubs into your predicted finishing order, from <strong>1st</strong> at the top to <strong>last</strong> at the bottom.</p>
         <div id="alpLadder" class="alp-ladder"></div>
         <button id="alpSubmit" class="alp-submit">Submit Prediction</button>
         <div id="alpMessage" class="alp-message"></div>
@@ -10378,63 +10416,57 @@ async function renderALeaguePredictor(){
       </div>
       <div class="alp-card">
         <h3>Overall leaderboard</h3>
-        <div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Player</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="4">Loading…</td></tr></tbody></table></div>
+        <div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
         <p class="alp-muted" style="margin:12px 0 0;">Your penalty changes automatically as the actual ladder is updated.</p>
       </div>
     </div>
   </div>`;
 
-  if(!ALEAGUE_PREDICTOR_APPS_SCRIPT_URL){
-    alpShowMessage("The predictor page is installed, but its Apps Script endpoint still needs to be configured.","error");
-    return;
-  }
+  if(!ALEAGUE_PREDICTOR_APPS_SCRIPT_URL){ alpShowMessage("The predictor page is installed, but its Apps Script endpoint still needs to be configured.","error"); return; }
 
   try{
     alpState=await alpApiGet("predictor");
+    const teamSelect=document.getElementById('alpTeam');
+    const eligible=alpState.eligibleTeams || [];
+    teamSelect.innerHTML='<option value="">Select your team…</option>'+eligible.map(t=>`<option value="${alpEsc(t)}">${alpEsc(t)}</option>`).join('');
     alpBuildLadder(alpState.teams || [], {});
     alpRenderLeaderboard(alpState.leaderboard || []);
-    const savedName=localStorage.getItem('eliza_alp_player_name') || '';
     const savedTeam=localStorage.getItem('eliza_alp_team_name') || '';
-    document.getElementById('alpPlayer').value=savedName;
-    document.getElementById('alpTeam').value=savedTeam;
-    if(savedName){
-      try{
-        const mine=await alpApiGet("prediction",{playerName:savedName});
-        if(mine && mine.playerName){ alpBuildLadder(alpState.teams,mine.picks||{}); alpRenderCurrent(mine); }
-      }catch(e){ /* no existing prediction is fine */ }
+    if(savedTeam && eligible.some(t=>t.toLowerCase()===savedTeam.toLowerCase())) teamSelect.value=eligible.find(t=>t.toLowerCase()===savedTeam.toLowerCase()) || savedTeam;
+    if(savedTeam){
+      try{ const mine=await alpApiGet("prediction",{teamName:savedTeam}); if(mine && mine.teamName){ alpBuildLadder(alpState.teams,mine.picks||{}); alpRenderCurrent(mine); } }
+      catch(e){}
     }else alpRenderCurrent(null);
+
+    teamSelect.addEventListener('change',async()=>{
+      const teamName=teamSelect.value;
+      if(!teamName){ alpBuildLadder(alpState.teams,{}); alpRenderCurrent(null); return; }
+      localStorage.setItem('eliza_alp_team_name',teamName);
+      try{
+        const mine=await alpApiGet("prediction",{teamName});
+        if(mine && mine.teamName) { alpBuildLadder(alpState.teams,mine.picks||{}); alpRenderCurrent(mine); }
+        else { alpBuildLadder(alpState.teams,{}); alpRenderCurrent(null); }
+      }catch(e){ alpBuildLadder(alpState.teams,{}); }
+    });
 
     const submit=document.getElementById('alpSubmit');
     submit.addEventListener('click',async()=>{
-      const playerName=document.getElementById('alpPlayer').value.trim();
-      const teamName=document.getElementById('alpTeam').value.trim();
+      const teamName=teamSelect.value;
       const picks=alpReadPicks();
-      if(!playerName || !teamName){ alpShowMessage("Please enter your player name and team name.","error"); return; }
-      if(Object.keys(picks).length !== alpState.teams.length){ alpShowMessage("Please assign a position to every club.","error"); return; }
-      const positions=Object.values(picks);
-      if(new Set(positions).size !== positions.length){ alpShowMessage("Each ladder position can only be used once.","error"); return; }
-      submit.disabled=true;
-      alpShowMessage("Submitting prediction…");
+      if(!teamName){ alpShowMessage("Please select your team.","error"); return; }
+      if(Object.keys(picks).length !== alpState.teams.length){ alpShowMessage("Please assign every club a position.","error"); return; }
+      submit.disabled=true; alpShowMessage("Submitting prediction…");
       try{
-        const result=await alpApiSubmit(playerName,teamName,picks);
-        localStorage.setItem('eliza_alp_player_name',playerName);
+        const result=await alpApiSubmit('',teamName,picks);
         localStorage.setItem('eliza_alp_team_name',teamName);
         alpShowMessage(result.message || "Prediction submitted successfully.","success");
-        const mine=await alpApiGet("prediction",{playerName});
-        alpBuildLadder(alpState.teams,mine.picks||picks);
-        alpRenderCurrent(mine);
-        const fresh=await alpApiGet("predictor");
-        alpState=fresh;
-        alpRenderLeaderboard(fresh.leaderboard||[]);
-      }catch(err){
-        console.error(err);
-        alpShowMessage(err.message || "Couldn't submit the prediction.","error");
-      }finally{ submit.disabled=false; }
+        const mine=await alpApiGet("prediction",{teamName});
+        alpBuildLadder(alpState.teams,mine.picks||picks); alpRenderCurrent(mine);
+        const fresh=await alpApiGet("predictor"); alpState=fresh; alpRenderLeaderboard(fresh.leaderboard||[]);
+      }catch(err){ console.error(err); alpShowMessage(err.message || "Couldn't submit the prediction.","error"); }
+      finally{ submit.disabled=false; }
     });
-  }catch(err){
-    console.error(err);
-    alpShowMessage("Couldn't load the A-League Predictor. Check that the Apps Script web app is deployed for public access.","error");
-  }
+  }catch(err){ console.error(err); alpShowMessage("Couldn't load the A-League Predictor. Check that the Apps Script web app is deployed for public access.","error"); }
 }
 
 async function loadSideLeague(leagueKey){
