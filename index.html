@@ -10372,6 +10372,32 @@ function alpWirePositionSelectors(){
   });
 }
 
+function alpRenderLeaderboard(rows){
+  const body=document.getElementById('alpLeaderboardBody');
+  if(!body) return;
+  if(!rows || !rows.length){
+    body.innerHTML='<tr><td colspan="3">No predictions submitted yet.</td></tr>';
+    return;
+  }
+  body.innerHTML=rows.map((r,i)=>{
+    const pos=Number(r.pos)||i+1;
+    const team=r.teamName || r.team || '';
+    const penalty=(r.totalPenalty!==undefined && r.totalPenalty!==null && r.totalPenalty!=='') ? r.totalPenalty : (r.penalty ?? '');
+    return `<tr><td>${pos}</td><td>${alpEsc(team)}</td><td>${alpEsc(penalty)}</td></tr>`;
+  }).join('');
+}
+
+function alpRenderCurrent(prediction){
+  const el=document.getElementById('alpCurrent');
+  if(!el) return;
+  if(!prediction || !prediction.teamName){
+    el.innerHTML='';
+    return;
+  }
+  const penalty = prediction.totalPenalty ?? prediction.penalty ?? '';
+  el.innerHTML=`<div class="alp-current-box"><strong>${alpEsc(prediction.teamName)}</strong><span>Current penalty: <b>${alpEsc(penalty)}</b></span></div>`;
+}
+
 function alpReadPicks(){
   const picks={};
   document.querySelectorAll('#alpLadder .alp-pick-row').forEach((row,i)=>{ picks[row.dataset.code]=i+1; });
