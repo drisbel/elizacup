@@ -1499,7 +1499,20 @@
 .alp-field select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;background:#fff;font:inherit;color:#111;}
 .alp-instructions{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;padding:9px 11px;background:#f5f7fa;border-left:3px solid var(--pitch);border-radius:4px;line-height:1.45;}
 .alp-ladder{display:flex;flex-direction:column;gap:5px;}
-.alp-pick-row{display:grid;grid-template-columns:minmax(0,1fr) 76px;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line-light);border-radius:5px;background:#fff;transition:background .12s,border-color .12s;}
+/* A-League predictor team cards */
+.alp-ladder{display:flex;flex-direction:column;gap:7px;user-select:none;}
+.alp-pick-row{display:grid;grid-template-columns:34px 44px minmax(0,1fr);align-items:center;gap:10px;padding:9px 12px;border:2px solid var(--alp-secondary,#111);border-left:8px solid var(--alp-primary,#111);border-radius:7px;background:var(--alp-primary,#fff);color:var(--alp-text,#111);transition:transform .12s,box-shadow .12s,opacity .12s,border-color .12s;cursor:grab;touch-action:none;}
+.alp-pick-row:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.12);}
+.alp-pick-row.dragging{opacity:.45;box-shadow:none;transform:scale(.99);}
+.alp-pick-row.drag-target{box-shadow:0 0 0 3px rgba(0,0,0,.2);}
+.alp-drag-handle{font-size:21px;line-height:1;text-align:center;opacity:.78;cursor:grab;}
+.alp-pick-number{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.82);color:#111;font-weight:800;font-size:13px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
+.alp-pick-team{font-family:'Barlow',sans-serif;font-size:15px;font-weight:800;min-width:0;line-height:1.25;}
+.alp-position{display:none;}
+.alp-pick-row:first-child{border-left-width:8px;}
+.alp-drag-hint{font-size:11.5px;color:#000;margin:-3px 0 12px;padding:8px 10px;background:#f5f7fa;border-radius:4px;}
+@media(max-width:600px){.alp-pick-row{grid-template-columns:30px 38px minmax(0,1fr);padding:10px 9px;gap:8px;}.alp-pick-number{width:30px;height:30px;font-size:12px}.alp-drag-handle{font-size:19px}.alp-pick-team{font-size:14px}}
+
 .alp-pick-row:hover{border-color:var(--line,#aaa);background:#fafbfc;}
 .alp-pick-team{font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;min-width:0;line-height:1.25;}
 .alp-position{width:100%;box-sizing:border-box;padding:7px 5px;border:1px solid #aaa;border-radius:5px;background:#fff;font:600 13px 'Barlow',sans-serif;color:#111;text-align:center;}
@@ -10278,6 +10291,20 @@ function renderLmsCup(data, containerId){
 }
 
 
+
+</script>
+<style id="alp-two-state-styles">
+.alp-mode-banner{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;margin:0 0 18px;border:1px solid var(--line-light);border-radius:8px;background:#fff}
+.alp-mode-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:4px 9px;border-radius:14px;background:var(--pitch);color:var(--chalk);font-size:10px;font-weight:800;letter-spacing:.06em}
+.alp-mode-banner strong{display:block;font-size:14px;margin-bottom:2px}.alp-mode-banner span:not(.alp-mode-badge){display:block;font-size:12.5px;color:#000;line-height:1.4}
+.alp-season-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.alp-collapsible{margin-top:14px;border:1px solid var(--line-light);border-radius:8px;background:#fff;overflow:hidden}
+.alp-collapsible summary{cursor:pointer;padding:13px 15px;font-weight:700;font-size:14px;list-style:none}.alp-collapsible summary::-webkit-details-marker{display:none}.alp-collapsible summary:after{content:"＋";float:right}.alp-collapsible[open] summary:after{content:"−"}
+.alp-actual-ladder,.alp-admin-box{padding:0 15px 15px}.alp-admin-row{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-light);font-size:13px}.alp-admin-row select,.alp-admin-actions input{font:inherit;border:1px solid var(--line-light);border-radius:5px;padding:7px;background:#fff}.alp-admin-actions{display:flex;gap:8px;margin-top:12px}.alp-admin-actions input{flex:1;min-width:0}.alp-check-summary{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0 12px;font-size:13px}
+@media(max-width:700px){.alp-season-grid{grid-template-columns:1fr}.alp-admin-actions{flex-direction:column}}
+</style>
+<script>
+
 function alpApiUrl(action, params={}){
   const base = ALEAGUE_PREDICTOR_APPS_SCRIPT_URL;
   if(!base) throw new Error("The A-League Predictor Apps Script URL has not been configured yet.");
@@ -10320,6 +10347,32 @@ function alpShowMessage(text, type=""){
   el.className="alp-message show" + (type ? " "+type : "");
 }
 
+const ALP_TEAM_COLOURS={
+  ADE:{primary:'#d61823',secondary:'#041934'},
+  AKL:{primary:'#0d1011',secondary:'#032775'},
+  BRI:{primary:'#f06415',secondary:'#0d1011'},
+  CCM:{primary:'#fdc71f',secondary:'#041934'},
+  MAC:{primary:'#fafafa',secondary:'#0d1011'},
+  MCY:{primary:'#6db1e9',secondary:'#fafafa'},
+  MVC:{primary:'#041934',secondary:'#fafafa'},
+  NEW:{primary:'#c3a062',secondary:'#041934'},
+  PER:{primary:'#49287c',secondary:'#f06415'},
+  SYD:{primary:'#6db1e9',secondary:'#041934'},
+  WEL:{primary:'#fdc71f',secondary:'#0d1011'},
+  WSW:{primary:'#d61823',secondary:'#0d1011'}
+};
+
+function alpColourText_(hex){
+  const h=hex.replace('#','');
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return ((r*299+g*587+b*114)/1000)>150 ? '#0d1011' : '#fafafa';
+}
+
+function alpTeamColour_(team){
+  const c=ALP_TEAM_COLOURS[String(team.code||'').toUpperCase()];
+  return c||{primary:'#fafafa',secondary:'#041934'};
+}
+
 function alpBuildLadder(teams, picks={}){
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
@@ -10332,43 +10385,79 @@ function alpBuildLadder(teams, picks={}){
     if(Number.isFinite(aa) && Number.isFinite(bb)) return aa-bb;
     return String(a.name).localeCompare(String(b.name));
   });
-  holder.innerHTML=ordered.map((t,i)=>`<div class="alp-pick-row" data-code="${alpEsc(t.code)}">
-    <div class="alp-pick-team">${alpEsc(t.name)}</div>
-    <select class="alp-position" data-code="${alpEsc(t.code)}" aria-label="Predicted position for ${alpEsc(t.name)}">
-      ${Array.from({length:teams.length},(_,n)=>`<option value="${n+1}"${i===n?' selected':''}>${n+1}</option>`).join('')}
-    </select>
-  </div>`).join('');
-  alpWirePositionSelectors();
+  holder.innerHTML=ordered.map((t,i)=>{
+    const c=alpTeamColour_(t),text=alpColourText_(c.primary);
+    return `<div class="alp-pick-row" draggable="true" data-code="${alpEsc(t.code)}" style="--alp-primary:${c.primary};--alp-secondary:${c.secondary};--alp-text:${text}" aria-label="Drag ${alpEsc(t.name)} to change its predicted position">
+      <div class="alp-drag-handle" title="Drag to reorder" aria-hidden="true">☰</div>
+      <div class="alp-pick-number">${i+1}</div>
+      <div class="alp-pick-team">${alpEsc(t.name)}</div>
+    </div>`;
+  }).join('');
+  alpWireDragDrop_();
 }
 
 function alpSetSequentialPositions(){
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
-  [...holder.querySelectorAll('.alp-pick-row')].forEach((row,i)=>{
-    const sel=row.querySelector('.alp-position');
-    if(sel) sel.value=String(i+1);
+  holder.querySelectorAll('.alp-pick-row').forEach((row,i)=>{
+    const n=row.querySelector('.alp-pick-number'); if(n) n.textContent=String(i+1);
   });
 }
 
-function alpWirePositionSelectors(){
+let alpDraggedRow_=null, alpPointerDrag_=null;
+
+function alpMoveRowBefore_(row,target){
+  if(!row||!target||row===target) return;
   const holder=document.getElementById('alpLadder');
   if(!holder) return;
-  holder.querySelectorAll('.alp-position').forEach(select=>{
-    select.addEventListener('change',()=>{
-      const row=select.closest('.alp-pick-row');
-      if(!row) return;
-      const rows=[...holder.querySelectorAll('.alp-pick-row')];
-      const targetIndex=Math.max(0,Math.min(rows.length-1,Number(select.value)-1));
-      const currentIndex=rows.indexOf(row);
-      if(currentIndex===targetIndex){ alpSetSequentialPositions(); return; }
-      if(targetIndex===0){ holder.prepend(row); }
-      else {
-        const target=rows[targetIndex];
-        if(currentIndex<targetIndex) target.after(row);
-        else target.before(row);
-      }
+  const rows=[...holder.querySelectorAll('.alp-pick-row')];
+  const from=rows.indexOf(row),to=rows.indexOf(target);
+  if(from<0||to<0) return;
+  if(from<to) target.after(row); else target.before(row);
+  alpSetSequentialPositions();
+}
+
+function alpWireDragDrop_(){
+  const holder=document.getElementById('alpLadder'); if(!holder) return;
+  holder.querySelectorAll('.alp-pick-row').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      alpDraggedRow_=row; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',row.dataset.code||'');
+    });
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target'));alpDraggedRow_=null;});
+    row.addEventListener('dragover',e=>{
+      e.preventDefault(); if(!alpDraggedRow_||alpDraggedRow_===row)return;
+      holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target')); row.classList.add('drag-target');
+      const rect=row.getBoundingClientRect();
+      if(e.clientY < rect.top+rect.height/2) row.before(alpDraggedRow_); else row.after(alpDraggedRow_);
       alpSetSequentialPositions();
     });
+    row.addEventListener('drop',e=>{e.preventDefault();holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target'));alpSetSequentialPositions();});
+    row.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='mouse') return;
+      if(e.target.closest('button,input,select,a')) return;
+      alpPointerDrag_={row,startX:e.clientX,startY:e.clientY,moved:false};
+      row.setPointerCapture?.(e.pointerId);
+    });
+    row.addEventListener('pointermove',e=>{
+      const d=alpPointerDrag_; if(!d||d.row!==row) return;
+      const dx=e.clientX-d.startX,dy=e.clientY-d.startY;
+      if(!d.moved && Math.hypot(dx,dy)<6) return;
+      d.moved=true; row.classList.add('dragging');
+      const el=document.elementFromPoint(e.clientX,e.clientY);
+      const target=el&&el.closest('.alp-pick-row');
+      if(target&&target!==row){
+        const rect=target.getBoundingClientRect();
+        if(e.clientY<rect.top+rect.height/2) target.before(row); else target.after(row);
+        alpSetSequentialPositions();
+      }
+      e.preventDefault();
+    });
+    row.addEventListener('pointerup',()=>{
+      if(!alpPointerDrag_||alpPointerDrag_.row!==row)return;
+      row.classList.remove('dragging'); alpPointerDrag_=null; alpSetSequentialPositions();
+    });
+    row.addEventListener('pointercancel',()=>{row.classList.remove('dragging');alpPointerDrag_=null;alpSetSequentialPositions();});
   });
 }
 
@@ -10409,100 +10498,138 @@ async function renderALeaguePredictor(){
   el.className="";
   const themeColor=sideLeagueThemeColor('aleaguepredictor');
   if(themeColor) applyDivisionTheme({color:themeColor});
-  el.innerHTML=`<div class="alp-page">
-    <div class="section-head" style="margin-top:0;margin-bottom:10px;"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>
-    <div class="alp-intro">
-      <p>Predict the final A-League Men ladder. Each club scores penalty points equal to the absolute difference between your predicted position and its actual position.</p>
-      <p><strong>Exact position = 0 points.</strong> Your total is the sum across all clubs.</p>
-    </div>
-    <div class="alp-layout">
-      <div class="alp-card">
-        <h3>Predict the final ladder</h3>
-        <div class="alp-field" style="margin-bottom:12px;"><label for="alpTeam">Your team</label><select id="alpTeam"><option value="">Loading teams…</option></select></div>
-        <p class="alp-instructions">Use the position dropdown beside each club. When you select a position, the list will automatically reorder so your prediction is always shown from <strong>1st</strong> to <strong>last</strong>.</p>
-        <div id="alpLadder" class="alp-ladder"></div>
-        <button id="alpSubmit" class="alp-submit">Submit Prediction</button>
-        <div id="alpMessage" class="alp-message"></div>
-        <div id="alpCurrent" class="alp-current"></div>
-      </div>
-      <div class="alp-card">
-        <h3>Overall leaderboard</h3>
-        <div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
-        <p class="alp-muted" style="margin:12px 0 0;">Your penalty changes automatically as the actual ladder is updated.</p>
-      </div>
-    </div>
-  </div>`;
-
-  if(!ALEAGUE_PREDICTOR_APPS_SCRIPT_URL){ alpShowMessage("The predictor page is installed, but its Apps Script endpoint still needs to be configured.","error"); return; }
-
+  if(!ALEAGUE_PREDICTOR_APPS_SCRIPT_URL){
+    el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div><div class="alp-message show error">The predictor endpoint is not configured.</div></div>';
+    return;
+  }
   try{
     alpState=await alpApiGet("predictor");
-    const teamSelect=document.getElementById('alpTeam');
-    let eligible=alpState.eligibleTeams || [];
-    // The Roddy competition lives in the main Eliza Cup spreadsheet, not the
-    // Side Leagues spreadsheet used by the predictor backend. Use the same
-    // public Roddy tab directly as a fallback so the selector remains linked
-    // to the live Roddy roster even if the backend roster lookup is unavailable.
-    if(!eligible.length){
-      try{
-        const roddy=DIVISIONS.find(d=>d.id==='roddy');
-        const res=await cachedFetch(csvUrlFor(roddy));
-        if(res.ok){
-          const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data;
-          const set=new Set();
-          let header=-1;
-          for(let r=0;r<Math.min(rows.length,30);r++){ if(cell(rows[r]||[],5).toUpperCase()==='POS'){ header=r; break; } }
-          if(header>=0){
-            for(let r=header+1;r<rows.length;r++){
-              const pos=String(cell(rows[r]||[],5)||'').trim();
-              const name=String(cell(rows[r]||[],7)||'').trim();
-              if(!/^\d+$/.test(pos)) break;
-              if(name) set.add(name);
-            }
-          }
-          eligible=[...set].sort((a,b)=>a.localeCompare(b));
-        }
-      }catch(e){ console.warn('Could not load Roddy roster directly:',e); }
+    const mode=String(alpState.mode||"PRE-SEASON").toUpperCase();
+    if(mode==="PRE-SEASON") await alpRenderPreSeason_(el);
+    else if(mode==="SEASON") await alpRenderSeason_(el);
+    else await alpRenderClosed_(el);
+  }catch(err){
+    console.error(err);
+    el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div><div class="alp-message show error">'+alpEsc(err.message||"Could not load the predictor.")+'</div></div>';
+  }
+}
+
+function alpModeBanner_(mode){
+  const cfg={
+    "PRE-SEASON":["PRE-SEASON","Predictions are open","Submit or update your final ladder prediction. The leaderboard and current ladder will appear when the competition moves to SEASON mode."],
+    "SEASON":["SEASON","Predictions are locked","The prediction period has closed. View the leaderboard, check any submitted prediction and compare predictions with the current ladder."],
+    "CLOSED":["CLOSED","Competition closed","The predictor is closed. Results and submitted predictions remain available for viewing."]
+  }[mode];
+  return cfg?'<div class="alp-mode-banner"><span class="alp-mode-badge">'+cfg[0]+'</span><div><strong>'+cfg[1]+'</strong><span>'+cfg[2]+'</span></div></div>':'';
+}
+
+async function alpGetEligibleTeams_(){
+  let eligible=alpState.eligibleTeams||[];
+  if(eligible.length) return eligible;
+  try{
+    const roddy=DIVISIONS.find(d=>d.id==='roddy');
+    const res=await cachedFetch(csvUrlFor(roddy));
+    if(res.ok){
+      const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data,set=new Set();
+      let header=-1;
+      for(let r=0;r<Math.min(rows.length,30);r++) if(cell(rows[r]||[],5).toUpperCase()==='POS'){header=r;break;}
+      if(header>=0) for(let r=header+1;r<rows.length;r++){
+        const pos=String(cell(rows[r]||[],5)||'').trim(),name=String(cell(rows[r]||[],7)||'').trim();
+        if(!/^\d+$/.test(pos)) break;
+        if(name)set.add(name);
+      }
+      eligible=[...set].sort((a,b)=>a.localeCompare(b));
     }
-    teamSelect.innerHTML='<option value="">Select your team…</option>'+eligible.map(t=>`<option value="${alpEsc(t)}">${alpEsc(t)}</option>`).join('');
-    alpBuildLadder(alpState.teams || [], {});
-    alpRenderLeaderboard(alpState.leaderboard || []);
-    const savedTeam=localStorage.getItem('eliza_alp_team_name') || '';
-    if(savedTeam && eligible.some(t=>t.toLowerCase()===savedTeam.toLowerCase())) teamSelect.value=eligible.find(t=>t.toLowerCase()===savedTeam.toLowerCase()) || savedTeam;
-    if(savedTeam){
-      try{ const mine=await alpApiGet("prediction",{teamName:savedTeam}); if(mine && mine.teamName){ alpBuildLadder(alpState.teams,mine.picks||{}); alpRenderCurrent(mine); } }
-      catch(e){}
-    }else alpRenderCurrent(null);
+  }catch(e){console.warn("Roddy roster load failed",e);}
+  return eligible;
+}
 
-    teamSelect.addEventListener('change',async()=>{
-      const teamName=teamSelect.value;
-      if(!teamName){ alpBuildLadder(alpState.teams,{}); alpRenderCurrent(null); return; }
-      localStorage.setItem('eliza_alp_team_name',teamName);
-      try{
-        const mine=await alpApiGet("prediction",{teamName});
-        if(mine && mine.teamName) { alpBuildLadder(alpState.teams,mine.picks||{}); alpRenderCurrent(mine); }
-        else { alpBuildLadder(alpState.teams,{}); alpRenderCurrent(null); }
-      }catch(e){ alpBuildLadder(alpState.teams,{}); }
-    });
+async function alpRenderPreSeason_(el){
+  const eligible=await alpGetEligibleTeams_();
+  el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>'+
+    alpModeBanner_("PRE-SEASON")+
+    '<div class="alp-intro"><p>Predict the final A-League Men ladder. Each club scores penalty points equal to the absolute difference between your predicted position and its actual position.</p><p><strong>Exact position = 0 points.</strong> Your total is the sum across all clubs.</p></div>'+
+    '<div class="alp-card"><h3>Predict the final ladder</h3><div class="alp-field" style="margin-bottom:12px;"><label for="alpTeam">Your team</label><select id="alpTeam"><option value="">Select your team…</option></select></div><p class="alp-instructions">Drag the club cards into your preferred order, from <strong>1st</strong> at the top to last at the bottom. You can drag them on desktop or touch-and-drag on mobile.</p><div id="alpLadder" class="alp-ladder"></div><button id="alpSubmit" class="alp-submit">Submit / Update Prediction</button><div id="alpMessage" class="alp-message"></div></div></div>';
+  const teamSelect=document.getElementById('alpTeam');
+  teamSelect.innerHTML='<option value="">Select your team…</option>'+eligible.map(t=>'<option value="'+alpEsc(t)+'">'+alpEsc(t)+'</option>').join('');
+  alpBuildLadder(alpState.teams||{});
+  const saved=localStorage.getItem('eliza_alp_team_name')||'';
+  if(saved&&eligible.some(t=>t.toLowerCase()===saved.toLowerCase())){
+    teamSelect.value=eligible.find(t=>t.toLowerCase()===saved.toLowerCase())||saved;
+    try{const mine=await alpApiGet("prediction",{teamName:saved});if(mine&&mine.teamName)alpBuildLadder(alpState.teams,mine.picks||{});}catch(e){}
+  }
+  teamSelect.addEventListener('change',async()=>{
+    const n=teamSelect.value;if(!n){alpBuildLadder(alpState.teams,{});return;}
+    localStorage.setItem('eliza_alp_team_name',n);
+    try{const mine=await alpApiGet("prediction",{teamName:n});alpBuildLadder(alpState.teams,mine&&mine.teamName?mine.picks||{}:{});}catch(e){alpBuildLadder(alpState.teams,{});}
+  });
+  document.getElementById('alpSubmit').addEventListener('click',async()=>{
+    const n=teamSelect.value,picks=alpReadPicks(),btn=document.getElementById('alpSubmit');
+    if(!n){alpShowMessage("Please select your team.","error");return;}
+    if(Object.keys(picks).length!==alpState.teams.length){alpShowMessage("Please assign every club a position.","error");return;}
+    btn.disabled=true;alpShowMessage("Submitting prediction…");
+    try{const r=await alpApiSubmit('',n,picks);localStorage.setItem('eliza_alp_team_name',n);alpShowMessage(r.message||"Prediction submitted successfully.","success");}
+    catch(e){alpShowMessage(e.message||"Couldn't submit the prediction.","error");}
+    finally{btn.disabled=false;}
+  });
+}
 
-    const submit=document.getElementById('alpSubmit');
-    submit.addEventListener('click',async()=>{
-      const teamName=teamSelect.value;
-      const picks=alpReadPicks();
-      if(!teamName){ alpShowMessage("Please select your team.","error"); return; }
-      if(Object.keys(picks).length !== alpState.teams.length){ alpShowMessage("Please assign every club a position.","error"); return; }
-      submit.disabled=true; alpShowMessage("Submitting prediction…");
-      try{
-        const result=await alpApiSubmit('',teamName,picks);
-        localStorage.setItem('eliza_alp_team_name',teamName);
-        alpShowMessage(result.message || "Prediction submitted successfully.","success");
-        const mine=await alpApiGet("prediction",{teamName});
-        alpBuildLadder(alpState.teams,mine.picks||picks); alpRenderCurrent(mine);
-        const fresh=await alpApiGet("predictor"); alpState=fresh; alpRenderLeaderboard(fresh.leaderboard||[]);
-      }catch(err){ console.error(err); alpShowMessage(err.message || "Couldn't submit the prediction.","error"); }
-      finally{ submit.disabled=false; }
-    });
-  }catch(err){ console.error("A-League Predictor API error:",err); alpShowMessage((err && err.message) ? "Couldn't load the A-League Predictor: " + err.message : "Couldn't load the A-League Predictor. Please try again.","error"); }
+async function alpRenderSeason_(el){
+  el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>'+
+    alpModeBanner_("SEASON")+
+    '<div class="alp-season-grid"><div class="alp-card"><h3>Overall leaderboard</h3><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="3">Loading…</td></tr></tbody></table></div></div>'+
+    '<div class="alp-card"><h3>Check a prediction</h3><div class="alp-field"><label for="alpCheckTeam">Select team</label><select id="alpCheckTeam"><option value="">Select a team…</option></select></div><div id="alpPredictionCheck"><p class="alp-muted">Select a team to view its prediction.</p></div></div></div>'+
+    '<details class="alp-collapsible"><summary>Current A-League ladder</summary><div id="alpActualLadder" class="alp-actual-ladder"></div></details>'+
+    '<details class="alp-collapsible"><summary>⚙ Update current ladder</summary><div class="alp-admin-box"><p class="alp-muted">For competition administrators only. Enter the current ladder positions and submit the update.</p><div id="alpAdminLadder"></div><div class="alp-admin-actions"><input id="alpAdminKey" type="password" placeholder="Admin key" autocomplete="off"><button id="alpUpdateLadder" class="alp-submit">Update Current Ladder</button></div><div id="alpAdminMessage" class="alp-message"></div></div></details></div>';
+  alpRenderLeaderboard(alpState.leaderboard||[]);
+  alpRenderActualLadder_(alpState.teams||[]);
+  alpRenderAdminLadder_(alpState.teams||[]);
+  const sel=document.getElementById('alpCheckTeam');
+  sel.innerHTML='<option value="">Select a team…</option>'+(alpState.leaderboard||[]).map(r=>'<option value="'+alpEsc(r.teamName)+'">'+alpEsc(r.teamName)+'</option>').join('');
+  sel.addEventListener('change',async()=>{
+    const holder=document.getElementById('alpPredictionCheck'),n=sel.value;
+    if(!n){holder.innerHTML='<p class="alp-muted">Select a team to view its prediction.</p>';return;}
+    holder.innerHTML='<p class="alp-muted">Loading prediction…</p>';
+    try{alpRenderPredictionBreakdown_(holder,await alpApiGet("prediction",{teamName:n}),alpState.teams||[]);}
+    catch(e){holder.innerHTML='<div class="alp-message show error">'+alpEsc(e.message||"Could not load prediction.")+'</div>';}
+  });
+  document.getElementById('alpUpdateLadder').addEventListener('click',async()=>{
+    const key=document.getElementById('alpAdminKey').value.trim(),btn=document.getElementById('alpUpdateLadder');
+    if(!key){alpShowAdminMessage_("Please enter the admin key.","error");return;}
+    const actuals={};document.querySelectorAll('#alpAdminLadder .alp-admin-position').forEach(s=>actuals[s.dataset.code]=Number(s.value));
+    btn.disabled=true;alpShowAdminMessage_("Updating current ladder…");
+    try{const r=await alpApiGet("updateLadder",{adminKey:key,actuals:JSON.stringify(actuals)});alpShowAdminMessage_(r.message||"Current ladder updated successfully.","success");alpState=await alpApiGet("predictor");alpRenderLeaderboard(alpState.leaderboard||[]);alpRenderActualLadder_(alpState.teams||[]);alpRenderAdminLadder_(alpState.teams||[]);}
+    catch(e){alpShowAdminMessage_(e.message||"Couldn't update the current ladder.","error");}
+    finally{btn.disabled=false;}
+  });
+}
+
+async function alpRenderClosed_(el){
+  el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>'+alpModeBanner_("CLOSED")+
+    '<div class="alp-card"><h3>Final results</h3><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="3">Loading…</td></tr></tbody></table></div></div></div>';
+  alpRenderLeaderboard(alpState.leaderboard||[]);
+}
+
+function alpRenderActualLadder_(teams){
+  const h=document.getElementById('alpActualLadder');if(!h)return;
+  const rows=teams.filter(t=>Number.isFinite(Number(t.actualPos))).sort((a,b)=>Number(a.actualPos)-Number(b.actualPos));
+  h.innerHTML=rows.length?'<div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Club</th></tr></thead><tbody>'+rows.map(t=>'<tr><td>'+t.actualPos+'</td><td>'+alpEsc(t.name)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="alp-muted">The current ladder has not been entered yet.</p>';
+}
+
+function alpRenderAdminLadder_(teams){
+  const h=document.getElementById('alpAdminLadder');if(!h)return;
+  const n=teams.length;
+  h.innerHTML=teams.map(t=>'<div class="alp-admin-row"><span>'+alpEsc(t.name)+'</span><select class="alp-admin-position" data-code="'+alpEsc(t.code)+'">'+Array.from({length:n},(_,i)=>'<option value="'+(i+1)+'"'+(Number(t.actualPos)===i+1?' selected':'')+'>'+(i+1)+'</option>').join('')+'</select></div>').join('');
+}
+
+function alpRenderPredictionBreakdown_(h,p,teams){
+  if(!p||!p.found){h.innerHTML='<p class="alp-muted">No prediction has been submitted for this team.</p>';return;}
+  const rows=teams.map(t=>{const predicted=Number(p.picks&&p.picks[t.code]),actual=Number(t.actualPos);return {name:t.name,predicted,actual,penalty:Number.isFinite(predicted)&&Number.isFinite(actual)?Math.abs(predicted-actual):null};}).sort((a,b)=>a.predicted-b.predicted);
+  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+alpEsc(r.name)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>').join('')+'</tbody></table></div>';
+}
+
+function alpShowAdminMessage_(text,type=""){
+  const e=document.getElementById('alpAdminMessage');if(!e)return;e.textContent=text;e.className="alp-message show"+(type?" "+type:"");
 }
 
 async function loadSideLeague(leagueKey){
