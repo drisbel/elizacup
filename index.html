@@ -10476,7 +10476,7 @@ async function renderALeaguePredictor(){
       }catch(err){ console.error(err); alpShowMessage(err.message || "Couldn't submit the prediction.","error"); }
       finally{ submit.disabled=false; }
     });
-  }catch(err){ console.error(err); alpShowMessage("Couldn't load the A-League Predictor. Check that the Apps Script web app is deployed for public access.","error"); }
+  }catch(err){ console.error("A-League Predictor API error:",err); alpShowMessage((err && err.message) ? "Couldn't load the A-League Predictor: " + err.message : "Couldn't load the A-League Predictor. Please try again.","error"); }
 }
 
 async function loadSideLeague(leagueKey){
