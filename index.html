@@ -4708,8 +4708,8 @@ function renderHonourRoll(){
 // Bye rounds (5, 6) and double rounds (12, 16) are called out per instruction rather
 // than detected from cell color, since background fills don't survive CSV export.
 const CAL_COL = { ROUND: 1, DATE: 3, ELIZA_CUP: 5, DIV2: 7, DIV3: 9, FA_CUP: 11, ECL: 13 };
-const BYE_ROUNDS = [5, 6];
-const DOUBLE_ROUNDS = [12, 16];
+const BYE_ROUNDS = [1, 5, 6];
+const DOUBLE_ROUNDS = [7, 12, 16];
 
 let calendarRounds = [];
 let calendarDebug = {};
@@ -4863,6 +4863,45 @@ function renderSeasonFixtures(rounds){
   document.getElementById('seasonFixturesUpdated').textContent = rounds.length + " rounds";
 }
 
+// Latest possible start round for each FA Cup / ECL stage. Past this round the
+// matches have to be played on a bye/double, so it's the "must start by"
+// deadline for each stage — not necessarily when it actually kicks off.
+const CAL_LATEST_START = [
+  { round: 13, faCup: "Round of 128", ecl: "" },
+  { round: 14, faCup: "", ecl: "" },
+  { round: 15, faCup: "Round of 64", ecl: "" },
+  { round: 16, faCup: "", ecl: "" },
+  { round: 17, faCup: "Round of 32", ecl: "" },
+  { round: 18, faCup: "", ecl: "Matchday 1" },
+  { round: 19, faCup: "Round of 16", ecl: "Matchday 2" },
+  { round: 20, faCup: "", ecl: "Matchday 3" },
+  { round: 21, faCup: "Quarter Finals", ecl: "Quarter Finals" },
+  { round: 22, faCup: "", ecl: "" },
+  { round: 23, faCup: "Semi Finals", ecl: "Semi Finals" },
+  { round: 24, faCup: "", ecl: "" },
+  { round: 25, faCup: "Final", ecl: "Final" },
+  { round: 26, faCup: "", ecl: "" }
+];
+
+function calendarLatestStartHtml(){
+  const cellHtml = (text, bg, fg) => text
+    ? `<td style="background:${bg};color:${fg};font-weight:600;text-align:center;">${text}</td>`
+    : `<td style="background:#e4e2dc;text-align:center;">&nbsp;</td>`;
+  return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Latest Possible Start Round</h2></div>
+    <p style="font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;max-width:560px;">The latest round each FA Cup and ECL stage can start. Once that round is reached, any matches still to be played will need to be played on byes and doubles.</p>
+    <div class="table-wrap" style="max-width:420px;"><table class="standings compact calendar-table"><thead><tr>
+      <th>Round</th>
+      <th style="background:#0a2f85;color:#fff;text-align:center;">FA Cup</th>
+      <th style="background:#111111;color:#fff;">ECL</th>
+    </tr></thead><tbody>
+      ${CAL_LATEST_START.map(r => `<tr>
+        <td class="pts">${r.round}</td>
+        ${cellHtml(r.faCup, "#0a2f85", "#fff")}
+        ${cellHtml(r.ecl, "#111111", "#fff")}
+      </tr>`).join("")}
+    </tbody></table></div>`;
+}
+
 function renderCalendar(){
   const container = document.getElementById('calendarContainer');
   if(calendarRounds.length === 0){
@@ -4896,6 +4935,8 @@ function renderCalendar(){
   </div>`;
 
   html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:10px;">*All Oppo Eliza FA Cup and Eliza Champions League rounds subject to change. Rounds may be moved to avoid unplanned byes/doubles. Any changes will be announced as necessary.</div>`;
+
+  html += calendarLatestStartHtml();
 
   container.innerHTML = html;
   document.getElementById('calendarUpdated').textContent = calendarRounds.length + " rounds";
