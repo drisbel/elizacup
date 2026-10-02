@@ -57,20 +57,6 @@
     "rules": ""
   },
   {
-    "id": "nblsupercoach",
-    "label": "NBL Supercoach",
-    "status": "active",
-    "code": "",
-    "notes": "",
-    "link": "#sideleagues=nbl",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "roundInfo": "ROUND 2",
-    "winners": [],
-    "rules": ""
-  },
-  {
     "id": "murhoxky",
     "label": "A-League Ladder Predictor",
     "status": "active",
@@ -82,6 +68,20 @@
     "countdownEnabled": false,
     "notes": "",
     "link": "https://elizacup.com/#sideleagues=aleaguepredictor",
+    "rules": ""
+  },
+  {
+    "id": "nblsupercoach",
+    "label": "NBL Supercoach",
+    "status": "active",
+    "code": "",
+    "notes": "",
+    "link": "#sideleagues=nbl",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "roundInfo": "ROUND 2",
+    "winners": [],
     "rules": ""
   },
   {
