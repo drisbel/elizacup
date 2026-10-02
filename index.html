@@ -1377,6 +1377,15 @@
     table.calendar-table thead th{padding:5px 4px;font-size:8px;}
     table.calendar-table tbody td{padding:5px 4px;font-size:10.5px;}
     table.calendar-table thead th:first-child, table.calendar-table tbody td:first-child{width:auto;padding-left:6px;}
+    /* Phones: fit every column on screen (wrap text instead of scrolling sideways),
+       so the FA Cup / ECL columns can't be missed off to the right. */
+    table.standings.compact.calendar-table{width:100%;}
+    table.standings.compact.calendar-table thead th{padding:5px 2px;font-size:8px;line-height:1.2;white-space:normal;}
+    table.standings.compact.calendar-table tbody td, table.standings.compact.calendar-table tbody td:nth-child(2){
+      padding:5px 2px;font-size:9.5px;line-height:1.25;white-space:normal;
+      max-width:none;overflow:visible;text-overflow:clip;
+    }
+    table.standings.compact.calendar-table thead th:first-child, table.standings.compact.calendar-table tbody td:first-child{padding-left:4px;padding-right:4px;}
     table.trophy-table{min-width:0;}
     table.trophy-table thead th{padding:5px 6px;font-size:8.5px;}
     table.trophy-table tbody td{padding:5px 6px;font-size:11.5px;}
@@ -1500,12 +1509,12 @@
 .alp-instructions{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;padding:9px 11px;background:#f5f7fa;border-left:3px solid var(--pitch);border-radius:4px;line-height:1.45;}
 .alp-ladder{display:flex;flex-direction:column;gap:5px;}
 /* A-League predictor team cards */
-.alp-ladder{display:flex;flex-direction:column;gap:7px;user-select:none;}
+.alp-ladder{display:flex;flex-direction:column;gap:7px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
 .alp-pick-row{display:grid;grid-template-columns:34px 44px minmax(0,1fr);align-items:center;gap:10px;padding:9px 12px;border:3px solid var(--alp-secondary,#111);border-radius:7px;background:var(--alp-primary,#fff);color:var(--alp-text,#111);transition:transform .12s,box-shadow .12s,opacity .12s,border-color .12s;cursor:grab;}
 @media (hover:hover){.alp-pick-row:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.12);}}
 .alp-pick-row.dragging{opacity:.45;box-shadow:none;transform:scale(.99);}
 .alp-pick-row.drag-target{box-shadow:0 0 0 3px rgba(0,0,0,.2);}
-.alp-drag-handle{font-size:21px;line-height:1;text-align:center;opacity:.78;cursor:grab;}
+.alp-drag-handle{font-size:21px;line-height:1;text-align:center;opacity:.78;cursor:grab;touch-action:none;}
 .alp-pick-number{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.82);color:#111;font-weight:800;font-size:13px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
 .alp-pick-team{font-family:'Barlow',sans-serif;font-size:15px;font-weight:800;min-width:0;line-height:1.25;}
 .alp-position{display:none;}
@@ -4889,7 +4898,7 @@ function calendarLatestStartHtml(){
     : `<td style="background:#e4e2dc;text-align:center;">&nbsp;</td>`;
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Latest Possible Start Round</h2></div>
     <p style="font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;max-width:560px;">The latest round each FA Cup and ECL stage can start. Once that round is reached, any matches still to be played will need to be played on byes and doubles.</p>
-    <div class="table-wrap" style="max-width:420px;"><table class="standings compact calendar-table"><thead><tr>
+    <div class="table-wrap" style="max-width:420px;"><table class="standings compact calendar-table" style="min-width:0;table-layout:fixed;"><colgroup><col style="width:20%;"><col style="width:36%;"><col style="width:44%;"></colgroup><thead><tr>
       <th>Round</th>
       <th style="background:#0a2f85;color:#fff;text-align:center;">FA Cup</th>
       <th style="background:#111111;color:#fff;">ECL</th>
@@ -10443,6 +10452,8 @@ function alpSetSequentialPositions(){
 }
 
 let alpDraggedRow_=null, alpPointerDrag_=null;
+const ALP_TOUCH_HOLD_MS=150; // short press before a card lifts on touch (was the browser's ~500ms long-press)
+const ALP_TOUCH_SLOP=8;       // px of movement that means 'scrolling', not 'dragging'
 
 function alpMoveRowBefore_(row,target){
   if(!row||!target||row===target) return;
@@ -10455,8 +10466,50 @@ function alpMoveRowBefore_(row,target){
   alpSetSequentialPositions();
 }
 
+// Touch drag: move/end are handled at page level (not per card) so they keep
+// working whichever element the browser reports under the finger.
+function alpTouchMove_(e){
+  const d=alpPointerDrag_; if(!d||e.pointerId!==d.id) return;
+  const row=d.row;
+  if(!d.active){
+    // Finger moved before the short hold finished: that's a scroll, not a drag.
+    if(Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>ALP_TOUCH_SLOP){
+      clearTimeout(d.timer); alpPointerDrag_=null; row.draggable=true;
+    }
+    return;
+  }
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const target=el&&el.closest('.alp-pick-row');
+  if(target&&target!==row&&target.parentNode===row.parentNode){
+    const rect=target.getBoundingClientRect();
+    if(e.clientY<rect.top+rect.height/2) target.before(row); else target.after(row);
+    alpSetSequentialPositions();
+  }
+  // Nudge the page when the card is dragged near the top/bottom edge of the screen.
+  if(e.clientY<70) window.scrollBy(0,-14);
+  else if(e.clientY>window.innerHeight-70) window.scrollBy(0,14);
+  if(e.cancelable) e.preventDefault();
+}
+function alpTouchEnd_(e){
+  const d=alpPointerDrag_; if(!d||e.pointerId!==d.id) return;
+  clearTimeout(d.timer);
+  d.row.classList.remove('dragging'); d.row.draggable=true;
+  alpPointerDrag_=null; alpSetSequentialPositions();
+}
+if(!window.__alpTouchWired){
+  window.__alpTouchWired=true;
+  window.addEventListener('pointermove',alpTouchMove_,{passive:false});
+  window.addEventListener('pointerup',alpTouchEnd_);
+  window.addEventListener('pointercancel',alpTouchEnd_);
+}
+
 function alpWireDragDrop_(){
   const holder=document.getElementById('alpLadder'); if(!holder) return;
+  if(!holder.dataset.touchGuard){
+    holder.dataset.touchGuard='1';
+    // Once a card has lifted, stop the page scrolling under the finger.
+    holder.addEventListener('touchmove',e=>{ if(alpPointerDrag_&&alpPointerDrag_.active&&e.cancelable) e.preventDefault(); },{passive:false});
+  }
   holder.querySelectorAll('.alp-pick-row').forEach(row=>{
     row.addEventListener('dragstart',e=>{
       alpDraggedRow_=row; row.classList.add('dragging');
@@ -10472,31 +10525,22 @@ function alpWireDragDrop_(){
     });
     row.addEventListener('drop',e=>{e.preventDefault();holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target'));alpSetSequentialPositions();});
     row.addEventListener('pointerdown',e=>{
-      if(e.pointerType==='mouse') return;
-if(!e.target.closest('.alp-drag-handle')) return;
+      if(e.pointerType==='mouse'){ row.draggable=true; return; }
       if(e.target.closest('button,input,select,a')) return;
-      alpPointerDrag_={row,startX:e.clientX,startY:e.clientY,moved:false};
-      row.setPointerCapture?.(e.pointerId);
+      // Touch/pen: switch off the browser's native long-press drag (that's the slow
+      // ~half-second hold) and run our own, which starts after a very short press
+      // anywhere on the card, or instantly from the handle.
+      row.draggable=false;
+      const d={row,id:e.pointerId,startX:e.clientX,startY:e.clientY,active:false,timer:null};
+      const activate=()=>{
+        d.active=true; row.classList.add('dragging');
+        try{ row.setPointerCapture(d.id); }catch(_){}
+        if(navigator.vibrate) navigator.vibrate(8);
+      };
+      if(e.target.closest('.alp-drag-handle')) activate();
+      else d.timer=setTimeout(()=>{ if(alpPointerDrag_===d) activate(); }, ALP_TOUCH_HOLD_MS);
+      alpPointerDrag_=d;
     });
-    row.addEventListener('pointermove',e=>{
-      const d=alpPointerDrag_; if(!d||d.row!==row) return;
-      const dx=e.clientX-d.startX,dy=e.clientY-d.startY;
-      if(!d.moved && Math.hypot(dx,dy)<6) return;
-      d.moved=true; row.classList.add('dragging');
-      const el=document.elementFromPoint(e.clientX,e.clientY);
-      const target=el&&el.closest('.alp-pick-row');
-      if(target&&target!==row){
-        const rect=target.getBoundingClientRect();
-        if(e.clientY<rect.top+rect.height/2) target.before(row); else target.after(row);
-        alpSetSequentialPositions();
-      }
-      e.preventDefault();
-    });
-    row.addEventListener('pointerup',()=>{
-      if(!alpPointerDrag_||alpPointerDrag_.row!==row)return;
-      row.classList.remove('dragging'); alpPointerDrag_=null; alpSetSequentialPositions();
-    });
-    row.addEventListener('pointercancel',()=>{row.classList.remove('dragging');alpPointerDrag_=null;alpSetSequentialPositions();});
   });
 }
 
