@@ -42,6 +42,20 @@
     "rules": "<strong><u>EPL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official EPL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
   },
   {
+    "id": "muu6vwt0",
+    "label": "A-League LMS",
+    "status": "signups",
+    "roundInfo": "",
+    "winners": [],
+    "code": "",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "notes": "",
+    "link": "#sideleagues=lms:aleague",
+    "rules": ""
+  },
+  {
     "id": "msbhwfxa",
     "label": "Australia Cup LMS",
     "status": "active",
@@ -68,20 +82,6 @@
     "countdownEnabled": false,
     "notes": "",
     "link": "#sideleagues=uclfantasy",
-    "rules": ""
-  },
-  {
-    "id": "muu6vwt0",
-    "label": "A-League LMS",
-    "status": "signups",
-    "roundInfo": "",
-    "winners": [],
-    "code": "",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "notes": "",
-    "link": "#sideleagues=lms:aleague",
     "rules": ""
   },
   {
