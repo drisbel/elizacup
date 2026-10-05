@@ -657,6 +657,16 @@
   .overall-table-wrap{max-width:360px;}
   .overall-table-wrap table.standings{width:auto;min-width:0;}
   .overall-table-wrap td, .overall-table-wrap th{padding-left:14px;padding-right:14px;}
+  /* A-League tipping overall tables — same compact standings language, but with
+     the latest completed scoring round and season total instead of W/D/L columns. */
+  .tipping-overall-wrap{max-width:520px;}
+  .tipping-overall-wrap table.standings{width:100%;min-width:0;}
+  .tipping-overall-wrap td.tipping-round-score,
+  .tipping-overall-wrap td.tipping-total{font-weight:700;}
+  @media (max-width:600px){
+    .tipping-overall-wrap{max-width:100%;}
+    .tipping-overall-wrap table.standings{min-width:360px;}
+  }
   /* Rows with no special status/tier coloring have no background set at all, which
      left the sticky Pos+Team columns transparent on those rows — letting other
      columns (like the Side League "Player" column) show through as the table
@@ -7503,6 +7513,10 @@ const SIDE_LEAGUES = [
   // fixture/matchup shape every other side league uses. Own loader/renderer
   // (isUcl branch in loadSideLeague, parseUclFantasy/renderUclFantasy).
   { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1534273263", isUcl: true },
+  // A-League Men/Women tipping. Both sheets use the same overall-table layout;
+  // only the tab/GID differs. The public table begins at physical row 40.
+  { key: "almtipping", label: "ALM Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1986596590", isTippingOverall: true, tippingStartRow: 40 },
+  { key: "alwtipping", label: "ALW Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1316975251", isTippingOverall: true, tippingStartRow: 40 },
   { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true }
 ];
 
@@ -7812,6 +7826,28 @@ function renderSideLeaguesHub(){
         link: "#sideleagues=aleaguepredictor"
       });
     }
+    // Keep the new tipping leagues discoverable on the Side Leagues Hub even
+    // before an optional admin-managed card has been created for them.
+    if(!cards.some(c => c.link === "#sideleagues=almtipping")){
+      cards.push({
+        key: "almtipping",
+        label: "ALM Tipping",
+        status: "active",
+        roundInfo: "A-League Men tipping",
+        notes: "Overall tipping leaderboard.",
+        link: "#sideleagues=almtipping"
+      });
+    }
+    if(!cards.some(c => c.link === "#sideleagues=alwtipping")){
+      cards.push({
+        key: "alwtipping",
+        label: "ALW Tipping",
+        status: "active",
+        roundInfo: "A-League Women tipping",
+        notes: "Overall tipping leaderboard.",
+        link: "#sideleagues=alwtipping"
+      });
+    }
     const sortedCards = cards.sort((a, b) => {
       const aDone = a.status === "complete" ? 1 : 0;
       const bDone = b.status === "complete" ? 1 : 0;
@@ -8083,7 +8119,7 @@ function sideLeagueCsvUrlFor(league){
   // returned; parseNblSupercoach() already identifies the real data rows itself.
   // Every existing side league keeps its URL unchanged.
   const headerParam = league && league.isNbl ? "&headers=0" : "";
-  const rangeParam = league && league.isUcl ? "&range=G27:AA34" : "";
+  const rangeParam = league && league.isUcl ? "&range=G27:AA34" : (league && league.isTippingOverall ? `&range=A${league.tippingStartRow || 40}:ZZ` : "");
   return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}${headerParam}${rangeParam}&cachebust=` + Date.now();
 }
 
@@ -8168,6 +8204,127 @@ function parseFplTable(rows, titleText){
 // header text — they turned out not to exist as header text at all, only
 // "TEAM" is actually typed in that row, which is why the earlier text-search
 // approach could never find them no matter how it was adjusted.
+// ---------- A-League tipping overall tables ----------
+// ALM and ALW use the same sheet layout. The public overall table starts at
+// physical row 40. The parser deliberately identifies TEAM/TOTAL and the round
+// columns from the returned header row rather than hard-coding their columns,
+// so minor column additions to the tipping sheets do not break the display.
+const TIPPING_ROUND_RE = /^(?:R(?:OUND)?\s*[-.]?\s*\d+|\d+)$/i;
+
+function parseTippingOverall(rows, startRowNumber){
+  const startIdx = Math.max(0, (Number(startRowNumber) || 40) - 1);
+  let headerRow = -1;
+  let teamCol = -1;
+  let totalCol = -1;
+  let posCol = -1;
+
+  // Usually the first returned row is the table header, but allow a few title/
+  // spacer rows after row 40 without making the parser fragile.
+  for(let r = startIdx; r < Math.min(rows.length, startIdx + 8); r++){
+    const row = rows[r] || [];
+    const labels = row.map(v => (v || "").toString().trim().toUpperCase());
+    const tc = labels.findIndex(v => v === "TEAM" || v === "TEAM NAME" || v === "MANAGER" || v === "NAME");
+    const tot = labels.findIndex(v => v === "TOTAL" || v === "PTS" || v === "POINTS" || v === "OVERALL");
+    if(tc !== -1 && tot !== -1){
+      headerRow = r;
+      teamCol = tc;
+      totalCol = tot;
+      posCol = labels.findIndex(v => v === "POS" || v === "POSITION" || v === "RANK");
+      break;
+    }
+  }
+
+  if(headerRow === -1){
+    return {
+      entries: [],
+      roundLabel: "",
+      debug: {
+        headerFound: false,
+        startRow: startRowNumber || 40,
+        rowsReturned: rows.length,
+        firstRows: rows.slice(startIdx, startIdx + 8)
+      }
+    };
+  }
+
+  const headers = rows[headerRow] || [];
+  const roundCols = [];
+  for(let c = 0; c < headers.length; c++){
+    if(c === teamCol || c === totalCol || c === posCol) continue;
+    const h = (headers[c] || "").toString().trim();
+    if(h && TIPPING_ROUND_RE.test(h)) roundCols.push({ col: c, label: h });
+  }
+
+  // Read the team rows first, then choose the latest round that has at least
+  // one entered score. This means the displayed "Round" column automatically
+  // advances as the sheet is updated.
+  const entries = [];
+  for(let r = headerRow + 1; r < rows.length; r++){
+    const row = rows[r] || [];
+    const team = cell(row, teamCol);
+    if(!team) break;
+
+    const total = cell(row, totalCol);
+    const pos = posCol >= 0 ? cell(row, posCol) : String(entries.length + 1);
+    entries.push({ pos, team, total, row });
+  }
+
+  let lastRound = null;
+  for(let i = roundCols.length - 1; i >= 0; i--){
+    const rc = roundCols[i];
+    if(entries.some(e => cell(e.row, rc.col) !== "")){
+      lastRound = rc;
+      break;
+    }
+  }
+
+  const parsedEntries = entries.map(e => ({
+    pos: e.pos,
+    team: e.team,
+    roundScore: lastRound ? cell(e.row, lastRound.col) : "",
+    total: e.total
+  }));
+
+  return {
+    entries: parsedEntries,
+    roundLabel: lastRound ? lastRound.label : "",
+    debug: {
+      headerFound: true,
+      headerRow: headerRow + 1,
+      teamCol: colIndexToLetter(teamCol),
+      posCol: posCol >= 0 ? colIndexToLetter(posCol) : null,
+      totalCol: colIndexToLetter(totalCol),
+      roundColumns: roundCols.map(x => ({ label: x.label, col: colIndexToLetter(x.col) })),
+      selectedRound: lastRound ? { label: lastRound.label, col: colIndexToLetter(lastRound.col) } : null,
+      entriesFound: parsedEntries.length,
+      firstParsedEntry: parsedEntries[0] || null,
+      lastParsedEntry: parsedEntries[parsedEntries.length - 1] || null
+    }
+  };
+}
+
+function tippingOverallTableHtml(data){
+  if(!data || !data.entries.length){
+    return `<p class="state-msg">No tipping data found. Check the Debug panel below.</p>`;
+  }
+  const roundLabel = data.roundLabel || "Latest Round";
+  return `<div class="table-wrap tipping-overall-wrap"><table class="standings compact">
+    <thead><tr>
+      <th>Pos</th><th style="text-align:left;">Team</th><th>${roundLabel}</th><th>Total</th>
+    </tr></thead><tbody>
+      ${data.entries.map(e=>{
+        const logoName = e.team; // ALM/ALW tipping team names match the Roddy team names.
+        const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+        return `<tr>
+          <td>${e.pos}</td>
+          <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${teamLink(e.team)}</td>
+          <td class="tipping-round-score">${e.roundScore || "—"}</td>
+          <td class="pts tipping-total">${e.total || "—"}</td>
+        </tr>`;
+      }).join("")}
+    </tbody></table></div>`;
+}
+
 const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
 const OVERALL_COL_OFFSET = { pos: 1, team: 3, pts: 4 }; // relative to the marker's own column
 function parseSideLeagueOverallTable(rows){
@@ -8798,6 +8955,17 @@ function fplRoddyTableHtml(data){
 function renderSideLeagueContent(){
   const el = document.getElementById('sideLeaguesContainer');
   el.className = "";
+
+  if(sideLeagueData && sideLeagueData.isTippingOverall){
+    const { overall, label, key } = sideLeagueData;
+    const themeColor = sideLeagueThemeColor(key);
+    if(themeColor) applyDivisionTheme({ color: themeColor });
+    el.innerHTML = `
+      ${sideLeagueWinnersBannerHtml("#sideleagues=" + key)}
+      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
+      ${tippingOverallTableHtml(overall)}`;
+    return;
+  }
 
   if(sideLeagueData.singleTable){
     const { table, fx, overall, label, key } = sideLeagueData;
@@ -10675,6 +10843,33 @@ async function loadSideLeague(leagueKey){
   await loadSideLeaguesHubData();
   // Page Visibility is loaded here too so nav/search reflect it.
   await loadPageVisibilityData();
+
+  if(league.isTippingOverall){
+    try{
+      const [res] = await Promise.all([
+        cachedFetch(sideLeagueCsvUrlFor(league)),
+        loadSideLeagueTeamMap()
+      ]);
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const overall = parseTippingOverall(rows, league.tippingStartRow || 40);
+      sideLeagueData = {
+        isTippingOverall: true,
+        overall,
+        label: league.label,
+        key: league.key
+      };
+      renderSideLeagueContent();
+      sideLeagueDebug = { tippingOverall: overall.debug };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load " + league.label + " data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
 
   if(league.isALeaguePredictor){
     await renderALeaguePredictor();
