@@ -149,5 +149,19 @@
     "notes": "",
     "link": "#sideleagues=almtipping",
     "rules": ""
+  },
+  {
+    "id": "muvsetmo",
+    "label": "ALW Tipping",
+    "status": "signups",
+    "roundInfo": "",
+    "winners": [],
+    "code": "",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "notes": "",
+    "link": "#sideleagues=alwtipping",
+    "rules": ""
   }
 ]
