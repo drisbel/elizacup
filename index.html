@@ -667,6 +667,35 @@
     .tipping-overall-wrap{max-width:100%;}
     .tipping-overall-wrap table.standings{min-width:360px;}
   }
+  /* Full tipping history — horizontally scrollable on smaller screens. */
+  .tipping-round-by-round{margin-top:24px;}
+  .tipping-round-by-round-head{margin-bottom:10px;}
+  .tipping-round-by-round-head h3{font-size:17px;margin:0;}
+  .tipping-round-scroll{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    border-radius:10px;
+  }
+  .tipping-round-table{
+    width:max-content !important;
+    min-width:100%;
+  }
+  .tipping-round-table th,
+  .tipping-round-table td{white-space:nowrap;}
+  .tipping-round-table th:first-child,
+  .tipping-round-table td:first-child{
+    position:sticky;
+    left:0;
+    z-index:2;
+  }
+  .tipping-round-table th:nth-child(2),
+  .tipping-round-table td:nth-child(2){
+    position:sticky;
+    left:55px;
+    z-index:2;
+  }
   /* Rows with no special status/tier coloring have no background set at all, which
      left the sticky Pos+Team columns transparent on those rows — letting other
      columns (like the Side League "Player" column) show through as the table
@@ -8212,7 +8241,11 @@ function parseFplTable(rows, titleText){
 const TIPPING_ROUND_RE = /^(?:R(?:OUND)?\s*[-.]?\s*\d+|\d+)$/i;
 
 function parseTippingOverall(rows, startRowNumber){
-  const startIdx = Math.max(0, (Number(startRowNumber) || 41) - 1);
+  // The GViz CSV range already starts at the requested sheet row, so rows[0]
+  // is the first returned row. Do not offset into the returned array again.
+  // This also makes the parser tolerant if the sheet has a title/spacer row
+  // immediately before the actual headers.
+  const startIdx = 0;
   let headerRow = -1;
   let teamCol = -1;
   let totalCol = -1;
@@ -8220,16 +8253,20 @@ function parseTippingOverall(rows, startRowNumber){
 
   // Usually the first returned row is the table header, but allow a few title/
   // spacer rows after row 40 without making the parser fragile.
-  for(let r = startIdx; r < Math.min(rows.length, startIdx + 8); r++){
+  for(let r = startIdx; r < Math.min(rows.length, startIdx + 15); r++){
     const row = rows[r] || [];
     const labels = row.map(v => (v || "").toString().trim().toUpperCase());
     const tc = labels.findIndex(v => v === "TEAM" || v === "TEAM NAME" || v === "MANAGER" || v === "NAME");
     const tot = labels.findIndex(v => v === "TOTAL" || v === "PTS" || v === "POINTS" || v === "OVERALL");
-    if(tc !== -1 && tot !== -1){
+    const pc = labels.findIndex(v => v === "POS" || v === "POSITION" || v === "RANK");
+    // The sheet contains an earlier SCORE ENTRY table with TEAM NAME/TOTAL
+    // but no POS column. The overall leaderboard is the header containing
+    // POS + TEAM NAME + TOTAL, so require all three.
+    if(tc !== -1 && tot !== -1 && pc !== -1){
       headerRow = r;
       teamCol = tc;
       totalCol = tot;
-      posCol = labels.findIndex(v => v === "POS" || v === "POSITION" || v === "RANK");
+      posCol = pc;
       break;
     }
   }
@@ -8282,7 +8319,11 @@ function parseTippingOverall(rows, startRowNumber){
     pos: e.pos,
     team: e.team,
     roundScore: lastRound ? cell(e.row, lastRound.col) : "",
-    total: e.total
+    total: e.total,
+    roundScores: roundCols.map(rc => ({
+      label: rc.label,
+      score: cell(e.row, rc.col)
+    }))
   }));
 
   return {
@@ -8307,24 +8348,60 @@ function tippingOverallTableHtml(data){
   if(!data || !data.entries.length){
     return `<p class="state-msg">No tipping data found. Check the Debug panel below.</p>`;
   }
-  const roundLabel = data.roundLabel || "Latest Round";
-  return `<div class="table-wrap tipping-overall-wrap"><table class="standings compact">
-    <thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>${roundLabel}</th><th>Total</th>
-    </tr></thead><tbody>
-      ${data.entries.map(e=>{
-        const logoName = e.team; // ALM/ALW tipping team names match the Roddy team names.
-        const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
-        return `<tr>
-          <td>${e.pos}</td>
-          <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
-          <td class="tipping-round-score">${e.roundScore || "—"}</td>
-          <td class="pts tipping-total">${e.total || "—"}</td>
-        </tr>`;
-      }).join("")}
-    </tbody></table></div>`;
-}
 
+  const roundLabel = data.roundLabel || "";
+  const roundHeaders = data.entries[0].roundScores || [];
+
+  const latestTable = `<div class="table-wrap tipping-overall-wrap">
+    <table class="standings compact">
+      <thead><tr>
+        <th>Pos</th><th style="text-align:left;">Team</th><th>${roundLabel || "Round"}</th><th>Total</th>
+      </tr></thead>
+      <tbody>
+        ${data.entries.map(e=>{
+          const logoName = e.team;
+          const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+          return `<tr>
+            <td>${e.pos}</td>
+            <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
+            <td class="tipping-round-score">${e.roundScore || "—"}</td>
+            <td class="pts tipping-total">${e.total || "—"}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  </div>`;
+
+  const fullTable = `<div class="tipping-round-by-round">
+    <div class="section-head tipping-round-by-round-head">
+      <h3>Round by Round</h3>
+    </div>
+    <div class="tipping-round-scroll">
+      <table class="standings compact tipping-round-table">
+        <thead><tr>
+          <th>Pos</th>
+          <th style="text-align:left;">Team</th>
+          <th>Total</th>
+          ${roundHeaders.map(r => `<th>${r.label}</th>`).join("")}
+        </tr></thead>
+        <tbody>
+          ${data.entries.map(e=>{
+            const logoName = e.team;
+            const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+            return `<tr>
+              <td>${e.pos}</td>
+              <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
+              <td class="pts tipping-total">${e.total || "—"}</td>
+              ${(e.roundScores || []).map(r => `<td class="tipping-round-score">${r.score || "—"}</td>`).join("")}
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  return latestTable + fullTable;
+}
 const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
 const OVERALL_COL_OFFSET = { pos: 1, team: 3, pts: 4 }; // relative to the marker's own column
 function parseSideLeagueOverallTable(rows){
