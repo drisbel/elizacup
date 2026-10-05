@@ -3805,7 +3805,7 @@ function renderRoddy(){
     const divColor = getDivisionColorByLabel(e.division);
     html += `<tr style="background:${hexToSolidTint(divColor,0.13)};border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
-      <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${teamLink(e.team)}</td>
+      <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${sideLeagueTeamLink(e.team)}</td>
       <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
       <td>${e.round || "—"}</td>
       <td>${e.chip || "—"}</td>
@@ -7515,8 +7515,8 @@ const SIDE_LEAGUES = [
   { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1534273263", isUcl: true },
   // A-League Men/Women tipping. Both sheets use the same overall-table layout;
   // only the tab/GID differs. The public table begins at physical row 40.
-  { key: "almtipping", label: "ALM Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1986596590", isTippingOverall: true, tippingStartRow: 40 },
-  { key: "alwtipping", label: "ALW Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1316975251", isTippingOverall: true, tippingStartRow: 40 },
+  { key: "almtipping", label: "ALM Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1986596590", isTippingOverall: true, tippingStartRow: 41 },
+  { key: "alwtipping", label: "ALW Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1316975251", isTippingOverall: true, tippingStartRow: 41 },
   { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true }
 ];
 
@@ -8212,7 +8212,7 @@ function parseFplTable(rows, titleText){
 const TIPPING_ROUND_RE = /^(?:R(?:OUND)?\s*[-.]?\s*\d+|\d+)$/i;
 
 function parseTippingOverall(rows, startRowNumber){
-  const startIdx = Math.max(0, (Number(startRowNumber) || 40) - 1);
+  const startIdx = Math.max(0, (Number(startRowNumber) || 41) - 1);
   let headerRow = -1;
   let teamCol = -1;
   let totalCol = -1;
@@ -8317,7 +8317,7 @@ function tippingOverallTableHtml(data){
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
           <td>${e.pos}</td>
-          <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${teamLink(e.team)}</td>
+          <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
           <td class="tipping-round-score">${e.roundScore || "—"}</td>
           <td class="pts tipping-total">${e.total || "—"}</td>
         </tr>`;
