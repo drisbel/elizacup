@@ -10014,8 +10014,12 @@ function aleagueLmsRoundNum(rawText){
 }
 
 function parseAleagueLms(rows){
-  const rounds = [];
-  let current = null;
+  // The D:H area contains participant picks/results for rounds that have
+  // already been populated, while N:S is the authoritative fixture list and
+  // contains all scheduled rounds. Build one unified round list from both so
+  // future rounds are available on the website before participant picks exist.
+  const participantRounds = [];
+  let currentParticipantRound = null;
   const rawDump = [];
   const headerCandidates = [];
 
@@ -10028,22 +10032,21 @@ function parseAleagueLms(rows){
     }
 
     if(isAleagueLmsRoundHeader(d)){
-      current = { name: d, roundNum: aleagueLmsRoundNum(d), entries: [] };
-      rounds.push(current);
+      currentParticipantRound = { name: d, roundNum: aleagueLmsRoundNum(d), entries: [] };
+      participantRounds.push(currentParticipantRound);
       continue;
     }
-    if(!current) continue;
+    if(!currentParticipantRound) continue;
 
     const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
     if(!d && !f && !g && !h) continue;
 
-    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
-    rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
+    currentParticipantRound.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
+    rawDump.push({ row: r+1, round: currentParticipantRound.name, D:d, F:f, G:g, H:h });
   }
 
   // Round / Deadline / Current reference table — X = round name, Y = deadline
-  // (DD/MM/YYYY HH:MM:SS AEST), Z = "TRUE" for the current round. Same
-  // convention as Australia Cup LMS.
+  // (DD/MM/YYYY HH:MM:SS AEST), Z = "TRUE" for the current round.
   const deadlineMap = {};
   let currentRoundLabel = "";
   for(let r=0; r<rows.length; r++){
@@ -10067,8 +10070,9 @@ function parseAleagueLms(rows){
     });
   }
 
-  // Fixture reference blocks — N holds "ROUND N" on the title row (no
-  // "FIXTURES" suffix, unlike Australia Cup), Q = home team, S = away team.
+  // Fixture reference blocks — N holds "ROUND N" on the title row, Q = home
+  // team and S = away team. This is the authoritative source for the season's
+  // round list because it includes future rounds that have no picks/results yet.
   const fixtureBlocks = [];
   let currentBlock = null;
   for(let r=0; r<rows.length; r++){
@@ -10084,10 +10088,40 @@ function parseAleagueLms(rows){
     currentBlock.fixtures.push({ home, away });
   }
 
+  // Merge the fixture rounds with any participant/results data. Fixture blocks
+  // define the complete 26-round navigation; participant entries are attached
+  // where available (currently the completed/populated rounds only).
+  const participantByRound = {};
+  participantRounds.forEach(rd => {
+    participantByRound[rd.roundNum] = rd;
+  });
+
+  const roundMap = {};
+  fixtureBlocks.forEach(block => {
+    roundMap[block.roundNum] = {
+      name: block.roundName,
+      roundNum: block.roundNum,
+      entries: participantByRound[block.roundNum] ? participantByRound[block.roundNum].entries : [],
+      fixtures: block.fixtures
+    };
+  });
+
+  // Also retain any participant round that isn't present in N:S, so unusual
+  // data-entry situations don't silently lose historical picks.
+  participantRounds.forEach(rd => {
+    if(!roundMap[rd.roundNum]){
+      roundMap[rd.roundNum] = {
+        name: rd.name,
+        roundNum: rd.roundNum,
+        entries: rd.entries,
+        fixtures: []
+      };
+    }
+  });
+
+  const rounds = Object.values(roundMap).sort((a,b) => a.roundNum - b.roundNum);
+
   // Raw form-submission log — AE timestamp, AF round, AG participant, AH team.
-  // Kept on this same sheet (unlike Australia Cup, which logs to a separate
-  // spreadsheet) — picks still get transcribed into the D:H entries block
-  // manually, this is just the raw record of what was submitted.
   const submissionLog = [];
   for(let r=0; r<rows.length; r++){
     const ts = cell(rows[r]||[], 30); // AE
@@ -10100,10 +10134,7 @@ function parseAleagueLms(rows){
     });
   }
 
-  // Team reference list — AY only. No elimination flag column (unlike
-  // Australia Cup): real A-League clubs don't get knocked out mid-season, so
-  // every team stays a valid option all year, subject only to the
-  // pick-eligibility rules below.
+  // Team reference list — AY only. Real A-League clubs remain valid options all year.
   const teamList = [];
   for(let r=0; r<rows.length; r++){
     const name = cell(rows[r]||[], 50); // AY
@@ -10111,8 +10142,7 @@ function parseAleagueLms(rows){
     teamList.push(name);
   }
 
-  // Each participant's full pick history (round number + team), used for all
-  // three eligibility rules on the tips form.
+  // Each participant's full pick history, used for all pick-eligibility rules.
   const history = {};
   rounds.forEach(round => {
     round.entries.forEach(e => {
@@ -10125,7 +10155,8 @@ function parseAleagueLms(rows){
   return {
     rounds, currentRoundLabel, deadlineMap, playerSummary, fixtureBlocks, submissionLog, teamList, history,
     debug: {
-      roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })),
+      roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length, fixtures: rd.fixtures.length })),
+      participantRoundsFound: participantRounds.map(rd => ({ name: rd.name, entries: rd.entries.length })),
       currentRoundLabel, deadlineMap,
       playerSummaryFound: playerSummary.length, playerSummary,
       fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})),
@@ -10201,11 +10232,11 @@ function renderAleagueLms(data, containerId){
   }).join("");
 
   el.innerHTML = sideLeagueWinnersBannerHtml("#sideleagues=lms:aleague") +
-    renderAleagueLmsPlayerSummary(data) +
-    `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
+    aleagueLmsTipsFormHtml(data) +
+    `<div class="section-head" style="margin-top:32px;margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
-    <div class="lms-pick-list">${rowsHtml}</div>
-    ${aleagueLmsTipsFormHtml(data)}`;
+    <div class="lms-pick-list">${rowsHtml}</div>` +
+    renderAleagueLmsPlayerSummary(data);
 
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
