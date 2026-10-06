@@ -8365,13 +8365,18 @@ function combineTippingClubChampionship(almData, alwData){
     const key = (e.team || "").trim().toLowerCase();
     const other = alwByTeam.get(key);
     if(!other) return null;
-    const almTotal = parseFloat(String(e.total || "").replace(/,/g, ""));
-    const alwTotal = parseFloat(String(other.total || "").replace(/,/g, ""));
+    // A player/team can be entered in both competitions before any scores have
+    // been recorded. Treat a blank TOTAL as zero so the Club Championship
+    // still shows everyone who has entered both ALM and ALW.
+    const almRaw = String(e.total == null ? "" : e.total).replace(/,/g, "").trim();
+    const alwRaw = String(other.total == null ? "" : other.total).replace(/,/g, "").trim();
+    const almTotal = almRaw === "" ? 0 : parseFloat(almRaw);
+    const alwTotal = alwRaw === "" ? 0 : parseFloat(alwRaw);
     if(!Number.isFinite(almTotal) || !Number.isFinite(alwTotal)) return null;
     return {
       team: e.team,
-      alm: e.total,
-      alw: other.total,
+      alm: almRaw === "" ? "0" : e.total,
+      alw: alwRaw === "" ? "0" : other.total,
       combined: almTotal + alwTotal
     };
   }).filter(Boolean);
