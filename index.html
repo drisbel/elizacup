@@ -690,6 +690,14 @@
     left:0;
     z-index:2;
   }
+  .tipping-club-championship{margin-top:28px;}
+  .tipping-club-championship-head{margin-bottom:10px;}
+  .tipping-club-championship-head h3{font-size:17px;margin:0;}
+  .tipping-club-table{max-width:620px;}
+  .tipping-club-table table{min-width:0 !important;width:100%;}
+  .tipping-club-table td.tipping-club-total,
+  .tipping-club-table td.tipping-club-combined{font-weight:700;}
+  @media(max-width:600px){.tipping-club-table{max-width:100%;}.tipping-club-table table{min-width:390px !important;}}
   .tipping-round-table th:nth-child(2),
   .tipping-round-table td:nth-child(2){
     position:sticky;
@@ -8344,6 +8352,63 @@ function parseTippingOverall(rows, startRowNumber){
   };
 }
 
+function combineTippingClubChampionship(almData, alwData){
+  const alm = almData && almData.entries ? almData.entries : [];
+  const alw = alwData && alwData.entries ? alwData.entries : [];
+  const alwByTeam = new Map();
+  alw.forEach(e => {
+    const key = (e.team || "").trim().toLowerCase();
+    if(key) alwByTeam.set(key, e);
+  });
+
+  const combined = alm.map(e => {
+    const key = (e.team || "").trim().toLowerCase();
+    const other = alwByTeam.get(key);
+    if(!other) return null;
+    const almTotal = parseFloat(String(e.total || "").replace(/,/g, ""));
+    const alwTotal = parseFloat(String(other.total || "").replace(/,/g, ""));
+    if(!Number.isFinite(almTotal) || !Number.isFinite(alwTotal)) return null;
+    return {
+      team: e.team,
+      alm: e.total,
+      alw: other.total,
+      combined: almTotal + alwTotal
+    };
+  }).filter(Boolean);
+
+  combined.sort((a,b) => b.combined - a.combined || a.team.localeCompare(b.team));
+  return combined.map((e,i) => ({...e, pos:i+1}));
+}
+
+function tippingClubChampionshipHtml(entries){
+  if(!entries || !entries.length) return "";
+  return `<div class="tipping-club-championship">
+    <div class="section-head tipping-club-championship-head">
+      <h3>Club Championship Tipping (ALM + ALW)</h3>
+    </div>
+    <div class="table-wrap tipping-club-table">
+      <table class="standings compact">
+        <thead><tr>
+          <th>Pos</th><th style="text-align:left;">Team</th><th>ALM</th><th>ALW</th><th>Total</th>
+        </tr></thead>
+        <tbody>
+          ${entries.map(e=>{
+            const logoName=e.team;
+            const logoOnError=`if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+            return `<tr>
+              <td>${e.pos}</td>
+              <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
+              <td>${e.alm}</td>
+              <td>${e.alw}</td>
+              <td class="pts tipping-club-combined">${e.combined}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
 function tippingOverallTableHtml(data){
   if(!data || !data.entries.length){
     return `<p class="state-msg">No tipping data found. Check the Debug panel below.</p>`;
@@ -8400,7 +8465,7 @@ function tippingOverallTableHtml(data){
     </div>
   </div>`;
 
-  return latestTable + fullTable;
+  return latestTable + fullTable + tippingClubChampionshipHtml(data.clubChampionship);
 }
 const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
 const OVERALL_COL_OFFSET = { pos: 1, team: 3, pts: 4 }; // relative to the marker's own column
@@ -10923,14 +10988,27 @@ async function loadSideLeague(leagueKey){
 
   if(league.isTippingOverall){
     try{
-      const [res] = await Promise.all([
+      const otherKey = league.key === "almtipping" ? "alwtipping" : "almtipping";
+      const otherLeague = SIDE_LEAGUES.find(s => s.key === otherKey);
+      const [res, otherRes] = await Promise.all([
         cachedFetch(sideLeagueCsvUrlFor(league)),
+        cachedFetch(sideLeagueCsvUrlFor(otherLeague)),
         loadSideLeagueTeamMap()
       ]);
-      if(!res.ok) throw new Error("HTTP " + res.status);
+      if(!res.ok) throw new Error("HTTP " + res.status + " for " + league.label);
+      if(!otherRes.ok) throw new Error("HTTP " + otherRes.status + " for " + otherLeague.label);
+
       const csvText = await res.text();
+      const otherCsvText = await otherRes.text();
       const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
-      const overall = parseTippingOverall(rows, league.tippingStartRow || 40);
+      const otherRows = Papa.parse(otherCsvText, {skipEmptyLines:false}).data;
+      const overall = parseTippingOverall(rows, league.tippingStartRow || 41);
+      const otherOverall = parseTippingOverall(otherRows, otherLeague.tippingStartRow || 41);
+      overall.clubChampionship = combineTippingClubChampionship(
+        league.key === "almtipping" ? overall : otherOverall,
+        league.key === "almtipping" ? otherOverall : overall
+      );
+
       sideLeagueData = {
         isTippingOverall: true,
         overall,
@@ -10938,12 +11016,20 @@ async function loadSideLeague(leagueKey){
         key: league.key
       };
       renderSideLeagueContent();
-      sideLeagueDebug = { tippingOverall: overall.debug };
+      sideLeagueDebug = {
+        tippingOverall: overall.debug,
+        clubChampionship: {
+          teamsEnteredBoth: overall.clubChampionship.length,
+          sourceLeague: league.key,
+          combinedFrom: ["ALM Tipping", "ALW Tipping"]
+        },
+        otherTippingOverall: otherOverall.debug
+      };
       document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
     }catch(err){
       console.error(err);
       el.className = "state-msg error";
-      el.innerHTML = "Couldn't load " + league.label + " data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+      el.innerHTML = "Couldn't load " + league.label + " data. Make sure both tipping sheets are shared as \"Anyone with the link can view\", then hit Refresh.";
     }
     return;
   }
