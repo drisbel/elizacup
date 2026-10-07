@@ -7055,6 +7055,54 @@ function parseHistoricalSeason(rows){
     if(fixtures.length) eclKnockout.push({ name: "Knockout", fixtures });
   }
 
+  // ---- Historical Playoffs / Finals (DA:DG) — completely separate from the
+  // division, Roddy, FA Cup and ECL parsers above.
+  // DA=Competition, DB=Division, DC=Round, DD=Home Team, DE=Home Score,
+  // DF=Away Score, DG=Away Team.
+  // A row containing only DA starts a competition block. Subsequent match rows
+  // may leave DA blank and inherit that competition. Fully populated rows are
+  // also accepted when DA is repeated on every row.
+  const PLAYOFF_BASE = 104; // DA
+  const historicalPlayoffs = [];
+  let currentPlayoffCompetition = "";
+
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    const competition = cell(row, PLAYOFF_BASE).trim();
+    const division = cell(row, PLAYOFF_BASE+1).trim();
+    const round = cell(row, PLAYOFF_BASE+2).trim();
+    const home = cell(row, PLAYOFF_BASE+3).trim();
+    const homeScore = cell(row, PLAYOFF_BASE+4).trim();
+    const awayScore = cell(row, PLAYOFF_BASE+5).trim();
+    const away = cell(row, PLAYOFF_BASE+6).trim();
+
+    const hasAny = !!(competition || division || round || home || homeScore || awayScore || away);
+    if(!hasAny) continue;
+
+    // Competition heading row — remember it for following match rows.
+    if(competition && !division && !round && !home && !homeScore && !awayScore && !away){
+      currentPlayoffCompetition = competition;
+      continue;
+    }
+
+    const effectiveCompetition = competition || currentPlayoffCompetition;
+    if(competition) currentPlayoffCompetition = competition;
+
+    // Ignore incomplete rows rather than allowing unrelated sheet content to
+    // leak into the historical playoff display.
+    if(!effectiveCompetition || !division || !round || !home || !away) continue;
+
+    historicalPlayoffs.push({
+      competition: effectiveCompetition,
+      division,
+      round,
+      home,
+      homeScore,
+      awayScore,
+      away
+    });
+  }
+
   historyDebug = {
     divisionsFound: Object.keys(divisions),
     divisionTeamCounts: Object.fromEntries(Object.entries(divisions).map(([k,v])=>[k,v.teams.length])),
@@ -7064,10 +7112,15 @@ function parseHistoricalSeason(rows){
     eclGroupsDebug,
     eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
     eclKnockoutRawDump,
+    historicalPlayoffsFound: historicalPlayoffs.length,
+    historicalPlayoffs: historicalPlayoffs.map(f=>({
+      competition:f.competition, division:f.division, round:f.round,
+      home:f.home, homeScore:f.homeScore, awayScore:f.awayScore, away:f.away
+    })),
     rawRowDump: rows.slice(0, 35).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")).filter(line => !line.endsWith(":"))
   };
 
-  return { divisions, roddy, facup, eclGroups, eclKnockout };
+  return { divisions, roddy, facup, eclGroups, eclKnockout, historicalPlayoffs };
 }
 
 // Bracket status computed purely from ladder position (not a sheet column)
@@ -7246,6 +7299,78 @@ function histFixtureTableHtml(fixtures, showDivTags){
   </tbody></table></div>`;
 }
 
+function historicalPlayoffDivisionKey(value){
+  const t = (value||"").trim().toUpperCase().replace(/\\s+/g," ");
+  if(/^D1$|^D 1$|^DIVISION 1$|^ELIZA CUP$/.test(t)) return "d1";
+  if(/^D2A$|^D 2A$|^2A$|^DIVISION 2A$/.test(t)) return "d2a";
+  if(/^D2B$|^D 2B$|^2B$|^DIVISION 2B$/.test(t)) return "d2b";
+  if(/^D3A$|^D 3A$|^3A$|^DIVISION 3A$/.test(t)) return "d3a";
+  if(/^D3B$|^D 3B$|^3B$|^DIVISION 3B$/.test(t)) return "d3b";
+  return null;
+}
+
+function histPlayoffFixtureCardHtml(f){
+  const h = splitTeamDivTag(f.home);
+  const a = splitTeamDivTag(f.away);
+  const homeNum = parseInt(f.homeScore,10);
+  const awayNum = parseInt(f.awayScore,10);
+  const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
+  const homeWin = hasScore && homeNum > awayNum;
+  const awayWin = hasScore && awayNum > homeNum;
+  const isDraw = hasScore && homeNum === awayNum;
+  const resultClass = (won) => hasScore ? (won ? "fx-win" : isDraw ? "fx-draw" : "fx-lose") : "";
+  const scoreHtml = hasScore
+    ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
+    : `<span class="upcoming">vs</span>`;
+
+  return `<div class="facup-card">
+    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(h.name)}</span>${histDivPill(h.tag)}</div>
+    <div class="fixture-score">${scoreHtml}</div>
+    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${histTeamLink(a.name)}</span></div>
+  </div>`;
+}
+
+function histPlayoffsHtml(playoffs, divKey){
+  const matches = (playoffs || []).filter(f => historicalPlayoffDivisionKey(f.division) === divKey);
+  if(!matches.length) return "";
+
+  const competitions = [];
+  const byCompetition = new Map();
+
+  matches.forEach(f=>{
+    const compKey = f.competition.trim();
+    if(!byCompetition.has(compKey)){
+      const group = { name: compKey, rounds: [] };
+      byCompetition.set(compKey, group);
+      competitions.push(group);
+    }
+
+    const group = byCompetition.get(compKey);
+    let roundGroup = group.rounds.find(r => r.name === f.round.trim());
+    if(!roundGroup){
+      roundGroup = { name: f.round.trim(), fixtures: [] };
+      group.rounds.push(roundGroup);
+    }
+    roundGroup.fixtures.push(f);
+  });
+
+  let html = `<div id="historyPlayoffsSection" class="section-head" style="margin-top:36px;">
+    <h2 style="font-size:18px;">Playoffs / Finals</h2>
+  </div>`;
+
+  competitions.forEach(comp=>{
+    if(competitions.length > 1){
+      html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${comp.name}</h4>`;
+    }
+    comp.rounds.forEach(round=>{
+      html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
+      html += `<div class="facup-grid">${round.fixtures.map(histPlayoffFixtureCardHtml).join("")}</div>`;
+    });
+  });
+
+  return html;
+}
+
 let historySeasonData = null;
 let historyActiveDivKey = "d1";
 
@@ -7261,7 +7386,8 @@ function renderHistorySeason(data){
 
   let html = `<div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Division Tables</h2></div>
     <div class="round-tabs">${divTabsHtml}</div>
-    <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>`;
+    <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>
+    <div id="historyPlayoffsWrap">${histPlayoffsHtml(data.historicalPlayoffs, historyActiveDivKey)}</div>`;
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;display:flex;align-items:center;gap:9px;"><img src="logo/roddy-logo.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="this.style.display='none';"> Roddy Rodriguez Cup</h2></div>`;
   html += histRoddyTableHtml(data.roddy);
@@ -7287,6 +7413,7 @@ function renderHistorySeason(data){
       btn.classList.add('active');
       historyActiveDivKey = btn.dataset.key;
       document.getElementById('historyDivTableWrap').innerHTML = histDivisionTableHtml(historySeasonData.divisions[historyActiveDivKey]);
+      document.getElementById('historyPlayoffsWrap').innerHTML = histPlayoffsHtml(historySeasonData.historicalPlayoffs, historyActiveDivKey);
     });
   });
 }
