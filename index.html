@@ -499,6 +499,17 @@
   .section-head .sub{font-family:'Barlow',sans-serif;font-size:12px;color:#000;text-transform:uppercase;letter-spacing:0.05em;}
 
   /* ---------- Home page ---------- */
+  .home-division-find-banner{
+    display:flex;align-items:center;justify-content:center;width:100%;
+    background:#28427c;color:#fff;text-decoration:none;
+    font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;
+    letter-spacing:.02em;line-height:1.1;padding:15px 20px;margin:-16px 0 28px;
+    transition:filter .15s,transform .15s;
+  }
+  .home-division-find-banner:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  @media (max-width:600px){
+    .home-division-find-banner{font-size:20px;padding:13px 14px;margin:-12px 0 24px;}
+  }
   .home-hero{
     text-align:center;padding:36px 0 30px;border-bottom:2px solid var(--ink);margin-bottom:32px;
   }
@@ -646,6 +657,53 @@
   .overall-table-wrap{max-width:360px;}
   .overall-table-wrap table.standings{width:auto;min-width:0;}
   .overall-table-wrap td, .overall-table-wrap th{padding-left:14px;padding-right:14px;}
+  /* A-League tipping overall tables — same compact standings language, but with
+     the latest completed scoring round and season total instead of W/D/L columns. */
+  .tipping-overall-wrap{max-width:520px;}
+  .tipping-overall-wrap table.standings{width:100%;min-width:0;}
+  .tipping-overall-wrap td.tipping-round-score,
+  .tipping-overall-wrap td.tipping-total{font-weight:700;}
+  @media (max-width:600px){
+    .tipping-overall-wrap{max-width:100%;}
+    .tipping-overall-wrap table.standings{min-width:360px;}
+  }
+  /* Full tipping history — horizontally scrollable on smaller screens. */
+  .tipping-round-by-round{margin-top:24px;}
+  .tipping-round-by-round-head{margin-bottom:10px;}
+  .tipping-round-by-round-head h3{font-size:17px;margin:0;}
+  .tipping-round-scroll{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    border-radius:10px;
+  }
+  .tipping-round-table{
+    width:max-content !important;
+    min-width:100%;
+  }
+  .tipping-round-table th,
+  .tipping-round-table td{white-space:nowrap;}
+  .tipping-round-table th:first-child,
+  .tipping-round-table td:first-child{
+    position:sticky;
+    left:0;
+    z-index:2;
+  }
+  .tipping-club-championship{margin-top:28px;}
+  .tipping-club-championship-head{margin-bottom:10px;}
+  .tipping-club-championship-head h3{font-size:17px;margin:0;}
+  .tipping-club-table{max-width:620px;}
+  .tipping-club-table table{min-width:0 !important;width:100%;}
+  .tipping-club-table td.tipping-club-total,
+  .tipping-club-table td.tipping-club-combined{font-weight:700;}
+  @media(max-width:600px){.tipping-club-table{max-width:100%;}.tipping-club-table table{min-width:390px !important;}}
+  .tipping-round-table th:nth-child(2),
+  .tipping-round-table td:nth-child(2){
+    position:sticky;
+    left:55px;
+    z-index:2;
+  }
   /* Rows with no special status/tier coloring have no background set at all, which
      left the sticky Pos+Team columns transparent on those rows — letting other
      columns (like the Side League "Player" column) show through as the table
@@ -1366,6 +1424,15 @@
     table.calendar-table thead th{padding:5px 4px;font-size:8px;}
     table.calendar-table tbody td{padding:5px 4px;font-size:10.5px;}
     table.calendar-table thead th:first-child, table.calendar-table tbody td:first-child{width:auto;padding-left:6px;}
+    /* Phones: fit every column on screen (wrap text instead of scrolling sideways),
+       so the FA Cup / ECL columns can't be missed off to the right. */
+    table.standings.compact.calendar-table{width:100%;}
+    table.standings.compact.calendar-table thead th{padding:5px 2px;font-size:8px;line-height:1.2;white-space:normal;}
+    table.standings.compact.calendar-table tbody td, table.standings.compact.calendar-table tbody td:nth-child(2){
+      padding:5px 2px;font-size:9.5px;line-height:1.25;white-space:normal;
+      max-width:none;overflow:visible;text-overflow:clip;
+    }
+    table.standings.compact.calendar-table thead th:first-child, table.standings.compact.calendar-table tbody td:first-child{padding-left:4px;padding-right:4px;}
     table.trophy-table{min-width:0;}
     table.trophy-table thead th{padding:5px 6px;font-size:8.5px;}
     table.trophy-table tbody td{padding:5px 6px;font-size:11.5px;}
@@ -1474,6 +1541,69 @@
     table.hist-fixture-table tbody td.hist-fx-pill{width:26px;}
     table.hist-fixture-table tbody td.hist-fx-score{width:24px;}
   }
+
+
+/* ---------- A-League Table Predictor ---------- */
+ 
+.alp-page{max-width:1080px;margin:0 auto;padding-bottom:36px;}
+.alp-intro{background:#fff;border:1px solid var(--line-light);border-left:4px solid var(--pitch);border-radius:6px;padding:14px 16px;margin-bottom:18px;}
+.alp-intro p{margin:4px 0;color:#000;line-height:1.45;font-family:'Barlow',sans-serif;font-size:13px;}
+.alp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:18px;align-items:start;}
+.alp-card{background:#fff;border:1px solid var(--line-light);border-radius:6px;padding:16px;min-width:0;}
+.alp-card h3{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--pitch);}
+.alp-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;color:#000;}
+.alp-field select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line-light);border-radius:5px;background:#fff;font:inherit;color:#111;}
+.alp-instructions{font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;padding:9px 11px;background:#f5f7fa;border-left:3px solid var(--pitch);border-radius:4px;line-height:1.45;}
+.alp-ladder{display:flex;flex-direction:column;gap:5px;}
+/* A-League predictor team cards */
+.alp-ladder{display:flex;flex-direction:column;gap:7px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+.alp-pick-row{display:grid;grid-template-columns:34px 44px minmax(0,1fr);align-items:center;gap:10px;padding:9px 12px;border:3px solid var(--alp-secondary,#111);border-radius:7px;background:var(--alp-primary,#fff);color:var(--alp-text,#111);transition:transform .12s,box-shadow .12s,opacity .12s,border-color .12s;cursor:grab;}
+@media (hover:hover){.alp-pick-row:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.12);}}
+.alp-pick-row.dragging{opacity:.45;box-shadow:none;transform:scale(.99);}
+.alp-pick-row.drag-target{box-shadow:0 0 0 3px rgba(0,0,0,.2);}
+.alp-drag-handle{font-size:21px;line-height:1;text-align:center;opacity:.78;cursor:grab;touch-action:none;}
+.alp-pick-number{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.82);color:#111;font-weight:800;font-size:13px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
+.alp-pick-team{font-family:'Barlow',sans-serif;font-size:15px;font-weight:800;min-width:0;line-height:1.25;}
+.alp-position{display:none;}
+.alp-drag-hint{font-size:11.5px;color:#000;margin:-3px 0 12px;padding:8px 10px;background:#f5f7fa;border-radius:4px;}
+
+.alp-pick-team{font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;min-width:0;line-height:1.25;}
+.alp-position{width:100%;box-sizing:border-box;padding:7px 5px;border:1px solid #aaa;border-radius:5px;background:#fff;font:600 13px 'Barlow',sans-serif;color:#111;text-align:center;}
+.alp-position:focus{outline:2px solid var(--pitch,#111);outline-offset:1px;}
+.alp-submit{width:100%;border:0;border-radius:5px;padding:12px 16px;margin-top:12px;background:var(--pitch);color:#fff;font-weight:700;font-size:15px;cursor:pointer;font-family:'Barlow',sans-serif;}
+.alp-submit:disabled{opacity:.55;cursor:default;}
+.alp-message{margin-top:10px;padding:10px 12px;border-radius:5px;background:#f4f6f8;color:#000;font-size:13px;line-height:1.4;display:none;}
+.alp-message.show{display:block;}
+.alp-message.error{background:#fff1f1;color:#a40000;border:1px solid #f0caca;}
+.alp-message.success{background:#effaf1;color:#176b2c;border:1px solid #c8e8cf;}
+.alp-table-wrap{overflow-x:auto;}
+.alp-table{width:100%;border-collapse:collapse;font-size:14px;}
+.alp-table th,.alp-table td{padding:9px 8px;border-bottom:1px solid var(--line-light);text-align:left;font-family:'Barlow',sans-serif;}
+.alp-table th{font-size:11px;text-transform:uppercase;color:#000;letter-spacing:.04em;}
+.alp-table td:first-child,.alp-table th:first-child{width:42px;text-align:center;font-weight:700;}
+.alp-penalty{font-weight:800;}
+.alp-current{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-light);}
+.alp-current h4{margin:0 0 8px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--pitch);}
+.alp-current-list{display:flex;flex-direction:column;gap:4px;}
+.alp-current-row{display:grid;grid-template-columns:32px 1fr;gap:7px;padding:5px 0;border-bottom:1px solid #f0f2f4;font-size:13px;font-family:'Barlow',sans-serif;}
+.alp-current-row b{color:#555;}
+.alp-muted{color:#000;font-size:13px;}
+@media(max-width:700px){
+  .alp-page{padding:0 0 30px;}
+  .alp-intro{padding:12px 13px;margin-bottom:12px;}
+  .alp-intro p{font-size:12.5px;}
+  .alp-layout{display:block;}
+  .alp-card{padding:12px;margin-bottom:12px;}
+  .alp-card h3{font-size:19px;margin-bottom:10px;}
+  .alp-pick-row{grid-template-columns:36px 28px minmax(0,1fr);gap:8px;padding:6px 10px 6px 2px;border-width:2px;}
+  .alp-pick-number{width:28px;height:28px;font-size:12px;}
+  .alp-drag-handle{font-size:20px;padding:8px 0;touch-action:none;}
+  .alp-pick-team{font-size:14px;line-height:1.2;overflow-wrap:anywhere;}
+  .alp-instructions{font-size:12px;}
+  .alp-table{font-size:13px;}
+  .alp-table th,.alp-table td{padding:8px 6px;}
+}
+
 </style>
 </head>
 <body>
@@ -1793,14 +1923,14 @@ const SEASON_2526_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
 const DIVISIONS = [
   { id: "home", label: "Home",                    pill: "Home",    gid: null,         teams: 0,  color: "#000000", type: "home" },
   { id: "calendar", label: "Calendar",            pill: "Calendar", gid: "2066314959", teams: 0, color: "#000000", type: "calendar" },
-  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1032423540", sheetId: SEASON_2526_SHEET_ID, teams: 14, color: "#28427c", type: "division" },
-  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "1011989388", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
-  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1025912239", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#990000", type: "division" },
-  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "352017161",  sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
-  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "1085366243", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
-  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "267705899",  sheetId: SEASON_2526_SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
-  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "2092692043", sheetId: SEASON_2526_SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
+  { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", sheetId: SHEET_ID, teams: 14, color: "#28427c", type: "division" },
+  { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  sheetId: SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
+  { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", sheetId: SHEET_ID, teams: 12, color: "#990000", type: "division" },
+  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  sheetId: SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
+  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", sheetId: SHEET_ID, teams: 12, color: "#274e13", type: "division" },
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482", sheetId: SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
+  { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",   sheetId: SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
+  { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", sheetId: SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
 
   // ---- 26/27 TEST PAGES ----
   // Point at the main sheet's original gids, freed up now that D1-D3/Roddy/
@@ -1811,14 +1941,6 @@ const DIVISIONS = [
   // launches: swap the real D1-D3/Roddy/FA Cup/ECL entries above to these
   // same gids (removing their sheetId override), then delete this whole
   // test block and its NAV_LAYOUT group.
-  { id: "d1-test",  label: "Division 1 (26/27 Test)", pill: "D1 Test",  gid: "1124941542", teams: 14, color: "#28427c", type: "division", isTest: true },
-  { id: "d2a-test", label: "Division 2A (26/27 Test)", pill: "D2A Test", gid: "919912875",  teams: 12, color: "#bc3532", type: "division", isTest: true },
-  { id: "d2b-test", label: "Division 2B (26/27 Test)", pill: "D2B Test", gid: "1047201294", teams: 12, color: "#990000", type: "division", isTest: true },
-  { id: "d3a-test", label: "Division 3A (26/27 Test)", pill: "D3A Test", gid: "688700661",  teams: 12, color: "#6aa84f", type: "division", isTest: true },
-  { id: "d3b-test", label: "Division 3B (26/27 Test)", pill: "D3B Test", gid: "2079252892", teams: 12, color: "#274e13", type: "division", isTest: true },
-  { id: "roddy-test", label: "Roddy Rodriguez Cup (26/27 Test)", pill: "Roddy Test", gid: "418105482", teams: 62, color: "#000000", type: "roddy", isTest: true },
-  { id: "facup-test", label: "Eliza FA Cup (26/27 Test)",        pill: "FA Cup Test", gid: "2398203",   teams: 64, color: "#0a2f85", type: "facup", isTest: true },
-  { id: "ecl-test",   label: "Eliza Champions League (26/27 Test)", pill: "ECL Test", gid: "1490882074", teams: 12, color: "#111111", type: "ecl", isTest: true },
   { id: "honour", label: "Hall of Fame",          pill: "Hall of Fame", gid: "16775594", teams: 0, color: "#8B6914", type: "honour" },
   { id: "stats", label: "Statistics",             pill: "Stats",   gid: "1560134779", teams: 0, color: "#000000", type: "stats" },
   { id: "history", label: "Past Seasons",          pill: "Past Seasons", gid: null, teams: 0, color: "#000000", type: "history" },
@@ -1828,7 +1950,7 @@ const DIVISIONS = [
   { id: "whatsmydiv", label: "26/27 Leagues",         pill: "26/27 Leagues", gid: null, teams: 0, color: "#000000", type: "whatsmydiv" },
   { id: "sideleagues", label: "Side Leagues",      pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagues" },
   { id: "sideleagueshub", label: "Side Leagues",   pill: "Side Leagues", gid: null, teams: 0, color: "#000000", type: "sideleagueshub" },
-  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "1751514020", sheetId: SEASON_2526_SHEET_ID, teams: 0, color: "#000000", type: "teams" }
+  { id: "teams", label: "Teams",                  pill: "Teams",   gid: "223348569", sheetId: SHEET_ID, teams: 0, color: "#000000", type: "teams" }
 ];
 
 // Divison label ("2A", "ELIZA CUP", etc.) -> DIVISIONS id, used to jump from a team's
@@ -1884,7 +2006,9 @@ const SIDE_LEAGUE_THEME_COLORS = {
   "afl": "#d90a30",
   "nrl": "#01c36b",
   "eplsc": "#7cb648",
-  "uclfantasy": "#010056"
+  "nbl": "#FF7900",
+  "uclfantasy": "#010056",
+  "aleaguepredictor": "#e31b23"
 };
 function sideLeagueThemeColor(key, subTab){
   const lookupKey = key === "fpl" ? ("fpl:" + (subTab || "premier")) : key;
@@ -1904,7 +2028,10 @@ function getDivisionFromHash(){
     // FPL branch and getSearchablePages, which is what generates these.
     // Meaningless for every other side league (they're single-view pages),
     // so it's just ignored there.
-    const [leagueKey, subTab] = value.split(":");
+    let [leagueKey, subTab] = value.split(":");
+    // Old combined Last Man Standing links (#sideleagues=lms:auscup / lms:aleague,
+    // or a bare #sideleagues=lms) now land on the two separate pages.
+    if(leagueKey === "lms"){ leagueKey = subTab === "aleague" ? "lmsaleague" : "lmsauscup"; subTab = null; }
     const base = DIVISIONS.find(d => d.id === "sideleagues");
     return { ...base, sideLeagueKey: leagueKey, sideLeagueSubTab: subTab || null };
   }
@@ -2008,7 +2135,6 @@ const NAV_LAYOUT = [
   { type: "single", id: "bilbbet" },
   { type: "single", id: "whatsmydiv" },
   { type: "sidegroup", key: "sideleagues", label: "Side Leagues" },
-  { type: "group", key: "test2627", label: "26/27 Test", ids: ["d1-test","d2a-test","d2b-test","d3a-test","d3b-test","roddy-test","facup-test","ecl-test"] }
 ];
 
 // ---------- Desktop top nav bar ----------
@@ -2072,7 +2198,7 @@ function getSearchablePages(){
   // is exactly what those pages themselves render.
   const sideLeagueHub = DIVISIONS.find(d => d.id === "sideleagueshub");
   const sideLeagueLogoHtml = compLogoHtmlFor({ type: "sideleagues" });
-  SIDE_LEAGUES.filter(l => !l.hidden).forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key, logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color }));
+  SIDE_LEAGUES.filter(l => !l.hidden && sideLeagueVisible(l)).forEach(l => pages.push({ label: l.label, hash: "sideleagues=" + l.key, logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color }));
   // FPL is the only side league with sub-tabs (Premier League/Championship/
   // Roddy/FPL Cup — everything else is a single-view page), so these are
   // hand-added rather than derived. Deep-links via the ":<subtab>" hash
@@ -2082,13 +2208,6 @@ function getSearchablePages(){
     pages.push({ label: "FPL Championship", hash: "sideleagues=fpl:championship", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
     pages.push({ label: "FPL Roddy", hash: "sideleagues=fpl:roddy", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
     pages.push({ label: "FPL Cup", hash: "sideleagues=fpl:cup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
-  }
-  // Last Man Standing likewise has sub-tabs (Australia Cup/A-League) rather
-  // than separate pages — each only searchable while its own Page Visibility
-  // toggle (admin.html) is on, matching its sub-tab visibility.
-  if(SIDE_LEAGUES.some(l => l.key === "lms")){
-    if(lmsHubSubTabVisible("auscup")) pages.push({ label: "Australia Cup LMS", hash: "sideleagues=lms:auscup", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
-    if(lmsHubSubTabVisible("aleague")) pages.push({ label: "A-League LMS", hash: "sideleagues=lms:aleague", logoHtml: sideLeagueLogoHtml, color: sideLeagueHub.color });
   }
   searchablePagesCache = pages;
   return pages;
@@ -2722,6 +2841,9 @@ const LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzp-On
 // within that column range, not a whole-sheet append), unlike the Australia
 // Cup script which posts to its own separate sheet.
 const ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqAelD8hY3oZh76ZHTxYAVWO76IjW10OEYTNzPdQyQ5LC8h0oNGotWSHiIxHJ7HkKI1w/exec";
+// Paste the deployed /exec URL of the Eliza Side Leagues Apps Script here.
+// The spreadsheet remains the source of truth for A-League Predictor data.
+const ALEAGUE_PREDICTOR_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1mlX0ZdmvWQe0Odi0fejsqNkUXp82f_PguHElT1dvcQGS6Oq4sU7ET8hf18vcSTWm9w/exec";
 
 async function load(){
   togglePageSections();
@@ -3349,6 +3471,24 @@ function parseFixtures(rows){
 }
 
 function render(){
+  // Division 3 conference structure is not final until at least one team
+  // appears in the league table. Until then, show a clean holding message.
+  if((currentDivision.id === "d3a" || currentDivision.id === "d3b") && standings.length === 0){
+    const tableEl = document.getElementById('tableContainer');
+    tableEl.className = "state-msg";
+    tableEl.innerHTML = `Division 3 conference structures are yet to be finalised. These will be confirmed shortly, please check again at a later date.`;
+
+    document.getElementById('tableLegend').innerHTML = "";
+    document.getElementById('tickerTrack').innerHTML = "";
+    document.getElementById('roundTabs').innerHTML = "";
+    const fixtureEl = document.getElementById('fixtureContainer');
+    fixtureEl.className = "state-msg";
+    fixtureEl.innerHTML = "";
+    const h2hEl = document.getElementById('h2hContainer');
+    if(h2hEl){ h2hEl.innerHTML = ""; h2hEl.className = ""; }
+    return;
+  }
+
   renderTable();
   renderTicker();
   renderRoundTabs();
@@ -3702,7 +3842,7 @@ function renderRoddy(){
     const divColor = getDivisionColorByLabel(e.division);
     html += `<tr style="background:${hexToSolidTint(divColor,0.13)};border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
-      <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${teamLink(e.team)}</td>
+      <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${sideLeagueTeamLink(e.team)}</td>
       <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
       <td>${e.round || "—"}</td>
       <td>${e.chip || "—"}</td>
@@ -4306,9 +4446,14 @@ function eclKnockoutHtml(){
 
 function renderECL(){
   const container = document.getElementById('eclContainer');
-  if(eclGroups.length === 0){
-    container.className = "state-msg error";
-    container.innerHTML = "Couldn't find the ECL group tables. Check the Debug panel below.";
+  const eclStarted = eclFixtures.some(f =>
+    f.matchday === "MD1" &&
+    f.home && f.away &&
+    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD"
+  );
+  if(!eclStarted){
+    container.className = "state-msg";
+    container.innerHTML = `The Eliza Champions League is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
     document.getElementById('eclUpdated').textContent = "";
     return;
   }
@@ -4615,8 +4760,8 @@ function renderHonourRoll(){
 // Bye rounds (5, 6) and double rounds (12, 16) are called out per instruction rather
 // than detected from cell color, since background fills don't survive CSV export.
 const CAL_COL = { ROUND: 1, DATE: 3, ELIZA_CUP: 5, DIV2: 7, DIV3: 9, FA_CUP: 11, ECL: 13 };
-const BYE_ROUNDS = [5, 6];
-const DOUBLE_ROUNDS = [12, 16];
+const BYE_ROUNDS = [1, 5, 6];
+const DOUBLE_ROUNDS = [7, 12, 16];
 
 let calendarRounds = [];
 let calendarDebug = {};
@@ -4770,6 +4915,45 @@ function renderSeasonFixtures(rounds){
   document.getElementById('seasonFixturesUpdated').textContent = rounds.length + " rounds";
 }
 
+// Latest possible start round for each FA Cup / ECL stage. Past this round the
+// matches have to be played on a bye/double, so it's the "must start by"
+// deadline for each stage — not necessarily when it actually kicks off.
+const CAL_LATEST_START = [
+  { round: 13, faCup: "Round of 128", ecl: "" },
+  { round: 14, faCup: "", ecl: "" },
+  { round: 15, faCup: "Round of 64", ecl: "" },
+  { round: 16, faCup: "", ecl: "" },
+  { round: 17, faCup: "Round of 32", ecl: "" },
+  { round: 18, faCup: "", ecl: "Matchday 1" },
+  { round: 19, faCup: "Round of 16", ecl: "Matchday 2" },
+  { round: 20, faCup: "", ecl: "Matchday 3" },
+  { round: 21, faCup: "Quarter Finals", ecl: "Quarter Finals" },
+  { round: 22, faCup: "", ecl: "" },
+  { round: 23, faCup: "Semi Finals", ecl: "Semi Finals" },
+  { round: 24, faCup: "", ecl: "" },
+  { round: 25, faCup: "Final", ecl: "Final" },
+  { round: 26, faCup: "", ecl: "" }
+];
+
+function calendarLatestStartHtml(){
+  const cellHtml = (text, bg, fg) => text
+    ? `<td style="background:${bg};color:${fg};font-weight:600;text-align:center;">${text}</td>`
+    : `<td style="background:#e4e2dc;text-align:center;">&nbsp;</td>`;
+  return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Latest Possible Start Round</h2></div>
+    <p style="font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;max-width:560px;">The latest round each FA Cup and ECL stage can start. Once that round is reached, any matches still to be played will need to be played on byes and doubles.</p>
+    <div class="table-wrap" style="max-width:420px;"><table class="standings compact calendar-table" style="min-width:0;table-layout:fixed;"><colgroup><col style="width:20%;"><col style="width:36%;"><col style="width:44%;"></colgroup><thead><tr>
+      <th>Round</th>
+      <th style="background:#0a2f85;color:#fff;text-align:center;">FA Cup</th>
+      <th style="background:#111111;color:#fff;">ECL</th>
+    </tr></thead><tbody>
+      ${CAL_LATEST_START.map(r => `<tr>
+        <td class="pts">${r.round}</td>
+        ${cellHtml(r.faCup, "#0a2f85", "#fff")}
+        ${cellHtml(r.ecl, "#111111", "#fff")}
+      </tr>`).join("")}
+    </tbody></table></div>`;
+}
+
 function renderCalendar(){
   const container = document.getElementById('calendarContainer');
   if(calendarRounds.length === 0){
@@ -4803,6 +4987,8 @@ function renderCalendar(){
   </div>`;
 
   html += `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:10px;">*All Oppo Eliza FA Cup and Eliza Champions League rounds subject to change. Rounds may be moved to avoid unplanned byes/doubles. Any changes will be announced as necessary.</div>`;
+
+  html += calendarLatestStartHtml();
 
   container.innerHTML = html;
   document.getElementById('calendarUpdated').textContent = calendarRounds.length + " rounds";
@@ -6869,50 +7055,6 @@ function parseHistoricalSeason(rows){
     if(fixtures.length) eclKnockout.push({ name: "Knockout", fixtures });
   }
 
-  // ---- Historical Playoffs / Finals (DA:DG) — completely isolated from the
-  // existing division, Roddy, FA Cup and ECL parsers above. The intended layout is:
-  // DA=Competition, DB=Division, DC=Round, DD=Home Team, DE=Home Score,
-  // DF=Away Score, DG=Away Team. A competition-only row in DA starts a block and
-  // subsequent match rows may leave DA blank; those rows inherit the last heading.
-  // For resilience, a fully populated DA:DG match row is also accepted directly,
-  // and a row with DA blank but DB:DG populated inherits the current competition.
-  const PLAYOFF_BASE = 104; // DA
-  const historicalPlayoffs = [];
-  let currentPlayoffCompetition = "";
-  for(let r=0; r<rows.length; r++){
-    const row = rows[r] || [];
-    const competition = cell(row, PLAYOFF_BASE).trim();
-    const division = cell(row, PLAYOFF_BASE+1).trim();
-    const round = cell(row, PLAYOFF_BASE+2).trim();
-    const home = cell(row, PLAYOFF_BASE+3).trim();
-    const homeScore = cell(row, PLAYOFF_BASE+4).trim();
-    const awayScore = cell(row, PLAYOFF_BASE+5).trim();
-    const away = cell(row, PLAYOFF_BASE+6).trim();
-    const hasAny = !!(competition || division || round || home || homeScore || awayScore || away);
-    if(!hasAny) continue;
-
-    // DA-only row = competition heading.
-    if(competition && !division && !round && !home && !homeScore && !awayScore && !away){
-      currentPlayoffCompetition = competition;
-      continue;
-    }
-
-    // A complete row may carry its competition in DA; otherwise inherit the heading.
-    const effectiveCompetition = competition || currentPlayoffCompetition;
-    if(competition) currentPlayoffCompetition = competition;
-    if(!effectiveCompetition || !division || !round || !home || !away) continue;
-
-    historicalPlayoffs.push({
-      competition: effectiveCompetition,
-      division,
-      round,
-      home,
-      homeScore,
-      awayScore,
-      away
-    });
-  }
-
   historyDebug = {
     divisionsFound: Object.keys(divisions),
     divisionTeamCounts: Object.fromEntries(Object.entries(divisions).map(([k,v])=>[k,v.teams.length])),
@@ -6921,13 +7063,11 @@ function parseHistoricalSeason(rows){
     eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
     eclGroupsDebug,
     eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
-    historicalPlayoffsFound: historicalPlayoffs.length,
-    historicalPlayoffs: historicalPlayoffs.map(f=>({competition:f.competition, division:f.division, round:f.round, home:f.home, homeScore:f.homeScore, awayScore:f.awayScore, away:f.away})),
     eclKnockoutRawDump,
     rawRowDump: rows.slice(0, 35).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")).filter(line => !line.endsWith(":"))
   };
 
-  return { divisions, roddy, facup, eclGroups, eclKnockout, historicalPlayoffs };
+  return { divisions, roddy, facup, eclGroups, eclKnockout };
 }
 
 // Bracket status computed purely from ladder position (not a sheet column)
@@ -7109,55 +7249,6 @@ function histFixtureTableHtml(fixtures, showDivTags){
 let historySeasonData = null;
 let historyActiveDivKey = "d1";
 
-function historicalPlayoffDivisionKey(value){
-  const t = (value||"").trim().toUpperCase().replace(/\s+/g," ");
-  if(/^D1$|^D 1$|^DIVISION 1$|^ELIZA CUP$/.test(t)) return "d1";
-  if(/^D2A$|^D 2A$|^2A$|^DIVISION 2A$/.test(t)) return "d2a";
-  if(/^D2B$|^D 2B$|^2B$|^DIVISION 2B$/.test(t)) return "d2b";
-  if(/^D3A$|^D 3A$|^3A$|^DIVISION 3A$/.test(t)) return "d3a";
-  if(/^D3B$|^D 3B$|^3B$|^DIVISION 3B$/.test(t)) return "d3b";
-  return null;
-}
-
-function histPlayoffFixtureCardHtml(f){
-  const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
-  const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
-  const homeWin = hasScore && homeNum > awayNum;
-  const awayWin = hasScore && awayNum > homeNum;
-  const isDraw = hasScore && homeNum === awayNum;
-  const resultClass = won => hasScore ? (won ? "fx-win" : isDraw ? "fx-draw" : "fx-lose") : "";
-  const scoreHtml = hasScore
-    ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
-    : `<span class="upcoming">vs</span>`;
-  const h = splitTeamDivTag(f.home), a = splitTeamDivTag(f.away);
-  return `<div class="facup-card playoff-card">
-    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(h.name)}</span>${histDivPill(h.tag)}</div>
-    <div class="fixture-score">${scoreHtml}</div>
-    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${histTeamLink(a.name)}</span></div>
-  </div>`;
-}
-
-function histPlayoffsHtml(playoffs, divKey){
-  const matches = (playoffs||[]).filter(f => historicalPlayoffDivisionKey(f.division) === divKey);
-  if(!matches.length) return "";
-  const competitions = [];
-  matches.forEach(f=>{
-    let comp = competitions.find(c => c.name === f.competition);
-    if(!comp){ comp = {name:f.competition, rounds:[]}; competitions.push(comp); }
-    let rd = comp.rounds.find(r => r.name === f.round);
-    if(!rd){ rd = {name:f.round, fixtures:[]}; comp.rounds.push(rd); }
-    rd.fixtures.push(f);
-  });
-  return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Playoffs / Finals</h2></div>` +
-    competitions.map(comp => `<div style="margin-bottom:18px;">
-      <h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${comp.name}</h4>
-      ${comp.rounds.map(round => `<div style="margin-top:10px;">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#000;text-align:left;margin-bottom:5px;text-transform:uppercase;">${round.name}</div>
-        <div class="facup-grid">${round.fixtures.map(histPlayoffFixtureCardHtml).join("")}</div>
-      </div>`).join("")}
-    </div>`).join("");
-}
-
 function renderHistorySeason(data){
   historySeasonData = data;
   const el = document.getElementById('historyContainer');
@@ -7170,8 +7261,7 @@ function renderHistorySeason(data){
 
   let html = `<div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Division Tables</h2></div>
     <div class="round-tabs">${divTabsHtml}</div>
-    <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>
-    <div id="historyPlayoffsWrap">${histPlayoffsHtml(data.historicalPlayoffs, historyActiveDivKey)}</div>`;
+    <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>`;
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;display:flex;align-items:center;gap:9px;"><img src="logo/roddy-logo.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="this.style.display='none';"> Roddy Rodriguez Cup</h2></div>`;
   html += histRoddyTableHtml(data.roddy);
@@ -7197,7 +7287,6 @@ function renderHistorySeason(data){
       btn.classList.add('active');
       historyActiveDivKey = btn.dataset.key;
       document.getElementById('historyDivTableWrap').innerHTML = histDivisionTableHtml(historySeasonData.divisions[historyActiveDivKey]);
-      document.getElementById('historyPlayoffsWrap').innerHTML = histPlayoffsHtml(historySeasonData.historicalPlayoffs, historyActiveDivKey);
     });
   });
 }
@@ -7218,7 +7307,7 @@ function formatNewsDate(iso){
 function newsCardHtml(item){
   const paragraphs = item.body.split("\n").map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 10px;">${p}</p>`).join("");
   return `<article style="border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;">
-    ${item.image ? `<img src="${item.image}" alt="" style="width:100%;height:auto;display:block;" onerror="this.style.display='none';">` : ""}
+    ${item.image ? `<div style="padding:16px 18px 0;"><img src="${item.image}" alt="" style="width:180px;height:120px;object-fit:cover;display:block;border-radius:6px;" onerror="this.parentElement.style.display='none';"></div>` : ""}
     <div style="padding:16px 18px;">
       <div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-bottom:4px;">${formatNewsDate(item.date)}</div>
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;margin:0 0 10px;color:var(--pitch);">${item.title}</h3>
@@ -7448,32 +7537,44 @@ const SIDE_LEAGUES = [
   { key: "afl", label: "AFL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "568428898", singleTable: true, titleText: "ELIZA SUPERCOACH AFL" },
   { key: "nrl", label: "NRL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1214968514", singleTable: true, titleText: "ELIZA SUPERCOACH NRL" },
   { key: "eplsc", label: "EPL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1980185043", singleTable: true, titleText: "ELIZA SUPERCOACH EPL" },
-  // Last Man Standing: one nav entry covering both competitions, toggled via
-  // sub-tabs like FPL's Premier/Championship/Roddy/Cup — see lmsGids below and
-  // the isLms branch in loadSideLeague. Both live on this same spreadsheet,
-  // different tabs. Each sub-tab's visibility is controlled via the Page
-  // Visibility panel in admin.html (ids "sideleagues=lms:auscup" /
-  // "sideleagues=lms:aleague") rather than a hardcoded flag, so no code
-  // change is needed to show/hide either one — see lmsHubSubTabVisible().
-  { key: "lms", label: "Last Man Standing", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk",
-    lmsGids: { auscup: "590890124", aleague: "922424054" }, isLms: true },
+  { key: "nbl", label: "NBL Supercoach", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1143509560", singleTable: true, isNbl: true, titleText: "LEAGUE TABLE" },
+  // Last Man Standing: two separate pages (Australia Cup and A-League), each with
+  // its own tab on the same spreadsheet. Old "#sideleagues=lms:auscup" /
+  // "lms:aleague" links still work (see getDivisionFromHash). pageId is the id
+  // used by the Page Visibility panel in admin.html to hide either one.
+  { key: "lmsauscup", label: "Australia Cup LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "590890124", isLms: true, pageId: "sideleagues=lms:auscup" },
+  { key: "lmsaleague", label: "A-League LMS", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "922424054", isLms: true, isALeagueLms: true, pageId: "sideleagues=lms:aleague" },
   { key: "honourboard", label: "Honour Board", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1138292654", isHonourBoard: true },
   // No head-to-head at all — teams just accumulate a score each round (17
   // named rounds through the UCL knockout stages), so this doesn't fit the
   // fixture/matchup shape every other side league uses. Own loader/renderer
   // (isUcl branch in loadSideLeague, parseUclFantasy/renderUclFantasy).
-  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "823386870", isUcl: true }
+  { key: "uclfantasy", label: "UCL Fantasy", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1534273263", isUcl: true },
+  // A-League Men/Women tipping. Both sheets use the same overall-table layout;
+  // only the tab/GID differs. The public table begins at physical row 40.
+  { key: "almtipping", label: "ALM Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1986596590", isTippingOverall: true, tippingStartRow: 41 },
+  { key: "alwtipping", label: "ALW Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1316975251", isTippingOverall: true, tippingStartRow: 41 },
+  { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
 // and status Dan sets on the Side Leagues Hub cards (side-leagues-hub.json,
 // admin's Reorder tool), so the dropdown/mobile nav don't drift out of sync
 // with the Hub page. A hub card's key is derived from its own link field
-// (e.g. "#sideleagues=fpl" -> "fpl", "#sideleagues=lms:auscup" -> "lms"),
+// (e.g. "#sideleagues=fpl" -> "fpl", "#sideleagues=lms:auscup" -> "lmsauscup"),
 // since cards aren't otherwise tied to a SIDE_LEAGUES entry.
 function sideLeagueHubKeyFromLink(link){
-  const m = (link||"").match(/^#sideleagues=([a-z0-9]+)/i);
-  return m ? m[1].toLowerCase() : null;
+  const m = (link||"").match(/^#sideleagues=([a-z0-9]+)(?::([a-z0-9]+))?/i);
+  if(!m) return null;
+  const key = m[1].toLowerCase();
+  // Last Man Standing hub cards link as "lms:auscup" / "lms:aleague" — each is its own page now.
+  if(key === "lms") return m[2] && m[2].toLowerCase() === "aleague" ? "lmsaleague" : "lmsauscup";
+  return key;
+}
+// Whether a side league is shown in the nav/search, per the Page Visibility panel
+// (absent/true = visible, explicit false = hidden; still reachable by direct link).
+function sideLeagueVisible(l){
+  return !l.pageId || pageVisibilityMap[l.pageId] !== false;
 }
 let sideLeagueOrderOverride = null; // array of keys, admin's hub order — null until hub data loads
 let completedSideLeagueKeys = new Set();
@@ -7483,7 +7584,7 @@ let completedSideLeagueKeys = new Set();
 // card created for that page yet) keep their original relative order,
 // appended after any that do have a match — never dropped or crash the nav.
 function sideLeaguesInDisplayOrder(){
-  const base = SIDE_LEAGUES.filter(s=>!s.hidden);
+  const base = SIDE_LEAGUES.filter(s=>!s.hidden && sideLeagueVisible(s));
   if(!sideLeagueOrderOverride) return base;
   const orderIndex = new Map();
   sideLeagueOrderOverride.forEach((k,i) => { if(!orderIndex.has(k)) orderIndex.set(k, i); });
@@ -7506,7 +7607,7 @@ const SIDE_LEAGUE_TEAM_MAP_GID = "1831804785";
 const SIDE_LEAGUE_TEAM_MAP_NAME_COL = 0; // column A: Eliza Cup team name
 const SIDE_LEAGUE_TEAM_MAP_FIRST_LEAGUE_COL = 2; // column C onward: one league per column
 // Maps each SIDE_LEAGUES key to that column's header text on the mapping sheet.
-const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", uclfantasy: "UCL" };
+const SIDE_LEAGUE_MAP_COLUMN_LABEL = { fpl: "FPL", afl: "AFL", nrl: "NRL", eplsc: "EPL SUPERCOACH", nbl: "NBL", uclfantasy: "UCL" };
 
 let sideLeagueTeamMap = {};       // { "FPL": { "SIDE LEAGUE NAME": "Eliza Team Name" }, ... }
 let sideLeagueTeamMapLoaded = false;
@@ -7751,7 +7852,40 @@ function renderSideLeaguesHub(){
     // stable sort, so within "still going" and within "complete" the
     // admin-defined order (slh-order, set via the Reorder tool in admin.html)
     // is otherwise preserved exactly.
-    const sortedCards = [...data.cards].sort((a, b) => {
+    const cards = [...data.cards];
+    if(!cards.some(c => c.link === "#sideleagues=aleaguepredictor")){
+      cards.push({
+        key: "aleaguepredictor",
+        label: "A-League Table Predictor",
+        status: "active",
+        roundInfo: "Predict the final A-League Men ladder",
+        notes: "Penalty points are based on the difference between your predicted and actual finishing positions.",
+        link: "#sideleagues=aleaguepredictor"
+      });
+    }
+    // Keep the new tipping leagues discoverable on the Side Leagues Hub even
+    // before an optional admin-managed card has been created for them.
+    if(!cards.some(c => c.link === "#sideleagues=almtipping")){
+      cards.push({
+        key: "almtipping",
+        label: "ALM Tipping",
+        status: "active",
+        roundInfo: "A-League Men tipping",
+        notes: "Overall tipping leaderboard.",
+        link: "#sideleagues=almtipping"
+      });
+    }
+    if(!cards.some(c => c.link === "#sideleagues=alwtipping")){
+      cards.push({
+        key: "alwtipping",
+        label: "ALW Tipping",
+        status: "active",
+        roundInfo: "A-League Women tipping",
+        notes: "Overall tipping leaderboard.",
+        link: "#sideleagues=alwtipping"
+      });
+    }
+    const sortedCards = cards.sort((a, b) => {
       const aDone = a.status === "complete" ? 1 : 0;
       const bDone = b.status === "complete" ? 1 : 0;
       return aDone - bDone;
@@ -7773,8 +7907,9 @@ function findSideLeagueCardForLink(link){
   const cards = (sideLeaguesHubData && sideLeaguesHubData.cards) || [];
   return cards.find(c => c.link === link) || null;
 }
+const LMS_CARD_LINKS = { lmsauscup: "#sideleagues=lms:auscup", lmsaleague: "#sideleagues=lms:aleague" };
 function findSideLeagueRulesCard(leagueKey){
-  return findSideLeagueCardForLink("#sideleagues=" + leagueKey);
+  return findSideLeagueCardForLink(LMS_CARD_LINKS[leagueKey] || ("#sideleagues=" + leagueKey));
 }
 
 // Trophy banner shown at the top of a side league's page once its hub card
@@ -7851,8 +7986,15 @@ document.addEventListener('keydown', (e) => {
 // 2A, 2B, 3A, 3B) matching the same convention used everywhere else on the
 // site. Deadline uses the same DD-MM-YYYY / AM-PM-aware parser as everything
 // else (parseLmsDeadline / formatAestDateTime).
-const WMD_DIVISION_ORDER = ["D1","2A","2B","3A","3B"];
-const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3A": "Division 3A", "3B": "Division 3B" };
+const WMD_DIVISION_ORDER = ["D1","2A","2B","3TBC","3A","3B"];
+const WMD_DIVISION_LABELS = { D1: "Division 1 (Eliza Cup)", "2A": "Division 2A", "2B": "Division 2B", "3TBC": "Div 3 - TBC", "3A": "Division 3A", "3B": "Division 3B" };
+
+function normaliseWmdDivision(value){
+  const raw = (value||"").trim().toUpperCase();
+  const compact = raw.replace(/[^A-Z0-9]/g,"");
+  if(raw === "3TBC" || compact === "3TBC" || compact === "DIV3TBC" || compact === "DIVISION3TBC") return "3TBC";
+  return raw;
+}
 
 // Join deadlines are a date only (no time) — separate from parseLmsDeadline,
 // which requires a time + AM/PM and would reject a bare date entirely.
@@ -7899,6 +8041,9 @@ function wmdTeamCardHtml(t){
   const codeHtml = t.code
     ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>`
     : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`;
+  const leagueLinkHtml = t.link
+    ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>`
+    : "";
   const roddyCodeHtml = wmdData.roddyCode
     ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>`
     : "";
@@ -7910,9 +8055,10 @@ function wmdTeamCardHtml(t){
     <div class="wmd-team-card-name">${t.team}</div>
     <div class="wmd-team-card-expand">
       ${codeHtml}
+      ${leagueLinkHtml}
+      <div class="wmd-league-divider"></div>
       ${roddyCodeHtml}
       ${roddyLinkHtml}
-      ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
       ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
     </div>
   </div>`;
@@ -7927,11 +8073,11 @@ function renderWmdDivisions(teams){
   }
   container.className = "";
   container.innerHTML = WMD_DIVISION_ORDER.map(divKey => {
-    const divTeams = teams.filter(t => (t.division||"").toUpperCase() === divKey);
+    const divTeams = teams.filter(t => normaliseWmdDivision(t.division) === divKey);
     if(!divTeams.length) return "";
     const divLogo = divisionLogoForShortLabel(divKey);
     return `<div class="wmd-div-section">
-      <h3 class="wmd-div-heading" style="color:${getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
+      <h3 class="wmd-div-heading" style="color:${divKey === "3TBC" ? "#6aa84f" : getDivisionColorByLabel(divKey)};">${divLogo ? `<img src="${divLogo}" alt="" class="wmd-div-heading-logo">` : ""}${WMD_DIVISION_LABELS[divKey] || divKey}</h3>
       <div class="wmd-team-grid">${divTeams.map(wmdTeamCardHtml).join("")}</div>
     </div>`;
   }).join("");
@@ -7946,9 +8092,10 @@ function renderWmdDivisions(teams){
 }
 
 function wmdSearchResultHtml(t){
-  const divColor = getDivisionColorByLabel(t.division);
-  const divLabel = WMD_DIVISION_LABELS[(t.division||"").toUpperCase()] || t.division;
-  const divLogo = divisionLogoForShortLabel(t.division);
+  const normalisedDivision = normaliseWmdDivision(t.division);
+  const divColor = normalisedDivision === "3TBC" ? "#6aa84f" : getDivisionColorByLabel(t.division);
+  const divLabel = WMD_DIVISION_LABELS[normalisedDivision] || t.division;
+  const divLogo = normalisedDivision === "3TBC" ? "" : divisionLogoForShortLabel(t.division);
   const deadlineDate = t.deadline ? parseDateOnly(t.deadline) : null;
   const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(t.team)}';}`;
   return `<div class="wmd-result-card">
@@ -7961,9 +8108,11 @@ function wmdSearchResultHtml(t){
       ${divLogo ? `<img src="${divLogo}" alt="" class="wmd-result-div-logo">` : ""}
     </div>
     ${t.code ? `<div class="wmd-result-row"><b>League code:</b></div><div class="wmd-result-code">${t.code}</div>` : `<div class="wmd-result-row wmd-no-code">League code not yet available</div>`}
+    ${t.link ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
+    <div class="wmd-league-divider"></div>
     ${wmdData.roddyCode ? `<div class="wmd-result-row"><b>Roddy code:</b></div><div class="wmd-result-code">${wmdData.roddyCode}</div>` : ""}
     ${wmdData.roddyLink ? `<div class="wmd-result-row"><b>Roddy join link:</b> <a class="wmd-result-link" href="${wmdData.roddyLink}" target="_blank" rel="noopener">${wmdData.roddyLink}</a></div>` : ""}
-    ${t.link ? `<div class="wmd-result-row"><b>Join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
+    ${t.link ? `<div class="wmd-result-row"><b>League join link:</b> <a class="wmd-result-link" href="${t.link}" target="_blank" rel="noopener">${t.link}</a></div>` : ""}
     ${deadlineDate ? `<div class="wmd-result-row"><b>Join by:</b> ${formatDateOnly(deadlineDate)}</div>` : ""}
   </div>`;
 }
@@ -8001,7 +8150,14 @@ function renderWhatsMyDivPage(){
 }
 
 function sideLeagueCsvUrlFor(league){
-  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}&cachebust=` + Date.now();
+  // NBL uses merged/multi-row headings. Google Visualization's automatic header
+  // detection can incorrectly consume the first two standings rows (positions 1
+  // and 2) as headers. Force ZERO headers for NBL so every physical sheet row is
+  // returned; parseNblSupercoach() already identifies the real data rows itself.
+  // Every existing side league keeps its URL unchanged.
+  const headerParam = league && league.isNbl ? "&headers=0" : "";
+  const rangeParam = league && league.isUcl ? "&range=G27:AA34" : (league && league.isTippingOverall ? `&range=A${league.tippingStartRow || 40}:ZZ` : "");
+  return `https://docs.google.com/spreadsheets/d/${league.sheetId}/gviz/tq?tqx=out:csv&gid=${league.gid}${headerParam}${rangeParam}&cachebust=` + Date.now();
 }
 
 let sideLeagueDebug = {};
@@ -8085,6 +8241,237 @@ function parseFplTable(rows, titleText){
 // header text — they turned out not to exist as header text at all, only
 // "TEAM" is actually typed in that row, which is why the earlier text-search
 // approach could never find them no matter how it was adjusted.
+// ---------- A-League tipping overall tables ----------
+// ALM and ALW use the same sheet layout. The public overall table starts at
+// physical row 40. The parser deliberately identifies TEAM/TOTAL and the round
+// columns from the returned header row rather than hard-coding their columns,
+// so minor column additions to the tipping sheets do not break the display.
+const TIPPING_ROUND_RE = /^(?:R(?:OUND)?\s*[-.]?\s*\d+|\d+)$/i;
+
+function parseTippingOverall(rows, startRowNumber){
+  // The GViz CSV range already starts at the requested sheet row, so rows[0]
+  // is the first returned row. Do not offset into the returned array again.
+  // This also makes the parser tolerant if the sheet has a title/spacer row
+  // immediately before the actual headers.
+  const startIdx = 0;
+  let headerRow = -1;
+  let teamCol = -1;
+  let totalCol = -1;
+  let posCol = -1;
+
+  // Usually the first returned row is the table header, but allow a few title/
+  // spacer rows after row 40 without making the parser fragile.
+  for(let r = startIdx; r < Math.min(rows.length, startIdx + 15); r++){
+    const row = rows[r] || [];
+    const labels = row.map(v => (v || "").toString().trim().toUpperCase());
+    const tc = labels.findIndex(v => v === "TEAM" || v === "TEAM NAME" || v === "MANAGER" || v === "NAME");
+    const tot = labels.findIndex(v => v === "TOTAL" || v === "PTS" || v === "POINTS" || v === "OVERALL");
+    const pc = labels.findIndex(v => v === "POS" || v === "POSITION" || v === "RANK");
+    // The sheet contains an earlier SCORE ENTRY table with TEAM NAME/TOTAL
+    // but no POS column. The overall leaderboard is the header containing
+    // POS + TEAM NAME + TOTAL, so require all three.
+    if(tc !== -1 && tot !== -1 && pc !== -1){
+      headerRow = r;
+      teamCol = tc;
+      totalCol = tot;
+      posCol = pc;
+      break;
+    }
+  }
+
+  if(headerRow === -1){
+    return {
+      entries: [],
+      roundLabel: "",
+      debug: {
+        headerFound: false,
+        startRow: startRowNumber || 40,
+        rowsReturned: rows.length,
+        firstRows: rows.slice(startIdx, startIdx + 8)
+      }
+    };
+  }
+
+  const headers = rows[headerRow] || [];
+  const roundCols = [];
+  for(let c = 0; c < headers.length; c++){
+    if(c === teamCol || c === totalCol || c === posCol) continue;
+    const h = (headers[c] || "").toString().trim();
+    if(h && TIPPING_ROUND_RE.test(h)) roundCols.push({ col: c, label: h });
+  }
+
+  // Read the team rows first, then choose the latest round that has at least
+  // one entered score. This means the displayed "Round" column automatically
+  // advances as the sheet is updated.
+  const entries = [];
+  for(let r = headerRow + 1; r < rows.length; r++){
+    const row = rows[r] || [];
+    const team = cell(row, teamCol);
+    if(!team) break;
+
+    const total = cell(row, totalCol);
+    const pos = posCol >= 0 ? cell(row, posCol) : String(entries.length + 1);
+    entries.push({ pos, team, total, row });
+  }
+
+  let lastRound = null;
+  for(let i = roundCols.length - 1; i >= 0; i--){
+    const rc = roundCols[i];
+    if(entries.some(e => cell(e.row, rc.col) !== "")){
+      lastRound = rc;
+      break;
+    }
+  }
+
+  const parsedEntries = entries.map(e => ({
+    pos: e.pos,
+    team: e.team,
+    roundScore: lastRound ? cell(e.row, lastRound.col) : "",
+    total: e.total,
+    roundScores: roundCols.map(rc => ({
+      label: rc.label,
+      score: cell(e.row, rc.col)
+    }))
+  }));
+
+  return {
+    entries: parsedEntries,
+    roundLabel: lastRound ? lastRound.label : "",
+    debug: {
+      headerFound: true,
+      headerRow: headerRow + 1,
+      teamCol: colIndexToLetter(teamCol),
+      posCol: posCol >= 0 ? colIndexToLetter(posCol) : null,
+      totalCol: colIndexToLetter(totalCol),
+      roundColumns: roundCols.map(x => ({ label: x.label, col: colIndexToLetter(x.col) })),
+      selectedRound: lastRound ? { label: lastRound.label, col: colIndexToLetter(lastRound.col) } : null,
+      entriesFound: parsedEntries.length,
+      firstParsedEntry: parsedEntries[0] || null,
+      lastParsedEntry: parsedEntries[parsedEntries.length - 1] || null
+    }
+  };
+}
+
+function combineTippingClubChampionship(almData, alwData){
+  const alm = almData && almData.entries ? almData.entries : [];
+  const alw = alwData && alwData.entries ? alwData.entries : [];
+  const alwByTeam = new Map();
+  alw.forEach(e => {
+    const key = (e.team || "").trim().toLowerCase();
+    if(key) alwByTeam.set(key, e);
+  });
+
+  const combined = alm.map(e => {
+    const key = (e.team || "").trim().toLowerCase();
+    const other = alwByTeam.get(key);
+    if(!other) return null;
+    // A player/team can be entered in both competitions before any scores have
+    // been recorded. Treat a blank TOTAL as zero so the Club Championship
+    // still shows everyone who has entered both ALM and ALW.
+    const almRaw = String(e.total == null ? "" : e.total).replace(/,/g, "").trim();
+    const alwRaw = String(other.total == null ? "" : other.total).replace(/,/g, "").trim();
+    const almTotal = almRaw === "" ? 0 : parseFloat(almRaw);
+    const alwTotal = alwRaw === "" ? 0 : parseFloat(alwRaw);
+    if(!Number.isFinite(almTotal) || !Number.isFinite(alwTotal)) return null;
+    return {
+      team: e.team,
+      alm: almRaw === "" ? "0" : e.total,
+      alw: alwRaw === "" ? "0" : other.total,
+      combined: almTotal + alwTotal
+    };
+  }).filter(Boolean);
+
+  combined.sort((a,b) => b.combined - a.combined || a.team.localeCompare(b.team));
+  return combined.map((e,i) => ({...e, pos:i+1}));
+}
+
+function tippingClubChampionshipHtml(entries){
+  if(!entries || !entries.length) return "";
+  return `<div class="tipping-club-championship">
+    <div class="section-head tipping-club-championship-head">
+      <h3>Club Championship Tipping (ALM + ALW)</h3>
+    </div>
+    <div class="table-wrap tipping-club-table">
+      <table class="standings compact">
+        <thead><tr>
+          <th>Pos</th><th style="text-align:left;">Team</th><th>ALM</th><th>ALW</th><th>Total</th>
+        </tr></thead>
+        <tbody>
+          ${entries.map(e=>{
+            const logoName=e.team;
+            const logoOnError=`if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+            return `<tr>
+              <td>${e.pos}</td>
+              <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
+              <td>${e.alm}</td>
+              <td>${e.alw}</td>
+              <td class="pts tipping-club-combined">${e.combined}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function tippingOverallTableHtml(data){
+  if(!data || !data.entries.length){
+    return `<p class="state-msg">No tipping data found. Check the Debug panel below.</p>`;
+  }
+
+  const roundLabel = data.roundLabel || "";
+  const roundHeaders = data.entries[0].roundScores || [];
+
+  const latestTable = `<div class="table-wrap tipping-overall-wrap">
+    <table class="standings compact">
+      <thead><tr>
+        <th>Pos</th><th style="text-align:left;">Team</th><th>${roundLabel || "Round"}</th><th>Total</th>
+      </tr></thead>
+      <tbody>
+        ${data.entries.map(e=>{
+          const logoName = e.team;
+          const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+          return `<tr>
+            <td>${e.pos}</td>
+            <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
+            <td class="tipping-round-score">${e.roundScore || "—"}</td>
+            <td class="pts tipping-total">${e.total || "—"}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  </div>`;
+
+  const fullTable = `<div class="tipping-round-by-round">
+    <div class="section-head tipping-round-by-round-head">
+      <h3>Round by Round</h3>
+    </div>
+    <div class="tipping-round-scroll">
+      <table class="standings compact tipping-round-table">
+        <thead><tr>
+          <th>Pos</th>
+          <th style="text-align:left;">Team</th>
+          <th>Total</th>
+          ${roundHeaders.map(r => `<th>${r.label}</th>`).join("")}
+        </tr></thead>
+        <tbody>
+          ${data.entries.map(e=>{
+            const logoName = e.team;
+            const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
+            return `<tr>
+              <td>${e.pos}</td>
+              <td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td>
+              <td class="pts tipping-total">${e.total || "—"}</td>
+              ${(e.roundScores || []).map(r => `<td class="tipping-round-score">${r.score || "—"}</td>`).join("")}
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  return latestTable + fullTable + tippingClubChampionshipHtml(data.clubChampionship);
+}
 const OVERALL_TABLE_MARKER = "OVERALL_TABLE_START";
 const OVERALL_COL_OFFSET = { pos: 1, team: 3, pts: 4 }; // relative to the marker's own column
 function parseSideLeagueOverallTable(rows){
@@ -8176,6 +8563,74 @@ function parseFplFixtures(rows, base, labelTest){
   return { gameweeks, rawDump };
 }
 
+// NBL Supercoach uses the reusable side-league workbook template rather than
+// the older AFL/NRL/EPL fixed-column template. These parsers translate that
+// sheet into the same table/fixture/overall objects the existing renderer uses.
+function parseNblSupercoach(rows){
+  const teams = [];
+  // gviz may return a different number of leading header rows depending on how
+  // it interprets the merged NBL headings. Do not rely on a fixed row offset:
+  // collect every row whose League Table position is numeric and has a team.
+  for(let r=0; r<rows.length; r++){
+    const pos = cell(rows[r]||[], 6);
+    const team = cell(rows[r]||[], 7);
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+    teams.push({
+      pos, team, name: "", pts: cell(rows[r]||[],8), w: cell(rows[r]||[],9), d: cell(rows[r]||[],10),
+      l: cell(rows[r]||[],11), for: cell(rows[r]||[],12), aga: cell(rows[r]||[],13), dif: cell(rows[r]||[],14),
+      status: cell(rows[r]||[],24), form: [], next: cell(rows[r]||[],23)
+    });
+  }
+
+  const gameweeks = [], byRound = new Map(), rawDump = [];
+  for(let r=0; r<rows.length; r++){
+    const roundRaw = cell(rows[r]||[],0);
+    const home = cell(rows[r]||[],1), away = cell(rows[r]||[],4);
+    if(!roundRaw || !home || !away) continue;
+    const roundKey = roundRaw.toUpperCase().replace(/\s+/g," ").trim();
+    if(!byRound.has(roundKey)){
+      const gw = { name: roundKey, fixtures: [] };
+      byRound.set(roundKey, gw); gameweeks.push(gw);
+    }
+    const fixture = { home, homeScore: cell(rows[r]||[],2), awayScore: cell(rows[r]||[],3), away };
+    byRound.get(roundKey).fixtures.push(fixture);
+    rawDump.push({ row:r+1, round:roundKey, ...fixture });
+  }
+
+  // Build the same five-result Form array used by the existing Supercoach
+  // renderer. Round 1 is Overall Only in the NBL template, so it is excluded.
+  const formByTeam = new Map();
+  gameweeks.forEach(gw => {
+    if(/NO H2H|OVERALL ONLY/i.test(gw.name)) return;
+    gw.fixtures.forEach(f => {
+      if(f.homeScore==="" || f.awayScore==="") return;
+      const hs=Number(f.homeScore), as=Number(f.awayScore);
+      if(!Number.isFinite(hs) || !Number.isFinite(as)) return;
+      const hr = hs>as ? "W" : hs<as ? "L" : "D";
+      const ar = hs>as ? "L" : hs<as ? "W" : "D";
+      if(!formByTeam.has(f.home)) formByTeam.set(f.home,[]);
+      if(!formByTeam.has(f.away)) formByTeam.set(f.away,[]);
+      formByTeam.get(f.home).push(hr); formByTeam.get(f.away).push(ar);
+    });
+  });
+  teams.forEach(t => { t.form = (formByTeam.get(t.team)||[]).slice(-5); });
+
+  const overallEntries = [];
+  // Same treatment for the Overall Table: identify standings rows by their
+  // numeric position rather than assuming a fixed CSV header offset.
+  for(let r=0; r<rows.length; r++){
+    const pos=cell(rows[r]||[],26), team=cell(rows[r]||[],27);
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+    overallEntries.push({ pos, team, pts:cell(rows[r]||[],28) });
+  }
+
+  return {
+    table:{ teams, formRoundLabels:[], debug:{ nblTemplate:true, teamsFound:teams.length } },
+    fx:{ gameweeks, rawDump },
+    overall:{ entries:overallEntries, debug:{ nblTemplate:true, entriesFound:overallEntries.length } }
+  };
+}
+
 // AFL Supercoach round labels: "Round 1".."Round 20", then finals stages — none of
 // which use the "GW" prefix the FPL blocks use.
 const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*FINAL|FINAL)$/i;
@@ -8183,12 +8638,14 @@ const AFL_ROUND_RE = /^(ROUND\s*\d+|QUARTER\s*FINAL|SEMI\s*FINAL|PRELIMINARY\s*F
 function sideLeagueTableHtml(table, opts){
   opts = opts || {};
   if(!table || !table.teams.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
+  const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
+  const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   const formLabels = table.formRoundLabels || [];
   const formHeaderHtml = opts.showForm
     ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
     : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
@@ -8202,7 +8659,7 @@ function sideLeagueTableHtml(table, opts){
             }).join("")}</span></td>`
           : "";
         return `<tr style="${rowStyle}">
-        <td>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
+        <td${nblKeyColStyle}>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts"${nblKeyColStyle}>${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
@@ -8213,14 +8670,16 @@ function sideLeagueTableHtml(table, opts){
 
 function sideLeagueOverallTableHtml(overall){
   if(!overall || !overall.entries.length) return `<p class="state-msg">No data found for this table. Check the Debug panel below.</p>`;
+  const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
+  const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   return `<div class="table-wrap overall-table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th>
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th>
     </tr></thead><tbody>
       ${overall.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
-        <td>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts">${e.pts}</td>
+        <td${nblKeyColStyle}>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts"${nblKeyColStyle}>${e.pts}</td>
       </tr>`;
       }).join("")}
     </tbody></table></div>`;
@@ -8644,6 +9103,17 @@ function renderSideLeagueContent(){
   const el = document.getElementById('sideLeaguesContainer');
   el.className = "";
 
+  if(sideLeagueData && sideLeagueData.isTippingOverall){
+    const { overall, label, key } = sideLeagueData;
+    const themeColor = sideLeagueThemeColor(key);
+    if(themeColor) applyDivisionTheme({ color: themeColor });
+    el.innerHTML = `
+      ${sideLeagueWinnersBannerHtml("#sideleagues=" + key)}
+      <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">${label}</h2></div>
+      ${tippingOverallTableHtml(overall)}`;
+    return;
+  }
+
   if(sideLeagueData.singleTable){
     const { table, fx, overall, label, key } = sideLeagueData;
     const themeColor = sideLeagueThemeColor(key);
@@ -8984,68 +9454,44 @@ function findSideLeagueHonours(honourBoardData, teamName){
 }
 
 // UCL Fantasy — no fixtures/head-to-head at all, just a running score per
-// team across 17 named rounds. Columns are located by searching the header
+// team across the G:Y source range of the current UCL Fantasy tab. Columns are located by searching the header
 // row's text rather than trusting fixed column letters (this sheet already
 // has at least one stray-space label — "R16 -2" — so exact-letter offsets
 // would be fragile here in a way they aren't on the more rigid FPL sheets).
 const UCL_ROUND_LABELS = ["MD1","MD2","MD3","MD4","MD5","MD6","MD7","MD8","PO1","PO2","R16-1","R16-2","QF-1","QF-2","SF-1","SF-2","F"];
 function parseUclFantasy(rows){
   const normalize = s => (s||"").toString().replace(/\s+/g, "").toUpperCase();
-
-  // Search a small window of rows for the header row (anchored on POS +
-  // TEAM NAME both appearing in the same row) rather than trusting a fixed
-  // row number, same safety margin used for title-row searches elsewhere.
+  // UCL Fantasy source is deliberately restricted to G27:AA34.
+  // Within that fetched range: G=POS, H=TEAM NAME, I=PLAYER, J=TOTAL, K:AA=MD1 through F.
+  const FIXED = { POS:0, TEAM:1, PLAYER:2, TOTAL:3 };
+  const ROUND_COLS = UCL_ROUND_LABELS.map((label, i) => ({ label, col: 4 + i }));
   let headerRowIdx = -1;
-  for(let r = 0; r < Math.min(rows.length, 15); r++){
+  for(let r = 0; r < Math.min(rows.length, 3); r++){
     const rowNorm = (rows[r] || []).map(normalize);
     if(rowNorm.includes("POS") && rowNorm.includes("TEAMNAME")){ headerRowIdx = r; break; }
   }
-  if(headerRowIdx === -1){
-    return { teams: [], rounds: UCL_ROUND_LABELS, debug: { headerRowFound: false } };
-  }
-
-  const headerNorm = (rows[headerRowIdx] || []).map(normalize);
-  const findCol = label => headerNorm.indexOf(normalize(label));
-  const posCol = findCol("POS"), teamCol = findCol("TEAM NAME"), playerCol = findCol("PLAYER"),
-        totalCol = findCol("TOTAL"), hitsCol = findCol("HITS");
-  const roundCols = UCL_ROUND_LABELS.map(label => ({ label, col: findCol(label) }));
-
+  const dataStart = headerRowIdx === -1 ? 0 : headerRowIdx + 1;
   const teams = [];
   const rawDump = [];
-  for(let r = headerRowIdx + 1; r < rows.length; r++){
+  for(let r=dataStart; r<rows.length; r++){
     const row = rows[r] || [];
-    const pos = cell(row, posCol), team = cell(row, teamCol);
-    if(!pos && !team) continue; // stop at the first blank row after the roster
-    const totalRaw = totalCol !== -1 ? cell(row, totalCol) : "";
-    const hitsRaw = hitsCol !== -1 ? cell(row, hitsCol) : "";
-    const hits = parseInt(hitsRaw, 10) || 0;
-    const total = parseInt(totalRaw, 10) || 0;
-    teams.push({
-      pos, team, player: playerCol !== -1 ? cell(row, playerCol) : "",
-      total, hits, netTotal: total - hits,
-      scores: roundCols.map(rc => ({ label: rc.label, value: rc.col !== -1 ? cell(row, rc.col) : "" }))
-    });
-    rawDump.push({ row: r + 1, pos, team, total: totalRaw, hits: hitsRaw });
+    const pos = cell(row, FIXED.POS), team = cell(row, FIXED.TEAM);
+    if(!pos && !team) continue;
+    if(!/^\d+$/.test(String(pos).trim()) || !team) continue;
+    const totalRaw = cell(row, FIXED.TOTAL);
+    const total = parseInt(totalRaw,10) || 0;
+    teams.push({ pos, team, player:cell(row,FIXED.PLAYER), total, hits:0, netTotal:total,
+      scores:ROUND_COLS.map(rc => ({ label:rc.label, value:cell(row,rc.col) })) });
+    rawDump.push({row:r+1,pos,team,player:cell(row,FIXED.PLAYER),total:totalRaw});
   }
-
-  return {
-    teams, rounds: UCL_ROUND_LABELS,
-    debug: {
-      headerRowFound: headerRowIdx + 1,
-      colsAsLetters: {
-        pos: posCol !== -1 ? colIndexToLetter(posCol) : "NOT FOUND",
-        team: teamCol !== -1 ? colIndexToLetter(teamCol) : "NOT FOUND",
-        player: playerCol !== -1 ? colIndexToLetter(playerCol) : "NOT FOUND",
-        total: totalCol !== -1 ? colIndexToLetter(totalCol) : "NOT FOUND",
-        hits: hitsCol !== -1 ? colIndexToLetter(hitsCol) : "NOT FOUND"
-      },
-      roundCols: roundCols.map(rc => ({ label: rc.label, col: rc.col !== -1 ? colIndexToLetter(rc.col) : "NOT FOUND" })),
-      teamsFound: teams.length,
-      rawDump: rawDump.slice(0, 10)
-    }
-  };
+  return { teams, rounds:UCL_ROUND_LABELS, debug:{
+    headerRowFound: headerRowIdx === -1 ? "CSV header consumed / fixed range layout used" : headerRowIdx+1,
+    dataStartRow:dataStart+1, sourceRange:"G27:AA34",
+    colsAsLetters:{pos:"G",team:"H",player:"I",total:"J",hits:"none"},
+    roundCols:ROUND_COLS.map(rc => ({label:rc.label,col:colIndexToLetter(rc.col+6)})),
+    teamsFound:teams.length, rawDump:rawDump.slice(0,10)
+  }};
 }
-
 function renderUclFantasy(data){
   const el = document.getElementById('sideLeaguesContainer');
   if(!data.teams.length){
@@ -9065,7 +9511,9 @@ function renderUclFantasy(data){
     let max = -Infinity;
     data.teams.forEach(t => {
       const num = parseInt(t.scores[i] && t.scores[i].value, 10);
-      if(!isNaN(num) && num > max) max = num;
+      // Ignore zeroes when determining the highest score. A round with only
+      // zeroes should have no highlighted score until a positive score exists.
+      if(!isNaN(num) && num > 0 && num > max) max = num;
     });
     return isFinite(max) ? max : null;
   });
@@ -9566,8 +10014,12 @@ function aleagueLmsRoundNum(rawText){
 }
 
 function parseAleagueLms(rows){
-  const rounds = [];
-  let current = null;
+  // The D:H area contains participant picks/results for rounds that have
+  // already been populated, while N:S is the authoritative fixture list and
+  // contains all scheduled rounds. Build one unified round list from both so
+  // future rounds are available on the website before participant picks exist.
+  const participantRounds = [];
+  let currentParticipantRound = null;
   const rawDump = [];
   const headerCandidates = [];
 
@@ -9580,22 +10032,21 @@ function parseAleagueLms(rows){
     }
 
     if(isAleagueLmsRoundHeader(d)){
-      current = { name: d, roundNum: aleagueLmsRoundNum(d), entries: [] };
-      rounds.push(current);
+      currentParticipantRound = { name: d, roundNum: aleagueLmsRoundNum(d), entries: [] };
+      participantRounds.push(currentParticipantRound);
       continue;
     }
-    if(!current) continue;
+    if(!currentParticipantRound) continue;
 
     const f = cell(row,5), g = cell(row,6), h = cell(row,7); // F, G, H
     if(!d && !f && !g && !h) continue;
 
-    current.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
-    rawDump.push({ row: r+1, round: current.name, D:d, F:f, G:g, H:h });
+    currentParticipantRound.entries.push({ name: d, pick: f, opponent: g, result: h.toUpperCase() });
+    rawDump.push({ row: r+1, round: currentParticipantRound.name, D:d, F:f, G:g, H:h });
   }
 
   // Round / Deadline / Current reference table — X = round name, Y = deadline
-  // (DD/MM/YYYY HH:MM:SS AEST), Z = "TRUE" for the current round. Same
-  // convention as Australia Cup LMS.
+  // (DD/MM/YYYY HH:MM:SS AEST), Z = "TRUE" for the current round.
   const deadlineMap = {};
   let currentRoundLabel = "";
   for(let r=0; r<rows.length; r++){
@@ -9619,8 +10070,9 @@ function parseAleagueLms(rows){
     });
   }
 
-  // Fixture reference blocks — N holds "ROUND N" on the title row (no
-  // "FIXTURES" suffix, unlike Australia Cup), Q = home team, S = away team.
+  // Fixture reference blocks — N holds "ROUND N" on the title row, Q = home
+  // team and S = away team. This is the authoritative source for the season's
+  // round list because it includes future rounds that have no picks/results yet.
   const fixtureBlocks = [];
   let currentBlock = null;
   for(let r=0; r<rows.length; r++){
@@ -9636,10 +10088,40 @@ function parseAleagueLms(rows){
     currentBlock.fixtures.push({ home, away });
   }
 
+  // Merge the fixture rounds with any participant/results data. Fixture blocks
+  // define the complete 26-round navigation; participant entries are attached
+  // where available (currently the completed/populated rounds only).
+  const participantByRound = {};
+  participantRounds.forEach(rd => {
+    participantByRound[rd.roundNum] = rd;
+  });
+
+  const roundMap = {};
+  fixtureBlocks.forEach(block => {
+    roundMap[block.roundNum] = {
+      name: block.roundName,
+      roundNum: block.roundNum,
+      entries: participantByRound[block.roundNum] ? participantByRound[block.roundNum].entries : [],
+      fixtures: block.fixtures
+    };
+  });
+
+  // Also retain any participant round that isn't present in N:S, so unusual
+  // data-entry situations don't silently lose historical picks.
+  participantRounds.forEach(rd => {
+    if(!roundMap[rd.roundNum]){
+      roundMap[rd.roundNum] = {
+        name: rd.name,
+        roundNum: rd.roundNum,
+        entries: rd.entries,
+        fixtures: []
+      };
+    }
+  });
+
+  const rounds = Object.values(roundMap).sort((a,b) => a.roundNum - b.roundNum);
+
   // Raw form-submission log — AE timestamp, AF round, AG participant, AH team.
-  // Kept on this same sheet (unlike Australia Cup, which logs to a separate
-  // spreadsheet) — picks still get transcribed into the D:H entries block
-  // manually, this is just the raw record of what was submitted.
   const submissionLog = [];
   for(let r=0; r<rows.length; r++){
     const ts = cell(rows[r]||[], 30); // AE
@@ -9652,10 +10134,7 @@ function parseAleagueLms(rows){
     });
   }
 
-  // Team reference list — AY only. No elimination flag column (unlike
-  // Australia Cup): real A-League clubs don't get knocked out mid-season, so
-  // every team stays a valid option all year, subject only to the
-  // pick-eligibility rules below.
+  // Team reference list — AY only. Real A-League clubs remain valid options all year.
   const teamList = [];
   for(let r=0; r<rows.length; r++){
     const name = cell(rows[r]||[], 50); // AY
@@ -9663,8 +10142,7 @@ function parseAleagueLms(rows){
     teamList.push(name);
   }
 
-  // Each participant's full pick history (round number + team), used for all
-  // three eligibility rules on the tips form.
+  // Each participant's full pick history, used for all pick-eligibility rules.
   const history = {};
   rounds.forEach(round => {
     round.entries.forEach(e => {
@@ -9677,7 +10155,8 @@ function parseAleagueLms(rows){
   return {
     rounds, currentRoundLabel, deadlineMap, playerSummary, fixtureBlocks, submissionLog, teamList, history,
     debug: {
-      roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length })),
+      roundsFound: rounds.map(rd => ({ name: rd.name, entries: rd.entries.length, fixtures: rd.fixtures.length })),
+      participantRoundsFound: participantRounds.map(rd => ({ name: rd.name, entries: rd.entries.length })),
       currentRoundLabel, deadlineMap,
       playerSummaryFound: playerSummary.length, playerSummary,
       fixtureBlocksFound: fixtureBlocks.map(b=>({round:b.roundName, fixtures:b.fixtures.length})),
@@ -9753,11 +10232,11 @@ function renderAleagueLms(data, containerId){
   }).join("");
 
   el.innerHTML = sideLeagueWinnersBannerHtml("#sideleagues=lms:aleague") +
-    renderAleagueLmsPlayerSummary(data) +
-    `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
+    aleagueLmsTipsFormHtml(data) +
+    `<div class="section-head" style="margin-top:32px;margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
-    <div class="lms-pick-list">${rowsHtml}</div>
-    ${aleagueLmsTipsFormHtml(data)}`;
+    <div class="lms-pick-list">${rowsHtml}</div>` +
+    renderAleagueLmsPlayerSummary(data);
 
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -9964,96 +10443,41 @@ async function submitAleagueLmsTip(e){
   }
 }
 
-// ---------- Last Man Standing hub (Australia Cup + A-League sub-tabs) ----------
-// Mirrors the FPL pattern: one SIDE_LEAGUES entry ("lms"), sub-tabs toggled
-// client-side rather than separate nav items. Unlike FPL's sub-tabs (which
-// all read different blocks of the same sheet gid), each LMS sub-tab is a
-// wholly separate sheet tab/gid with its own parser — see lmsGids on the
-// SIDE_LEAGUES entry.
-let lmsHubActiveTab = "auscup"; // "auscup" | "aleague"
-let lmsHubData = { auscup: null, aleague: null }; // per-tab parsed-data cache, cleared on each page (re)load so Refresh still works
-
-// Whether a given LMS sub-tab should show at all, per the Page Visibility
-// panel in admin.html — ids "sideleagues=lms:auscup" / "sideleagues=lms:aleague".
-// Same convention as every other page-visibility.json entry: absent/true
-// means visible, explicit false means hidden. Because it's "visible by
-// default", a brand-new sub-tab shows immediately unless someone actively
-// unchecks it in admin — worth doing that for A-League until its season's
-// ready to go live, since there's no separate hardcoded flag to hold it back
-// anymore.
-function lmsHubSubTabVisible(tabKey){
-  const id = "sideleagues=lms:" + tabKey;
-  return pageVisibilityMap[id] !== false;
-}
-
-function renderLmsHubShell(league){
+// ---------- Last Man Standing pages (Australia Cup LMS + A-League LMS) ----------
+// Two separate side-league pages (see the lmsauscup / lmsaleague entries in
+// SIDE_LEAGUES). Each reads its own tab of the same spreadsheet with its own parser.
+async function loadLmsPage(league){
   const el = document.getElementById('sideLeaguesContainer');
-  el.className = "";
-  const tabs = [];
-  if(lmsHubSubTabVisible("auscup")) tabs.push({ key: "auscup", label: "Australia Cup" });
-  if(lmsHubSubTabVisible("aleague")) tabs.push({ key: "aleague", label: "A-League" });
-
-  const toggleHtml = tabs.length > 1
-    ? `<div class="round-tabs" id="lmsHubToggle">
-        ${tabs.map(t => `<button class="round-tab${lmsHubActiveTab===t.key?' active':''}" data-tab="${t.key}">${t.label}</button>`).join("")}
-      </div>`
-    : "";
-
-  el.innerHTML = `${toggleHtml}<div id="lmsHubPanel" class="state-msg">Loading…</div>`;
-
-  el.querySelectorAll('#lmsHubToggle .round-tab').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(lmsHubActiveTab === btn.dataset.tab) return;
-      lmsHubActiveTab = btn.dataset.tab;
-      el.querySelectorAll('#lmsHubToggle .round-tab').forEach(b => b.classList.toggle('active', b===btn));
-      loadLmsHubTab(league, lmsHubActiveTab);
-    });
-  });
-}
-
-async function loadLmsHubTab(league, tabKey){
-  const panel = document.getElementById('lmsHubPanel');
-  if(!panel) return; // user navigated away before this resolved
-
-  if(lmsHubData[tabKey]){
-    if(tabKey === "auscup") renderLmsCup(lmsHubData[tabKey], 'lmsHubPanel');
-    else renderAleagueLms(lmsHubData[tabKey], 'lmsHubPanel');
-    return;
-  }
-
-  panel.className = "state-msg";
-  panel.innerHTML = "Loading…";
-  const label = tabKey === "auscup" ? "Australia Cup" : "A-League";
+  el.className = "state-msg";
+  el.innerHTML = "Loading…";
   try{
-    const res = await cachedFetch(sideLeagueCsvUrlFor({ sheetId: league.sheetId, gid: league.lmsGids[tabKey] }));
+    const res = await cachedFetch(sideLeagueCsvUrlFor(league));
     if(!res.ok) throw new Error("HTTP " + res.status);
     const csvText = await res.text();
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
-    if(tabKey === "auscup"){
-      const data = parseLmsCup(rows);
-      const matchIdx = data.currentRoundLabel
-        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
-        : -1;
-      lmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1;
-      lmsHubData.auscup = data;
-      renderLmsCup(data, 'lmsHubPanel');
-      sideLeagueDebug = Object.assign({}, sideLeagueDebug, { lmsCup: data.debug });
-    } else {
+    if(league.isALeagueLms){
       const data = parseAleagueLms(rows);
       const matchIdx = data.currentRoundLabel
         ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
         : -1;
       aleagueLmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1;
-      lmsHubData.aleague = data;
-      renderAleagueLms(data, 'lmsHubPanel');
-      sideLeagueDebug = Object.assign({}, sideLeagueDebug, { aleagueLms: data.debug });
+      renderAleagueLms(data, 'sideLeaguesContainer');
+      sideLeagueDebug = { aleagueLms: data.debug };
+    } else {
+      const data = parseLmsCup(rows);
+      const matchIdx = data.currentRoundLabel
+        ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
+        : -1;
+      lmsActiveRoundIdx = matchIdx !== -1 ? matchIdx : data.rounds.length - 1;
+      renderLmsCup(data, 'sideLeaguesContainer');
+      sideLeagueDebug = { lmsCup: data.debug };
     }
     document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
   }catch(err){
     console.error(err);
-    panel.className = "state-msg error";
-    panel.innerHTML = `Couldn't load ${label} LMS data. Make sure the sheet is shared as "Anyone with the link can view", then hit Refresh.`;
+    el.className = "state-msg error";
+    el.innerHTML = `Couldn't load ${league.label} data. Make sure the sheet is shared as "Anyone with the link can view", then hit Refresh.`;
   }
 }
 
@@ -10207,6 +10631,383 @@ function renderLmsCup(data, containerId){
   wireLmsTipsForm(data);
 }
 
+
+
+</script>
+<style id="alp-two-state-styles">
+.alp-mode-banner{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;margin:0 0 18px;border:1px solid var(--line-light);border-radius:8px;background:#fff}
+.alp-mode-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:4px 9px;border-radius:14px;background:var(--pitch);color:var(--chalk);font-size:10px;font-weight:800;letter-spacing:.06em}
+.alp-mode-banner strong{display:block;font-size:14px;margin-bottom:2px}.alp-mode-banner span:not(.alp-mode-badge){display:block;font-size:12.5px;color:#000;line-height:1.4}
+.alp-season-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.alp-collapsible{margin-top:14px;border:1px solid var(--line-light);border-radius:8px;background:#fff;overflow:hidden}
+.alp-collapsible summary{cursor:pointer;padding:13px 15px;font-weight:700;font-size:14px;list-style:none}.alp-collapsible summary::-webkit-details-marker{display:none}.alp-collapsible summary:after{content:"＋";float:right}.alp-collapsible[open] summary:after{content:"−"}
+.alp-actual-ladder,.alp-admin-box{padding:0 15px 15px}.alp-admin-row{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-light);font-size:13px}.alp-admin-row select,.alp-admin-actions input{font:inherit;border:1px solid var(--line-light);border-radius:5px;padding:7px;background:#fff}.alp-admin-actions{display:flex;gap:8px;margin-top:12px}.alp-admin-actions input{flex:1;min-width:0}.alp-check-summary{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0 12px;font-size:13px}
+@media(max-width:700px){.alp-season-grid{grid-template-columns:1fr}.alp-admin-actions{flex-direction:column}}
+</style>
+<script>
+
+function alpApiUrl(action, params={}){
+  const base = ALEAGUE_PREDICTOR_APPS_SCRIPT_URL;
+  if(!base) throw new Error("The A-League Predictor Apps Script URL has not been configured yet.");
+  const u = new URL(base);
+  u.searchParams.set("action", action);
+  Object.keys(params).forEach(k => { if(params[k] !== undefined && params[k] !== null) u.searchParams.set(k, params[k]); });
+  return u.toString();
+}
+
+function alpApiGet(action, params={}){
+  return new Promise((resolve,reject)=>{
+    const callbackName = "__alpJsonp_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
+    const timeout = setTimeout(()=>{ cleanup(); reject(new Error("The predictor service did not respond.")); },15000);
+    function cleanup(){ clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    window[callbackName] = data => { cleanup(); if(data && data.ok === false) reject(new Error(data.error || "Predictor request failed.")); else resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error("Couldn't reach the predictor service.")); };
+    script.src = alpApiUrl(action, {...params, callback: callbackName});
+    document.head.appendChild(script);
+  });
+}
+
+// Use the JSONP endpoint for submissions as well. This avoids browser CORS
+// problems with Apps Script web-app redirects and, importantly, avoids a
+// POST-then-fallback sequence that could accidentally submit twice.
+async function alpApiSubmit(playerName, teamName, picks){
+  return alpApiGet("submit", {playerName, teamName, picks: JSON.stringify(picks)});
+}
+
+function alpEsc(v){
+  return String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+}
+
+let alpState = null;
+
+function alpShowMessage(text, type=""){
+  const el=document.getElementById('alpMessage');
+  if(!el) return;
+  el.textContent=text;
+  el.className="alp-message show" + (type ? " "+type : "");
+}
+
+const ALP_TEAM_COLOURS={
+  ADE:{primary:'#d61823',secondary:'#041934'},
+  AKL:{primary:'#032775',secondary:'#0d1011'},
+  BRI:{primary:'#f06415',secondary:'#0d1011'},
+  CCM:{primary:'#fdc71f',secondary:'#041934'},
+  MAC:{primary:'#fafafa',secondary:'#0d1011'},
+  MCY:{primary:'#6db1e9',secondary:'#d61823'},
+  MVC:{primary:'#041934',secondary:'#fafafa'},
+  NEW:{primary:'#c3a062',secondary:'#041934'},
+  PER:{primary:'#49287c',secondary:'#f06415'},
+  SYD:{primary:'#6db1e9',secondary:'#041934'},
+  WEL:{primary:'#fdc71f',secondary:'#0d1011'},
+  WSW:{primary:'#d61823',secondary:'#0d1011'}
+};
+
+function alpColourText_(hex){
+  const h=hex.replace('#','');
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return ((r*299+g*587+b*114)/1000)>150 ? '#0d1011' : '#fafafa';
+}
+
+function alpTeamColour_(team){
+  const c=ALP_TEAM_COLOURS[String(team.code||'').toUpperCase()];
+  return c||{primary:'#fafafa',secondary:'#041934'};
+}
+
+function alpBuildLadder(teams, picks={}){
+  const holder=document.getElementById('alpLadder');
+  if(!holder) return;
+  const ordered=[...teams].sort((a,b)=>{
+    const ap=Number(picks[a.code]), bp=Number(picks[b.code]);
+    if(Number.isFinite(ap) && Number.isFinite(bp)) return ap-bp;
+    if(Number.isFinite(ap)) return -1;
+    if(Number.isFinite(bp)) return 1;
+    const aa=Number(a.actualPos), bb=Number(b.actualPos);
+    if(Number.isFinite(aa) && Number.isFinite(bb)) return aa-bb;
+    return String(a.name).localeCompare(String(b.name));
+  });
+  holder.innerHTML=ordered.map((t,i)=>{
+    const c=alpTeamColour_(t),text=alpColourText_(c.primary);
+    return `<div class="alp-pick-row" draggable="true" data-code="${alpEsc(t.code)}" style="--alp-primary:${c.primary};--alp-secondary:${c.secondary};--alp-text:${text}" aria-label="Drag ${alpEsc(t.name)} to change its predicted position">
+      <div class="alp-drag-handle" title="Drag to reorder" aria-hidden="true">☰</div>
+      <div class="alp-pick-number">${i+1}</div>
+      <div class="alp-pick-team">${alpEsc(t.name)}</div>
+    </div>`;
+  }).join('');
+  alpWireDragDrop_();
+}
+
+function alpSetSequentialPositions(){
+  const holder=document.getElementById('alpLadder');
+  if(!holder) return;
+  holder.querySelectorAll('.alp-pick-row').forEach((row,i)=>{
+    const n=row.querySelector('.alp-pick-number'); if(n) n.textContent=String(i+1);
+  });
+}
+
+let alpDraggedRow_=null, alpPointerDrag_=null;
+const ALP_TOUCH_HOLD_MS=150; // short press before a card lifts on touch (was the browser's ~500ms long-press)
+const ALP_TOUCH_SLOP=8;       // px of movement that means 'scrolling', not 'dragging'
+
+function alpMoveRowBefore_(row,target){
+  if(!row||!target||row===target) return;
+  const holder=document.getElementById('alpLadder');
+  if(!holder) return;
+  const rows=[...holder.querySelectorAll('.alp-pick-row')];
+  const from=rows.indexOf(row),to=rows.indexOf(target);
+  if(from<0||to<0) return;
+  if(from<to) target.after(row); else target.before(row);
+  alpSetSequentialPositions();
+}
+
+// Touch drag: move/end are handled at page level (not per card) so they keep
+// working whichever element the browser reports under the finger.
+function alpTouchMove_(e){
+  const d=alpPointerDrag_; if(!d||e.pointerId!==d.id) return;
+  const row=d.row;
+  if(!d.active){
+    // Finger moved before the short hold finished: that's a scroll, not a drag.
+    if(Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>ALP_TOUCH_SLOP){
+      clearTimeout(d.timer); alpPointerDrag_=null; row.draggable=true;
+    }
+    return;
+  }
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const target=el&&el.closest('.alp-pick-row');
+  if(target&&target!==row&&target.parentNode===row.parentNode){
+    const rect=target.getBoundingClientRect();
+    if(e.clientY<rect.top+rect.height/2) target.before(row); else target.after(row);
+    alpSetSequentialPositions();
+  }
+  // Nudge the page when the card is dragged near the top/bottom edge of the screen.
+  if(e.clientY<70) window.scrollBy(0,-14);
+  else if(e.clientY>window.innerHeight-70) window.scrollBy(0,14);
+  if(e.cancelable) e.preventDefault();
+}
+function alpTouchEnd_(e){
+  const d=alpPointerDrag_; if(!d||e.pointerId!==d.id) return;
+  clearTimeout(d.timer);
+  d.row.classList.remove('dragging'); d.row.draggable=true;
+  alpPointerDrag_=null; alpSetSequentialPositions();
+}
+if(!window.__alpTouchWired){
+  window.__alpTouchWired=true;
+  window.addEventListener('pointermove',alpTouchMove_,{passive:false});
+  window.addEventListener('pointerup',alpTouchEnd_);
+  window.addEventListener('pointercancel',alpTouchEnd_);
+}
+
+function alpWireDragDrop_(){
+  const holder=document.getElementById('alpLadder'); if(!holder) return;
+  if(!holder.dataset.touchGuard){
+    holder.dataset.touchGuard='1';
+    // Once a card has lifted, stop the page scrolling under the finger.
+    holder.addEventListener('touchmove',e=>{ if(alpPointerDrag_&&alpPointerDrag_.active&&e.cancelable) e.preventDefault(); },{passive:false});
+  }
+  holder.querySelectorAll('.alp-pick-row').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      alpDraggedRow_=row; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',row.dataset.code||'');
+    });
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target'));alpDraggedRow_=null;});
+    row.addEventListener('dragover',e=>{
+      e.preventDefault(); if(!alpDraggedRow_||alpDraggedRow_===row)return;
+      holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target')); row.classList.add('drag-target');
+      const rect=row.getBoundingClientRect();
+      if(e.clientY < rect.top+rect.height/2) row.before(alpDraggedRow_); else row.after(alpDraggedRow_);
+      alpSetSequentialPositions();
+    });
+    row.addEventListener('drop',e=>{e.preventDefault();holder.querySelectorAll('.drag-target').forEach(x=>x.classList.remove('drag-target'));alpSetSequentialPositions();});
+    row.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='mouse'){ row.draggable=true; return; }
+      if(e.target.closest('button,input,select,a')) return;
+      // Touch/pen: switch off the browser's native long-press drag (that's the slow
+      // ~half-second hold) and run our own, which starts after a very short press
+      // anywhere on the card, or instantly from the handle.
+      row.draggable=false;
+      const d={row,id:e.pointerId,startX:e.clientX,startY:e.clientY,active:false,timer:null};
+      const activate=()=>{
+        d.active=true; row.classList.add('dragging');
+        try{ row.setPointerCapture(d.id); }catch(_){}
+        if(navigator.vibrate) navigator.vibrate(8);
+      };
+      if(e.target.closest('.alp-drag-handle')) activate();
+      else d.timer=setTimeout(()=>{ if(alpPointerDrag_===d) activate(); }, ALP_TOUCH_HOLD_MS);
+      alpPointerDrag_=d;
+    });
+  });
+}
+
+function alpRenderLeaderboard(rows){
+  const body=document.getElementById('alpLeaderboardBody');
+  if(!body) return;
+  if(!rows || !rows.length){
+    body.innerHTML='<tr><td colspan="3">No predictions submitted yet.</td></tr>';
+    return;
+  }
+  body.innerHTML=rows.map((r,i)=>{
+    const pos=Number(r.pos)||i+1;
+    const team=r.teamName || r.team || '';
+    const penalty=(r.totalPenalty!==undefined && r.totalPenalty!==null && r.totalPenalty!=='') ? r.totalPenalty : (r.penalty ?? '');
+    return `<tr><td>${pos}</td><td>${alpEsc(team)}</td><td>${alpEsc(penalty)}</td></tr>`;
+  }).join('');
+}
+
+function alpRenderCurrent(prediction){
+  const el=document.getElementById('alpCurrent');
+  if(!el) return;
+  if(!prediction || !prediction.teamName){
+    el.innerHTML='';
+    return;
+  }
+  const penalty = prediction.totalPenalty ?? prediction.penalty ?? '';
+  el.innerHTML=`<div class="alp-current-box"><strong>${alpEsc(prediction.teamName)}</strong><span>Current penalty: <b>${alpEsc(penalty)}</b></span></div>`;
+}
+
+function alpReadPicks(){
+  const picks={};
+  document.querySelectorAll('#alpLadder .alp-pick-row').forEach((row,i)=>{ picks[row.dataset.code]=i+1; });
+  return picks;
+}
+
+async function renderALeaguePredictor(){
+  const el=document.getElementById('sideLeaguesContainer');
+  el.className="";
+  const themeColor=sideLeagueThemeColor('aleaguepredictor');
+  if(themeColor) applyDivisionTheme({color:themeColor});
+  if(!ALEAGUE_PREDICTOR_APPS_SCRIPT_URL){
+    el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div><div class="alp-message show error">The predictor endpoint is not configured.</div></div>';
+    return;
+  }
+  try{
+    alpState=await alpApiGet("predictor");
+    const mode=String(alpState.mode||"PRE-SEASON").toUpperCase();
+    if(mode==="PRE-SEASON") await alpRenderPreSeason_(el);
+    else if(mode==="SEASON") await alpRenderSeason_(el);
+    else await alpRenderClosed_(el);
+  }catch(err){
+    console.error(err);
+    el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div><div class="alp-message show error">'+alpEsc(err.message||"Could not load the predictor.")+'</div></div>';
+  }
+}
+
+function alpModeBanner_(mode){
+  const cfg={
+    "PRE-SEASON":["PRE-SEASON","Predictions are open","Submit or update your final ladder prediction. The leaderboard and current ladder will appear when the competition moves to SEASON mode."],
+    "SEASON":["SEASON","Predictions are locked","The prediction period has closed. View the leaderboard, check any submitted prediction and compare predictions with the current ladder."],
+    "CLOSED":["CLOSED","Competition closed","The predictor is closed. Results and submitted predictions remain available for viewing."]
+  }[mode];
+  return cfg?'<div class="alp-mode-banner"><span class="alp-mode-badge">'+cfg[0]+'</span><div><strong>'+cfg[1]+'</strong><span>'+cfg[2]+'</span></div></div>':'';
+}
+
+async function alpGetEligibleTeams_(){
+  let eligible=alpState.eligibleTeams||[];
+  if(eligible.length) return eligible;
+  try{
+    const roddy=DIVISIONS.find(d=>d.id==='roddy');
+    const res=await cachedFetch(csvUrlFor(roddy));
+    if(res.ok){
+      const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data,set=new Set();
+      let header=-1;
+      for(let r=0;r<Math.min(rows.length,30);r++) if(cell(rows[r]||[],5).toUpperCase()==='POS'){header=r;break;}
+      if(header>=0) for(let r=header+1;r<rows.length;r++){
+        const pos=String(cell(rows[r]||[],5)||'').trim(),name=String(cell(rows[r]||[],7)||'').trim();
+        if(!/^\d+$/.test(pos)) break;
+        if(name)set.add(name);
+      }
+      eligible=[...set].sort((a,b)=>a.localeCompare(b));
+    }
+  }catch(e){console.warn("Roddy roster load failed",e);}
+  return eligible;
+}
+
+async function alpRenderPreSeason_(el){
+  const eligible=await alpGetEligibleTeams_();
+  el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>'+
+    alpModeBanner_("PRE-SEASON")+
+    '<div class="alp-intro"><p>Predict the final A-League Men ladder. Each club scores penalty points equal to the absolute difference between your predicted position and its actual position.</p><p><strong>Exact position = 0 points.</strong> Your total is the sum across all clubs.</p></div>'+
+    '<div class="alp-card"><h3>Predict the final ladder</h3><div class="alp-field" style="margin-bottom:12px;"><label for="alpTeam">Your team</label><select id="alpTeam"><option value="">Select your team…</option></select></div><p class="alp-instructions">Drag the club cards into your preferred order, from <strong>1st</strong> at the top to last at the bottom. You can drag them on desktop or touch-and-drag on mobile.</p><div id="alpLadder" class="alp-ladder"></div><button id="alpSubmit" class="alp-submit">Submit / Update Prediction</button><div id="alpMessage" class="alp-message"></div></div></div>';
+  const teamSelect=document.getElementById('alpTeam');
+  teamSelect.innerHTML='<option value="">Select your team…</option>'+eligible.map(t=>'<option value="'+alpEsc(t)+'">'+alpEsc(t)+'</option>').join('');
+  alpBuildLadder(alpState.teams||{});
+  const saved=localStorage.getItem('eliza_alp_team_name')||'';
+  if(saved&&eligible.some(t=>t.toLowerCase()===saved.toLowerCase())){
+    teamSelect.value=eligible.find(t=>t.toLowerCase()===saved.toLowerCase())||saved;
+    try{const mine=await alpApiGet("prediction",{teamName:saved});if(mine&&mine.teamName)alpBuildLadder(alpState.teams,mine.picks||{});}catch(e){}
+  }
+  teamSelect.addEventListener('change',async()=>{
+    const n=teamSelect.value;if(!n){alpBuildLadder(alpState.teams,{});return;}
+    localStorage.setItem('eliza_alp_team_name',n);
+    try{const mine=await alpApiGet("prediction",{teamName:n});alpBuildLadder(alpState.teams,mine&&mine.teamName?mine.picks||{}:{});}catch(e){alpBuildLadder(alpState.teams,{});}
+  });
+  document.getElementById('alpSubmit').addEventListener('click',async()=>{
+    const n=teamSelect.value,picks=alpReadPicks(),btn=document.getElementById('alpSubmit');
+    if(!n){alpShowMessage("Please select your team.","error");return;}
+    if(Object.keys(picks).length!==alpState.teams.length){alpShowMessage("Please assign every club a position.","error");return;}
+    btn.disabled=true;alpShowMessage("Submitting prediction…");
+    try{const r=await alpApiSubmit('',n,picks);localStorage.setItem('eliza_alp_team_name',n);alpShowMessage(r.message||"Prediction submitted successfully.","success");}
+    catch(e){alpShowMessage(e.message||"Couldn't submit the prediction.","error");}
+    finally{btn.disabled=false;}
+  });
+}
+
+async function alpRenderSeason_(el){
+  el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>'+
+    alpModeBanner_("SEASON")+
+    '<div class="alp-season-grid"><div class="alp-card"><h3>Overall leaderboard</h3><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="3">Loading…</td></tr></tbody></table></div></div>'+
+    '<div class="alp-card"><h3>Check a prediction</h3><div class="alp-field"><label for="alpCheckTeam">Select team</label><select id="alpCheckTeam"><option value="">Select a team…</option></select></div><div id="alpPredictionCheck"><p class="alp-muted">Select a team to view its prediction.</p></div></div></div>'+
+    '<details class="alp-collapsible"><summary>Current A-League ladder</summary><div id="alpActualLadder" class="alp-actual-ladder"></div></details>'+
+    '<details class="alp-collapsible"><summary>⚙ Update current ladder</summary><div class="alp-admin-box"><p class="alp-muted">Enter the current ladder positions and submit the update.</p><div id="alpAdminLadder"></div><div class="alp-admin-actions"><button id="alpUpdateLadder" class="alp-submit">Update Current Ladder</button></div><div id="alpAdminMessage" class="alp-message"></div></div></details></div>';
+  alpRenderLeaderboard(alpState.leaderboard||[]);
+  alpRenderActualLadder_(alpState.teams||[]);
+  alpRenderAdminLadder_(alpState.teams||[]);
+  const sel=document.getElementById('alpCheckTeam');
+  sel.innerHTML='<option value="">Select a team…</option>'+(alpState.leaderboard||[]).map(r=>'<option value="'+alpEsc(r.teamName)+'">'+alpEsc(r.teamName)+'</option>').join('');
+  sel.addEventListener('change',async()=>{
+    const holder=document.getElementById('alpPredictionCheck'),n=sel.value;
+    if(!n){holder.innerHTML='<p class="alp-muted">Select a team to view its prediction.</p>';return;}
+    holder.innerHTML='<p class="alp-muted">Loading prediction…</p>';
+    try{alpRenderPredictionBreakdown_(holder,await alpApiGet("prediction",{teamName:n}),alpState.teams||[]);}
+    catch(e){holder.innerHTML='<div class="alp-message show error">'+alpEsc(e.message||"Could not load prediction.")+'</div>';}
+  });
+  document.getElementById('alpUpdateLadder').addEventListener('click',async()=>{
+    const btn=document.getElementById('alpUpdateLadder');
+    const actuals={};document.querySelectorAll('#alpAdminLadder .alp-admin-position').forEach(s=>actuals[s.dataset.code]=Number(s.value));
+    btn.disabled=true;alpShowAdminMessage_("Updating current ladder…");
+    try{const r=await alpApiGet("updateLadder",{actuals:JSON.stringify(actuals)});alpShowAdminMessage_(r.message||"Current ladder updated successfully.","success");alpState=await alpApiGet("predictor");alpRenderLeaderboard(alpState.leaderboard||[]);alpRenderActualLadder_(alpState.teams||[]);alpRenderAdminLadder_(alpState.teams||[]);}
+    catch(e){alpShowAdminMessage_(e.message||"Couldn't update the current ladder.","error");}
+    finally{btn.disabled=false;}
+  });
+}
+
+async function alpRenderClosed_(el){
+  el.innerHTML='<div class="alp-page"><div class="section-head"><h2 style="font-size:18px;">A-League Table Predictor</h2></div>'+alpModeBanner_("CLOSED")+
+    '<div class="alp-card"><h3>Final results</h3><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"><tr><td colspan="3">Loading…</td></tr></tbody></table></div></div></div>';
+  alpRenderLeaderboard(alpState.leaderboard||[]);
+}
+
+function alpRenderActualLadder_(teams){
+  const h=document.getElementById('alpActualLadder');if(!h)return;
+  const rows=teams.filter(t=>Number.isFinite(Number(t.actualPos))).sort((a,b)=>Number(a.actualPos)-Number(b.actualPos));
+  h.innerHTML=rows.length?'<div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Club</th></tr></thead><tbody>'+rows.map(t=>'<tr><td>'+t.actualPos+'</td><td>'+alpEsc(t.name)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="alp-muted">The current ladder has not been entered yet.</p>';
+}
+
+function alpRenderAdminLadder_(teams){
+  const h=document.getElementById('alpAdminLadder');if(!h)return;
+  const n=teams.length;
+  h.innerHTML=teams.map(t=>'<div class="alp-admin-row"><span>'+alpEsc(t.name)+'</span><select class="alp-admin-position" data-code="'+alpEsc(t.code)+'">'+Array.from({length:n},(_,i)=>'<option value="'+(i+1)+'"'+(Number(t.actualPos)===i+1?' selected':'')+'>'+(i+1)+'</option>').join('')+'</select></div>').join('');
+}
+
+function alpRenderPredictionBreakdown_(h,p,teams){
+  if(!p||!p.found){h.innerHTML='<p class="alp-muted">No prediction has been submitted for this team.</p>';return;}
+  const rows=teams.map(t=>{const predicted=Number(p.picks&&p.picks[t.code]),actual=Number(t.actualPos);return {name:t.name,predicted,actual,penalty:Number.isFinite(predicted)&&Number.isFinite(actual)?Math.abs(predicted-actual):null};}).sort((a,b)=>a.predicted-b.predicted);
+  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+alpEsc(r.name)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>').join('')+'</tbody></table></div>';
+}
+
+function alpShowAdminMessage_(text,type=""){
+  const e=document.getElementById('alpAdminMessage');if(!e)return;e.textContent=text;e.className="alp-message show"+(type?" "+type:"");
+}
+
 async function loadSideLeague(leagueKey){
   const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
   const el = document.getElementById('sideLeaguesContainer');
@@ -10218,9 +11019,61 @@ async function loadSideLeague(leagueKey){
   // than popping in after a delay — cached after the first call, so this
   // only costs a real fetch once per session.
   await loadSideLeaguesHubData();
-  // Same reasoning for the LMS sub-tab visibility check (lmsHubSubTabVisible)
-  // — needed before renderLmsHubShell decides which tabs to draw.
+  // Page Visibility is loaded here too so nav/search reflect it.
   await loadPageVisibilityData();
+
+  if(league.isTippingOverall){
+    try{
+      const otherKey = league.key === "almtipping" ? "alwtipping" : "almtipping";
+      const otherLeague = SIDE_LEAGUES.find(s => s.key === otherKey);
+      const [res, otherRes] = await Promise.all([
+        cachedFetch(sideLeagueCsvUrlFor(league)),
+        cachedFetch(sideLeagueCsvUrlFor(otherLeague)),
+        loadSideLeagueTeamMap()
+      ]);
+      if(!res.ok) throw new Error("HTTP " + res.status + " for " + league.label);
+      if(!otherRes.ok) throw new Error("HTTP " + otherRes.status + " for " + otherLeague.label);
+
+      const csvText = await res.text();
+      const otherCsvText = await otherRes.text();
+      const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
+      const otherRows = Papa.parse(otherCsvText, {skipEmptyLines:false}).data;
+      const overall = parseTippingOverall(rows, league.tippingStartRow || 41);
+      const otherOverall = parseTippingOverall(otherRows, otherLeague.tippingStartRow || 41);
+      overall.clubChampionship = combineTippingClubChampionship(
+        league.key === "almtipping" ? overall : otherOverall,
+        league.key === "almtipping" ? otherOverall : overall
+      );
+
+      sideLeagueData = {
+        isTippingOverall: true,
+        overall,
+        label: league.label,
+        key: league.key
+      };
+      renderSideLeagueContent();
+      sideLeagueDebug = {
+        tippingOverall: overall.debug,
+        clubChampionship: {
+          teamsEnteredBoth: overall.clubChampionship.length,
+          sourceLeague: league.key,
+          combinedFrom: ["ALM Tipping", "ALW Tipping"]
+        },
+        otherTippingOverall: otherOverall.debug
+      };
+      document.getElementById('debugOut').textContent = "Side league debug: " + JSON.stringify(sideLeagueDebug, null, 2);
+    }catch(err){
+      console.error(err);
+      el.className = "state-msg error";
+      el.innerHTML = "Couldn't load " + league.label + " data. Make sure both tipping sheets are shared as \"Anyone with the link can view\", then hit Refresh.";
+    }
+    return;
+  }
+
+  if(league.isALeaguePredictor){
+    await renderALeaguePredictor();
+    return;
+  }
 
   if(league.isHonourBoard){
     try{
@@ -10258,14 +11111,7 @@ async function loadSideLeague(leagueKey){
   }
 
   if(league.isLms){
-    const validLmsSubTabs = new Set(["auscup", "aleague"]);
-    lmsHubActiveTab = (pendingSideLeagueSubTab && validLmsSubTabs.has(pendingSideLeagueSubTab) && lmsHubSubTabVisible(pendingSideLeagueSubTab))
-      ? pendingSideLeagueSubTab
-      : "auscup";
-    pendingSideLeagueSubTab = null;
-    lmsHubData = { auscup: null, aleague: null };
-    renderLmsHubShell(league);
-    await loadLmsHubTab(league, lmsHubActiveTab);
+    await loadLmsPage(league);
     return;
   }
 
@@ -10281,15 +11127,16 @@ async function loadSideLeague(leagueKey){
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
     if(league.singleTable){
-      const table = parseFplTable(rows, league.titleText);
-      // AFL Supercoach fixtures live in one continuous block: AH=Team1, AI=Team1
-      // score, AJ=Team2 score, AK=Team2 — 20 rounds followed by Quarter/Semi/
-      // Preliminary/Final, not the GW-labelled two-block layout FPL uses.
-      const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
-      // "Overall" table — same marker-anchored convention (OVERALL_TABLE_START
-      // in column AN, POS/Team/Pts at fixed offsets from it) now used across
-      // AFL, NRL and EPL Supercoach. Shown underneath the Fixtures section.
-      const overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
+      let table, fx, overall;
+      if(league.isNbl){
+        const parsed = parseNblSupercoach(rows);
+        table = parsed.table; fx = parsed.fx; overall = parsed.overall;
+      }else{
+        table = parseFplTable(rows, league.titleText);
+        // AFL/NRL/EPL Supercoach fixtures use the established AH:AK block.
+        fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH
+        overall = ["afl","nrl","eplsc"].includes(league.key) ? parseSideLeagueOverallTable(rows) : null;
+      }
 
       sideLeagueData = { singleTable: true, table, fx, overall, label: league.label, key: league.key };
       sideLeagueActiveRound = {};
@@ -10474,6 +11321,7 @@ function renderHome(){
         <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
         <div class="home-hero-banner-text">ELIZA CUP</div>
       </div>
+      <a href="#whatsmydiv" class="home-division-find-banner">26/27 LEAGUES - FIND MY DIVISION</a>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
@@ -10550,11 +11398,17 @@ let facupBracketSelectedTeam = null;
 function renderFACup(){
   const tabsEl = document.getElementById('facupRoundTabs');
   const toggleEl = document.getElementById('facupViewToggle');
-  if(facupRounds.length === 0){
+  const firstRound = facupRounds[0];
+  const facupStarted = !!(firstRound && firstRound.fixtures.some(f =>
+    f.home && f.away &&
+    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD" &&
+    f.home.toUpperCase() !== "BYE" && f.away.toUpperCase() !== "BYE"
+  ));
+  if(!facupStarted){
     toggleEl.innerHTML = "";
     tabsEl.innerHTML = "";
-    document.getElementById('facupContainer').className = "state-msg error";
-    document.getElementById('facupContainer').innerHTML = "Couldn't find the FA Cup bracket. Check the Debug panel below.";
+    document.getElementById('facupContainer').className = "state-msg";
+    document.getElementById('facupContainer').innerHTML = `The Eliza FA Cup is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
     document.getElementById('facupUpdated').textContent = "";
     return;
   }
@@ -10725,7 +11579,19 @@ load();
 // Fire-and-forget: never blocks initial render. Nav/home already painted with
 // everything visible by the time this resolves; this just retroactively hides
 // whatever page-visibility.json marks as hidden.
-loadPageVisibilityData().then(()=> applyPageVisibility());
+loadPageVisibilityData().then(()=>{
+  renderDivNav(); // also re-applies page visibility; side leagues hidden in admin drop out of the nav
+  if(currentDivision.type === "sideleagues"){
+    const activeKey = (currentDivision.sideLeagueKey && SIDE_LEAGUES.some(s=>s.key===currentDivision.sideLeagueKey))
+      ? currentDivision.sideLeagueKey : SIDE_LEAGUES[0].key;
+    renderSideLeagueTabs(activeKey);
+  }
+  const homePillsEl = document.getElementById('homeSideLeaguesPills');
+  if(homePillsEl){
+    const activeLeagues = sideLeaguesInDisplayOrder().filter(s => !completedSideLeagueKeys.has(s.key));
+    homePillsEl.innerHTML = activeLeagues.map(s => `<a href="#sideleagues=${s.key}" class="home-sideleagues-pill">${s.label}</a>`).join("");
+  }
+});
 
 // Fire-and-forget: banner starts hidden by default; shows itself once the
 // fetch resolves, if enabled and in scope for the current page.
