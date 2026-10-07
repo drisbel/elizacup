@@ -25,7 +25,7 @@
     "countdownEnabled": false,
     "notes": "",
     "link": "#sideleagues=lms:aleague",
-    "rules": ""
+    "rules": "The aim of the game is to choose a winner from each round of the competition\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nEveryone starts off with 3 lives, and in each round you predict just one team to win\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nIf your prediction is correct then your life remains, but if you're incorrect then you lose a life.\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nGet three predictions wrong and you're eliminated.\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nClauses.\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n1. You can only choose one team a maximum of 3 times\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n2. You cannot pick the same team two weeks in a row\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n3. You cannot pick the same team more than twice in the first half of the season (rd 1-13) or the 2nd half of the season (rd 14-26)\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n4. You cannot predict a draw.\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n5. If your choice results in a draw, you lose a life\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n6. If you fail to pick a team before the first game of the round, you lose a life (Did Not Pick)\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nNote, that there will be an exception on the first round of the season for clause 6, due to the late set up of LMS, but players can only choose a side that has not kicked off their match yet"
   },
   {
     "id": "muvsekh5",
