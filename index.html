@@ -6926,37 +6926,81 @@ function parseHistoricalSeason(rows){
 
     const teams = [];
     for(let dr=headerRow+1; dr<rows.length; dr++){
-      const pos = cell(rows[dr]||[],db.base);
-      if(!pos) break;
+      const row = rows[dr] || [];
+      const hasAny = Array.from({length:10}, (_,i)=>cell(row,db.base+i)).some(Boolean);
+      if(!hasAny) break;
+      const pos = cell(row,db.base);
+      // Only rows beginning with a numeric position belong to the standings table.
+      // This prevents the next section of the historical sheet from being consumed.
+      if(!/^\\d+$/.test(pos)) continue;
       teams.push({
-        pos, team: cell(rows[dr]||[],db.base+1), pts: cell(rows[dr]||[],db.base+2),
-        w: cell(rows[dr]||[],db.base+3), d: cell(rows[dr]||[],db.base+4), l: cell(rows[dr]||[],db.base+5),
-        for: cell(rows[dr]||[],db.base+6), aga: cell(rows[dr]||[],db.base+7), dif: cell(rows[dr]||[],db.base+8),
-        status: cell(rows[dr]||[],db.base+9)
+        pos, team: cell(row,db.base+1), pts: cell(row,db.base+2),
+        w: cell(row,db.base+3), d: cell(row,db.base+4), l: cell(row,db.base+5),
+        for: cell(row,db.base+6), aga: cell(row,db.base+7), dif: cell(row,db.base+8),
+        status: cell(row,db.base+9)
       });
     }
     if(!teams.length) return;
 
+    // In the 25/26 archive the section title is on the row immediately above
+    // the common header row (e.g. A2 = ELIZA CUP, L2 = DIVISION 2A).
+    // Fall back to the configured name if that title cell is blank.
     const titleRaw = cell(rows[headerRow-1]||[], db.base).trim();
     divisions[db.key] = { name: titleRaw || db.name, teams };
   });
 
-  // ---- Roddy (BD:BG) — now its own isolated block. Header row found via the
-  // TEAM/DIV/TOTAL combo (robust to whatever ends up in the Pos column's own text). ----
+  // ---- Roddy (BD:BG) ----
+  // The 25/26 archive does NOT contain a TEAM/DIV/TOTAL header row here.
+  // BD2 contains the section label "RODDY", and the actual ranked data starts
+  // at BD16. Detect the section label and then read the following contiguous
+  // numeric-position rows. Also retain the older header-based format for other
+  // historical tabs.
   const RODDY_BASE = 55; // BD
   let roddyHeaderRow = -1;
+  let roddyDataStart = -1;
+
   for(let r=0; r<rows.length; r++){
     const m = cell(rows[r]||[],RODDY_BASE+1).toUpperCase();
     const n = cell(rows[r]||[],RODDY_BASE+2).toUpperCase();
     const o = cell(rows[r]||[],RODDY_BASE+3).toUpperCase();
-    if(m === "TEAM" && n === "DIV" && o === "TOTAL"){ roddyHeaderRow = r; break; }
+    if(m === "TEAM" && n === "DIV" && o === "TOTAL"){
+      roddyHeaderRow = r;
+      roddyDataStart = r + 1;
+      break;
+    }
   }
+
+  // 25/26 format: BD contains "RODDY" as the section heading, with no
+  // separate column header row.
+  if(roddyDataStart === -1){
+    for(let r=0; r<rows.length; r++){
+      if(cell(rows[r]||[],RODDY_BASE).toUpperCase() === "RODDY"){
+        roddyHeaderRow = r;
+        roddyDataStart = r + 1;
+        break;
+      }
+    }
+  }
+
   const roddy = [];
-  if(roddyHeaderRow !== -1){
-    for(let r=roddyHeaderRow+1; r<rows.length; r++){
-      const pos = cell(rows[r]||[],RODDY_BASE);
-      if(!pos) break;
-      roddy.push({ pos, team: cell(rows[r]||[],RODDY_BASE+1), division: cell(rows[r]||[],RODDY_BASE+2), total: cell(rows[r]||[],RODDY_BASE+3) });
+  if(roddyDataStart !== -1){
+    for(let r=roddyDataStart; r<rows.length; r++){
+      const row = rows[r] || [];
+      const pos = cell(row,RODDY_BASE);
+      const team = cell(row,RODDY_BASE+1);
+      const division = cell(row,RODDY_BASE+2);
+      const total = cell(row,RODDY_BASE+3);
+
+      // Skip blank rows before the first entry, but once the table has started,
+      // stop at the first fully blank Roddy row.
+      const anyRoddy = pos || team || division || total;
+      if(!anyRoddy) {
+        if(roddy.length) break;
+        continue;
+      }
+
+      if(!/^\\d+$/.test(pos) || !team) continue;
+      roddy.push({ pos, team, division, total });
     }
   }
 
@@ -7055,51 +7099,32 @@ function parseHistoricalSeason(rows){
     if(fixtures.length) eclKnockout.push({ name: "Knockout", fixtures });
   }
 
-  // ---- Historical Playoffs / Finals (DA:DG) — completely separate from the
-  // division, Roddy, FA Cup and ECL parsers above.
-  // DA=Competition, DB=Division, DC=Round, DD=Home Team, DE=Home Score,
-  // DF=Away Score, DG=Away Team.
-  // A row containing only DA starts a competition block. Subsequent match rows
-  // may leave DA blank and inherit that competition. Fully populated rows are
-  // also accepted when DA is repeated on every row.
+  // ---- Historical Playoffs / Finals (DA:DG) ----
+  // 25/26 stores this as a dedicated block at the far right of the sheet:
+  // DA Competition, DB Division, DC Round, DD Home, DE H, DF A, DG Away.
+  // Some rows repeat the competition name; both formats are supported.
   const PLAYOFF_BASE = 104; // DA
   const historicalPlayoffs = [];
-  let currentPlayoffCompetition = "";
 
   for(let r=0; r<rows.length; r++){
     const row = rows[r] || [];
-    const competition = cell(row, PLAYOFF_BASE).trim();
-    const division = cell(row, PLAYOFF_BASE+1).trim();
-    const round = cell(row, PLAYOFF_BASE+2).trim();
-    const home = cell(row, PLAYOFF_BASE+3).trim();
-    const homeScore = cell(row, PLAYOFF_BASE+4).trim();
-    const awayScore = cell(row, PLAYOFF_BASE+5).trim();
-    const away = cell(row, PLAYOFF_BASE+6).trim();
+    const competition = cell(row, PLAYOFF_BASE);
+    const division = cell(row, PLAYOFF_BASE+1);
+    const round = cell(row, PLAYOFF_BASE+2);
+    const home = cell(row, PLAYOFF_BASE+3);
+    const homeScore = cell(row, PLAYOFF_BASE+4);
+    const awayScore = cell(row, PLAYOFF_BASE+5);
+    const away = cell(row, PLAYOFF_BASE+6);
 
-    const hasAny = !!(competition || division || round || home || homeScore || awayScore || away);
-    if(!hasAny) continue;
+    if(!competition && !division && !round && !home && !homeScore && !awayScore && !away) continue;
 
-    // Competition heading row — remember it for following match rows.
-    if(competition && !division && !round && !home && !homeScore && !awayScore && !away){
-      currentPlayoffCompetition = competition;
-      continue;
-    }
+    // Header row.
+    if(competition.toUpperCase() === "COMPETITION") continue;
 
-    const effectiveCompetition = competition || currentPlayoffCompetition;
-    if(competition) currentPlayoffCompetition = competition;
-
-    // Ignore incomplete rows rather than allowing unrelated sheet content to
-    // leak into the historical playoff display.
-    if(!effectiveCompetition || !division || !round || !home || !away) continue;
+    if(!competition || !division || !round || !home || !away) continue;
 
     historicalPlayoffs.push({
-      competition: effectiveCompetition,
-      division,
-      round,
-      home,
-      homeScore,
-      awayScore,
-      away
+      competition, division, round, home, homeScore, awayScore, away
     });
   }
 
@@ -7111,12 +7136,8 @@ function parseHistoricalSeason(rows){
     eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
     eclGroupsDebug,
     eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
+    historicalPlayoffsFound: historicalPlayoffs.map(f=>({competition:f.competition, division:f.division, round:f.round, home:f.home, away:f.away})),
     eclKnockoutRawDump,
-    historicalPlayoffsFound: historicalPlayoffs.length,
-    historicalPlayoffs: historicalPlayoffs.map(f=>({
-      competition:f.competition, division:f.division, round:f.round,
-      home:f.home, homeScore:f.homeScore, awayScore:f.awayScore, away:f.away
-    })),
     rawRowDump: rows.slice(0, 35).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")).filter(line => !line.endsWith(":"))
   };
 
@@ -7299,8 +7320,9 @@ function histFixtureTableHtml(fixtures, showDivTags){
   </tbody></table></div>`;
 }
 
+
 function historicalPlayoffDivisionKey(value){
-  const t = (value||"").trim().toUpperCase().replace(/\\s+/g," ");
+  const t = (value||"").trim().toUpperCase().replace(/\s+/g," ");
   if(/^D1$|^D 1$|^DIVISION 1$|^ELIZA CUP$/.test(t)) return "d1";
   if(/^D2A$|^D 2A$|^2A$|^DIVISION 2A$/.test(t)) return "d2a";
   if(/^D2B$|^D 2B$|^2B$|^DIVISION 2B$/.test(t)) return "d2b";
@@ -7310,61 +7332,42 @@ function historicalPlayoffDivisionKey(value){
 }
 
 function histPlayoffFixtureCardHtml(f){
-  const h = splitTeamDivTag(f.home);
-  const a = splitTeamDivTag(f.away);
   const homeNum = parseInt(f.homeScore,10);
   const awayNum = parseInt(f.awayScore,10);
   const hasScore = !isNaN(homeNum) && !isNaN(awayNum);
   const homeWin = hasScore && homeNum > awayNum;
   const awayWin = hasScore && awayNum > homeNum;
   const isDraw = hasScore && homeNum === awayNum;
-  const resultClass = (won) => hasScore ? (won ? "fx-win" : isDraw ? "fx-draw" : "fx-lose") : "";
+  const resultClass = won => hasScore ? (won ? "fx-win" : isDraw ? "fx-draw" : "fx-lose") : "";
   const scoreHtml = hasScore
     ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
     : `<span class="upcoming">vs</span>`;
 
   return `<div class="facup-card">
-    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(h.name)}</span>${histDivPill(h.tag)}</div>
+    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(f.home)}</span></div>
     <div class="fixture-score">${scoreHtml}</div>
-    <div class="facup-team facup-team-away ${resultClass(awayWin)}">${histDivPill(a.tag)}<span class="facup-team-name">${histTeamLink(a.name)}</span></div>
+    <div class="facup-team facup-team-away ${resultClass(awayWin)}"><span class="facup-team-name">${histTeamLink(f.away)}</span></div>
   </div>`;
 }
 
 function histPlayoffsHtml(playoffs, divKey){
-  const matches = (playoffs || []).filter(f => historicalPlayoffDivisionKey(f.division) === divKey);
+  const matches = (playoffs||[]).filter(f => historicalPlayoffDivisionKey(f.division) === divKey);
   if(!matches.length) return "";
 
-  const competitions = [];
-  const byCompetition = new Map();
-
+  const byCompetition = {};
   matches.forEach(f=>{
-    const compKey = f.competition.trim();
-    if(!byCompetition.has(compKey)){
-      const group = { name: compKey, rounds: [] };
-      byCompetition.set(compKey, group);
-      competitions.push(group);
-    }
-
-    const group = byCompetition.get(compKey);
-    let roundGroup = group.rounds.find(r => r.name === f.round.trim());
-    if(!roundGroup){
-      roundGroup = { name: f.round.trim(), fixtures: [] };
-      group.rounds.push(roundGroup);
-    }
-    roundGroup.fixtures.push(f);
+    if(!byCompetition[f.competition]) byCompetition[f.competition] = {};
+    if(!byCompetition[f.competition][f.round]) byCompetition[f.competition][f.round] = [];
+    byCompetition[f.competition][f.round].push(f);
   });
 
-  let html = `<div id="historyPlayoffsSection" class="section-head" style="margin-top:36px;">
-    <h2 style="font-size:18px;">Playoffs / Finals</h2>
-  </div>`;
+  let html = `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;">Playoffs / Finals</h2></div>`;
 
-  competitions.forEach(comp=>{
-    if(competitions.length > 1){
-      html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${comp.name}</h4>`;
-    }
-    comp.rounds.forEach(round=>{
-      html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round.name}</h4>`;
-      html += `<div class="facup-grid">${round.fixtures.map(histPlayoffFixtureCardHtml).join("")}</div>`;
+  Object.entries(byCompetition).forEach(([competition, rounds])=>{
+    html += `<h3 style="font-family:'Barlow Condensed',sans-serif;font-size:16px;margin:0 0 8px;">${competition}</h3>`;
+    Object.entries(rounds).forEach(([round, fixtures])=>{
+      html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${round}</h4>`;
+      html += `<div class="facup-grid">${fixtures.map(histPlayoffFixtureCardHtml).join("")}</div>`;
     });
   });
 
