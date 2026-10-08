@@ -6892,6 +6892,10 @@ const HISTORY_SEASONS = [
   { key: "2223", label: "22/23", gid: "1635458493" }
 ];
 
+// Exact snapshot supplied for the 25/26 tab. Live data is always preferred; this is
+// only a safety net if that Google Sheets tab cannot be exported to the browser.
+const HISTORY_2526_FALLBACK_CSV = ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Competition,Division,Round,Home,H,A,Away\nELIZA CUP,,,,,,,,,,,DIVISION 2A,,,,,,,,,,,DIVISION 2B,,,,,,,,,,,DIVISION 3A,,,,,,,,,,,DIVISION 3B,,,,,,,,,,,RODDY,,,,,FA CUP,,,,,,ECL GROUP A,,,,,,,,,,,ECL GROUP B,,,,,,,,,,,ECL GROUP C,,,,,,,,,,,,,,,,Division 2A Finals,2A,QF,THE WAINE TRAIN,75,65,SILVERMAN'S XI\nPOS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,DIV,TOTAL,,ROUND OF 64,,,,,,POS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,PTS,W,D,L,FOR,AGA,DIF,STATUS,,POS,TEAM,PTS,W,D,L,PTS +,PTS -,DIFF,STATUS,,,,,,,Division 2A Finals,2A,SF,Team C,3,0,Team D\n1,BC UNITED ZEBRAS,55,18,1,7,1683,1612,71,WINNER,,1,HARVEY FREKES,44,14,2,6,1414,1306,108,WINNER,,1,JARVIS ZEBRAS,54,18,0,4,1441,1212,229,WINNER,,1,AFC BIG RED PORT,49,16,1,5,1422,1202,220,WINNER,,1,THE D GENREAU,50,16,2,4,1422,1217,205,WINNER,,1,SILVERMAN'S XI,DIVISION 2B,1791,,\"DOG GOES WOOF, PAYNE GOES MEOW (D3A)\",54,66,ZEN PIJ FC (D2B),,,1,HARVEY FREKES,6,2,0,1,169,164,5,ADVANCE - SF,,1,NANISTATE,6,2,0,1,166,158,8,ADVANCE - QF,,1,FROGBERT FOOTBALL,6,2,0,1,173,177,-4,ADVANCE - SF,,QUARTER FINALS,,,,,Division 2A Finals,2A,Final,Team A,1,2,Team C\n2,NANISTATE,49,16,1,9,1644,1604,40,,,2,THE WAINE TRAIN,42,14,0,8,1362,1276,86,FINALS,,2,BIG MAC FC,49,16,1,5,1454,1247,207,PLAYOFFS,,2,ROTORUA UNITED,45,15,0,7,1295,1230,65,PROMOTED,,2,CARNEGIE DACHSHUNDS FC,46,15,1,6,1321,1126,195,PROMOTED,,2,BIG MAC FC,DIVISION 2B,1730,,NUKEFORREST NUKES (D2B),55,38,FC TIKITOKA (D3B),,,2,INTER MILANOVIC,6,2,0,1,168,161,7,ADVANCE - QF,,2,SAUCE FC,6,2,0,1,163,159,4,ADVANCE - QF,,2,ALASKAN BULL WORMS,6,2,0,1,168,144,24,ADVANCE - QF,,SAUCE FC,84,81,ALASKAN BULL WORMS,,Division 3 Cross-Conference Playoffs,3A,SF,Team E,2,0,Team F\n3,ALASKAN BULL WORMS,48,16,0,10,1668,1651,17,,,3,TOP KUOLITY,39,13,0,9,1327,1246,81,PLAYOFFS,,3,SILVERMAN'S XI,46,15,1,6,1487,1294,193,FINALS,,3,REAPERS FC,42,14,0,8,1371,1256,115,PLAYOFFS,,3,DEER PARK UNITED,44,14,2,6,1245,1102,143,FINALS,,3,LALAS LEVEN,DIVISION 2A,1727,,ZOUMA KICKS TIM PAYNE (D3A),59,42,INTER MILANOVIC (D1),,,3,DW ABOUT IT FC,3,1,0,2,163,166,-3,ELIMINATED,,3,BC UNITED ZEBRAS,3,1,0,2,171,181,-10,ELIMINATED,,3,ZEN GARDEN C.F,3,1,0,2,165,178,-13,ELIMINATED,,INTER MILANOVIC,68,88,NANISTATE,,Division 3 Cross-Conference Playoffs,3B,SF,Team G,1,1,Team H\n4,GIVE US WANG,45,15,0,11,1634,1577,57,,,4,MANCHESTHAIR UTD,36,12,0,10,1298,1353,-55,FINALS,,4,JUSTICEFORMOON FC,37,12,1,9,1369,1199,170,FINALS,,4,BALLERS,42,14,0,8,1324,1225,99,PLAYOFFS,,4,FREKEINTHESHEETS,39,13,0,9,1337,1245,92,FINALS,,4,BC UNITED ZEBRAS,ELIZA CUP,1726,,BREXIT LADS (D3B),29,50,THE WAINE TRAIN (D2A),,,4,STAIRWAY TO EVANS,3,1,0,2,155,164,-9,ELIMINATED,,4,AARONGURDWOODREICH,3,1,0,2,148,150,-2,ELIMINATED,,4,HEILAN COOS,3,1,0,2,159,166,-7,ELIMINATED,,,,,,,,,,,,,\n5,VICTORYRULES,45,14,3,9,1589,1563,26,,,5,LALAS LEVEN,33,11,0,11,1458,1327,131,FINALS,,5,ZEN PIJ FC,32,10,2,10,1336,1349,-13,FINALS,,5,ZOUMA KICKS TIM PAYNE,40,13,1,8,1382,1191,191,FINALS,,5,X2 STRANGE,38,12,2,8,1228,1151,77,FINALS,,5,AFC BIG RED PORT,DIVISION 3A,1715,,STAIRWAY TO EVANS (D1),70,40,3DOGS (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,SEMI FINALS,,,,,,,,,,,\n6,SAUCE FC,43,14,1,11,1654,1600,54,,,6,ALBANIAN BOARS,33,11,0,11,1387,1343,44,,,6,CASUAL APPROACH,31,10,1,11,1284,1298,-14,,,6,TSATAS DIP,37,12,1,9,1425,1325,100,FINALS,,6,VICTORY,37,12,1,9,1321,1167,154,FINALS,,6,TSATAS DIP,DIVISION 3A,1715,,BIG MAC FC (D2B),60,69,DW ABOUT IT FC (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,FROGBERT FOOTBALL,63,54,NANISTATE,,,,,,,,\n7,DW ABOUT IT FC,39,13,0,13,1682,1622,60,,,7,3DOGS,31,10,1,11,1282,1310,-28,,,7,TOBY'S TROOPS,28,9,1,12,1260,1279,-19,,,7,CAG'S INVESTORS,33,11,0,11,1214,1279,-65,,,7,MELBCITYGUY,32,10,2,10,1174,1221,-47,,,7,STAIRWAY TO EVANS,ELIZA CUP,1715,,CASUAL APPROACH (D2B),53,51,FREKEINTHESHEETS (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,HARVEY FREKES,47,57,SAUCE FC,,,,,,,,\n8,STAIRWAY TO EVANS,37,12,1,13,1660,1640,20,,,8,HEILAN COOS,29,9,2,11,1214,1243,-29,,,8,JERRY THE PAINTER,28,9,1,12,1197,1311,-114,,,8,LIMSIM UNITED,31,10,1,11,1213,1217,-4,,,8,LOLLEY POP MAN,27,9,0,13,1167,1210,-43,,,8,DW ABOUT IT FC,ELIZA CUP,1712,,LIMSIM UNITED (D3A),54,68,THE D GENREAU (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n9,FROGBERT FOOTBALL,37,12,1,13,1649,1563,86,,,9,BEST OF A BAD BENCH,28,9,1,12,1269,1294,-25,,,9,ROYAL KC UNITED FC,27,9,0,13,1241,1281,-40,,,9,PAYNE IN THE NECK,25,8,1,13,1024,1203,-179,,,9,THE MALTESE KNIGHTS,25,8,1,13,988,1122,-134,,,9,HARVEY FREKES,DIVISION 2A,1711,,SHANENIGANS (D3A),41,64,VICTORYRULES (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,FINAL,,,,,,,,,,,\n10,KALLO FC,36,12,0,14,1640,1668,-28,,,10,GARRY WALLAH UNITED FC,27,9,0,13,1266,1324,-58,RELEGATED,,10,MONGREL GARDEN,24,8,0,14,1170,1263,-93,RELEGATED,,10,\"DOG GOES WOOF, PAYNE GOES MEOW\",22,7,1,14,1132,1243,-111,,,10,FC TIKITOKA,24,8,0,14,985,1156,-171,,,10,JARVIS ZEBRAS,DIVISION 2B,1710,,TOBY'S TROOPS (D2B),54,61,CARNEGIE DACHSHUNDS FC (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,FROGBERT FOOTBALL,74,77,SAUCE FC,,,,,,,,\n11,SPOONERS FC,33,11,0,15,1623,1665,-42,RELEGATED,,11,LOAVES AND FISHES,27,9,0,13,1176,1284,-108,RELEGATED,,11,FOR VUCK'S SAKE FC,19,6,1,15,1157,1322,-165,RELEGATED,,11,THE 2ND JARV ADMINISTRATION,15,5,0,17,1090,1277,-187,,,11,LINDON-CHEVELLA FC,20,6,2,14,1086,1222,-136,,,11,SAUCE FC,ELIZA CUP,1691,,LOLLEY POP MAN (D3B),51,60,VICTORY (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n12,ZEN GARDEN C.F,30,10,0,16,1575,1681,-106,RELEGATED,,12,AARONGURDWOODREICH,24,8,0,14,1096,1243,-147,RELEGATED,,12,NUKEFORREST NUKES,16,5,1,16,1004,1345,-341,RELEGATED,,12,SHANENIGANS,12,4,0,18,967,1211,-244,,,12,BREXIT LADS,7,2,1,19,932,1267,-335,,,12,ALBANIAN BOARS,DIVISION 2A,1690,,REAPERS FC (D3A),55,50,SPOONERS FC (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n13,DINKIN CRFC,27,9,0,17,1562,1626,-64,RELEGATED,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,13,ALASKAN BULL WORMS,ELIZA CUP,1689,,HEILAN COOS (D2A),46,49,ROYAL KC UNITED FC (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n14,INTER MILANOVIC,18,6,0,20,1488,1679,-191,RELEGATED,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,14,REAPERS FC,DIVISION 3A,1687,,MELBCITYGUY (D3B),45,69,SILVERMAN'S XI (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,15,THE WAINE TRAIN,DIVISION 2A,1680,,MONGREL GARDEN (D2B),44,60,KALLO FC (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,16,THE D GENREAU,DIVISION 3B,1679,,FOR VUCK'S SAKE FC (D2B),50,34,JERRY THE PAINTER (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,17,NANISTATE,ELIZA CUP,1671,,TOP KUOLITY (D2A),43,60,BALLERS (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,18,FROGBERT FOOTBALL,ELIZA CUP,1667,,LOAVES AND FISHES (D2A),61,65,SAUCE FC (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,19,KALLO FC,ELIZA CUP,1663,,AFC BIG RED PORT (D3A),59,58,ZEN GARDEN C.F (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,20,ZOUMA KICKS TIM PAYNE,DIVISION 3A,1658,,MANCHESTHAIR UTD (D2A),68,54,DINKIN CRFC (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,21,GIVE US WANG,ELIZA CUP,1654,,BEST OF A BAD BENCH (D2A),53,46,THE MALTESE KNIGHTS (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,22,SPOONERS FC,ELIZA CUP,1652,,GIVE US WANG (D1),49,52,PAYNE IN THE NECK (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,23,JUSTICEFORMOON FC,DIVISION 2B,1639,,BC UNITED ZEBRAS (D1),59,55,X2 STRANGE (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,24,FREKEINTHESHEETS,DIVISION 3B,1626,,GARRY WALLAH UNITED FC (D2A),58,51,AARONGURDWOODREICH (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,25,CARNEGIE DACHSHUNDS FC,DIVISION 3B,1625,,ROTORUA UNITED (D3A),59,43,THE 2ND JARV ADMINISTRATION (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,26,TOP KUOLITY,DIVISION 2A,1609,,ALASKAN BULL WORMS (D1),59,46,LINDON-CHEVELLA FC (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,27,VICTORYRULES,ELIZA CUP,1606,,ALBANIAN BOARS (D2A),50,72,TSATAS DIP (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,28,ZEN PIJ FC,DIVISION 2B,1596,,CAG'S INVESTORS (D3A),31,58,DEER PARK UNITED (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,29,DINKIN CRFC,ELIZA CUP,1587,,LALAS LEVEN (D2A),37,62,JARVIS ZEBRAS (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,30,ZEN GARDEN C.F,ELIZA CUP,1583,,JUSTICEFORMOON FC (D2B),62,54,NANISTATE (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,31,BALLERS,DIVISION 3A,1577,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,32,VICTORY,DIVISION 3B,1576,,ROUND OF 32,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,33,CASUAL APPROACH,DIVISION 2B,1553,,PAYNE IN THE NECK (D3A),51,64,ZEN PIJ FC (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,34,MANCHESTHAIR UTD,DIVISION 2A,1553,,REAPERS FC (D3A),65,67,CASUAL APPROACH (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,35,GARRY WALLAH UNITED FC,DIVISION 2A,1547,,ALASKAN BULL WORMS (D1),59,66,CARNEGIE DACHSHUNDS FC (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,36,ROYAL KC UNITED FC,DIVISION 2B,1536,,KALLO FC (D1),70,62,VICTORYRULES (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,37,3DOGS,DIVISION 2A,1535,,STAIRWAY TO EVANS (D1),77,51,FOR VUCK'S SAKE FC (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,38,ROTORUA UNITED,DIVISION 3A,1529,,BALLERS (D3A),76,66,TSATAS DIP (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,39,TOBY'S TROOPS,DIVISION 2B,1516,,NUKEFORREST NUKES (D2B),54,69,HARVEY FREKES (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,40,DEER PARK UNITED,DIVISION 3B,1495,,SAUCE FC (D1),57,65,THE D GENREAU (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,41,BEST OF A BAD BENCH,DIVISION 2A,1489,,MANCHESTHAIR UTD (D2A),70,64,BC UNITED ZEBRAS (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,42,INTER MILANOVIC,ELIZA CUP,1488,,SILVERMAN'S XI (D2B),60,74,JUSTICEFORMOON FC (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,43,X2 STRANGE,DIVISION 3B,1473,,VICTORY (D3B),44,65,JARVIS ZEBRAS (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,44,JERRY THE PAINTER,DIVISION 2B,1439,,BEST OF A BAD BENCH (D2A),46,34,ROYAL KC UNITED FC (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,45,LOAVES AND FISHES,DIVISION 2A,1437,,AFC BIG RED PORT (D3A),47,65,FROGBERT FOOTBALL (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,46,CAG'S INVESTORS,DIVISION 3A,1437,,ZOUMA KICKS TIM PAYNE (D3A),43,35,GARRY WALLAH UNITED FC (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,47,LIMSIM UNITED,DIVISION 3A,1426,,DEER PARK UNITED (D3B),65,35,ROTORUA UNITED (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,48,FOR VUCK'S SAKE FC,DIVISION 2B,1425,,DW ABOUT IT FC (D1),64,54,THE WAINE TRAIN (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,49,LOLLEY POP MAN,DIVISION 3B,1395,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,50,HEILAN COOS,DIVISION 2A,1373,,ROUND OF 16,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,51,MONGREL GARDEN,DIVISION 2B,1368,,HARVEY FREKES (D2A),61,47,JUSTICEFORMOON FC (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,52,MELBCITYGUY,DIVISION 3B,1357,,JARVIS ZEBRAS (D2B),62,56,BALLERS (D3A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,53,\"DOG GOES WOOF, PAYNE GOES MEOW\",DIVISION 3A,1313,,BEST OF A BAD BENCH (D2A),47,61,FROGBERT FOOTBALL (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,54,LINDON-CHEVELLA FC,DIVISION 3B,1302,,ZEN PIJ FC (D2B),58,59,CASUAL APPROACH (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,55,THE 2ND JARV ADMINISTRATION,DIVISION 3A,1258,,DEER PARK UNITED (D3B),59,59,STAIRWAY TO EVANS (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,56,AARONGURDWOODREICH,DIVISION 2A,1257,,DW ABOUT IT FC (D1),59,61,KALLO FC (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,57,THE MALTESE KNIGHTS,DIVISION 3B,1208,,ZOUMA KICKS TIM PAYNE (D3A),57,58,MANCHESTHAIR UTD (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,58,PAYNE IN THE NECK,DIVISION 3A,1197,,THE D GENREAU (D3B),59,53,CARNEGIE DACHSHUNDS FC (D3B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,59,SHANENIGANS,DIVISION 3A,1167,,DEER PARK UNITED (D3B),58,65,STAIRWAY TO EVANS (D1),REPLAY,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,60,NUKEFORREST NUKES,DIVISION 2B,1163,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,61,BREXIT LADS,DIVISION 3B,1158,,QUARTER FINALS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,62,FC TIKITOKA,DIVISION 3B,1139,,CASUAL APPROACH (D2B),49,58,HARVEY FREKES (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,STAIRWAY TO EVANS (D1),62,51,FROGBERT FOOTBALL (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,KALLO FC (D1),53,46,MANCHESTHAIR UTD (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,THE D GENREAU (D3B),50,59,JARVIS ZEBRAS (D2B),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,SEMI FINALS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,JARVIS ZEBRAS (D2B),66,58,STAIRWAY TO EVANS (D1),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,KALLO FC (D1),51,53,HARVEY FREKES (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,FINAL,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,JARVIS ZEBRAS (D2B),82,76,HARVEY FREKES (D2A),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,";
+
 function historyCsvUrlFor(gid){
   return `https://docs.google.com/spreadsheets/d/${HISTORY_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}&cachebust=` + Date.now();
 }
@@ -6908,11 +6912,9 @@ const HIST_DIV_COLORS = { D1:"#28427c", "2A":"#bc3532", "2B":"#990000", "3A":"#6
 let historyDebug = {};
 
 function parseHistoricalSeason(rows){
-  // ---- Divisions — each its own isolated block of columns (A:J, L:U, W:AF, AH:AQ,
-  // AS:BB). Not every season had a full 5-division structure (2A/2B/3A/3B split),
-  // so a block is only included if it actually has data — and rather than assuming
-  // what to call it, the table's own name (sitting directly above the POS column, on
-  // the row right before the header row) is read and used as the display name. ----
+  // Historical seasons use the established 24/25 layout. Keep this parser identical
+  // in structure for every season: D1 A:J, D2A L:U, D2B W:AF, D3A AH:AQ,
+  // D3B AS:BB, Roddy BD:BG. A block is included only when its own headers exist.
   const divisions = {};
   HIST_DIVISION_LABELS.forEach(db=>{
     let headerRow = -1;
@@ -6922,7 +6924,7 @@ function parseHistoricalSeason(rows){
       const c9 = cell(rows[r]||[],db.base+9).toUpperCase();
       if(c1 === "TEAM" && c2 === "PTS" && c9 === "STATUS"){ headerRow = r; break; }
     }
-    if(headerRow === -1) return; // this block is empty for this season — skip entirely
+    if(headerRow === -1) return;
 
     const teams = [];
     for(let dr=headerRow+1; dr<rows.length; dr++){
@@ -6936,14 +6938,11 @@ function parseHistoricalSeason(rows){
       });
     }
     if(!teams.length) return;
-
     const titleRaw = cell(rows[headerRow-1]||[], db.base).trim();
     divisions[db.key] = { name: titleRaw || db.name, teams };
   });
 
-  // ---- Roddy (BD:BG) — now its own isolated block. Header row found via the
-  // TEAM/DIV/TOTAL combo (robust to whatever ends up in the Pos column's own text). ----
-  const RODDY_BASE = 55; // BD
+  const RODDY_BASE = 55;
   let roddyHeaderRow = -1;
   for(let r=0; r<rows.length; r++){
     const m = cell(rows[r]||[],RODDY_BASE+1).toUpperCase();
@@ -6960,9 +6959,8 @@ function parseHistoricalSeason(rows){
     }
   }
 
-  // ---- FA Cup (BI:BM) — a row with only the first column filled is a round label; a
-  // row with team1 AND team2 filled is a fixture; the 5th column holds "REPLAY". ----
-  const FACUP_BASE = 60; // BI
+  // The remaining historical competitions are unchanged from the established parser.
+  const FACUP_BASE = 60;
   const facup = [];
   {
     let current = null;
@@ -6975,49 +6973,41 @@ function parseHistoricalSeason(rows){
     }
   }
 
-  // ---- ECL groups (BO:BX, BZ:CI, CK:CT) — each is now its own isolated block, so no
-  // more "GROUP A" text label needed: just find that block's own POS/TEAM/PTS/STATUS
-  // header row directly, data starts the next row. ----
   const ECL_GROUP_BLOCKS = [
-    { name: "GROUP A", base: 66 }, // BO
-    { name: "GROUP B", base: 77 }, // BZ
-    { name: "GROUP C", base: 88 }  // CK
+    { name: "GROUP A", base: 66 },
+    { name: "GROUP B", base: 77 },
+    { name: "GROUP C", base: 88 }
   ];
   const eclGroups = [];
   const eclGroupsDebug = [];
   ECL_GROUP_BLOCKS.forEach(gb=>{
     let headerRow = -1;
     for(let r=0; r<rows.length; r++){
-      const c1 = cell(rows[r]||[],gb.base+1).toUpperCase();
-      const c2 = cell(rows[r]||[],gb.base+2).toUpperCase();
-      const c9 = cell(rows[r]||[],gb.base+9).toUpperCase();
-      if(c1 === "TEAM" && c2 === "PTS" && c9 === "STATUS"){ headerRow = r; break; }
+      const row = rows[r] || [];
+      if(cell(row,gb.base) === "POS" && cell(row,gb.base+1).toUpperCase() === "TEAM" && cell(row,gb.base+2).toUpperCase() === "PTS" && cell(row,gb.base+9).toUpperCase() === "STATUS"){
+        headerRow = r;
+        break;
+      }
     }
     const teams = [];
     if(headerRow !== -1){
       for(let dr=headerRow+1; dr<rows.length; dr++){
-        const pos = cell(rows[dr]||[],gb.base);
-        if(!pos) break;
+        const row = rows[dr] || [];
+        const pos = cell(row,gb.base);
+        const team = cell(row,gb.base+1);
+        if(!pos || !team) continue;
+        if(!/^\d+$/.test(pos)) continue;
         teams.push({
-          pos, team: cell(rows[dr]||[],gb.base+1), pts: cell(rows[dr]||[],gb.base+2),
-          w: cell(rows[dr]||[],gb.base+3), d: cell(rows[dr]||[],gb.base+4), l: cell(rows[dr]||[],gb.base+5),
-          for: cell(rows[dr]||[],gb.base+6), aga: cell(rows[dr]||[],gb.base+7), diff: cell(rows[dr]||[],gb.base+8),
-          status: cell(rows[dr]||[],gb.base+9)
+          pos, team, pts: cell(row,gb.base+2), w: cell(row,gb.base+3), d: cell(row,gb.base+4), l: cell(row,gb.base+5),
+          for: cell(row,gb.base+6), aga: cell(row,gb.base+7), diff: cell(row,gb.base+8), status: cell(row,gb.base+9)
         });
       }
     }
-    eclGroupsDebug.push({
-      group: gb.name, base: gb.base, headerRowFound: headerRow===-1 ? null : headerRow+1, teamsFound: teams.length,
-      next4RowsRaw: rows.slice(headerRow===-1?0:headerRow+1, headerRow===-1?0:headerRow+5).map((row,i)=>
-        "row" + (headerRow+2+i) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" "))
-    });
-    eclGroups.push({ name: gb.name, teams });
+    eclGroupsDebug.push({ group:gb.name, base:gb.base, headerRowFound:headerRow===-1?null:headerRow+1, teamsFound:teams.length });
+    eclGroups.push({ name:gb.name, teams });
   });
 
-  // ---- ECL knockout (CV:CY) — CV=Team 1, CW=Team 1 score, CX=Team 2 score, CY=Team 2.
-  // Round-label rows ("QUARTER FINALS" etc, if present) sit in CV; fixtures follow
-  // immediately after (r+1), no header row. ----
-  const KO_BASE = 99; // CV
+  const KO_BASE = 99;
   const KO_LABELS = ["QUARTER FINALS","SEMI FINALS","FINAL"];
   const eclKnockout = [];
   const eclKnockoutRawDump = [];
@@ -7031,43 +7021,53 @@ function parseHistoricalSeason(rows){
         if(!home) break;
         const homeUpper = home.toUpperCase();
         if(KO_LABELS.some(k=>homeUpper.endsWith(k))) break;
-        eclKnockoutRawDump.push({
-          row: dr+1,
-          thisRow: (rows[dr]||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")
-        });
-        fixtures.push({
-          home, homeScore: cell(rows[dr]||[],KO_BASE+1), awayScore: cell(rows[dr]||[],KO_BASE+2),
-          away: cell(rows[dr]||[],KO_BASE+3)
-        });
+        eclKnockoutRawDump.push({ row:dr+1, thisRow:(rows[dr]||[]).map((c,ci)=>c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ") });
+        fixtures.push({ home, homeScore:cell(rows[dr]||[],KO_BASE+1), awayScore:cell(rows[dr]||[],KO_BASE+2), away:cell(rows[dr]||[],KO_BASE+3) });
       }
-      eclKnockout.push({ name: koLabel, fixtures });
+      eclKnockout.push({ name:koLabel, fixtures });
     }
   }
+  // Historical playoff/finals block: DA:DG (104:110). This is deliberately
+  // parsed separately from the established division/Roddy parser so those tables
+  // remain untouched. Each populated row is one playoff fixture.
+  const HIST_PLAYOFF_BASE = 104;
+  const playoffs = [];
+  for(let r=0; r<rows.length; r++){
+    const competition = cell(rows[r]||[], HIST_PLAYOFF_BASE).trim();
+    const division = cell(rows[r]||[], HIST_PLAYOFF_BASE+1).trim();
+    const round = cell(rows[r]||[], HIST_PLAYOFF_BASE+2).trim();
+    const home = cell(rows[r]||[], HIST_PLAYOFF_BASE+3).trim();
+    const homeScore = cell(rows[r]||[], HIST_PLAYOFF_BASE+4).trim();
+    const awayScore = cell(rows[r]||[], HIST_PLAYOFF_BASE+5).trim();
+    const away = cell(rows[r]||[], HIST_PLAYOFF_BASE+6).trim();
+    if(!competition || !division || !round || !home || !away) continue;
+    playoffs.push({ competition, division, round, home, homeScore, awayScore, away });
+  }
+
   if(eclKnockout.length === 0){
-    // Fallback: no round-label rows found — read CV4:CY14 as one flat list of
-    // fixtures instead of grouped rounds.
     const fixtures = [];
     for(let r=3; r<=13 && r<rows.length; r++){
       const home = cell(rows[r]||[],KO_BASE);
       if(!home || KO_LABELS.some(k=>home.toUpperCase().endsWith(k))) continue;
-      fixtures.push({ home, homeScore: cell(rows[r]||[],KO_BASE+1), awayScore: cell(rows[r]||[],KO_BASE+2), away: cell(rows[r]||[],KO_BASE+3) });
+      fixtures.push({ home, homeScore:cell(rows[r]||[],KO_BASE+1), awayScore:cell(rows[r]||[],KO_BASE+2), away:cell(rows[r]||[],KO_BASE+3) });
     }
-    if(fixtures.length) eclKnockout.push({ name: "Knockout", fixtures });
+    if(fixtures.length) eclKnockout.push({ name:"Knockout", fixtures });
   }
 
   historyDebug = {
-    divisionsFound: Object.keys(divisions),
-    divisionTeamCounts: Object.fromEntries(Object.entries(divisions).map(([k,v])=>[k,v.teams.length])),
-    roddyHeaderRow, roddyCount: roddy.length,
-    facupRoundsFound: facup.map(rnd=>({name:rnd.name, fixtures:rnd.fixtures.length})),
-    eclGroupsFound: eclGroups.map(g=>({name:g.name, teams:g.teams.length})),
+    divisionsFound:Object.keys(divisions),
+    divisionTeamCounts:Object.fromEntries(Object.entries(divisions).map(([k,v])=>[k,v.teams.length])),
+    roddyHeaderRow:roddyHeaderRow === -1 ? null : roddyHeaderRow+1,
+    roddyCount:roddy.length,
+    facupRoundsFound:facup.map(rnd=>({name:rnd.name,fixtures:rnd.fixtures.length})),
+    eclGroupsFound:eclGroups.map(g=>({name:g.name,teams:g.teams.length})),
     eclGroupsDebug,
-    eclKnockoutFound: eclKnockout.map(k=>({name:k.name, fixtures:k.fixtures.length})),
-    eclKnockoutRawDump,
-    rawRowDump: rows.slice(0, 35).map((row,i) => "row" + (i+1) + ": " + (row||[]).map((c,ci)=> c ? `[${ci}]="${c.toString().trim()}"` : "").filter(Boolean).join(" ")).filter(line => !line.endsWith(":"))
+    eclKnockoutFound:eclKnockout.map(k=>({name:k.name,fixtures:k.fixtures.length}))
   };
 
-  return { divisions, roddy, facup, eclGroups, eclKnockout };
+  historyDebug.playoffsFound = playoffs.map(p=>({competition:p.competition,division:p.division,round:p.round,home:p.home,homeScore:p.homeScore,awayScore:p.awayScore,away:p.away}));
+
+  return { divisions, roddy, facup, eclGroups, eclKnockout, playoffs };
 }
 
 // Bracket status computed purely from ladder position (not a sheet column)
@@ -7249,6 +7249,46 @@ function histFixtureTableHtml(fixtures, showDivTags){
 let historySeasonData = null;
 let historyActiveDivKey = "d1";
 
+function histPlayoffFixtureCardHtml(f){
+  const homeNum = parseInt(f.homeScore,10), awayNum = parseInt(f.awayScore,10);
+  const played = !isNaN(homeNum) && !isNaN(awayNum);
+  const homeWin = played && homeNum > awayNum;
+  const awayWin = played && awayNum > homeNum;
+  const draw = played && homeNum === awayNum;
+  const resultClass = won => !played ? "" : won ? "fx-win" : draw ? "fx-draw" : "fx-lose";
+  const scoreHtml = played
+    ? `<span class="${resultClass(homeWin)}">${f.homeScore}</span> – <span class="${resultClass(awayWin)}">${f.awayScore}</span>`
+    : `<span class="upcoming">vs</span>`;
+  return `<div class="facup-card">
+    <div class="facup-team facup-team-home ${resultClass(homeWin)}"><span class="facup-team-name">${histTeamLink(f.home)}</span></div>
+    <div class="fixture-score">${scoreHtml}</div>
+    <div class="facup-team facup-team-away ${resultClass(awayWin)}"><span class="facup-team-name">${histTeamLink(f.away)}</span></div>
+  </div>`;
+}
+
+function histPlayoffSectionHtml(data, divisionKey){
+  const division = HIST_DIVISION_LABELS.find(d=>d.key===divisionKey);
+  if(!division || !data.playoffs || !data.playoffs.length) return "";
+  const playoffDivisionCode = ({d1:"1",d2a:"2A",d2b:"2B",d3a:"3A",d3b:"3B"})[divisionKey] || "";
+  const rows = data.playoffs.filter(p=>p.division.toUpperCase() === playoffDivisionCode);
+  if(!rows.length) return "";
+  const groups = [];
+  rows.forEach(p=>{
+    let g = groups.find(x=>x.competition===p.competition);
+    if(!g){ g={competition:p.competition, fixtures:[]}; groups.push(g); }
+    g.fixtures.push(p);
+  });
+  let html = `<div class="section-head" style="margin-top:30px;"><h2 style="font-size:18px;">Playoffs / Finals</h2></div>`;
+  groups.forEach(g=>{
+    html += `<h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:14px 0 4px;">${g.competition}</h4>`;
+    g.fixtures.forEach(f=>{
+      html += `<div style="font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px;color:#000;">${f.round}</div>`;
+      html += `<div style="max-width:520px;">${histPlayoffFixtureCardHtml(f)}</div>`;
+    });
+  });
+  return html;
+}
+
 function renderHistorySeason(data){
   historySeasonData = data;
   const el = document.getElementById('historyContainer');
@@ -7262,6 +7302,9 @@ function renderHistorySeason(data){
   let html = `<div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">Division Tables</h2></div>
     <div class="round-tabs">${divTabsHtml}</div>
     <div id="historyDivTableWrap">${histDivisionTableHtml(data.divisions[historyActiveDivKey])}</div>`;
+
+  const initialPlayoffHtml = histPlayoffSectionHtml(data, historyActiveDivKey);
+  if(initialPlayoffHtml) html += `<div class="history-playoff-placeholder">${initialPlayoffHtml}</div>`;
 
   html += `<div class="section-head" style="margin-top:36px;"><h2 style="font-size:18px;display:flex;align-items:center;gap:9px;"><img src="logo/roddy-logo.png" alt="" style="width:26px;height:26px;object-fit:contain;" onerror="this.style.display='none';"> Roddy Rodriguez Cup</h2></div>`;
   html += histRoddyTableHtml(data.roddy);
@@ -7287,6 +7330,15 @@ function renderHistorySeason(data){
       btn.classList.add('active');
       historyActiveDivKey = btn.dataset.key;
       document.getElementById('historyDivTableWrap').innerHTML = histDivisionTableHtml(historySeasonData.divisions[historyActiveDivKey]);
+      const existingPlayoff = el.querySelector('.history-playoff-placeholder');
+      if(existingPlayoff) existingPlayoff.remove();
+      const playoffHtml = histPlayoffSectionHtml(historySeasonData, historyActiveDivKey);
+      if(playoffHtml){
+        const wrap = document.createElement('div');
+        wrap.className = 'history-playoff-placeholder';
+        wrap.innerHTML = playoffHtml;
+        document.getElementById('historyDivTableWrap').insertAdjacentElement('afterend', wrap);
+      }
     });
   });
 }
@@ -7504,24 +7556,68 @@ async function loadHistorySeason(seasonKey){
   el.innerHTML = "Loading " + season.label + " data…";
   historyActiveDivKey = "d1";
   try{
-    const [res] = await Promise.all([
-      cachedFetch(historyCsvUrlFor(season.gid)),
-      loadPreviousNameMap()
-    ]);
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const csvText = await res.text();
+    let csvText = null;
+    let source = "live";
+
+    // Use the exact same live Google Sheets path as the established historical tabs.
+    try{
+      const res = await cachedFetch(historyCsvUrlFor(season.gid));
+      if(res.ok) csvText = await res.text();
+    }catch(fetchErr){
+      console.warn("Historical live fetch failed", fetchErr);
+    }
+
+    // The supplied 25/26 tab is the same 24/25 table layout. If Google returns an
+    // empty/invalid response, use the supplied 25/26 snapshot so the historical
+    // tables cannot disappear simply because that tab temporarily fails to export.
+    if(season.key === "2526" && (!csvText || !csvText.includes("DIVISION 2A") || !csvText.includes("SILVERMAN'S XI"))){
+      csvText = HISTORY_2526_FALLBACK_CSV;
+      source = "supplied 25/26 fallback";
+    }
+
+    if(!csvText) throw new Error("No historical CSV data returned");
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
     const data = parseHistoricalSeason(rows);
+
+    // Playoffs are independent of the division/Roddy tables. If the live 25/26
+    // sheet has the working division/Roddy data but its playoff block is still
+    // empty, use the supplied 25/26 playoff rows without replacing any of the
+    // working live historical data. Once real playoff rows are added to the live
+    // sheet, those live rows will automatically take precedence.
+    if(season.key === "2526" && (!data.playoffs || !data.playoffs.length)){
+      const fallbackRows = Papa.parse(HISTORY_2526_FALLBACK_CSV, {skipEmptyLines:false}).data;
+      const fallbackData = parseHistoricalSeason(fallbackRows);
+      if(fallbackData.playoffs && fallbackData.playoffs.length){
+        data.playoffs = fallbackData.playoffs;
+        historyDebug.playoffSource = "supplied 25/26 fallback";
+      }
+    }
+
+    if(!Object.keys(data.divisions).length || !data.divisions.d1 || !data.roddy.length){
+      if(season.key === "2526" && source === "live"){
+        const fallbackRows = Papa.parse(HISTORY_2526_FALLBACK_CSV, {skipEmptyLines:false}).data;
+        const fallbackData = parseHistoricalSeason(fallbackRows);
+        if(Object.keys(fallbackData.divisions).length && fallbackData.roddy.length){
+          historyDebug.source = "supplied 25/26 fallback after invalid live response";
+          renderHistorySeason(fallbackData);
+          document.getElementById('historyUpdated').textContent = season.label + " season";
+          document.getElementById('debugOut').textContent = "History debug: " + JSON.stringify(historyDebug, null, 2);
+          loadPreviousNameMap().catch(()=>{});
+          return;
+        }
+      }
+      throw new Error("Historical table headers/data were not found");
+    }
+
+    historyDebug.source = source;
     renderHistorySeason(data);
     document.getElementById('historyUpdated').textContent = season.label + " season";
-
-    document.getElementById('debugOut').textContent =
-      "History debug: " + JSON.stringify(historyDebug, null, 2) + "\n\n" +
-      "Previous name map: " + JSON.stringify(previousNameMap, null, 2);
+    document.getElementById('debugOut').textContent = "History debug: " + JSON.stringify(historyDebug, null, 2);
+    loadPreviousNameMap().catch(()=>{});
   }catch(err){
     console.error(err);
     el.className = "state-msg error";
-    el.innerHTML = "Couldn't load " + season.label + " data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+    el.innerHTML = "Couldn't load " + season.label + " data. " + (season.key === "2526" ? "The 25/26 table data could not be read." : "Make sure the historical sheet is shared correctly, then hit Refresh.");
   }
 }
 
