@@ -499,12 +499,12 @@
       "deadline": "09/10/2026"
     },
     {
-      "id": "msfw9lr8miev",
-      "team": "THE BEAU-CHAMPS",
+      "id": "mv1ikeu0",
+      "team": "PLACEHOLDER 1 *NEW*",
       "division": "3TBC",
       "code": "",
       "link": "",
-      "deadline": "09/10/2026"
+      "deadline": ""
     },
     {
       "id": "msfw9lr8mj65",
@@ -523,12 +523,12 @@
       "deadline": "09/10/2026"
     },
     {
-      "id": "mv1ikeu0",
-      "team": "PLACEHOLDER 1 *NEW*",
+      "id": "msfw9lr8miev",
+      "team": "THE BEAU-CHAMPS",
       "division": "3TBC",
       "code": "",
       "link": "",
-      "deadline": ""
+      "deadline": "09/10/2026"
     }
   ]
 }
