@@ -11498,8 +11498,9 @@ function renderFACup(){
   const firstRound = facupRounds[0];
   const facupStarted = !!(firstRound && firstRound.fixtures.some(f =>
     f.home && f.away &&
-    f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD" &&
-    f.home.toUpperCase() !== "BYE" && f.away.toUpperCase() !== "BYE"
+    f.home.name && f.away.name &&
+    f.home.name.toUpperCase() !== "TBD" && f.away.name.toUpperCase() !== "TBD" &&
+    f.home.name.toUpperCase() !== "BYE" && f.away.name.toUpperCase() !== "BYE"
   ));
   if(!facupStarted){
     toggleEl.innerHTML = "";
