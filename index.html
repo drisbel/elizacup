@@ -2959,7 +2959,8 @@ async function load(){
       setStatus("Couldn't reach the sheet (" + err.message + ")", false);
       document.getElementById('facupContainer').className = "state-msg error";
       document.getElementById('facupContainer').innerHTML =
-        "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh.";
+        "Couldn't load live data. Make sure the sheet is shared as \"Anyone with the link can view\", then hit Refresh." +
+        `<br><small style="display:block;margin-top:8px;color:#666;">Error: ${err && err.message ? err.message : err}</small>`;
     }
     return;
   }
@@ -3883,11 +3884,11 @@ function parseFACup(rows){
   facupRounds = [];
   facupDebug = { roundMarkersFound: [] };
 
-  // Round titles sit in column A (e.g. "ROUND OF 64", "ROUND OF 32", "SEMI FINAL", "FINAL").
+  // Round titles sit in column A (e.g. "PLAYOFF ROUND", "ROUND OF 64", "ROUND OF 32", "SEMI FINAL", "FINAL").
   const roundMarkers = [];
   for(let r=0; r<rows.length; r++){
     const v = cell(rows[r]||[], 0);
-    if(v && /ROUND OF|QUARTER|SEMI|FINAL/i.test(v)){
+    if(v && /PLAYOFF|ROUND OF|QUARTER|SEMI|FINAL/i.test(v)){
       roundMarkers.push({ row: r, name: v });
     }
   }
