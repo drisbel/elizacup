@@ -1751,15 +1751,6 @@
     <div id="fixtureContainer" class="state-msg">Loading fixtures…</div>
   </section>
 
-  <section id="h2hSection" style="margin-top:48px;">
-    <div class="section-head">
-      <h2>Head-to-Head</h2>
-      <span class="sub" id="h2hRoundLabel">Current round</span>
-    </div>
-    <div id="h2hTabs" class="round-tabs"></div>
-    <div id="h2hContainer"></div>
-  </section>
-
   <section id="roddySection" style="display:none;">
     <div class="section-head">
       <span class="sub" id="roddyUpdated"></span>
@@ -2772,7 +2763,6 @@ function togglePageSections(){
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
   document.getElementById('fixturesSection').style.display = isDivision ? "" : "none";
-  document.getElementById('h2hSection').style.display = isDivision ? "" : "none";
   document.getElementById('roddySection').style.display = isRoddy ? "" : "none";
   document.getElementById('facupSection').style.display = isFACup ? "" : "none";
   document.getElementById('eclSection').style.display = isECL ? "" : "none";
@@ -3285,8 +3275,8 @@ const TIER_CONFIGS = {
   ],
   d2: [
     { class: "tier-champion",   label: "Automatic promotion (1st)",     upTo: 1 },
-    { class: "tier-ecl",        label: "Playoff qualification (2–5)",   upTo: 5 },
-    { class: "tier-mid",        label: "Mid-table (6–9)",               upTo: 9 },
+    { class: "tier-ecl",        label: "Playoff qualification (2–6)",   upTo: 6 },
+    { class: "tier-mid",        label: "Mid-table (7–9)",               upTo: 9 },
     { class: "tier-relegation", label: "Relegation (10–12)",            upTo: 12 }
   ],
   d3: [
@@ -3493,7 +3483,6 @@ function render(){
   renderTable();
   renderTicker();
   renderRoundTabs();
-  renderH2H();
 }
 
 function renderTable(){
@@ -11418,7 +11407,6 @@ function renderHome(){
         <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
         <div class="home-hero-banner-text">ELIZA CUP</div>
       </div>
-      <a href="#whatsmydiv" class="home-division-find-banner">26/27 LEAGUES - FIND MY DIVISION</a>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
