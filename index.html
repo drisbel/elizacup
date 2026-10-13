@@ -7681,7 +7681,7 @@ const SIDE_LEAGUES = [
   { key: "almtipping", label: "ALM Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1986596590", isTippingOverall: true, tippingStartRow: 41 },
   { key: "alwtipping", label: "ALW Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1316975251", isTippingOverall: true, tippingStartRow: 41 },
   { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true },
-  { key: "elizapredictor", label: "Eliza Predictor 26/27", isElizaPredictor: true }
+  { key: "elizapredictor", label: "Eliza Cup Predictor", isElizaPredictor: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
@@ -7981,7 +7981,7 @@ function renderSideLeaguesHub(){
     // is otherwise preserved exactly.
     const cards = [...data.cards];
     if(!cards.some(c => c.link === "#sideleagues=elizapredictor")){
-      cards.push({key:"elizapredictor",label:"Eliza Predictor 26/27",status:"active",roundInfo:"Division 1 ladder and cup winner predictions",notes:"Rank all 14 Division 1 teams, plus predict Roddy, ECL and FA Cup winners.",link:"#sideleagues=elizapredictor"});
+      cards.push({key:"elizapredictor",label:"Eliza Cup Predictor",status:"active",roundInfo:"Division 1 ladder and cup winner predictions",notes:"Rank all 14 Division 1 teams, plus predict Roddy, ECL and FA Cup winners.",link:"#sideleagues=elizapredictor"});
     }
     if(!cards.some(c => c.link === "#sideleagues=aleaguepredictor")){
       cards.push({
