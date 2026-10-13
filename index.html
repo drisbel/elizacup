@@ -4147,7 +4147,6 @@ function renderFACupRound(idx){
   }
 
   container.innerHTML = html;
-  populateClubHistoryChart(teamName, roddyEntry ? roddyEntry.division : "");
 }
 
 // ---------- Eliza Champions League (group stage tables) ----------
@@ -7083,6 +7082,7 @@ function renderTeamProfile(data){
   html += sideLeagueHonoursHtml(sideLeagueHonours);
 
   container.innerHTML = html;
+  populateClubHistoryChart(teamName, roddyEntry ? roddyEntry.division : "");
 
   if(teamVsTeamOpponents && teamVsTeamOpponents.length){
     const toggle = document.getElementById('tvtOpponentToggle');
