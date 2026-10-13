@@ -6969,7 +6969,8 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
   if(!records||!records.some(r=>r.position!==null))return '';
   const currentTier=clubHistoryTier(currentDivision);
   const points=records.map((r,i)=>({...r,tier:r.tier||(i===4?currentTier:null)}));
-  const W=690,H=207,L=49,R=25,T=13,B=31;
+  const mobile=window.matchMedia('(max-width:600px)').matches;
+  const W=mobile?510:690,H=mobile?215:207,L=mobile?42:49,R=mobile?14:25,T=mobile?17:13,B=mobile?35:31;
   const chartH=H-T-B,bandH=chartH/3;
   const x=i=>L+(W-L-R)*i/4;
   const y=r=>{
@@ -6986,7 +6987,7 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     const top=T+(tier-1)*bandH;
     svg+=`<rect x="${L}" y="${top}" width="${W-L-R}" height="${bandH-3}" rx="4" fill="${bandColors[tier]}"/>`;
     svg+=`<rect x="${L}" y="${top}" width="3" height="${bandH-3}" rx="1" fill="${tierColors[tier]}"/>`;
-    svg+=`<text x="${L-9}" y="${top+bandH/2+4}" fill="${tierColors[tier]}" font-size="13" text-anchor="end" font-weight="700">${'D'+tier}</text>`;
+    svg+=`<text x="${L-9}" y="${top+bandH/2+4}" fill="${tierColors[tier]}" font-size="${mobile?17:13}" text-anchor="end" font-weight="700">${'D'+tier}</text>`;
   }
   // Join only consecutive seasons. Missing seasons should not create a false jump.
   for(let i=1;i<valid.length;i++){
@@ -6999,7 +7000,7 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     if(changed){
       const mx=(x(a.i)+x(b.i))/2,my=(y(a)+y(b))/2;
       const arrowPath='M0 -6 L6 2 H3 V7 H-3 V2 H-6 Z';
-      svg+=`<circle cx="${mx}" cy="${my}" r="11" fill="${stroke}" stroke="#fff" stroke-width="1.5"/><path d="${arrowPath}" transform="translate(${mx} ${my}) rotate(${moveUp?0:180})" fill="#fff"/>`;
+      svg+=`<circle cx="${mx}" cy="${my}" r="${mobile?13:11}" fill="${stroke}" stroke="#fff" stroke-width="1.5"/><path d="${arrowPath}" transform="translate(${mx} ${my}) rotate(${moveUp?0:180})" fill="#fff"/>`;
     }
   }
   for(const r of valid){
@@ -7007,9 +7008,9 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     const previous=points.slice(0,r.i).reverse().find(p=>p.position!==null&&p.tier);
     const change=previous&&previous.tier!==r.tier?(previous.tier>r.tier?' — Promoted':' — Relegated'):'';
     const title=`${r.year} — ${r.division||'Current division'} — ${ordinal(r.position)}${r.isLive?' (live)':''}${change}`;
-    svg+=`<g class="history-dot" tabindex="0"><title>${esc(title)}</title><circle cx="${cx}" cy="${cy}" r="10" fill="${r.isLive?'#fff':color}" stroke="${color}" stroke-width="${r.isLive?3:1.5}"/><text x="${cx}" y="${cy+3.5}" font-size="10" text-anchor="middle" font-weight="700" fill="${r.isLive?color:'#fff'}">${r.position}</text></g>`;
+    svg+=`<g class="history-dot" tabindex="0"><title>${esc(title)}</title><circle cx="${cx}" cy="${cy}" r="${mobile?15:10}" fill="${r.isLive?'#fff':color}" stroke="${color}" stroke-width="${r.isLive?3:1.5}"/><text x="${cx}" y="${cy+(mobile?5:3.5)}" font-size="${mobile?15:10}" text-anchor="middle" font-weight="700" fill="${r.isLive?color:'#fff'}">${r.position}</text></g>`;
   }
-  points.forEach((r,i)=>{svg+=`<text x="${x(i)}" y="${H-8}" font-size="12" text-anchor="middle" fill="${i===4?'#1e513a':'#565d56'}" font-weight="${i===4?700:500}">${r.year}${i===4?' ●':''}</text>`;});
+  points.forEach((r,i)=>{svg+=`<text x="${x(i)}" y="${H-8}" font-size="${mobile?16:12}" text-anchor="middle" fill="${i===4?'#1e513a':'#565d56'}" font-weight="${i===4?700:500}">${r.year}${i===4?' ●':''}</text>`;});
   svg+='</svg>';
   return `<section class="club-history-chart"><h3>Historical table positions</h3><div class="club-history-scroll">${svg}</div><div class="club-history-legend"><span><b class="club-history-up">▲ Promotion</b></span><span><b class="club-history-down">▼ Relegation</b></span></div></section>`;
 }
