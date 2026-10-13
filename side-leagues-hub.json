@@ -84,6 +84,20 @@
     "rules": "<strong><u>EPL SUPERCOACH RULES</u></strong>\n\nAll results, fixtures and tables will follow what is shown on the official EPL Supercoach league page.\nRefer to official rules sections on the Supercoach website for more information"
   },
   {
+    "id": "mv68gyr0",
+    "label": "Eliza Cup Predictor",
+    "status": "active",
+    "roundInfo": "",
+    "winners": [],
+    "code": "",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "notes": "",
+    "link": "#sideleagues=elizapredictor",
+    "rules": ""
+  },
+  {
     "id": "mtt2xnyy",
     "label": "UCL Fantasy",
     "status": "active",
@@ -109,20 +123,6 @@
     "countdownEnabled": false,
     "roundInfo": "ROUND 2",
     "winners": [],
-    "rules": ""
-  },
-  {
-    "id": "mv68gyr0",
-    "label": "Eliza Cup Predictor",
-    "status": "active",
-    "roundInfo": "",
-    "winners": [],
-    "code": "",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "notes": "",
-    "link": "#sideleagues=elizapredictor",
     "rules": ""
   },
   {
