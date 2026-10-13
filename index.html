@@ -936,9 +936,10 @@
   table.standings.compact thead th:nth-child(3){text-align:left;z-index:4;}
   .league-change{display:inline-flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:11px;color:#111;}
   .league-change-arrow{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:13px;font-weight:800;line-height:1;color:#fff;flex-shrink:0;}
-  .league-change-up .league-change-arrow{background:#00dc8c;}
-  .league-change-down .league-change-arrow{background:#ff3990;}
-  .league-change-same .league-change-arrow{background:#a4a4a4;font-size:12px;}
+  .league-change-up .league-change-arrow{background:#087a4b;color:#fff;}
+  .league-change-down .league-change-arrow{background:#bb2450;color:#fff;}
+  .league-change-same .league-change-arrow{background:#777;color:#fff;font-size:12px;}
+  .league-change-arrow svg{display:block;flex-shrink:0;}
   .league-change-value{min-width:0;text-align:right;font-size:11px;}
   .league-change-missing{color:#888;}
   table.standings.compact th.league-change-col,table.standings.compact td.league-change-col{
@@ -2269,7 +2270,11 @@ function divisionPositionChangeHtml(team){
   const movement = divisionPositionChanges.get(positionChangeTeamKey(team));
   if(movement === undefined) return `<span class="league-change-missing" title="Change unavailable">—</span>`;
   const direction = movement > 0 ? "up" : movement < 0 ? "down" : "same";
-  const symbol = movement > 0 ? "↑" : movement < 0 ? "↓" : "–";
+  const symbol = movement > 0
+    ? '<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M10 3 L17 12 H13 V17 H7 V12 H3 Z" fill="currentColor"/></svg>'
+    : movement < 0
+    ? '<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M10 3 L17 12 H13 V17 H7 V12 H3 Z" fill="currentColor" transform="rotate(180 10 10)"/></svg>'
+    : "–";
   return `<span class="league-change league-change-${direction}" title="${movement > 0 ? "Up" : movement < 0 ? "Down" : "No change"} ${Math.abs(movement)} places"><span class="league-change-arrow">${symbol}</span><span class="league-change-value">${Math.abs(movement)}</span></span>`;
 }
 
@@ -6972,8 +6977,8 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     return T+(r.tier-1)*bandH+8+((r.position-1)/Math.max(1,size-1))*(bandH-16);
   };
   const valid=points.map((r,i)=>({...r,i})).filter(r=>r.position!==null&&r.tier&&r.position>0);
-  const tierColors={1:'#284783',2:'#278c9e',3:'#7054a3'};
-  const bandColors={1:'#edf2fb',2:'#e8f5f7',3:'#f1edf9'};
+  const tierColors={1:'#284783',2:'#bc3532',3:'#6aa84f'};
+  const bandColors={1:'#edf2fb',2:'#fbeeee',3:'#eef6e9'};
   const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const ordinal=n=>`${n}${n%100>=11&&n%100<=13?'th':n%10===1?'st':n%10===2?'nd':n%10===3?'rd':'th'}`;
   let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Historical league positions for ${esc(teamName)}">`;
@@ -6993,7 +6998,8 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     svg+=`<line x1="${x(a.i)}" y1="${y(a)}" x2="${x(b.i)}" y2="${y(b)}" stroke="${stroke}" stroke-width="${changed?3:2}" stroke-linecap="round"/>`;
     if(changed){
       const mx=(x(a.i)+x(b.i))/2,my=(y(a)+y(b))/2;
-      svg+=`<circle cx="${mx}" cy="${my}" r="9" fill="${stroke}"/><text x="${mx}" y="${my+4}" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">${moveUp?'↑':'↓'}</text>`;
+      const arrowPath='M0 -6 L6 2 H3 V7 H-3 V2 H-6 Z';
+      svg+=`<circle cx="${mx}" cy="${my}" r="11" fill="${stroke}" stroke="#fff" stroke-width="1.5"/><path d="${arrowPath}" transform="translate(${mx} ${my}) rotate(${moveUp?0:180})" fill="#fff"/>`;
     }
   }
   for(const r of valid){
@@ -7005,7 +7011,7 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
   }
   points.forEach((r,i)=>{svg+=`<text x="${x(i)}" y="${H-8}" font-size="12" text-anchor="middle" fill="${i===4?'#1e513a':'#565d56'}" font-weight="${i===4?700:500}">${r.year}${i===4?' ●':''}</text>`;});
   svg+='</svg>';
-  return `<section class="club-history-chart"><h3>Historical table positions</h3><div class="club-history-scroll">${svg}</div><div class="club-history-legend"><span><b class="club-history-up">↑ Promotion</b></span><span><b class="club-history-down">↓ Relegation</b></span><span>Outlined marker = live 26/27</span></div></section>`;
+  return `<section class="club-history-chart"><h3>Historical table positions</h3><div class="club-history-scroll">${svg}</div><div class="club-history-legend"><span><b class="club-history-up">▲ Promotion</b></span><span><b class="club-history-down">▼ Relegation</b></span></div></section>`;
 }
 async function populateClubHistoryChart(teamName,currentDivision){
   const slot=document.getElementById('clubHistoryChartSlot');if(!slot)return;
