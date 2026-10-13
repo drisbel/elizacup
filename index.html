@@ -6912,42 +6912,50 @@ function clubHistoryPosition(v){const m=String(v??'').match(/^\s*(\d{1,2})(?:ST|
 async function loadClubHistory(){
   if(!clubHistoryPromise){
     clubHistoryPromise=(async()=>{
-      // Fetch the full tab, then select DI:DT locally. This avoids inconsistent
-      // gviz range handling, which can silently return the wrong columns.
-      const url=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CLUB_HISTORY_GID}&cachebust=${Date.now()}`;
-      const res=await cachedFetch(url);
-      if(!res.ok)throw new Error(`Historical sheet returned HTTP ${res.status}`);
-      const csv=await res.text();
-      const all=Papa.parse(csv,{skipEmptyLines:false}).data;
-      if(!all.length)throw new Error('Historical sheet returned no rows');
-      // DI is zero-based column 112; DT is 123. Rows are zero-based.
-      const cell=(sheetRow,col)=>String(all[sheetRow-1]?.[col-1]??'').trim();
+      const base=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq`;
+      const cols=['DI','DJ','DK','DL','DM','DN','DO','DP','DQ','DR','DS','DT'];
+      const urls=[
+        `${base}?tqx=out:csv&gid=${CLUB_HISTORY_GID}&tq=${encodeURIComponent('select '+cols.join(',')+' where DI is not null')}&headers=0&v=${Date.now()}`,
+        `${base}?tqx=out:csv&gid=${CLUB_HISTORY_GID}&range=DI2%3ADT74&headers=0&v=${Date.now()}`
+      ];
       const years=['22/23','23/24','24/25','25/26','26/27'];
-      const sizes={};
-      for(let tier=1;tier<=3;tier++){
-        // Row 71 is the header; division sizes are rows 72-74.
-        sizes[tier]=years.map((_,i)=>{
-          const raw=cell(71+tier,114+i);
-          const m=raw.match(/\d+/);
-          return m?Number(m[0]):null;
-        });
+      let best=null,bestScore=-1;
+      for(const url of urls){
+        try{
+          const response=await cachedFetch(url);
+          if(!response.ok)throw new Error('HTTP '+response.status);
+          const rows=Papa.parse(await response.text(),{skipEmptyLines:false}).data;
+          const value=(row,i)=>String(row?.[i]??'').trim();
+          // Detect the actual first season by its column heading, rather than
+          // assuming Google Visualization preserves blank leading columns.
+          const header=rows.find(row=>row.some(v=>/22\/23\s*Div/i.test(String(v||''))));
+          const divIndex=header?header.findIndex(v=>/22\/23\s*Div/i.test(String(v||''))):1;
+          const teamIndex=Math.max(0,divIndex-1);
+          const teams=new Map();
+          const sizes={};
+          for(const row of rows){
+            const tier=clubHistoryTier(value(row,teamIndex));
+            if(!tier||!/^(ELIZA CUP|DIVISION [123])$/i.test(value(row,teamIndex)))continue;
+            sizes[tier]=years.map((_,i)=>{const m=value(row,divIndex+i).match(/\d+/);return m?Number(m[0]):null;});
+          }
+          for(const row of rows){
+            const team=value(row,teamIndex);
+            if(!team||/^(ELIZA CUP|DIVISION [123]|\d{2}\/\d{2})$/i.test(team))continue;
+            const records=years.map((year,i)=>{
+              const division=value(row,divIndex+i*2);
+              const posIndex=divIndex+i*2+1;
+              const raw=i===4?(value(row,posIndex+1)||value(row,posIndex)):value(row,posIndex);
+              const tier=clubHistoryTier(division);
+              return {year,division,position:clubHistoryPosition(raw),tier,size:tier?sizes[tier]?.[i]:null,isLive:i===4};
+            });
+            if(records.some(r=>r.tier&&r.position!==null))teams.set(clubHistoryKey(team),records);
+          }
+          const score=[...teams.values()].reduce((n,recs)=>n+recs.filter(r=>r.tier&&r.position!==null).length,0);
+          if(score>bestScore){bestScore=score;best=teams;}
+        }catch(err){console.warn('Historical data source attempt failed:',err);}
       }
-      const teams=new Map();
-      for(let sheetRow=3;sheetRow<=68;sheetRow++){
-        const team=cell(sheetRow,113);
-        if(!team)continue;
-        const records=years.map((year,i)=>{
-          const division=cell(sheetRow,114+i*2);
-          // 26/27 has an extra current-position column in DT.
-          const rawPosition=i===4?(cell(sheetRow,124)||cell(sheetRow,123)):cell(sheetRow,115+i*2);
-          const tier=clubHistoryTier(division);
-          return {year,division,position:clubHistoryPosition(rawPosition),tier,
-            size:tier?sizes[tier]?.[i]:null,isLive:i===4};
-        });
-        teams.set(clubHistoryKey(team),records);
-      }
-      if(!teams.size)throw new Error('No team names found in DATA 26/27 column DI');
-      return teams;
+      if(!best||!best.size)throw new Error('No historical positions returned from the spreadsheet');
+      return best;
     })().catch(err=>{clubHistoryPromise=null;throw err;});
   }
   return clubHistoryPromise;
@@ -6964,8 +6972,8 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     return T+(r.tier-1)*bandH+8+((r.position-1)/Math.max(1,size-1))*(bandH-16);
   };
   const valid=points.map((r,i)=>({...r,i})).filter(r=>r.position!==null&&r.tier&&r.position>0);
-  const tierColors={1:'#284783',2:'#d3a31a',3:'#23845d'};
-  const bandColors={1:'#edf2fb',2:'#fcf6df',3:'#eaf5ee'};
+  const tierColors={1:'#284783',2:'#278c9e',3:'#7054a3'};
+  const bandColors={1:'#edf2fb',2:'#e8f5f7',3:'#f1edf9'};
   const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const ordinal=n=>`${n}${n%100>=11&&n%100<=13?'th':n%10===1?'st':n%10===2?'nd':n%10===3?'rd':'th'}`;
   let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Historical league positions for ${esc(teamName)}">`;
@@ -6973,7 +6981,7 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
     const top=T+(tier-1)*bandH;
     svg+=`<rect x="${L}" y="${top}" width="${W-L-R}" height="${bandH-3}" rx="4" fill="${bandColors[tier]}"/>`;
     svg+=`<rect x="${L}" y="${top}" width="3" height="${bandH-3}" rx="1" fill="${tierColors[tier]}"/>`;
-    svg+=`<text x="${L-9}" y="${top+bandH/2+4}" fill="${tierColors[tier]}" font-size="13" text-anchor="end" font-weight="700">${tier===1?'EC':'D'+tier}</text>`;
+    svg+=`<text x="${L-9}" y="${top+bandH/2+4}" fill="${tierColors[tier]}" font-size="13" text-anchor="end" font-weight="700">${'D'+tier}</text>`;
   }
   // Join only consecutive seasons. Missing seasons should not create a false jump.
   for(let i=1;i<valid.length;i++){
