@@ -14,6 +14,20 @@
     "rules": "1 point penalty for every position per team you are away from the real life table position.\nTeam with the lowest points total at the end of the last round wins."
   },
   {
+    "id": "mv68gyr0",
+    "label": "Eliza Cup Predictor",
+    "status": "signups",
+    "roundInfo": "",
+    "winners": [],
+    "code": "",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "notes": "",
+    "link": "#sideleagues=elizapredictor",
+    "rules": ""
+  },
+  {
     "id": "muu6vwt0",
     "label": "A-League LMS",
     "status": "signups",
@@ -39,20 +53,6 @@
     "countdownEnabled": false,
     "notes": "",
     "link": "#sideleagues=almtipping",
-    "rules": ""
-  },
-  {
-    "id": "mv68gyr0",
-    "label": "Eliza Cup Predictor",
-    "status": "signups",
-    "roundInfo": "",
-    "winners": [],
-    "code": "",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "notes": "",
-    "link": "#sideleagues=elizapredictor",
     "rules": ""
   },
   {
