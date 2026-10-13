@@ -42,20 +42,6 @@
     "rules": ""
   },
   {
-    "id": "muvsetmo",
-    "label": "ALW Tipping",
-    "status": "signups",
-    "roundInfo": "",
-    "winners": [],
-    "code": "",
-    "closeEnabled": false,
-    "closeDate": "",
-    "countdownEnabled": false,
-    "notes": "",
-    "link": "#sideleagues=alwtipping",
-    "rules": ""
-  },
-  {
     "id": "mv68gyr0",
     "label": "Eliza Cup Predictor",
     "status": "signups",
@@ -67,6 +53,20 @@
     "countdownEnabled": false,
     "notes": "",
     "link": "#sideleagues=elizapredictor",
+    "rules": ""
+  },
+  {
+    "id": "muvsetmo",
+    "label": "ALW Tipping",
+    "status": "signups",
+    "roundInfo": "",
+    "winners": [],
+    "code": "",
+    "closeEnabled": false,
+    "closeDate": "",
+    "countdownEnabled": false,
+    "notes": "",
+    "link": "#sideleagues=alwtipping",
     "rules": ""
   },
   {
