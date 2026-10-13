@@ -6912,38 +6912,41 @@ function clubHistoryPosition(v){const m=String(v??'').match(/^\s*(\d{1,2})(?:ST|
 async function loadClubHistory(){
   if(!clubHistoryPromise){
     clubHistoryPromise=(async()=>{
-      // Fetch the exact historical range, so CSV column indexes do not depend
-      // on the size or leading empty columns of the rest of the spreadsheet.
-      const url=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CLUB_HISTORY_GID}&range=DI2%3ADT74&cachebust=${Date.now()}`;
+      // Fetch the full tab, then select DI:DT locally. This avoids inconsistent
+      // gviz range handling, which can silently return the wrong columns.
+      const url=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CLUB_HISTORY_GID}&cachebust=${Date.now()}`;
       const res=await cachedFetch(url);
       if(!res.ok)throw new Error(`Historical sheet returned HTTP ${res.status}`);
       const csv=await res.text();
-      const rows=Papa.parse(csv,{skipEmptyLines:false}).data;
-      if(!rows.length)throw new Error('Historical sheet returned no rows');
-      // Range starts at DI2: row 2 is array row 0, DI is column 0.
-      const cell=(sheetRow,offset)=>String(rows[sheetRow-2]?.[offset]??'').trim();
+      const all=Papa.parse(csv,{skipEmptyLines:false}).data;
+      if(!all.length)throw new Error('Historical sheet returned no rows');
+      // DI is zero-based column 112; DT is 123. Rows are zero-based.
+      const cell=(sheetRow,col)=>String(all[sheetRow-1]?.[col-1]??'').trim();
       const years=['22/23','23/24','24/25','25/26','26/27'];
       const sizes={};
       for(let tier=1;tier<=3;tier++){
+        // Row 71 is the header; division sizes are rows 72-74.
         sizes[tier]=years.map((_,i)=>{
-          const m=cell(71+tier,1+i).match(/\d+/);
+          const raw=cell(71+tier,114+i);
+          const m=raw.match(/\d+/);
           return m?Number(m[0]):null;
         });
       }
       const teams=new Map();
       for(let sheetRow=3;sheetRow<=68;sheetRow++){
-        const team=cell(sheetRow,0);
+        const team=cell(sheetRow,113);
         if(!team)continue;
         const records=years.map((year,i)=>{
-          const division=cell(sheetRow,1+i*2);
-          const rawPosition=i===4?(cell(sheetRow,11)||cell(sheetRow,10)):cell(sheetRow,2+i*2);
+          const division=cell(sheetRow,114+i*2);
+          // 26/27 has an extra current-position column in DT.
+          const rawPosition=i===4?(cell(sheetRow,124)||cell(sheetRow,123)):cell(sheetRow,115+i*2);
           const tier=clubHistoryTier(division);
           return {year,division,position:clubHistoryPosition(rawPosition),tier,
             size:tier?sizes[tier]?.[i]:null,isLive:i===4};
         });
         teams.set(clubHistoryKey(team),records);
       }
-      if(!teams.size)throw new Error('No historical team rows found');
+      if(!teams.size)throw new Error('No team names found in DATA 26/27 column DI');
       return teams;
     })().catch(err=>{clubHistoryPromise=null;throw err;});
   }
