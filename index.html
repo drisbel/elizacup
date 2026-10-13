@@ -3353,17 +3353,9 @@ const COL = {
   POS:1, TEAM:3, PTS:8, W:9, D:10, L:11, FOR:12, AGA:13, DIFF:14
 };
 
-// Form columns (T:X) shift position due to hidden columns elsewhere on the sheet.
-// Detect them directly from the data: 5 consecutive cells that are each exactly W/D/L.
-function findFormColumns(dataRow){
-  for(let i = 0; i < dataRow.length - 4; i++){
-    const vals = dataRow.slice(i, i+5).map(v => (v||"").toString().trim().toUpperCase());
-    if(vals.every(v => v === "W" || v === "D" || v === "L")){
-      return [i, i+1, i+2, i+3, i+4];
-    }
-  }
-  return null;
-}
+// Division FORM results are always in sheet columns T:X (zero-based 19:23).
+// Read them directly: blank/unplayed rounds must not hide other teams' results.
+const DIVISION_FORM_COLS = [19, 20, 21, 22, 23];
 
 function initials(name){
   return name.split(/\s+/).map(w=>w[0]).join("").slice(0,3).toUpperCase();
@@ -3383,8 +3375,8 @@ function parseStandings(rows){
   standings = [];
   knownTeams = new Set();
   const headerRow = rows[TABLE_HEADER_ROW] || [];
-  const formCols = findFormColumns(rows[TABLE_DATA_START] || []);
-  formRoundLabels = formCols ? formCols.map(i => cell(headerRow, i)) : [];
+  const formCols = DIVISION_FORM_COLS;
+  formRoundLabels = formCols.map(i => cell(headerRow, i));
   const nextOppCol = findColumnByHeader(headerRow, "NEXT OPPONENT");
 
   for(let r = TABLE_DATA_START; r <= tableDataEnd() && r < rows.length; r++){
@@ -3403,7 +3395,7 @@ function parseStandings(rows){
       for: parseInt(cell(row,COL.FOR),10) || 0,
       aga: parseInt(cell(row,COL.AGA),10) || 0,
       diff: parseInt((cell(row,COL.DIFF)||"0").replace(/[^\-\d]/g,""),10) || 0,
-      form: formCols ? formCols.map(i => cell(row,i)) : ["","","","",""],
+      form: formCols.map(i => cell(row,i)),
       nextOpponent: nextOppCol !== null ? cell(row, nextOppCol) : ""
     });
   }
