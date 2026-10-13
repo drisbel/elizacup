@@ -6909,27 +6909,41 @@ function clubHistoryPosition(v){const m=String(v??'').match(/^\s*(\d{1,2})(?:ST|
 async function loadClubHistory(){
   if(!clubHistoryPromise){
     clubHistoryPromise=(async()=>{
-      const url=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CLUB_HISTORY_GID}&range=DI2:DT74&cachebust=${Date.now()}`;
-      const res=await cachedFetch(url);if(!res.ok)throw new Error('Historical data unavailable');
-      const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data;
-      const sizes={};
-      // CSV starts at sheet row 2; row 71 => index 69; row 72-74 => 70-72.
+      // Fetch the full tab, then select DI:DT locally. This avoids inconsistent
+      // gviz range handling, which can silently return the wrong columns.
+      const url=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CLUB_HISTORY_GID}&cachebust=${Date.now()}`;
+      const res=await cachedFetch(url);
+      if(!res.ok)throw new Error(`Historical sheet returned HTTP ${res.status}`);
+      const csv=await res.text();
+      const all=Papa.parse(csv,{skipEmptyLines:false}).data;
+      if(!all.length)throw new Error('Historical sheet returned no rows');
+      // DI is zero-based column 112; DT is 123. Rows are zero-based.
+      const cell=(sheetRow,col)=>String(all[sheetRow-1]?.[col-1]??'').trim();
       const years=['22/23','23/24','24/25','25/26','26/27'];
+      const sizes={};
       for(let tier=1;tier<=3;tier++){
-        const row=rows[69+tier]||[];
-        sizes[tier]=years.map((_,i)=>Number(row[i+1])||null);
+        // Row 71 is the header; division sizes are rows 72-74.
+        sizes[tier]=years.map((_,i)=>{
+          const raw=cell(71+tier,114+i);
+          const m=raw.match(/\d+/);
+          return m?Number(m[0]):null;
+        });
       }
       const teams=new Map();
-      for(const row of rows.slice(1,67)){
-        if(!row[0])continue;
+      for(let sheetRow=3;sheetRow<=68;sheetRow++){
+        const team=cell(sheetRow,113);
+        if(!team)continue;
         const records=years.map((year,i)=>{
-          const division=row[1+i*2]||'';
-          const rawPosition=i===4?(row[11]||row[10]):row[2+i*2];
-          return {year,division,position:clubHistoryPosition(rawPosition),tier:clubHistoryTier(division),size:null,isLive:i===4};
+          const division=cell(sheetRow,114+i*2);
+          // 26/27 has an extra current-position column in DT.
+          const rawPosition=i===4?(cell(sheetRow,124)||cell(sheetRow,123)):cell(sheetRow,115+i*2);
+          const tier=clubHistoryTier(division);
+          return {year,division,position:clubHistoryPosition(rawPosition),tier,
+            size:tier?sizes[tier]?.[i]:null,isLive:i===4};
         });
-        records.forEach((r,i)=>{r.size=r.tier?sizes[r.tier]?.[i]:null;});
-        teams.set(clubHistoryKey(row[0]),records);
+        teams.set(clubHistoryKey(team),records);
       }
+      if(!teams.size)throw new Error('No team names found in DATA 26/27 column DI');
       return teams;
     })().catch(err=>{clubHistoryPromise=null;throw err;});
   }
@@ -6968,12 +6982,13 @@ function clubHistoryChartHtml(teamName,records,currentDivision){
 }
 async function populateClubHistoryChart(teamName,currentDivision){
   const slot=document.getElementById('clubHistoryChartSlot');if(!slot)return;
+  slot.innerHTML='<p class="club-history-note">Loading historical positions…</p>';
   try{
     const map=await loadClubHistory();
     // Avoid injecting results into a different club after rapid navigation.
     if(document.getElementById('clubHistoryChartSlot')!==slot)return;
     slot.innerHTML=clubHistoryChartHtml(teamName,map.get(clubHistoryKey(teamName)),currentDivision);
-  }catch(err){console.warn('Club history chart:',err);}
+  }catch(err){console.warn('Club history chart:',err);if(document.getElementById('clubHistoryChartSlot')===slot)slot.innerHTML='<p class="club-history-note">Historical chart could not load. Please refresh the page or check spreadsheet access.</p>';}
 }
 
 function renderTeamProfile(data){
