@@ -1957,9 +1957,9 @@ const DIVISIONS = [
   { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", sheetId: SHEET_ID, teams: 14, color: "#28427c", type: "division" },
   { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  sheetId: SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
   { id: "d2b", label: "Division 2B",            pill: "Div. 2B", gid: "1047201294", sheetId: SHEET_ID, teams: 12, color: "#990000", type: "division" },
-  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  sheetId: SHEET_ID, teams: 12, color: "#6aa84f", type: "division" },
-  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", sheetId: SHEET_ID, teams: 12, color: "#274e13", type: "division" },
-  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482", sheetId: SHEET_ID, teams: 62, color: "#000000", type: "roddy" },
+  { id: "d3a", label: "Division 3A",            pill: "Div. 3A", gid: "688700661",  sheetId: SHEET_ID, teams: 14, color: "#6aa84f", type: "division" },
+  { id: "d3b", label: "Division 3B",            pill: "Div. 3B", gid: "2079252892", sheetId: SHEET_ID, teams: 14, color: "#274e13", type: "division" },
+  { id: "roddy", label: "Roddy Rodriguez Cup",  pill: "Roddy",   gid: "418105482", sheetId: SHEET_ID, teams: 66, color: "#000000", type: "roddy" },
   { id: "facup", label: "Eliza FA Cup",         pill: "FA Cup",  gid: "2398203",   sheetId: SHEET_ID, teams: 64, color: "#0a2f85", type: "facup" },
   { id: "ecl",   label: "Eliza Champions League", pill: "ECL",   gid: "1490882074", sheetId: SHEET_ID, teams: 12, color: "#111111", type: "ecl" },
 
@@ -3321,8 +3321,8 @@ const TIER_CONFIGS = {
   ],
   d3: [
     { class: "tier-champion",   label: "Automatic promotion (1st–2nd)", upTo: 2 },
-    { class: "tier-ecl",        label: "Playoff qualification (3–6)",   upTo: 6 },
-    { class: "tier-mid",        label: "Non-playoff spots (7–12)",      upTo: 12 }
+    { class: "tier-ecl",        label: "Playoff qualification (3–8)",   upTo: 8 },
+    { class: "tier-mid",        label: "Non-playoff spots (9–14)",      upTo: 14 }
   ]
 };
 
@@ -3460,7 +3460,11 @@ function parseFixtures(rows){
     const teamHits = [];
     nonEmpty.forEach((c,i) => {
       if(knownTeams.has(c.toUpperCase())){ teamHits.push({name:c, idx:i, known:true}); return; }
-      if(isPlayoffRound && TEAM_NAME_RE.test(c) && !/^\d+$/.test(c) && !/^ROUND\s*\d+$/i.test(c) && !ROLE_TOKENS.has(c.toUpperCase())){
+      // Division 3 now has seven fixtures per round. Allow team names from the
+      // fixture block even if the expanded 14-team standings roster is not yet
+      // populated or has a slightly different spelling. Keep other divisions unchanged.
+      const isDivision3Fixture = currentDivision.id === "d3a" || currentDivision.id === "d3b";
+      if((isPlayoffRound || isDivision3Fixture) && TEAM_NAME_RE.test(c) && !/^\d+$/.test(c) && !/^ROUND\s*\d+$/i.test(c) && !ROLE_TOKENS.has(c.toUpperCase())){
         teamHits.push({name:c, idx:i, known:false});
       }
     });
