@@ -880,6 +880,16 @@
     border-left:5px solid #b93c32 !important;
   }
 
+  /* Division 3 conference allocation — scoped to wheel draw results. */
+  .wheel-conference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;}
+  .wheel-conference-group{min-width:0;border:1px solid var(--line);border-radius:10px;padding:12px;background:#f7f9fc;}
+  .wheel-conference-group h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 12px;text-align:center;text-transform:uppercase;color:#274e13;}
+  .wheel-conference-group:nth-child(2) h3{color:#6aa84f;}
+  .wheel-conference-group h3 small{font-family:Barlow,sans-serif;font-size:12px;color:var(--muted);}
+  .wheel-conference-group .draw-fixture-row{padding:8px;gap:7px;}
+  .wheel-conference-group .team{font-size:13px!important;min-width:0;overflow-wrap:anywhere;}
+  .wheel-conference-empty{text-align:center;color:var(--muted);font-size:13px;}
+  @media(max-width:600px){.wheel-conference-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -1333,11 +1343,35 @@
 
     <div class="card">
       <div class="field" style="margin-bottom:0;">
+        <label for="wheelDrawType">Draw type</label>
+        <select id="wheelDrawType">
+          <option value="fixtures">Fixture Draw (existing)</option>
+          <option value="conferences">Division 3 Conference Allocation (3A / 3B)</option>
+        </select>
+        <div class="hint" id="wheelConferenceHint" style="display:none;margin-top:8px;">Enter only the unallocated teams in the main team list. Add teams already allocated to 3A and 3B in the fields below. Each spin assigns the selected team to the conference with fewer teams (3A when tied). Both conferences finish with 14 teams.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="field" style="margin-bottom:0;">
         <label for="wheelTitleInput">Wheel title <span class="hint" style="display:inline;">(shown centred at the top of the right side in Full Screen Mode)</span></label>
         <input type="text" id="wheelTitleInput" placeholder="e.g. Round 5 Draw">
       </div>
     </div>
 
+    <div class="card" id="wheelConferencePreassigned" style="display:none;">
+      <h2>Already allocated — Division 3</h2>
+      <div class="row" style="flex-wrap:wrap;">
+        <div class="field" style="min-width:230px;">
+          <label for="wheelPreassigned3A">Division 3A (one team per line)</label>
+          <textarea id="wheelPreassigned3A" rows="6" placeholder="Teams already in 3A"></textarea>
+        </div>
+        <div class="field" style="min-width:230px;">
+          <label for="wheelPreassigned3B">Division 3B (one team per line)</label>
+          <textarea id="wheelPreassigned3B" rows="6" placeholder="Teams already in 3B"></textarea>
+        </div>
+      </div>
+      <div class="hint">These teams are shown on the right before the first spin and are excluded from the wheel. Enter only teams still needing allocation in the main Team list below. Total must be 28, with no duplicates.</div>
+    </div>
     <div class="card">
       <h2>Team list</h2>
       <div class="field">
@@ -3158,7 +3192,41 @@ function drawStart(){
     alert("Enter at least 2 teams (one per line) before starting the draw.");
     return;
   }
-  const includeAverage = $("drawIncludeAverage").checked;
+  const conferenceMode = wheelConferenceMode();
+  let preassignedA = [], preassignedB = [];
+  if(conferenceMode){
+    preassignedA = wheelConferenceInputTeams("wheelPreassigned3A");
+    preassignedB = wheelConferenceInputTeams("wheelPreassigned3B");
+    const allTeams = [...preassignedA, ...preassignedB, ...teams];
+    const normalized = allTeams.map(t => t.toLocaleLowerCase().replace(/\s+/g," ").trim());
+    if(new Set(normalized).size !== allTeams.length){
+      alert("A team is listed more than once. Each team must appear in only one field.");
+      return;
+    }
+    if(allTeams.length !== 28){
+      alert("Division 3 needs exactly 28 teams in total. Already allocated: " + (preassignedA.length+preassignedB.length) + ". Remaining on wheel: " + teams.length + ". Total: " + allTeams.length + ".");
+      return;
+    }
+    if(preassignedA.length > 14 || preassignedB.length > 14){
+      alert("A conference cannot start with more than 14 teams.");
+      return;
+    }
+    if(!teams.length){
+      alert("All 28 teams are already allocated. There are no teams left to spin.");
+      return;
+    }
+    // Simulate the smaller-conference-first allocation to ensure both reach 14.
+    let countA=preassignedA.length, countB=preassignedB.length;
+    for(let i=0;i<teams.length;i++){
+      if((countA <= countB && countA < 14) || countB >= 14) countA++;
+      else countB++;
+    }
+    if(countA !== 14 || countB !== 14){
+      alert("The pre-allocations cannot produce 14 teams in each conference.");
+      return;
+    }
+  }
+  const includeAverage = !conferenceMode && $("drawIncludeAverage").checked;
   if(includeAverage && teams.length % 2 === 0){
     alert(`With "Average" included, you need an odd number of teams entered above so everyone pairs up evenly once Average takes one of the slots. You currently have ${teams.length} teams — add or remove one.`);
     return;
@@ -3166,6 +3234,7 @@ function drawStart(){
   drawPot = shuffleArray(teams);
   drawWheelDisplayPot = drawPot.slice();
   drawFixtures = [];
+  wheelConferenceAllocations = { "3A": preassignedA.slice(), "3B": preassignedB.slice() };
   $("drawSpinBtn").disabled = false;
 
   if(includeAverage){
@@ -3184,7 +3253,7 @@ function drawStart(){
   updateWheelCompleteDrawButtonVisibility();
   if(wheelColorMode === "per-team") renderWheelPerTeamList();
   drawRenderWheel();
-  loadWheelMatchupData(); // pre-warm so the first spin's matchup info appears instantly
+  if(!conferenceMode) loadWheelMatchupData(); // pre-warm so the first spin's matchup info appears instantly
   enterWheelFullscreen();
 }
 
@@ -3193,6 +3262,7 @@ function drawReset(){
   drawWheelDisplayPot = [];
   drawPending = null;
   drawFixtures = [];
+  wheelConferenceAllocations = { "3A": [], "3B": [] };
   drawSpinning = false;
   $("drawSpinBtn").disabled = true;
   $("drawWheelPick").style.display = "none";
@@ -3223,7 +3293,7 @@ function isWheelDrawComplete(){
 function updateWheelCompleteDrawButtonVisibility(){
   const btn = $("wheelCompleteDrawBtn");
   if(!btn) return;
-  const show = isWheelDrawComplete() && wheelFullscreenActive && !wheelPlainMode;
+  const show = isWheelDrawComplete() && wheelFullscreenActive && !wheelPlainMode && !wheelConferenceMode();
   const wasShown = btn.style.display !== "none";
   btn.style.display = show ? "inline-block" : "none";
   if(show !== wasShown && wheelFullscreenActive && !wheelFullscreenResultsActive){
@@ -3419,7 +3489,54 @@ function exportWheelResultsImage(){
 
 // Records one pick (the wheel's spin landing) — pairs it with a pending
 // team, or holds it as pending if it's the first of a pair.
+let wheelConferenceAllocations = { "3A": [], "3B": [] };
+function wheelConferenceMode(){
+  return $("wheelDrawType").value === "conferences";
+}
+function wheelConferenceInputTeams(id){
+  return $(id).value.split("\n").map(t=>t.trim()).filter(Boolean);
+}
+function wheelConferenceTeamHtml(name, index){
+  const logoName = resolveElizaTeamName(name);
+  return `<div class="draw-fixture-row" style="margin-bottom:7px;">
+    <span class="num">${index+1}</span>
+    <span class="team"><img src="logo/${teamLogoSlug(logoName)}.png" class="draw-fixture-logo" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${escapeHtml(name)}</span>
+  </div>`;
+}
+function renderWheelConferenceAllocations(){
+  const a=wheelConferenceAllocations["3A"], b=wheelConferenceAllocations["3B"];
+  return `<div class="wheel-conference-grid">
+    <section class="wheel-conference-group"><h3>Division 3A <small>${a.length}/14</small></h3>
+      ${a.map(wheelConferenceTeamHtml).join("") || '<p class="wheel-conference-empty">Awaiting first team…</p>'}</section>
+    <section class="wheel-conference-group"><h3>Division 3B <small>${b.length}/14</small></h3>
+      ${b.map(wheelConferenceTeamHtml).join("") || '<p class="wheel-conference-empty">Awaiting first team…</p>'}</section>
+  </div>`;
+}
+function updateWheelDrawType(){
+  const isConference=wheelConferenceMode();
+  $("wheelConferenceHint").style.display=isConference?"block":"none";
+  $("wheelConferencePreassigned").style.display=isConference?"block":"none";
+  $("drawIncludeAverage").closest(".field").style.display=isConference?"none":"";
+  $("wheelSideLeagueMode").closest(".checkbox-row").style.display=isConference?"none":"";
+  $("wheelPlainMode").closest(".checkbox-row").style.display=isConference?"none":"";
+  if(isConference){
+    $("wheelPlainMode").checked=false;wheelPlainMode=false;
+    $("wheelSideLeagueMode").checked=false;wheelSideLeagueMode=false;
+    if(!$("wheelTitleInput").value.trim()) $("wheelTitleInput").value="DIVISION 3 CONFERENCE DRAW";
+    $("wheelCompLogoSelect").value="logo/division-3-logo.png";
+    updateWheelCenterLogo();
+  }
+  drawReset();
+}
 function drawRecordPick(picked){
+  if(wheelConferenceMode()){
+    const aCount = wheelConferenceAllocations["3A"].length;
+    const bCount = wheelConferenceAllocations["3B"].length;
+    const next = aCount >= 14 ? "3B" : bCount >= 14 ? "3A" : aCount <= bCount ? "3A" : "3B";
+    wheelConferenceAllocations[next].push(picked);
+    if(!drawPot.length) $("drawSpinBtn").disabled=true;
+    return;
+  }
   if(drawPending === null){
     drawPending = picked;
   }else{
@@ -3487,7 +3604,7 @@ function renderDrawShared(){
         <span class="team away draw-fixture-pending-slot">Awaiting opponent…</span>
       </div>`;
   }
-  $("drawFixtureList").innerHTML = fixturesHtml;
+  $("drawFixtureList").innerHTML = wheelConferenceMode() ? renderWheelConferenceAllocations() : fixturesHtml;
 
   // The matchup info panel is pinned at the top of the right column in Full
   // Screen Mode, so the fixtures pane below it keeps its own scroll — always
@@ -4329,7 +4446,7 @@ async function enterWheelFullscreen(){
   // Side League mode has no matchup info (it's Eliza Cup division/H2H data,
   // which doesn't apply to side-league team names) — hide the box entirely
   // so the fixtures pane below gets the full column instead of empty space.
-  $("wheelMatchupInfo").style.display = wheelSideLeagueMode ? "none" : "";
+  $("wheelMatchupInfo").style.display = (wheelSideLeagueMode || wheelConferenceMode()) ? "none" : "";
 
   reparentToFullscreen($("wheelWrap"), left);
   reparentToFullscreen($("drawSpinBtn").parentElement, left);
@@ -4631,7 +4748,7 @@ function drawSpin(){
     // pending, now cleared) — show the full matchup info for that pair.
     // Side League mode skips this entirely — division/H2H stats are Eliza
     // Cup data and don't apply to side-league team names.
-    if(!wheelSideLeagueMode){
+    if(!wheelSideLeagueMode && !wheelConferenceMode()){
       if(pendingBefore === null && drawPending !== null){
         renderWheelMatchupInfo(picked, null);
       }else if(pendingBefore !== null && drawPending === null){
@@ -4666,6 +4783,7 @@ $("saveRulebookBtn").addEventListener("click", saveRulebookSection);
 $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
 $("savePvBtn").addEventListener("click", savePageVisibility);
 $("drawStartBtn").addEventListener("click", drawStart);
+$("wheelDrawType").addEventListener("change", updateWheelDrawType);
 $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
