@@ -880,31 +880,29 @@
     border-left:5px solid #b93c32 !important;
   }
 
-  /* Division 3 conference allocation — scoped to wheel draw results. */
-  .wheel-conference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;}
-  .wheel-conference-group{min-width:0;border:1px solid var(--line);border-radius:10px;padding:12px;background:#f7f9fc;}
-  .wheel-conference-group h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 12px;text-align:center;text-transform:uppercase;color:#274e13;}
-  .wheel-conference-group:nth-child(2) h3{color:#6aa84f;}
-  .wheel-conference-group h3 small{font-family:Barlow,sans-serif;font-size:12px;color:var(--muted);}
-  .wheel-conference-group .draw-fixture-row{padding:8px;gap:7px;}
-  .wheel-conference-group .team{font-size:13px!important;min-width:0;overflow-wrap:anywhere;}
-  .wheel-conference-empty{text-align:center;color:var(--muted);font-size:13px;}
-  @media(max-width:600px){.wheel-conference-grid{grid-template-columns:1fr;}}
-
-  /* Fullscreen conference draw: fit both complete 14-team lists in the visible desktop viewport. */
-  @media (min-width:901px){
-    #wheelFullscreenRight.conference-fit .wheel-fullscreen-header{padding:var(--conf-head-pad,12px) 18px 0;}
-    #wheelFullscreenRight.conference-fit .wheel-fullscreen-title{font-size:var(--conf-title,20px);margin-bottom:var(--conf-title-gap,6px);}
-    #wheelFullscreenRight.conference-fit #wheelFullscreenFixturesPane{overflow:hidden;padding:var(--conf-pane-pad,8px) 14px 8px;min-height:0;}
-    #wheelFullscreenRight.conference-fit #wheelFullscreenFixturesPane > h2{font-size:var(--conf-heading,17px);margin-bottom:var(--conf-heading-gap,6px);}
-    #wheelFullscreenRight.conference-fit .wheel-conference-grid{gap:var(--conf-gap,8px);height:100%;align-items:start;}
-    #wheelFullscreenRight.conference-fit .wheel-conference-group{padding:var(--conf-group-pad,6px);}
-    #wheelFullscreenRight.conference-fit .wheel-conference-group h3{font-size:var(--conf-group-title,16px);margin-bottom:var(--conf-group-title-gap,5px);}
-    #wheelFullscreenRight.conference-fit .wheel-conference-group .draw-fixture-row{min-height:0;padding:var(--conf-row-pad,3px) 5px;margin-bottom:var(--conf-row-gap,3px)!important;gap:5px;}
-    #wheelFullscreenRight.conference-fit .wheel-conference-group .team{font-size:var(--conf-font,12px)!important;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    #wheelFullscreenRight.conference-fit .wheel-conference-group .draw-fixture-logo{width:var(--conf-logo,18px)!important;height:var(--conf-logo,18px)!important;}
-    #wheelFullscreenRight.conference-fit .wheel-conference-group .num{font-size:var(--conf-number,10px);}
-  }
+  /* Division 3: conference colour panels; white fixed-height team cards. */
+  .wheel-conference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
+  .wheel-conference-group{min-width:0;border-radius:10px;padding:8px;background:#a9d879;border:2px solid #6a9f35;}
+  .wheel-conference-group:nth-child(2){background:#245e37;border-color:#164328;}
+  .wheel-conference-group h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;margin:0 0 8px;text-align:center;text-transform:uppercase;color:#173b1c;}
+  .wheel-conference-group:nth-child(2) h3{color:#fff;}
+  .wheel-conference-group h3 small{font-family:Barlow,sans-serif;font-size:12px;color:inherit;opacity:.85;}
+  .wheel-conference-group .draw-fixture-row{background:#fff;border:1px solid #e2e6ec;border-radius:5px;display:flex;align-items:center;overflow:hidden;min-width:0;}
+  .wheel-conference-group .team{min-width:0;flex:1;display:flex;align-items:center;overflow:hidden;}
+  .wheel-conference-group .conference-team-name{min-width:0;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;white-space:normal;line-height:1.08;}
+  .wheel-conference-empty{text-align:center;color:#213b27;font-size:13px;}
+  #wheelFullscreenRight.conference-fit .wheel-fullscreen-header{padding:var(--conf-head-pad,8px) 14px 0;}
+  #wheelFullscreenRight.conference-fit .wheel-fullscreen-title{font-size:var(--conf-title,20px);margin-bottom:var(--conf-title-gap,4px);}
+  #wheelFullscreenRight.conference-fit #wheelFullscreenFixturesPane{overflow:hidden;padding:var(--conf-pane-pad,6px) 10px 6px;min-height:0;}
+  #wheelFullscreenRight.conference-fit #wheelFullscreenFixturesPane > h2{font-size:var(--conf-heading,17px);margin-bottom:var(--conf-heading-gap,5px);}
+  #wheelFullscreenRight.conference-fit .wheel-conference-grid{gap:var(--conf-gap,8px);height:auto;}
+  #wheelFullscreenRight.conference-fit .wheel-conference-group{padding:var(--conf-group-pad,6px);}
+  #wheelFullscreenRight.conference-fit .wheel-conference-group h3{font-size:var(--conf-group-title,17px);margin-bottom:var(--conf-group-title-gap,5px);}
+  #wheelFullscreenRight.conference-fit .wheel-conference-group .draw-fixture-row{height:var(--conf-row-height,34px);min-height:0;max-height:var(--conf-row-height,34px);padding:0 5px;margin-bottom:var(--conf-row-gap,3px)!important;gap:5px;}
+  #wheelFullscreenRight.conference-fit .wheel-conference-group .team{font-size:var(--conf-font,14px)!important;line-height:1.08;}
+  #wheelFullscreenRight.conference-fit .wheel-conference-group .draw-fixture-logo{width:var(--conf-logo,23px)!important;height:var(--conf-logo,23px)!important;flex-shrink:0;}
+  #wheelFullscreenRight.conference-fit .wheel-conference-group .num{font-size:var(--conf-number,11px);}
+  @media(max-width:900px){.wheel-conference-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 </style>
 </head>
 <body>
@@ -3515,7 +3513,7 @@ function wheelConferenceTeamHtml(name, index){
   const logoName = resolveElizaTeamName(name);
   return `<div class="draw-fixture-row" style="margin-bottom:7px;">
     <span class="num">${index+1}</span>
-    <span class="team"><img src="logo/${teamLogoSlug(logoName)}.png" class="draw-fixture-logo" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${escapeHtml(name)}</span>
+    <span class="team"><img src="logo/${teamLogoSlug(logoName)}.png" class="draw-fixture-logo" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${`<span class="conference-team-name">${escapeHtml(name)}</span>`}</span>
   </div>`;
 }
 function renderWheelConferenceAllocations(){
@@ -3597,48 +3595,49 @@ function fitWheelConferenceViewport(){
   if(!right) return;
   const enabled=wheelFullscreenActive && wheelConferenceMode();
   right.classList.toggle('conference-fit',enabled);
-  if(!enabled || window.innerWidth<=900) return;
+  if(!enabled) return;
   const pane=$('wheelFullscreenFixturesPane');
   const header=right.querySelector('.wheel-fullscreen-header');
-  const title=header.querySelector('.wheel-fullscreen-title');
   const paneHeading=pane.querySelector('h2');
-  // Account for the actual height occupied by the title and fixtures heading.
-  const height=right.clientHeight;
-  const titleHeight=title && title.style.display!=='none' ? Math.min(36,title.scrollHeight) : 0;
-  const budget=Math.max(180,height-titleHeight-95);
-  // Scale row heights, gaps, icons and typography together. 14 rows must fit.
-  const rowSpace=Math.max(16,Math.min(46,(budget-58)/14));
-  const scale=Math.min(1,Math.max(.57,rowSpace/34));
   const set=(key,value)=>right.style.setProperty('--conf-'+key,value+'px');
-  set('head-pad',Math.round(12*scale));
-  set('title',Math.round(20*scale));
-  set('title-gap',Math.round(6*scale));
-  set('pane-pad',Math.round(8*scale));
-  set('heading',Math.round(17*scale));
-  set('heading-gap',Math.round(6*scale));
-  set('gap',Math.round(8*scale));
-  set('group-pad',Math.round(6*scale));
-  set('group-title',Math.round(16*scale));
-  set('group-title-gap',Math.round(5*scale));
-  set('row-pad',Math.max(1,Math.floor((rowSpace-18*scale-4)/2)));
-  set('row-gap',Math.max(1,Math.round(3*scale)));
-  set('font',Math.max(9,Math.round(12*scale)));
-  set('logo',Math.max(12,Math.round(18*scale)));
-  set('number',Math.max(8,Math.round(10*scale)));
-  // Second pass: shrink if the actual rendered 14-row layout is taller than the pane.
+  // Calculate against actual available height, reserving space for 14 rows.
+  const H=right.clientHeight;
+  const compact=H<700;
+  set('head-pad',compact?5:9);
+  set('title',compact?17:22);
+  set('title-gap',compact?2:5);
+  set('pane-pad',compact?3:7);
+  set('heading',compact?15:18);
+  set('heading-gap',compact?3:6);
+  set('gap',compact?6:12);
+  set('group-pad',compact?4:8);
+  set('group-title',compact?15:20);
+  set('group-title-gap',compact?3:7);
   const grid=pane.querySelector('.wheel-conference-grid');
-  if(grid){
-    const maxHeight=pane.clientHeight-paneHeading.offsetHeight-10;
-    let current=grid.getBoundingClientRect().height;
-    let tries=0;
-    while(current>maxHeight+1 && tries++<12){
-      const v=parseFloat(right.style.getPropertyValue('--conf-row-pad'))||1;
-      const g=parseFloat(right.style.getPropertyValue('--conf-row-gap'))||1;
-      if(v>1)set('row-pad',v-1);
-      else if(g>1)set('row-gap',g-1);
-      else {set('logo',Math.max(10,parseFloat(right.style.getPropertyValue('--conf-logo'))-1));set('font',Math.max(8,parseFloat(right.style.getPropertyValue('--conf-font'))-1));}
-      current=grid.getBoundingClientRect().height;
-    }
+  if(!grid) return;
+  const groups=Array.from(grid.querySelectorAll('.wheel-conference-group'));
+  const headingH=paneHeading ? paneHeading.getBoundingClientRect().height : 0;
+  const paneStyle=getComputedStyle(pane);
+  const panePadding=parseFloat(paneStyle.paddingTop)+parseFloat(paneStyle.paddingBottom);
+  const available=Math.max(100,pane.clientHeight-panePadding-headingH-8);
+  const groupPad=compact?4:8, groupTitle=compact?21:29;
+  const usable=available-(groupPad*2+groupTitle+4);
+  let gap=compact?2:3;
+  let rowH=Math.floor((usable-14*gap)/14);
+  rowH=Math.max(12,rowH);
+  // The rows have a fixed height even when the team name wraps to two lines.
+  set('row-height',rowH);
+  set('row-gap',gap);
+  set('font',Math.max(9,Math.min(16,Math.floor(rowH*.40))));
+  set('logo',Math.max(10,Math.min(29,rowH-5)));
+  set('number',Math.max(8,Math.min(12,Math.floor(rowH*.34))));
+  // Fit using the real rendered dimensions; never rely on a scrollbar.
+  let tries=0;
+  while(grid.getBoundingClientRect().height>available+1 && tries++<25){
+    rowH=Math.max(10,rowH-1);
+    set('row-height',rowH);
+    set('font',Math.max(8,Math.min(16,Math.floor(rowH*.40))));
+    set('logo',Math.max(9,Math.min(29,rowH-5)));
   }
 }
 window.addEventListener('resize',()=>requestAnimationFrame(fitWheelConferenceViewport));
