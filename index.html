@@ -946,44 +946,73 @@
     padding-left:2px;padding-right:2px;
   }
 
-  /* League table only: lock POS, CHG and TEAM together when scrolling sideways. */
-  table.league-standings thead th:nth-child(1),table.league-standings tbody td:nth-child(1){
+  /* Division standings: POS, CHG and TEAM stay locked, including their headers.
+     Override the older compact-table rule that made CHG position:static. */
+  table.standings.compact.league-standings thead th:nth-child(1),
+  table.standings.compact.league-standings tbody td:nth-child(1){
     position:sticky;left:0;z-index:5;
   }
-  table.league-standings thead th:nth-child(2),table.league-standings tbody td:nth-child(2){
-    position:sticky;left:var(--league-pos-width, 34px);z-index:5;
+  table.standings.compact.league-standings thead th:nth-child(2),
+  table.standings.compact.league-standings tbody td:nth-child(2){
+    position:sticky;left:var(--league-pos-width, 30px);z-index:5;
   }
-  table.league-standings thead th:nth-child(3),table.league-standings tbody td:nth-child(3){
-    position:sticky;left:calc(var(--league-pos-width, 34px) + var(--league-chg-width, 42px));z-index:5;
+  table.standings.compact.league-standings thead th:nth-child(3),
+  table.standings.compact.league-standings tbody td:nth-child(3){
+    position:sticky;left:calc(var(--league-pos-width, 30px) + var(--league-chg-width, 38px));z-index:5;
   }
-  table.league-standings thead th:nth-child(-n+3){z-index:7;background:var(--pitch);}
-  table.league-standings tbody td:nth-child(-n+3){background-color:inherit;}
-  table.league-standings tbody td:nth-child(3){white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  table.league-standings tbody td:nth-child(3) .team-link{
+  table.standings.compact.league-standings thead th:nth-child(-n+3){
+    z-index:7;background:var(--pitch);background-clip:padding-box;
+  }
+  table.standings.compact.league-standings tbody td:nth-child(-n+3){
+    background:inherit;background-clip:padding-box;
+  }
+  table.standings.compact.league-standings tbody td:nth-child(3){
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  table.standings.compact.league-standings tbody td:nth-child(3) .team-link{
     display:inline-block;vertical-align:middle;max-width:calc(100% - 27px);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   @media (max-width:600px){
-    /* Fixed first eight widths ensure FOR is on screen before horizontal scrolling. */
-    table.league-standings{table-layout:fixed;width:660px;min-width:660px;}
-    table.league-standings th,table.league-standings td{box-sizing:border-box;}
-    table.league-standings th:nth-child(1),table.league-standings td:nth-child(1){width:30px;min-width:30px;max-width:30px;padding-left:3px;padding-right:2px;}
-    table.league-standings th:nth-child(2),table.league-standings td:nth-child(2){width:38px;min-width:38px;max-width:38px;padding-left:1px;padding-right:1px;}
-    table.league-standings th:nth-child(3),table.league-standings td:nth-child(3){width:116px;min-width:116px;max-width:116px;padding-left:3px;padding-right:2px;font-size:10.5px;}
-    table.league-standings th:nth-child(4),table.league-standings td:nth-child(4){width:30px;min-width:30px;max-width:30px;padding-left:1px;padding-right:1px;}
-    table.league-standings th:nth-child(5),table.league-standings td:nth-child(5),
-    table.league-standings th:nth-child(6),table.league-standings td:nth-child(6),
-    table.league-standings th:nth-child(7),table.league-standings td:nth-child(7){width:23px;min-width:23px;max-width:23px;padding-left:1px;padding-right:1px;}
-    table.league-standings th:nth-child(8),table.league-standings td:nth-child(8){width:32px;min-width:32px;max-width:32px;padding-left:1px;padding-right:1px;}
-    table.league-standings th:nth-child(9),table.league-standings td:nth-child(9){width:34px;}
-    table.league-standings th:nth-child(10),table.league-standings td:nth-child(10){width:36px;}
-    table.league-standings th:nth-child(11),table.league-standings td:nth-child(11){width:140px;}
-    table.league-standings th:nth-child(12),table.league-standings td:nth-child(12){width:135px;}
-    table.league-standings .table-team-logo{width:15px;height:15px;margin-right:3px;vertical-align:middle;}
-    table.league-standings tbody td:nth-child(3) .team-link{max-width:calc(100% - 20px);}
-    table.league-standings .league-change{gap:1px;font-size:9px;}
-    table.league-standings .league-change-arrow{width:14px;height:14px;font-size:11px;}
-    table.league-standings .league-change-value{font-size:9px;}
+    /* Only through L (column 7) must fit immediately; FOR and later columns scroll.
+       Give the team the remaining width rather than squeezing it to 116px. */
+    table.standings.compact.league-standings{
+      table-layout:fixed;width:calc(100vw - 48px + 389px + 3px);min-width:0;
+    }
+    table.standings.compact.league-standings th,
+    table.standings.compact.league-standings td{box-sizing:border-box;}
+    table.standings.compact.league-standings th:nth-child(1),
+    table.standings.compact.league-standings td:nth-child(1){width:30px;min-width:30px;max-width:30px;padding-left:3px;padding-right:2px;}
+    table.standings.compact.league-standings th:nth-child(2),
+    table.standings.compact.league-standings td:nth-child(2){width:38px;min-width:38px;max-width:38px;padding-left:1px;padding-right:1px;}
+    table.standings.compact.league-standings th:nth-child(3),
+    table.standings.compact.league-standings td:nth-child(3){
+      width:calc(100vw - 48px - 30px - 38px - 30px - 23px - 23px - 23px - 3px);
+      min-width:85px;max-width:none;padding-left:5px;padding-right:3px;font-size:11.5px;
+    }
+    table.standings.compact.league-standings th:nth-child(4),
+    table.standings.compact.league-standings td:nth-child(4){width:30px;min-width:30px;max-width:30px;padding-left:1px;padding-right:1px;}
+    table.standings.compact.league-standings th:nth-child(5),
+    table.standings.compact.league-standings td:nth-child(5),
+    table.standings.compact.league-standings th:nth-child(6),
+    table.standings.compact.league-standings td:nth-child(6),
+    table.standings.compact.league-standings th:nth-child(7),
+    table.standings.compact.league-standings td:nth-child(7){width:23px;min-width:23px;max-width:23px;padding-left:1px;padding-right:1px;}
+    table.standings.compact.league-standings th:nth-child(8),
+    table.standings.compact.league-standings td:nth-child(8){width:36px;}
+    table.standings.compact.league-standings th:nth-child(9),
+    table.standings.compact.league-standings td:nth-child(9){width:38px;}
+    table.standings.compact.league-standings th:nth-child(10),
+    table.standings.compact.league-standings td:nth-child(10){width:40px;}
+    table.standings.compact.league-standings th:nth-child(11),
+    table.standings.compact.league-standings td:nth-child(11){width:140px;}
+    table.standings.compact.league-standings th:nth-child(12),
+    table.standings.compact.league-standings td:nth-child(12){width:135px;}
+    table.standings.compact.league-standings .table-team-logo{width:16px;height:16px;margin-right:4px;vertical-align:middle;}
+    table.standings.compact.league-standings tbody td:nth-child(3) .team-link{max-width:calc(100% - 22px);}
+    table.standings.compact.league-standings .league-change{gap:1px;font-size:9px;}
+    table.standings.compact.league-standings .league-change-arrow{width:14px;height:14px;font-size:11px;}
+    table.standings.compact.league-standings .league-change-value{font-size:9px;}
   }
 
   /* Fixtures */
