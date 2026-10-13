@@ -1576,6 +1576,15 @@
 .alp-message.show{display:block;}
 .alp-message.error{background:#fff1f1;color:#a40000;border:1px solid #f0caca;}
 .alp-message.success{background:#effaf1;color:#176b2c;border:1px solid #c8e8cf;}
+/* Season mode: prediction breakdown uses the existing club palette. */
+.alp-check-table{border-collapse:separate;border-spacing:0 5px;table-layout:fixed;}
+.alp-check-table th,.alp-check-table td{text-align:center !important;vertical-align:middle;}
+.alp-check-table th:first-child,.alp-check-table td:first-child{width:40%;text-align:center !important;}
+.alp-check-table th:not(:first-child),.alp-check-table td:not(:first-child){width:20%;}
+.alp-check-table tbody tr{background:var(--alp-primary,#fff);color:var(--alp-text,#111);}
+.alp-check-table tbody td{background:var(--alp-primary,#fff);color:var(--alp-text,#111);border-top:2px solid var(--alp-secondary,#111);border-bottom:2px solid var(--alp-secondary,#111);font-weight:600;}
+.alp-check-table tbody td:first-child{border-left:2px solid var(--alp-secondary,#111);border-radius:6px 0 0 6px;font-weight:800;}
+.alp-check-table tbody td:last-child{border-right:2px solid var(--alp-secondary,#111);border-radius:0 6px 6px 0;}
 .alp-table-wrap{overflow-x:auto;}
 .alp-table{width:100%;border-collapse:collapse;font-size:14px;}
 .alp-table th,.alp-table td{padding:9px 8px;border-bottom:1px solid var(--line-light);text-align:left;font-family:'Barlow',sans-serif;}
@@ -11086,8 +11095,8 @@ function alpRenderAdminLadder_(teams){
 
 function alpRenderPredictionBreakdown_(h,p,teams){
   if(!p||!p.found){h.innerHTML='<p class="alp-muted">No prediction has been submitted for this team.</p>';return;}
-  const rows=teams.map(t=>{const predicted=Number(p.picks&&p.picks[t.code]),actual=Number(t.actualPos);return {name:t.name,predicted,actual,penalty:Number.isFinite(predicted)&&Number.isFinite(actual)?Math.abs(predicted-actual):null};}).sort((a,b)=>a.predicted-b.predicted);
-  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+alpEsc(r.name)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>').join('')+'</tbody></table></div>';
+  const rows=teams.map(t=>{const predicted=Number(p.picks&&p.picks[t.code]),actual=Number(t.actualPos);return {name:t.name,code:t.code,predicted,actual,penalty:Number.isFinite(predicted)&&Number.isFinite(actual)?Math.abs(predicted-actual):null};}).sort((a,b)=>a.predicted-b.predicted);
+  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map(r=>{const c=alpTeamColour_({code:r.code});return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+alpEsc(r.name)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
 
 function alpShowAdminMessage_(text,type=""){
