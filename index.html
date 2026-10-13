@@ -925,6 +925,22 @@
   .chip-pill.chip-blank{background:#E4DFD0;color:#B0A890;font-weight:400;}
   .roddy-pts-divider{border-right:2px solid var(--ink);}
 
+  /* The new Change column sits between Pos and Team; keep both compact
+     and adjust the sticky Team column to the new third-column position. */
+  table.standings.compact thead th:nth-child(2),table.standings.compact tbody td:nth-child(2){position:static;left:auto;z-index:auto;}
+  table.standings.compact thead th:nth-child(3),table.standings.compact tbody td:nth-child(3){position:sticky;left:28px;z-index:3;}
+  table.standings.compact tbody td:nth-child(3){background-color:inherit;text-align:left;font-weight:600;}
+  table.standings.compact thead th:nth-child(3){text-align:left;z-index:4;}
+  /* Division league position movement: signed values from DATA 2627. */
+  .league-change{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px;color:#111;}
+  .league-change-arrow{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;font-size:17px;font-weight:800;line-height:1;color:#fff;}
+  .league-change-up .league-change-arrow{background:#00dc8c;}
+  .league-change-down .league-change-arrow{background:#ff3990;}
+  .league-change-same .league-change-arrow{background:#a4a4a4;font-size:15px;}
+  .league-change-value{min-width:15px;text-align:right;}
+  .league-change-missing{color:#888;}
+  table.standings th.league-change-col,table.standings td.league-change-col{white-space:nowrap;text-align:center;}
+
   /* Fixtures */
   .round-tabs{
     display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:18px;
@@ -2143,6 +2159,40 @@ async function cachedFetch(url, options){
 const TEAM_NAME_RE = /^[A-Z0-9][A-Z0-9 .'’()\-\/]{2,}$/; // ALL CAPS-ish team names as used in the sheet
 const ROLE_TOKENS = new Set(["GK","DEF","MID","ATT","VC","C"]);
 
+// Signed league-position movement from DATA 2627: team name AQ, change BB.
+// The division sheets show ABS(change), so they cannot tell up from down.
+let divisionPositionChanges = new Map();
+function positionChangeTeamKey(name){
+  return String(name || "").normalize("NFKC").replace(/[’‘]/g, "'").replace(/\s+/g, " ").trim().toUpperCase();
+}
+async function loadDivisionPositionChanges(){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("DATA 2627")}&range=AQ3%3ABB68`;
+  try{
+    const res = await cachedFetch(url);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = Papa.parse(await res.text(), {skipEmptyLines:true}).data;
+    const changes = new Map();
+    rows.forEach(row => {
+      const name = positionChangeTeamKey(row[0]);
+      const raw = String(row[11] ?? "").trim().replace(/,/g, "");
+      if(!name || !/^[+-]?\d+(?:\.\d+)?$/.test(raw)) return;
+      changes.set(name, Number(raw));
+    });
+    if(!changes.size) throw new Error("No signed changes returned from DATA 2627");
+    divisionPositionChanges = changes;
+  }catch(err){
+    console.warn("League position change data unavailable:", err);
+    divisionPositionChanges = new Map();
+  }
+}
+function divisionPositionChangeHtml(team){
+  const movement = divisionPositionChanges.get(positionChangeTeamKey(team));
+  if(movement === undefined) return `<span class="league-change-missing" title="Change unavailable">—</span>`;
+  const direction = movement > 0 ? "up" : movement < 0 ? "down" : "same";
+  const symbol = movement > 0 ? "↑" : movement < 0 ? "↓" : "–";
+  return `<span class="league-change league-change-${direction}" title="${movement > 0 ? "Up" : movement < 0 ? "Down" : "No change"} ${Math.abs(movement)} places"><span class="league-change-arrow">${symbol}</span><span class="league-change-value">${Math.abs(movement)}</span></span>`;
+}
+
 let standings = [];
 let fixturesByRound = {}; // { "1": [ {home,away,homeScore,awayScore} ] }
 let knownTeams = new Set();
@@ -3169,6 +3219,7 @@ async function load(){
     const parsed = Papa.parse(csvText, {skipEmptyLines:false});
     const rows = parsed.data;
 
+    await loadDivisionPositionChanges();
     parseStandings(rows);
     parseFixtures(rows);
     parseH2H(rows);
@@ -3531,7 +3582,7 @@ function renderTable(){
   el.className = "";
   renderLegend();
   let html = `<div class="table-wrap"><table class="standings compact"><thead><tr>
-    <th>Pos</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
+    <th>Pos</th><th class="league-change-col">Change</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
     <th>Next</th>
   </tr></thead><tbody>`;
@@ -3546,6 +3597,7 @@ function renderTable(){
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(s.team)}';}`;
     html += `<tr class="${tierClass}">
       <td>${s.pos}</td>
+      <td class="league-change-col">${divisionPositionChangeHtml(s.team)}</td>
       <td><img src="logo/${teamLogoSlug(s.team)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${teamLink(s.team)}</td>
       <td class="pts">${s.pts}</td>
       <td>${s.w}</td>
