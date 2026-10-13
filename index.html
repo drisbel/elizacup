@@ -1613,6 +1613,7 @@
   .alp-table th,.alp-table td{padding:8px 6px;}
 }
 
+.ep-winners{display:grid;gap:8px;margin:12px 0}.ep-winners>div{display:flex;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--line-light);border-radius:6px;background:#f8f9fb;font-size:13px}.ep-winners span{text-align:right;font-weight:700}
 </style>
 </head>
 <body>
@@ -7649,7 +7650,8 @@ const SIDE_LEAGUES = [
   // only the tab/GID differs. The public table begins at physical row 40.
   { key: "almtipping", label: "ALM Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1986596590", isTippingOverall: true, tippingStartRow: 41 },
   { key: "alwtipping", label: "ALW Tipping", sheetId: "19H6Q4C_b6lTK064KkLL4UYLmYSi0mcOpgELrx6PODYk", gid: "1316975251", isTippingOverall: true, tippingStartRow: 41 },
-  { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true }
+  { key: "aleaguepredictor", label: "A-League Table Predictor", isALeaguePredictor: true },
+  { key: "elizapredictor", label: "Eliza Predictor 26/27", isElizaPredictor: true }
 ];
 
 // Competition-selector ordering/completion — kept in sync with whatever order
@@ -7948,6 +7950,9 @@ function renderSideLeaguesHub(){
     // admin-defined order (slh-order, set via the Reorder tool in admin.html)
     // is otherwise preserved exactly.
     const cards = [...data.cards];
+    if(!cards.some(c => c.link === "#sideleagues=elizapredictor")){
+      cards.push({key:"elizapredictor",label:"Eliza Predictor 26/27",status:"active",roundInfo:"Division 1 ladder and cup winner predictions",notes:"Rank all 14 Division 1 teams, plus predict Roddy, ECL and FA Cup winners.",link:"#sideleagues=elizapredictor"});
+    }
     if(!cards.some(c => c.link === "#sideleagues=aleaguepredictor")){
       cards.push({
         key: "aleaguepredictor",
@@ -10806,6 +10811,7 @@ function alpColourText_(hex){
 
 function alpTeamColour_(team){
   const c=ALP_TEAM_COLOURS[String(team.code||'').toUpperCase()];
+  if(!c && String(team.code||'').startsWith('D1-')) return {primary:'#28427c',secondary:'#ffdd00'};
   return c||{primary:'#fafafa',secondary:'#041934'};
 }
 
@@ -11103,6 +11109,44 @@ function alpShowAdminMessage_(text,type=""){
   const e=document.getElementById('alpAdminMessage');if(!e)return;e.textContent=text;e.className="alp-message show"+(type?" "+type:"");
 }
 
+
+// ELIZA PREDICTOR 26/27 — isolated from the A-League Predictor.
+let epState=null;
+function epApi(action,params={}){return alpApiGet(action,params);}
+function epWinnerFields(p={}){
+  const defs=[['roddy','Roddy winner'],['ecl','ECL winner'],['facup','FA Cup winner']];
+  return defs.map(([key,label])=>'<div class="alp-field" style="margin:12px 0"><label for="ep-'+key+'">'+label+'</label><select id="ep-'+key+'"><option value="">Select winner…</option>'+(epState.choices[key]||[]).map(n=>'<option value="'+alpEsc(n)+'"'+(String(p[key]||'').toUpperCase()===n.toUpperCase()?' selected':'')+'>'+alpEsc(n)+'</option>').join('')+'</select></div>').join('');
+}
+function epSetWinnerFields(p={}){['roddy','ecl','facup'].forEach(k=>{const s=document.getElementById('ep-'+k);if(s)s.value=p[k]||'';});}
+function epLeaderboard(){alpRenderLeaderboard(epState.leaderboard||[]);}
+function epBreakdown(holder,p){
+  alpRenderPredictionBreakdown_(holder,p,epState.teams.map(t=>({...t,actualPos:t.actualPos===null?'':t.actualPos})));
+  if(p&&p.found)holder.insertAdjacentHTML('beforeend','<div class="alp-card" style="margin-top:12px"><h3>Extra winner predictions</h3><div class="ep-winners"><div><b>Roddy</b><span>'+alpEsc(p.roddy||'—')+'</span></div><div><b>ECL</b><span>'+alpEsc(p.ecl||'—')+'</span></div><div><b>FA Cup</b><span>'+alpEsc(p.facup||'—')+'</span></div></div><p class="alp-muted">Winner predictions are recorded only and do not affect penalties.</p></div>');
+}
+async function renderElizaPredictor(){
+  const el=document.getElementById('sideLeaguesContainer');el.className='';
+  applyDivisionTheme({color:'#28427c'});
+  try{epState=await epApi('elizaPredictor');}catch(e){el.innerHTML='<div class="alp-page"><h2>Eliza Predictor 26/27</h2><div class="alp-message show error">'+alpEsc(e.message)+'</div></div>';return;}
+  const mode=epState.mode;
+  const header='<div class="section-head"><h2 style="font-size:22px">Eliza Predictor 26/27</h2></div>';
+  if(mode==='PRE-SEASON'){
+    el.innerHTML='<div class="alp-page">'+header+alpModeBanner_('PRE-SEASON')+'<div class="alp-intro"><p>Rank the 14 Eliza Cup Division 1 teams from 1st to 14th. Each place away from the actual ladder costs one penalty point. Lowest total wins.</p><p>Also predict the Roddy, ECL and FA Cup winners. These extra predictions do not affect scoring.</p></div><div class="alp-layout"><div class="alp-card"><h3>Predict the Division 1 ladder</h3><p class="alp-drag-hint">Drag the cards to change their finishing order.</p><div id="alpLadder" class="alp-ladder"></div></div><div class="alp-card"><h3>Your predictions</h3><div class="alp-field"><label for="epTeam">Your Eliza team</label><select id="epTeam"><option value="">Select your team…</option>'+(epState.eligibleTeams||[]).map(n=>'<option value="'+alpEsc(n)+'">'+alpEsc(n)+'</option>').join('')+'</select></div><div id="epWinnerFields">'+epWinnerFields()+'</div><button class="alp-submit" id="epSubmit">Submit all predictions</button><div id="alpMessage" class="alp-message"></div></div></div></div>';
+    alpBuildLadder(epState.teams,{});
+    const sel=document.getElementById('epTeam');const saved=localStorage.getItem('eliza_ep_team')||'';
+    if(saved&&[...sel.options].some(o=>o.value===saved)){sel.value=saved;try{const p=await epApi('elizaPrediction',{teamName:saved});if(p.found){alpBuildLadder(epState.teams,p.picks);epSetWinnerFields(p);}}catch(e){}}
+    sel.addEventListener('change',async()=>{const name=sel.value;localStorage.setItem('eliza_ep_team',name);try{const p=name?await epApi('elizaPrediction',{teamName:name}):null;alpBuildLadder(epState.teams,p&&p.found?p.picks:{});epSetWinnerFields(p&&p.found?p:{});}catch(e){alpShowMessage(e.message,'error');}});
+    document.getElementById('epSubmit').addEventListener('click',async()=>{const name=sel.value,btn=document.getElementById('epSubmit');const roddy=document.getElementById('ep-roddy').value,ecl=document.getElementById('ep-ecl').value,facup=document.getElementById('ep-facup').value;
+      if(!name||!roddy||!ecl||!facup){alpShowMessage('Select your team and all three cup winners.','error');return;}
+      btn.disabled=true;alpShowMessage('Submitting predictions…');try{const r=await epApi('elizaSubmit',{teamName:name,picks:JSON.stringify(alpReadPicks()),roddy,ecl,facup});localStorage.setItem('eliza_ep_team',name);alpShowMessage(r.message||'Submitted.','success');}catch(e){alpShowMessage(e.message,'error');}finally{btn.disabled=false;}
+    });
+  }else{
+    el.innerHTML='<div class="alp-page">'+header+alpModeBanner_(mode)+'<div class="alp-season-grid"><div class="alp-card"><h3>Overall leaderboard</h3><div class="alp-table-wrap"><table class="alp-table"><thead><tr><th>Pos</th><th>Team</th><th>Penalty</th></tr></thead><tbody id="alpLeaderboardBody"></tbody></table></div></div><div class="alp-card"><h3>Check a prediction</h3><div class="alp-field"><label for="epCheckTeam">Select team</label><select id="epCheckTeam"><option value="">Select team…</option>'+(epState.leaderboard||[]).map(t=>'<option value="'+alpEsc(t.teamName)+'">'+alpEsc(t.teamName)+'</option>').join('')+'</select></div><div id="epPredictionCheck" class="alp-muted">Select a team to view its predictions.</div></div></div><details class="alp-collapsible"><summary>Current Division 1 ladder</summary><div id="alpActualLadder" class="alp-actual-ladder"></div></details>'+(mode==='SEASON'?'<details class="alp-collapsible"><summary>⚙ Update current ladder</summary><div class="alp-admin-box"><div id="alpAdminLadder"></div><button id="epUpdateLadder" class="alp-submit">Update Current Ladder</button><div id="alpAdminMessage" class="alp-message"></div></div></details>':'')+'</div>';
+    epLeaderboard();alpRenderActualLadder_(epState.teams);alpRenderAdminLadder_(epState.teams);
+    document.getElementById('epCheckTeam').addEventListener('change',async e=>{const h=document.getElementById('epPredictionCheck');if(!e.target.value){h.textContent='Select a team to view its predictions.';return;}h.textContent='Loading…';try{epBreakdown(h,await epApi('elizaPrediction',{teamName:e.target.value}));}catch(err){h.textContent=err.message;}});
+    const update=document.getElementById('epUpdateLadder');if(update)update.addEventListener('click',async()=>{const actuals={};document.querySelectorAll('#alpAdminLadder .alp-admin-position').forEach(s=>actuals[s.dataset.code]=Number(s.value));update.disabled=true;alpShowAdminMessage_('Updating ladder…');try{const r=await epApi('elizaUpdateLadder',{actuals:JSON.stringify(actuals)});epState=await epApi('elizaPredictor');epLeaderboard();alpRenderActualLadder_(epState.teams);alpRenderAdminLadder_(epState.teams);alpShowAdminMessage_(r.message,'success');}catch(err){alpShowAdminMessage_(err.message,'error');}finally{update.disabled=false;}});
+  }
+}
+
 async function loadSideLeague(leagueKey){
   const league = SIDE_LEAGUES.find(s => s.key === leagueKey) || SIDE_LEAGUES[0];
   const el = document.getElementById('sideLeaguesContainer');
@@ -11167,6 +11211,10 @@ async function loadSideLeague(leagueKey){
 
   if(league.isALeaguePredictor){
     await renderALeaguePredictor();
+    return;
+  }
+  if(league.isElizaPredictor){
+    await renderElizaPredictor();
     return;
   }
 
