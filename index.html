@@ -8966,7 +8966,7 @@ function parseTippingOverall(rows, startRowNumber){
     const labels = row.map(v => (v || "").toString().trim().toUpperCase());
     const tc = labels.findIndex(v => v === "TEAM" || v === "TEAM NAME" || v === "MANAGER" || v === "NAME");
     const tot = labels.findIndex(v => v === "TOTAL" || v === "PTS" || v === "POINTS" || v === "OVERALL");
-    const pc = labels.findIndex(v => v === "POS" || v === "POSITION" || v === "RANK");
+    const pc = labels.findIndex(v => v === "POS" || v === "POSITION" || v === "RANK" || v === "OVERALL LEADERBOARD POS");
     // The sheet contains an earlier SCORE ENTRY table with TEAM NAME/TOTAL
     // but no POS column. The overall leaderboard is the header containing
     // POS + TEAM NAME + TOTAL, so require all three.
@@ -12586,6 +12586,32 @@ if(installInstructionsOverlay){
     content.querySelectorAll('img').forEach(img=>{
       img.removeAttribute('width');img.removeAttribute('height');
       img.style.setProperty('object-fit','contain','important');img.style.setProperty('aspect-ratio','auto','important');
+    });
+    // Export-only: hide round columns that have no recorded non-zero score.
+    // Applies to UCL Fantasy and ALM/ALW tipping round-by-round tables.
+    // Keep the website tables untouched; operate solely on the cloned content.
+    content.querySelectorAll('table.ucl-fantasy-table, table.tipping-round-table').forEach(table=>{
+      const header=table.querySelector('thead tr');
+      if(!header)return;
+      const cells=Array.from(header.children);
+      const bodyRows=Array.from(table.querySelectorAll('tbody tr'));
+      const emptyRoundIndices=[];
+      cells.forEach((cell,index)=>{
+        const label=cell.textContent.trim();
+        if(!/^(?:R(?:OUND)?\s*[-.]?\s*\d+|\d+)$/i.test(label))return;
+        const hasScore=bodyRows.some(row=>{
+          const value=(row.children[index]?.textContent||'').trim().replace(/,/g,'');
+          if(!value||value==='—'||value==='-'||value==='–')return false;
+          const score=Number(value);
+          return Number.isFinite(score) ? score!==0 : false;
+        });
+        if(!hasScore)emptyRoundIndices.push(index);
+      });
+      // Remove from right to left so column indices remain stable.
+      emptyRoundIndices.reverse().forEach(index=>{
+        cells[index]?.remove();
+        bodyRows.forEach(row=>row.children[index]?.remove());
+      });
     });
     // Three-column overall standings need a compact export canvas, not the
     // full 1190px reserved for detailed multi-column tables.
