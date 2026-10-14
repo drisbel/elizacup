@@ -1786,6 +1786,30 @@
 .export-social img.table-team-logo,.export-social .fixture-team-logo-wrap img{width:32px!important;height:32px!important;max-width:32px!important;max-height:32px!important;object-fit:contain!important;object-position:center!important;aspect-ratio:auto!important}
 .export-social .fixture-team-logo-wrap{width:38px!important;height:38px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
 .export-social .fixture-team-logo-wrap img{width:36px!important;height:36px!important;max-width:36px!important;max-height:36px!important}
+
+/* 2026/27 social exports: legible compact tables, single-column results and unsquashed crests. */
+td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{color:#273343!important;opacity:1!important;font-weight:600!important}
+.export-social .export-image-body{padding:16px!important}
+.export-social .league-standings{font-size:15px!important;table-layout:fixed!important}
+.export-social .league-standings th{font-size:13px!important;letter-spacing:.35px!important;padding:12px 5px!important;text-align:center!important}
+.export-social .league-standings td{font-size:15px!important;padding:9px 5px!important;text-align:center!important;vertical-align:middle!important;line-height:1.35!important}
+.export-social .league-standings th:nth-child(1),.export-social .league-standings td:nth-child(1){width:48px!important}
+.export-social .league-standings th:nth-child(2),.export-social .league-standings td:nth-child(2){width:65px!important}
+.export-social .league-standings th:nth-child(3),.export-social .league-standings td:nth-child(3){width:245px!important;text-align:left!important}
+.export-social .league-standings th:nth-child(11),.export-social .league-standings td:nth-child(11){width:135px!important}
+.export-social .league-standings th:nth-child(12),.export-social .league-standings td:nth-child(12){width:175px!important}
+.export-social .league-standings .league-change{justify-content:center!important}
+.export-social .league-standings .form-row{justify-content:center!important}
+.export-social .league-standings td.next-opp,.export-social .league-standings td.next-opp a{color:#273343!important;font-size:14px!important;font-weight:650!important;opacity:1!important}
+.export-social .league-standings .table-team-logo{width:auto!important;height:auto!important;max-width:36px!important;max-height:36px!important;min-width:0!important;min-height:0!important;object-fit:contain!important;aspect-ratio:auto!important;vertical-align:middle!important;margin-right:8px!important}
+.export-social .fixture-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+.export-social .fixture-card{min-height:62px!important;padding:12px 20px!important}
+.export-social .fixture-team-logo-wrap{width:44px!important;height:44px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+.export-social .fixture-team-logo-wrap img{width:auto!important;height:auto!important;max-width:42px!important;max-height:42px!important;min-width:0!important;min-height:0!important;object-fit:contain!important;aspect-ratio:auto!important}
+.export-social .fixture-team-with-logo{grid-template-columns:44px minmax(0,1fr)!important}
+.export-social .fixture-team-with-logo.right{grid-template-columns:minmax(0,1fr) 44px!important}
+.export-social .fixture-team{font-size:18px!important}
+.export-social .fixture-score{font-size:22px!important}
 </style>
 </head>
 <body>
@@ -3844,7 +3868,7 @@ async function exportDivisionImage(kind, style){
   const title=kind==='table'?'League Table':round;
   const outer=document.createElement('div');
   outer.className='export-image-stage '+(style==='social'?'export-social':'export-exact');
-  outer.style.cssText='position:fixed;left:-12000px;top:0;width:1520px;box-sizing:border-box;z-index:-1;';
+  outer.style.cssText='position:fixed;left:-12000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;';
   outer.style.setProperty('--export-division-color',currentDivision.color || '#172d52');
   if(style==='social'){
     const header=document.createElement('div');header.className='export-image-header';
@@ -3871,10 +3895,18 @@ async function exportDivisionImage(kind, style){
       cell.style.setProperty('overflow','visible','important');
       cell.style.setProperty('text-overflow','clip','important');
       cell.style.setProperty('white-space',i===2?'nowrap':'normal','important');
-      cell.style.setProperty('width',i===2?'340px':i===10?'160px':i===11?'180px':i===1?'76px':i===0?'55px':'auto','important');
+      cell.style.setProperty('width',i===2?'245px':i===10?'135px':i===11?'175px':i===1?'65px':i===0?'48px':'auto','important');
       cell.style.setProperty('min-width','0','important');
       cell.style.setProperty('max-width','none','important');
     });
+  });
+  // Browser layout must use the logo's intrinsic aspect ratio, not a forced square.
+  clone.querySelectorAll('img.table-team-logo, .fixture-team-logo-wrap img').forEach(img=>{
+    img.removeAttribute('width');img.removeAttribute('height');
+    img.style.setProperty('width','auto','important');
+    img.style.setProperty('height','auto','important');
+    img.style.setProperty('object-fit','contain','important');
+    img.style.setProperty('aspect-ratio','auto','important');
   });
   clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');});
   body.appendChild(clone);outer.appendChild(body);
@@ -3886,7 +3918,7 @@ async function exportDivisionImage(kind, style){
   try{
     await Promise.all(Array.from(outer.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3500);}))) ;
     if(document.fonts?.ready) await document.fonts.ready;
-    const canvas=await html2canvas(outer,{backgroundColor:style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1700});
+    const canvas=await html2canvas(outer,{backgroundColor:style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
     const link=document.createElement('a');
     const clean=v=>v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     link.download='eliza-'+clean(label)+'-'+clean(title)+'-'+style+'.png';
