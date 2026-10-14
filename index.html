@@ -1768,6 +1768,24 @@
 .export-social .export-image-body{padding:20px;border-radius:0 0 12px 12px}
 .export-image-footer{text-align:right;font-size:13px;font-weight:700;letter-spacing:2px;color:#b7c7e3;padding-top:18px}
 @media(max-width:650px){.social-export-actions{width:100%;margin:5px 0}.social-export-actions button{font-size:11px;padding:6px 8px}}
+/* Social image export: full desktop table columns, division colour and natural logo proportions. */
+.social-export-actions{width:auto!important;margin-left:auto!important}
+.social-export-actions .social-export-download{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--pitch,#28427c);background:var(--pitch,#28427c);color:#fff;border-radius:7px;padding:7px 10px;font:700 12px Arial,sans-serif;box-shadow:0 2px 6px #0002;cursor:pointer}
+.social-export-actions .social-export-download:hover{filter:brightness(1.17)}
+.export-social .export-image-header{background:var(--export-division-color,#172d52)!important}
+.export-social .export-image-header .export-kicker,.export-social .export-image-header .export-subheading{color:#fff;opacity:.9}
+.export-social .league-standings{width:100%!important;min-width:0!important;table-layout:fixed!important}
+.export-social .league-standings th,.export-social .league-standings td{box-sizing:border-box!important;position:static!important;left:auto!important;right:auto!important;z-index:auto!important;display:table-cell!important;visibility:visible!important;overflow:visible!important;text-overflow:clip!important}
+.export-social .league-standings th:nth-child(1),.export-social .league-standings td:nth-child(1){width:55px!important}
+.export-social .league-standings th:nth-child(2),.export-social .league-standings td:nth-child(2){width:76px!important}
+.export-social .league-standings th:nth-child(3),.export-social .league-standings td:nth-child(3){width:340px!important;max-width:none!important;white-space:nowrap!important;text-align:left!important}
+.export-social .league-standings th:nth-child(11),.export-social .league-standings td:nth-child(11){width:160px!important}
+.export-social .league-standings th:nth-child(12),.export-social .league-standings td:nth-child(12){width:180px!important}
+.export-social .league-standings th{background:var(--export-division-color,#172d52)!important;color:white!important}
+.export-social .league-standings .team-link{max-width:none!important;overflow:visible!important;text-overflow:clip!important;white-space:nowrap!important}
+.export-social img.table-team-logo,.export-social .fixture-team-logo-wrap img{width:32px!important;height:32px!important;max-width:32px!important;max-height:32px!important;object-fit:contain!important;object-position:center!important;aspect-ratio:auto!important}
+.export-social .fixture-team-logo-wrap{width:38px!important;height:38px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+.export-social .fixture-team-logo-wrap img{width:36px!important;height:36px!important;max-width:36px!important;max-height:36px!important}
 </style>
 </head>
 <body>
@@ -1901,7 +1919,7 @@
     <div class="section-head">
       <h2>League Table</h2>
       <span class="sub" id="tableUpdated"></span>
-      <div class="social-export-actions"><button type="button" onclick="exportDivisionImage('table','exact')">↓ Website PNG</button><button type="button" onclick="exportDivisionImage('table','social')">↓ Social PNG</button></div>
+      <div class="social-export-actions"><button type="button" class="social-export-download" onclick="exportDivisionImage('table','social')" title="Download league table PNG" aria-label="Download league table PNG">⬇ <span>PNG</span></button></div>
     </div>
     <div id="tableContainer" class="state-msg">Loading standings…</div>
     <div class="legend" id="tableLegend"></div>
@@ -1911,7 +1929,7 @@
     <div class="section-head">
       <h2>Fixtures</h2>
       <span class="sub">All rounds</span>
-      <div class="social-export-actions"><button type="button" onclick="exportDivisionImage('fixtures','exact')">↓ Website PNG</button><button type="button" onclick="exportDivisionImage('fixtures','social')">↓ Social PNG</button></div>
+      <div class="social-export-actions"><button type="button" class="social-export-download" onclick="exportDivisionImage('fixtures','social')" title="Download round PNG" aria-label="Download round PNG">⬇ <span>PNG</span></button></div>
     </div>
     <div id="roundTabs" class="round-tabs"></div>
     <div id="fixtureContainer" class="state-msg">Loading fixtures…</div>
@@ -3826,7 +3844,8 @@ async function exportDivisionImage(kind, style){
   const title=kind==='table'?'League Table':round;
   const outer=document.createElement('div');
   outer.className='export-image-stage '+(style==='social'?'export-social':'export-exact');
-  outer.style.cssText='position:fixed;left:-12000px;top:0;width:1120px;box-sizing:border-box;z-index:-1;';
+  outer.style.cssText='position:fixed;left:-12000px;top:0;width:1520px;box-sizing:border-box;z-index:-1;';
+  outer.style.setProperty('--export-division-color',currentDivision.color || '#172d52');
   if(style==='social'){
     const header=document.createElement('div');header.className='export-image-header';
     header.innerHTML='<div class="export-kicker">ELIZA CUP · 2026/27</div><div class="export-heading"></div><div class="export-subheading"></div>';
@@ -3838,7 +3857,25 @@ async function exportDivisionImage(kind, style){
   const clone=source.cloneNode(true);clone.removeAttribute('id');
   clone.style.cssText='display:block!important;overflow:visible!important;width:100%!important;max-width:none!important;';
   clone.querySelectorAll('.table-wrap').forEach(e=>{e.style.cssText='overflow:visible!important;width:100%!important;max-width:none!important;';});
-  clone.querySelectorAll('table').forEach(e=>{e.style.cssText+=';width:100%!important;min-width:0!important;';});
+  clone.querySelectorAll('table').forEach(e=>{e.style.cssText+=';width:100%!important;min-width:0!important;table-layout:fixed!important;';});
+  // Remove mobile sticky-column positioning from the offscreen export copy.
+  // Preserve the source DOM column order: POS, CHG, TEAM, PTS, W, D, L, FOR, AGA, DIFF, FORM, NEXT.
+  clone.querySelectorAll('table.league-standings tr').forEach(tr=>{
+    Array.from(tr.children).forEach((cell,i)=>{
+      cell.style.setProperty('position','static','important');
+      cell.style.setProperty('left','auto','important');
+      cell.style.setProperty('right','auto','important');
+      cell.style.setProperty('z-index','auto','important');
+      cell.style.setProperty('display','table-cell','important');
+      cell.style.setProperty('visibility','visible','important');
+      cell.style.setProperty('overflow','visible','important');
+      cell.style.setProperty('text-overflow','clip','important');
+      cell.style.setProperty('white-space',i===2?'nowrap':'normal','important');
+      cell.style.setProperty('width',i===2?'340px':i===10?'160px':i===11?'180px':i===1?'76px':i===0?'55px':'auto','important');
+      cell.style.setProperty('min-width','0','important');
+      cell.style.setProperty('max-width','none','important');
+    });
+  });
   clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');});
   body.appendChild(clone);outer.appendChild(body);
   if(style==='social'){
@@ -3849,7 +3886,7 @@ async function exportDivisionImage(kind, style){
   try{
     await Promise.all(Array.from(outer.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3500);}))) ;
     if(document.fonts?.ready) await document.fonts.ready;
-    const canvas=await html2canvas(outer,{backgroundColor:style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1300});
+    const canvas=await html2canvas(outer,{backgroundColor:style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1700});
     const link=document.createElement('a');
     const clean=v=>v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     link.download='eliza-'+clean(label)+'-'+clean(title)+'-'+style+'.png';
