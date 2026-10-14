@@ -1900,6 +1900,33 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .export-sideleague .export-image-body .fixture-grid{grid-template-columns:minmax(0,1fr)!important}
 .export-sideleague.export-broadcast-fixtures .export-image-body{background:#0b1426!important}
 .export-sideleague.export-broadcast-fixtures .export-image-body .section-head h2{color:#fff!important}
+
+/* Export refinements: centre team labels, keep fixture names large and single-line. */
+.export-sideleague .export-image-body table td,
+.export-sideleague .export-image-body table th{text-align:center!important}
+.export-sideleague .export-image-body table td:nth-child(2),
+.export-sideleague .export-image-body table th:nth-child(2){text-align:center!important}
+.export-sideleague.export-compact-overall .export-image-body{padding:16px 22px!important}
+.export-sideleague.export-compact-overall .overall-table-wrap,
+.export-sideleague.export-compact-overall .table-wrap{width:100%!important;max-width:100%!important}
+.export-sideleague.export-compact-overall table{width:100%!important;table-layout:auto!important}
+.export-sideleague.export-compact-overall table th:nth-child(1),
+.export-sideleague.export-compact-overall table td:nth-child(1){width:70px!important}
+.export-sideleague.export-compact-overall table th:nth-child(3),
+.export-sideleague.export-compact-overall table td:nth-child(3){width:95px!important}
+.export-sideleague.export-compact-overall table td:nth-child(2){font-size:17px!important;font-weight:750!important}
+.export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team-name{
+  font-size:23px!important;font-weight:750!important;white-space:nowrap!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;overflow-wrap:normal!important;
+  word-break:normal!important;display:block!important;min-width:0!important;
+  flex:1 1 auto!important;line-height:1.25!important;
+}
+.export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team-name a{
+  display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  white-space:nowrap!important;font-size:inherit!important;
+}
+.export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team.broadcast-home .fixture-team-name{text-align:right!important}
+.export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team.broadcast-away .fixture-team-name{text-align:left!important}
 </style>
 </head>
 <body>
@@ -12517,7 +12544,8 @@ if(installInstructionsOverlay){
   ensureControls();
   async function exportSideLeagueSection(heading,title){
     if(typeof html2canvas!=='function'){alert('Image exporter could not load. Please try again.');return;}
-    const key=(typeof sideLeagueData!=='undefined'&&sideLeagueData?.key)||currentDivision?.sideLeagueKey||'fpl';
+    // Prefer the active route: sideLeagueData can still contain the previously visited league.
+    const key=currentDivision?.sideLeagueKey||(typeof sideLeagueData!=='undefined'&&sideLeagueData?.key)||'fpl';
     const sub=(typeof sideLeagueActiveDiv!=='undefined')?sideLeagueActiveDiv:null;
     const theme=(typeof sideLeagueThemeColor==='function'&&sideLeagueThemeColor(key,sub))||'#172d52';
     const hex=theme.replace('#','');const rgb=/^[0-9a-f]{6}$/i.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)):[40,66,124];
@@ -12559,6 +12587,14 @@ if(installInstructionsOverlay){
       img.removeAttribute('width');img.removeAttribute('height');
       img.style.setProperty('object-fit','contain','important');img.style.setProperty('aspect-ratio','auto','important');
     });
+    // Three-column overall standings need a compact export canvas, not the
+    // full 1190px reserved for detailed multi-column tables.
+    const exportTables=Array.from(content.querySelectorAll('table'));
+    const compactOverall=exportTables.length>0 && exportTables.every(t=>t.querySelectorAll('thead th').length===3);
+    if(compactOverall){
+      stage.classList.add('export-compact-overall');
+      stage.style.width='720px';
+    }
     const cards=content.querySelectorAll('.fixture-card');
     if(cards.length && !content.querySelector('table')){
       stage.classList.add('export-broadcast-fixtures');
