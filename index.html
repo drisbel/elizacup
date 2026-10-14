@@ -1841,16 +1841,18 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   display:grid!important;grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr)!important;
   gap:0!important;align-items:stretch!important;padding:0!important;min-height:88px!important;
   width:100%!important;box-sizing:border-box!important;overflow:hidden!important;
-  background:#192943!important;border:1px solid #30405a!important;border-radius:9px!important;
+  background:var(--export-division-soft,#263957)!important;border:1px solid #30405a!important;border-radius:9px!important;
   box-shadow:none!important;
 }
 .export-broadcast-fixtures .fixture-card .fixture-team{
   display:flex!important;align-items:center!important;justify-content:flex-start!important;
   gap:14px!important;padding:12px 18px!important;margin:0!important;min-width:0!important;
-  box-sizing:border-box!important;background:#192943!important;border:0!important;
+  box-sizing:border-box!important;background:var(--export-division-soft,#263957)!important;border:0!important;
   color:#c3d0e3!important;font-size:19px!important;font-weight:650!important;
 }
 .export-broadcast-fixtures .fixture-card .fixture-team.broadcast-home{justify-content:flex-end!important;text-align:right!important}
+.export-broadcast-fixtures .fixture-card .fixture-team.broadcast-home .fixture-team-name{text-align:right!important}
+.export-broadcast-fixtures .fixture-card .fixture-team.broadcast-away .fixture-team-name{text-align:left!important}
 .export-broadcast-fixtures .fixture-card .fixture-team.broadcast-away{justify-content:flex-start!important;text-align:left!important}
 .export-broadcast-fixtures .fixture-card .fixture-team.broadcast-winner{
   background:var(--export-division-color,#29467d)!important;color:#fff!important;font-weight:800!important;
@@ -1878,6 +1880,26 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .export-broadcast-fixtures .fixture-card .fixture-score .upcoming{color:#c5d2e8!important;font-style:normal!important;font-size:22px!important;text-transform:uppercase!important}
 .export-broadcast-fixtures .playoff-seed-row{color:#dce6f5!important;background:#1b2b46!important}
 
+
+/* Side-league exports: restrained download controls; exports never modify live fixtures. */
+.side-export-button{display:inline-flex;align-items:center;justify-content:center;width:31px;height:29px;padding:4px;border:1px solid currentColor;border-radius:6px;background:transparent;color:inherit;opacity:.58;cursor:pointer;flex-shrink:0;margin-left:auto}
+.side-export-button:hover,.side-export-button:focus-visible{opacity:1;background:rgba(120,120,120,.10)}
+.side-export-button svg{display:block}
+.side-export-heading{display:flex;align-items:center;gap:10px}
+.side-export-page-tools{display:flex;justify-content:flex-end;margin:10px 0 14px}
+.side-export-page-tools .side-export-button{width:auto;gap:7px;padding:5px 10px;font-weight:650;font-size:12px;opacity:.75}
+.side-export-page-tools .side-export-button:hover{opacity:1}
+.export-sideleague .export-image-body{background:#f8fafc;padding:20px!important}
+.export-sideleague .export-image-body .section-head{margin-top:14px!important}
+.export-sideleague .export-image-body .side-export-button,.export-sideleague .export-image-body .side-export-page-tools,.export-sideleague .export-image-body .round-tabs{display:none!important}
+.export-sideleague .export-image-body .table-wrap{overflow:visible!important;width:100%!important;max-width:none!important}
+.export-sideleague .export-image-body table{width:100%!important;min-width:0!important}
+.export-sideleague .export-image-body table th{background:var(--export-division-color,#172d52)!important;color:#fff!important;font-weight:750!important}
+.export-sideleague .export-image-body table td{font-size:15px!important;color:#263447!important;font-weight:600!important}
+.export-sideleague .export-image-body img{object-fit:contain!important;aspect-ratio:auto!important}
+.export-sideleague .export-image-body .fixture-grid{grid-template-columns:minmax(0,1fr)!important}
+.export-sideleague.export-broadcast-fixtures .export-image-body{background:#0b1426!important}
+.export-sideleague.export-broadcast-fixtures .export-image-body .section-head h2{color:#fff!important}
 </style>
 </head>
 <body>
@@ -3938,6 +3960,12 @@ async function exportDivisionImage(kind, style){
   outer.className='export-image-stage '+(style==='social'?'export-social':'export-exact');
   outer.style.cssText='position:fixed;left:-12000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;';
   outer.style.setProperty('--export-division-color',currentDivision.color || '#172d52');
+  // Muted division tint for losing teams and all unplayed fixtures; the original
+  // division colour remains reserved for winners.
+  const themeHex=(currentDivision.color || '#28427c').replace('#','');
+  const themeRgb=/^[0-9a-f]{6}$/i.test(themeHex)?[0,2,4].map(i=>parseInt(themeHex.slice(i,i+2),16)):[40,66,124];
+  const mutedRgb=themeRgb.map((v,i)=>Math.round(v*0.52+[18,30,47][i]*0.48));
+  outer.style.setProperty('--export-division-soft',`rgb(${mutedRgb.join(',')})`);
   if(style==='social'){
     const header=document.createElement('div');header.className='export-image-header';
     header.innerHTML='<div class="export-kicker">ELIZA CUP · 2026/27</div><div class="export-heading"></div><div class="export-subheading"></div>';
@@ -4008,6 +4036,14 @@ async function exportDivisionImage(kind, style){
       if(sides.length!==2 || !score) return;
       sides[0].classList.add('broadcast-home');
       sides[1].classList.add('broadcast-away');
+      // Export only: TEAM NAME | LOGO | SCORE | LOGO | TEAM NAME.
+      // Move existing nodes, keeping original logo sources and proportions.
+      const homeName=sides[0].querySelector('.fixture-team-name');
+      const homeLogo=sides[0].querySelector('.fixture-team-logo-wrap');
+      if(homeName && homeLogo) sides[0].insertBefore(homeName,homeLogo);
+      const awayName=sides[1].querySelector('.fixture-team-name');
+      const awayLogo=sides[1].querySelector('.fixture-team-logo-wrap');
+      if(awayName && awayLogo) sides[1].insertBefore(awayLogo,awayName);
       const homeWon=sides[0].classList.contains('fx-win');
       const awayWon=sides[1].classList.contains('fx-win');
       if(homeWon!==awayWon){
@@ -12432,6 +12468,132 @@ if(installInstructionsOverlay){
     if(e.target === installInstructionsOverlay) installInstructionsOverlay.classList.remove('open');
   });
 }
+</script>
+<script>
+
+/* Side-league image exports: export the visible section as rendered, regardless of
+   whether it contains a league table, H2H fixtures, tipping, grids or standings. */
+(function(){
+  const root=document.getElementById('sideLeaguesContainer');
+  if(!root) return;
+  const icon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>';
+  function button(title,fn,full){
+    const b=document.createElement('button');b.type='button';b.className='side-export-button';
+    b.title=title;b.setAttribute('aria-label',title);b.innerHTML=icon+(full?' <span>Download page image</span>':'');
+    b.addEventListener('click',fn);return b;
+  }
+  function titleText(h){return (h?.querySelector('h2,h3')||h)?.textContent?.trim()||'Results';}
+  function ensureControls(){
+    if(!root.children.length) return;
+    // A full-page export works for special side leagues without conventional
+    // H2H fixtures or standings (e.g. tipping, predictors, LMS).
+    let tools=root.querySelector(':scope > .side-export-page-tools');
+    if(!tools){
+      tools=document.createElement('div');tools.className='side-export-page-tools';
+      tools.appendChild(button('Download currently displayed side-league page',()=>exportSideLeagueSection(null,'Full Page'),true));
+      root.insertBefore(tools,root.firstChild);
+    }
+    // Some H2H side leagues had round selectors and fixtures but no heading.
+    root.querySelectorAll('#sideLeagueRoundTabs').forEach(tabs=>{
+      if(tabs.previousElementSibling?.classList.contains('side-export-fixtures-head'))return;
+      const head=document.createElement('div');head.className='section-head side-export-fixtures-head';
+      head.style.marginTop='30px';head.innerHTML='<h2 style="font-size:18px;">Fixtures</h2>';
+      tabs.parentNode.insertBefore(head,tabs);
+    });
+    root.querySelectorAll('.section-head').forEach(h=>{
+      if(h.querySelector('.side-export-button'))return;
+      h.classList.add('side-export-heading');
+      const label=titleText(h);
+      h.appendChild(button('Download '+label+' image',()=>exportSideLeagueSection(h,label),false));
+    });
+  }
+  let scheduled=false;
+  const observer=new MutationObserver(()=>{
+    if(scheduled)return;
+    scheduled=true;
+    queueMicrotask(()=>{scheduled=false;ensureControls();});
+  });
+  observer.observe(root,{childList:true,subtree:true});
+  ensureControls();
+  async function exportSideLeagueSection(heading,title){
+    if(typeof html2canvas!=='function'){alert('Image exporter could not load. Please try again.');return;}
+    const key=(typeof sideLeagueData!=='undefined'&&sideLeagueData?.key)||currentDivision?.sideLeagueKey||'fpl';
+    const sub=(typeof sideLeagueActiveDiv!=='undefined')?sideLeagueActiveDiv:null;
+    const theme=(typeof sideLeagueThemeColor==='function'&&sideLeagueThemeColor(key,sub))||'#172d52';
+    const hex=theme.replace('#','');const rgb=/^[0-9a-f]{6}$/i.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)):[40,66,124];
+    const muted=rgb.map((v,i)=>Math.round(v*.52+[18,30,47][i]*.48));
+    const label=(typeof SIDE_LEAGUES!=='undefined'&&SIDE_LEAGUES.find(s=>s.key===key)?.label)||currentDivision?.label||'Side League';
+    const stage=document.createElement('div');stage.className='export-image-stage export-social export-sideleague';
+    stage.style.cssText='position:fixed;left:-15000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;';
+    stage.style.setProperty('--export-division-color',theme);
+    stage.style.setProperty('--export-division-soft',`rgb(${muted.join(',')})`);
+    const head=document.createElement('div');head.className='export-image-header';
+    head.innerHTML='<div class="export-kicker">ELIZA CUP · 2026/27</div><div class="export-heading"></div><div class="export-subheading"></div>';
+    head.querySelector('.export-heading').textContent=label;
+    const round=root.querySelector('#sideLeagueRoundTabs .round-tab.active')?.textContent?.trim();
+    head.querySelector('.export-subheading').textContent=title+(round&&/fixture/i.test(title)?' · '+round:'');
+    stage.appendChild(head);
+    const body=document.createElement('div');body.className='export-image-body';
+    const content=document.createElement('div');content.className='side-export-content';
+    if(!heading){
+      Array.from(root.children).filter(n=>!n.classList.contains('side-export-page-tools')).forEach(n=>content.appendChild(n.cloneNode(true)));
+    }else{
+      let n=heading.nextElementSibling;
+      // Capture only the selected section, stopping before the next section heading.
+      // Include its current round tabs only as context in the image header.
+      while(n&&!n.classList.contains('section-head')){
+        if(!n.classList.contains('side-export-page-tools'))content.appendChild(n.cloneNode(true));
+        n=n.nextElementSibling;
+      }
+      if(!content.children.length){alert('This section has no content to export yet.');return;}
+    }
+    content.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+    content.querySelectorAll('a').forEach(a=>a.removeAttribute('href'));
+    content.querySelectorAll('.table-wrap').forEach(e=>{e.style.setProperty('overflow','visible','important');e.style.setProperty('max-width','none','important');});
+    content.querySelectorAll('table').forEach(e=>{e.style.setProperty('width','100%','important');e.style.setProperty('min-width','0','important');});
+    content.querySelectorAll('table tr').forEach(tr=>Array.from(tr.children).forEach(cell=>{
+      cell.style.setProperty('position','static','important');cell.style.setProperty('left','auto','important');
+      cell.style.setProperty('right','auto','important');cell.style.setProperty('display','table-cell','important');
+    }));
+    content.querySelectorAll('img').forEach(img=>{
+      img.removeAttribute('width');img.removeAttribute('height');
+      img.style.setProperty('object-fit','contain','important');img.style.setProperty('aspect-ratio','auto','important');
+    });
+    const cards=content.querySelectorAll('.fixture-card');
+    if(cards.length && !content.querySelector('table')){
+      stage.classList.add('export-broadcast-fixtures');
+      cards.forEach(card=>{
+        const sides=card.querySelectorAll('.fixture-team');const score=card.querySelector('.fixture-score');
+        if(sides.length!==2||!score)return;
+        sides[0].classList.add('broadcast-home');sides[1].classList.add('broadcast-away');
+        const hn=sides[0].querySelector('.fixture-team-name'),hl=sides[0].querySelector('.fixture-team-logo-wrap');
+        const an=sides[1].querySelector('.fixture-team-name'),al=sides[1].querySelector('.fixture-team-logo-wrap');
+        if(hn&&hl)sides[0].insertBefore(hn,hl);
+        if(an&&al)sides[1].insertBefore(al,an);
+        const hw=sides[0].classList.contains('fx-win'),aw=sides[1].classList.contains('fx-win');
+        if(hw!==aw){sides[hw?0:1].classList.add('broadcast-winner');card.classList.add('broadcast-decided');}
+        else if(score.querySelector('.upcoming'))card.classList.add('broadcast-upcoming');
+        else card.classList.add('broadcast-draw');
+      });
+    }
+    body.appendChild(content);stage.appendChild(body);
+    const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';stage.appendChild(footer);
+    document.body.appendChild(stage);
+    const controls=Array.from(root.querySelectorAll('.side-export-button'));controls.forEach(b=>b.disabled=true);
+    try{
+      await Promise.all(Array.from(stage.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{
+        img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3500);
+      })));
+      if(document.fonts?.ready)await document.fonts.ready;
+      const canvas=await html2canvas(stage,{backgroundColor:stage.classList.contains('export-broadcast-fixtures')?'#0b1426':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
+      const clean=v=>String(v).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+      const a=document.createElement('a');a.download='eliza-'+clean(label)+'-'+clean(title)+'-social.png';
+      a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
+    }catch(err){console.error('Side league image export failed',err);alert('Unable to export image. Some externally hosted images may block capture.');}
+    finally{stage.remove();controls.forEach(b=>b.disabled=false);}
+  }
+})();
+
 </script>
 </body>
 </html>
