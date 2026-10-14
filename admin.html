@@ -4043,7 +4043,17 @@ async function renderWheelMatchupInfo(teamA, teamB){
     <div class="wheel-matchup-h2h-title">Head to Head</div>
     <div id="wheelMatchupH2H"><div class="wheel-matchup-h2h-empty">${pending ? "Waiting for the second team to be drawn…" : "Loading…"}</div></div>`;
 
-  if(pending) return; // nothing to fetch yet — this pair isn't complete
+  // Show the first team's division and standings immediately, even while
+  // waiting for its opponent. Head-to-head is only fetched for a completed pair.
+  if(pending){
+    try{
+      const infoA = await getWheelTeamMatchInfo(teamA);
+      if(myToken !== wheelMatchupRenderToken) return;
+      const teamsEl = box.querySelector(".wheel-matchup-teams");
+      if(teamsEl) teamsEl.innerHTML = wheelMatchupTeamBlockHtml(teamA, infoA) + `<div class="wheel-matchup-vs">VS</div>` + wheelMatchupEmptySlotHtml();
+    }catch(err){ console.warn("Wheel first-team division lookup:", err); }
+    return;
+  }
 
   const [infoA, infoB, record] = await Promise.all([
     getWheelTeamMatchInfo(teamA),
