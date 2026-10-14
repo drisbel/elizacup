@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     /* Default/global brand colour — used by D1, Home, Roddy, and every page
@@ -1748,6 +1749,25 @@
 .club-history-legend b{font-weight:700}
 .club-history-up{color:#187b43}.club-history-down{color:#bd443e}
 @media(max-width:600px){.club-history-chart{box-sizing:border-box;width:100%;max-width:100%;min-width:0;padding:9px 6px;margin:12px 0 18px}.club-history-scroll{overflow-x:hidden;min-width:0}.club-history-chart svg{width:100%;max-width:100%;min-width:0;height:auto}}
+
+/* Division PNG exports (website and branded social layouts) */
+.social-export-actions{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto}
+.social-export-actions button{border:1px solid #b6c2d2;background:#fff;color:#1c3456;border-radius:5px;padding:7px 10px;font:600 12px inherit;cursor:pointer;white-space:nowrap}
+.social-export-actions button:hover{background:#eef3f9}
+.social-export-actions button:disabled{opacity:.55;cursor:wait}
+.export-image-stage{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#1c2432;padding:24px}
+.export-image-stage .export-image-body{background:#fff;color:#1c2432}
+.export-image-stage .league-standings{width:100%;table-layout:auto}
+.export-image-stage .fixture-grid{width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.export-image-stage .fixture-card{min-width:0}
+.export-image-stage.export-social{padding:34px;background:#101c34}
+.export-image-header{background:#172d52;color:#fff;padding:26px 30px 24px;border-radius:12px 12px 0 0}
+.export-kicker{font-size:15px;letter-spacing:2px;color:#aec3e9;font-weight:700}
+.export-heading{font-size:37px;font-weight:900;line-height:1.2;margin-top:7px}
+.export-subheading{font-size:21px;margin-top:4px;color:#e4ebf8}
+.export-social .export-image-body{padding:20px;border-radius:0 0 12px 12px}
+.export-image-footer{text-align:right;font-size:13px;font-weight:700;letter-spacing:2px;color:#b7c7e3;padding-top:18px}
+@media(max-width:650px){.social-export-actions{width:100%;margin:5px 0}.social-export-actions button{font-size:11px;padding:6px 8px}}
 </style>
 </head>
 <body>
@@ -1881,6 +1901,7 @@
     <div class="section-head">
       <h2>League Table</h2>
       <span class="sub" id="tableUpdated"></span>
+      <div class="social-export-actions"><button type="button" onclick="exportDivisionImage('table','exact')">↓ Website PNG</button><button type="button" onclick="exportDivisionImage('table','social')">↓ Social PNG</button></div>
     </div>
     <div id="tableContainer" class="state-msg">Loading standings…</div>
     <div class="legend" id="tableLegend"></div>
@@ -1890,6 +1911,7 @@
     <div class="section-head">
       <h2>Fixtures</h2>
       <span class="sub">All rounds</span>
+      <div class="social-export-actions"><button type="button" onclick="exportDivisionImage('fixtures','exact')">↓ Website PNG</button><button type="button" onclick="exportDivisionImage('fixtures','social')">↓ Social PNG</button></div>
     </div>
     <div id="roundTabs" class="round-tabs"></div>
     <div id="fixtureContainer" class="state-msg">Loading fixtures…</div>
@@ -3791,6 +3813,49 @@ function renderFixtures(round){
     return card;
   }).join("");
   el.innerHTML = banner + `<div class="fixture-grid">${cardsHtml}</div>`;
+}
+
+// Export the currently visible league table or selected round, with both layout styles.
+async function exportDivisionImage(kind, style){
+  if(currentDivision.type !== 'division') return;
+  if(typeof html2canvas !== 'function') { alert('Image exporter could not load. Check your connection and try again.'); return; }
+  const source=document.getElementById(kind==='table'?'tableContainer':'fixtureContainer');
+  if(!source || !source.querySelector(kind==='table'?'table':' .fixture-card')) { alert('Please wait for the division data to load.'); return; }
+  const label=currentDivision.id==='d1'?'Division 1':currentDivision.label;
+  const round=document.querySelector('#roundTabs .round-tab.active')?.textContent?.trim()||'Fixtures';
+  const title=kind==='table'?'League Table':round;
+  const outer=document.createElement('div');
+  outer.className='export-image-stage '+(style==='social'?'export-social':'export-exact');
+  outer.style.cssText='position:fixed;left:-12000px;top:0;width:1120px;box-sizing:border-box;z-index:-1;';
+  if(style==='social'){
+    const header=document.createElement('div');header.className='export-image-header';
+    header.innerHTML='<div class="export-kicker">ELIZA CUP · 2026/27</div><div class="export-heading"></div><div class="export-subheading"></div>';
+    header.querySelector('.export-heading').textContent=label;
+    header.querySelector('.export-subheading').textContent=title;
+    outer.appendChild(header);
+  }
+  const body=document.createElement('div');body.className='export-image-body';
+  const clone=source.cloneNode(true);clone.removeAttribute('id');
+  clone.style.cssText='display:block!important;overflow:visible!important;width:100%!important;max-width:none!important;';
+  clone.querySelectorAll('.table-wrap').forEach(e=>{e.style.cssText='overflow:visible!important;width:100%!important;max-width:none!important;';});
+  clone.querySelectorAll('table').forEach(e=>{e.style.cssText+=';width:100%!important;min-width:0!important;';});
+  clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');});
+  body.appendChild(clone);outer.appendChild(body);
+  if(style==='social'){
+    const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';outer.appendChild(footer);
+  }
+  document.body.appendChild(outer);
+  const buttons=document.querySelectorAll('.social-export-actions button');buttons.forEach(b=>b.disabled=true);
+  try{
+    await Promise.all(Array.from(outer.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3500);}))) ;
+    if(document.fonts?.ready) await document.fonts.ready;
+    const canvas=await html2canvas(outer,{backgroundColor:style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1300});
+    const link=document.createElement('a');
+    const clean=v=>v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    link.download='eliza-'+clean(label)+'-'+clean(title)+'-'+style+'.png';
+    link.href=canvas.toDataURL('image/png');document.body.appendChild(link);link.click();link.remove();
+  }catch(err){console.error('Division image export failed',err);alert('Unable to export image. If a logo is hosted externally, it may need CORS permission.');}
+  finally{outer.remove();buttons.forEach(b=>b.disabled=false);}
 }
 
 // Manual refresh always bypasses the cache — forceFreshFetch makes every
