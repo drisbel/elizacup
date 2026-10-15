@@ -7154,16 +7154,41 @@ function teamTrophiesHtml(trophies, trophyNote){
     return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies</h2></div>
       <p style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">No trophies yet.</p>${noteHtml}`;
   }
-  return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies (${trophies.length})</h2></div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;max-width:640px;">
-      ${trophies.map(t => `<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-light);border-left:4px solid ${t.color};border-radius:5px;padding:8px 12px;">
-        <span style="font-size:16px;">🏆</span>
-        <div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;">${t.competition}</div>
-          <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#000;">${t.season}</div>
-        </div>
-      </div>`).join("")}
-    </div>${noteHtml}`;
+  // Profile-only display grouping; the historical Hall of Fame names/data stay unchanged.
+  const groups = ["Eliza Cup", "Roddy", "FA Cup", "ECL", "Div 1 Shield", "All Other"];
+  function trophyGroup(competition){
+    const name = (competition || "").toLowerCase().trim();
+    if(name === "eliza cup") return 0;
+    if(name === "roddy") return 1;
+    if(name === "fa cup" || name === "facup") return 2;
+    if(name === "ecl") return 3;
+    if(name === "shield (div 1 gf)" || name === "div 1 shield" || name === "division 1 shield") return 4;
+    return 5;
+  }
+  const ordered = [...trophies].sort((a,b)=>{
+    const groupDiff = trophyGroup(a.competition) - trophyGroup(b.competition);
+    if(groupDiff) return groupDiff;
+    const yearA = parseInt((a.season || "").match(/\d{4}/)?.[0] || "0", 10);
+    const yearB = parseInt((b.season || "").match(/\d{4}/)?.[0] || "0", 10);
+    return yearB - yearA || a.competition.localeCompare(b.competition);
+  });
+  const sections = groups.map((groupName,groupIndex)=>{
+    const items = ordered.filter(t=>trophyGroup(t.competition) === groupIndex);
+    if(!items.length) return "";
+    return `<div style="margin-bottom:15px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin-bottom:7px;">${groupName}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;max-width:640px;">
+        ${items.map(t=>`<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-light);border-left:4px solid ${t.color};border-radius:5px;padding:8px 12px;">
+          <span style="font-size:16px;">🏆</span>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;">${t.competition}</div>
+            <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#000;">${t.season}</div>
+          </div>
+        </div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+  return `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Trophies (${trophies.length})</h2></div>${sections}${noteHtml}`;
 }
 
 function sideLeagueHonoursHtml(honours){
