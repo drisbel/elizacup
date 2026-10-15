@@ -7172,7 +7172,7 @@ function teamTrophiesHtml(trophies, trophyNote){
     const yearB = parseInt((b.season || "").match(/\d{4}/)?.[0] || "0", 10);
     return yearB - yearA || a.competition.localeCompare(b.competition);
   });
-  const logos = ["logo/eliza-logo.png", "logo/roddy-logo.png", "logo/fa-cup-logo.png", "logo/ecl-logo.png", "logo/division-1-logo.png", ""];
+  const logos = ["logo/division-1-logo.png", "logo/roddy-logo.png", "logo/fa-cup-logo.png", "logo/ecl-logo.png", "logo/division-1-logo.png", ""];
   const sections = groups.map((groupName,groupIndex)=>{
     const items = ordered.filter(t=>trophyGroup(t.competition) === groupIndex);
     if(!items.length) return "";
@@ -7185,7 +7185,7 @@ function teamTrophiesHtml(trophies, trophyNote){
         ${icon}<span style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;line-height:1.1;">${groupName}</span>
       </div>
       <div style="display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:5px;min-height:30px;">
-        ${items.map(t=>`<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line-light);border-left:3px solid ${t.color};border-radius:4px;padding:5px 8px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:650;white-space:nowrap;">${groupIndex===5 ? `<span style="font-weight:600;">${t.competition}</span><span style="opacity:.55;">·</span>` : ""}${t.season}</span>`).join("")}
+        ${items.map(t=>`<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line-light);border-left:3px solid ${t.color};border-radius:4px;padding:5px 8px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:650;white-space:nowrap;">${groupIndex===5 ? `<span style="font-weight:600;">${t.competition}</span><span style="opacity:.55;">·</span>` : ""}🏆 ${t.season}</span>`).join("")}
       </div>
     </div>`;
   }).join("");
@@ -7322,6 +7322,74 @@ async function loadClubHistory(){
   }
   return clubHistoryPromise;
 }
+// Roddy historical positions: DATA 26/27!EF2:EK68 (team name + five seasons).
+// Values such as "1 / 66" retain both rank and number of participants.
+let clubRoddyHistoryPromise=null;
+function clubRoddyHistoryPosition(raw){
+  const m=String(raw??'').trim().match(/^(\d+)\s*(?:\/\s*(\d+))?$/);
+  if(!m)return null;
+  const position=Number(m[1]),total=m[2]?Number(m[2]):null;
+  return position>0&&(!total||position<=total)?{position,total}:null;
+}
+async function loadClubRoddyHistory(){
+  if(!clubRoddyHistoryPromise){
+    clubRoddyHistoryPromise=(async()=>{
+      const base=`https://docs.google.com/spreadsheets/d/${SEASON_FIXTURES_SHEET_ID}/gviz/tq`;
+      const url=`${base}?tqx=out:csv&gid=${CLUB_HISTORY_GID}&range=EF2%3AEK68&headers=0&v=${Date.now()}`;
+      const response=await cachedFetch(url);
+      if(!response.ok)throw new Error('Roddy history HTTP '+response.status);
+      const rows=Papa.parse(await response.text(),{skipEmptyLines:false}).data;
+      const map=new Map();
+      rows.forEach(row=>{
+        const name=String(row?.[0]??'').trim();
+        if(!name||/^(TEAM|CLUB|NAME)$/i.test(name))return;
+        const records=['22/23','23/24','24/25','25/26','26/27'].map((year,i)=>({year,...(clubRoddyHistoryPosition(row[i+1])||{position:null,total:null}),isLive:i===4}));
+        if(records.some(r=>r.position!==null))map.set(clubHistoryKey(name),records);
+      });
+      if(!map.size)throw new Error('No Roddy positions found in EF2:EK68');
+      return map;
+    })().catch(err=>{clubRoddyHistoryPromise=null;throw err;});
+  }
+  return clubRoddyHistoryPromise;
+}
+function clubRoddyHistoryChartHtml(teamName,records){
+  if(!records?.some(r=>r.position!==null))return '<p class="club-history-note">No Roddy positions available for this club.</p>';
+  const mobile=window.matchMedia('(max-width:600px)').matches;
+  const W=mobile?510:690,H=mobile?225:225,L=mobile?45:55,R=mobile?16:25,T=20,B=37;
+  const totals=records.map(r=>r.total).filter(n=>Number.isFinite(n)&&n>0);
+  const maxRank=Math.max(2,...totals,...records.map(r=>r.position||0));
+  const x=i=>L+(W-L-R)*i/4;
+  const y=rank=>T+((rank-1)/(maxRank-1))*(H-T-B);
+  const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Roddy positions for ${esc(teamName)}">`;
+  [1,Math.ceil(maxRank/2),maxRank].filter((v,i,a)=>a.indexOf(v)===i).forEach(rank=>{
+    svg+=`<line x1="${L}" y1="${y(rank)}" x2="${W-R}" y2="${y(rank)}" stroke="#dfe4e9" stroke-dasharray="3 4"/><text x="${L-9}" y="${y(rank)+4}" text-anchor="end" fill="#596371" font-size="${mobile?14:12}">${rank}</text>`;
+  });
+  const valid=records.map((r,i)=>({...r,i})).filter(r=>r.position!==null);
+  for(let i=1;i<valid.length;i++){
+    const a=valid[i-1],b=valid[i];
+    if(b.i-a.i!==1)continue;
+    svg+=`<line x1="${x(a.i)}" y1="${y(a.position)}" x2="${x(b.i)}" y2="${y(b.position)}" stroke="#566e92" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  valid.forEach(r=>{
+    const champion=r.position===1,cx=x(r.i),cy=y(r.position),radius=mobile?16:13;
+    const color=champion?'#d3a216':'#284783';
+    svg+=`<g class="history-dot" tabindex="0"><title>${esc(`${r.year}: ${r.position}${r.total?' / '+r.total:''}${champion?' — Roddy winner':''}${r.isLive?' (live)':''}`)}</title><circle cx="${cx}" cy="${cy}" r="${radius}" fill="${champion?'#ffe08a':r.isLive?'#fff':color}" stroke="${color}" stroke-width="${champion?3:2}"/><text x="${cx}" y="${cy+5}" font-size="${mobile?15:13}" text-anchor="middle" font-weight="800" fill="${champion?'#684c00':r.isLive?color:'#fff'}">${r.position}</text>${champion?`<text x="${cx}" y="${cy-radius-5}" text-anchor="middle" font-size="${mobile?16:14}">🏆</text>`:''}</g>`;
+  });
+  records.forEach((r,i)=>{svg+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" fill="#565d56" font-size="${mobile?16:12}" font-weight="600">${r.year}</text>`;});
+  svg+='</svg>';
+  return `<div class="club-history-scroll">${svg}</div><div class="club-history-legend"><span>Position 1 is highest</span><span>🏆 Roddy winner</span><span>Labels show position; hover for position / total players</span></div>`;
+}
+function switchClubHistoryView(view){
+  const league=document.getElementById('clubHistoryLeagueView'),roddy=document.getElementById('clubHistoryRoddyView');
+  if(!league||!roddy)return;
+  league.hidden=view!=='league';roddy.hidden=view!=='roddy';
+  document.querySelectorAll('[data-club-history-view]').forEach(btn=>{
+    const active=btn.dataset.clubHistoryView===view;
+    btn.setAttribute('aria-pressed',String(active));
+    btn.style.background=active?'#28427c':'#fff';btn.style.color=active?'#fff':'#28427c';
+  });
+}
 function clubHistoryChartHtml(teamName,records,currentDivision){
   if(!records||!records.some(r=>r.position!==null))return '';
   const currentTier=clubHistoryTier(currentDivision);
@@ -7375,11 +7443,17 @@ async function populateClubHistoryChart(teamName,currentDivision){
   const slot=document.getElementById('clubHistoryChartSlot');if(!slot)return;
   slot.innerHTML='<p class="club-history-note">Loading historical positions…</p>';
   try{
-    const map=await loadClubHistory();
-    // Avoid injecting results into a different club after rapid navigation.
+    const [leagueResult,roddyResult]=await Promise.allSettled([loadClubHistory(),loadClubRoddyHistory()]);
     if(document.getElementById('clubHistoryChartSlot')!==slot)return;
-    slot.innerHTML=clubHistoryChartHtml(teamName,map.get(clubHistoryKey(teamName)),currentDivision);
-  }catch(err){console.warn('Club history chart:',err);if(document.getElementById('clubHistoryChartSlot')===slot)slot.innerHTML='<p class="club-history-note">Historical chart could not load. Please refresh the page or check spreadsheet access.</p>';}
+    const leagueHtml=leagueResult.status==='fulfilled'
+      ? clubHistoryChartHtml(teamName,leagueResult.value.get(clubHistoryKey(teamName)),currentDivision)
+      : '<p class="club-history-note">League history unavailable.</p>';
+    const roddyHtml=roddyResult.status==='fulfilled'
+      ? clubRoddyHistoryChartHtml(teamName,roddyResult.value.get(clubHistoryKey(teamName)))
+      : '<p class="club-history-note">Roddy history unavailable. Check EF2:EK68.</p>';
+    slot.innerHTML=`<section class="club-history-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;"><h3 style="margin:0;">Historical Positions</h3><div style="display:flex;gap:5px;"><button type="button" data-club-history-view="league" onclick="switchClubHistoryView('league')" style="border:1px solid #28427c;border-radius:5px;padding:5px 10px;font:700 12px Barlow,sans-serif;cursor:pointer;">League</button><button type="button" data-club-history-view="roddy" onclick="switchClubHistoryView('roddy')" style="border:1px solid #28427c;border-radius:5px;padding:5px 10px;font:700 12px Barlow,sans-serif;cursor:pointer;">Roddy</button></div></div><div id="clubHistoryLeagueView">${leagueHtml||'<p class="club-history-note">No league history for this club.</p>'}</div><div id="clubHistoryRoddyView" hidden>${roddyHtml}</div></section>`;
+    switchClubHistoryView('league');
+  }catch(err){console.warn('Club history chart:',err);if(document.getElementById('clubHistoryChartSlot')===slot)slot.innerHTML='<p class="club-history-note">Historical chart could not load.</p>';}
 }
 
 function renderTeamProfile(data){
