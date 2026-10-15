@@ -7172,19 +7172,20 @@ function teamTrophiesHtml(trophies, trophyNote){
     const yearB = parseInt((b.season || "").match(/\d{4}/)?.[0] || "0", 10);
     return yearB - yearA || a.competition.localeCompare(b.competition);
   });
+  const logos = ["logo/eliza-logo.png", "logo/roddy-logo.png", "logo/fa-cup-logo.png", "logo/ecl-logo.png", "logo/division-1-logo.png", ""];
   const sections = groups.map((groupName,groupIndex)=>{
     const items = ordered.filter(t=>trophyGroup(t.competition) === groupIndex);
     if(!items.length) return "";
-    return `<div style="margin-bottom:15px;">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin-bottom:7px;">${groupName}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;max-width:640px;">
-        ${items.map(t=>`<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-light);border-left:4px solid ${t.color};border-radius:5px;padding:8px 12px;">
-          <span style="font-size:16px;">🏆</span>
-          <div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;">${t.competition}</div>
-            <div style="font-family:'Barlow',sans-serif;font-size:11px;color:#000;">${t.season}</div>
-          </div>
-        </div>`).join("")}
+    const logo = logos[groupIndex];
+    const icon = logo
+      ? `<img src="${logo}" alt="" style="width:24px;height:24px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none';">`
+      : `<span style="width:24px;display:inline-flex;justify-content:center;flex-shrink:0;">🏆</span>`;
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:5px 0;border-bottom:1px solid var(--line-light);">
+      <div style="display:flex;align-items:center;gap:8px;width:150px;min-width:150px;min-height:30px;">
+        ${icon}<span style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;line-height:1.1;">${groupName}</span>
+      </div>
+      <div style="display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:5px;min-height:30px;">
+        ${items.map(t=>`<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line-light);border-left:3px solid ${t.color};border-radius:4px;padding:5px 8px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:650;white-space:nowrap;">${groupIndex===5 ? `<span style="font-weight:600;">${t.competition}</span><span style="opacity:.55;">·</span>` : ""}${t.season}</span>`).join("")}
       </div>
     </div>`;
   }).join("");
