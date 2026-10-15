@@ -1698,6 +1698,16 @@
 .ep-tally-table th,.ep-tally-table td{padding:7px 5px;border-bottom:1px solid var(--line-light);text-align:left;}
 .ep-tally-table th:last-child,.ep-tally-table td:last-child{text-align:center;width:45px;}
 @media(max-width:850px){.ep-tally-grid{grid-template-columns:1fr;}}
+
+/* Predictor result tables: aligned logos, a narrow rank, and identical card styling for averages. */
+.alp-check-table th:first-child,.alp-check-table td:first-child{width:46px!important;text-align:center!important;}
+.alp-check-table th:nth-child(2),.alp-check-table td:nth-child(2){width:auto!important;text-align:left!important;}
+.alp-check-table th:nth-child(n+3),.alp-check-table td:nth-child(n+3){width:auto!important;text-align:center!important;}
+.alp-predictor-club{display:inline-flex;align-items:center;gap:8px;min-width:0;text-align:left;vertical-align:middle;}
+.alp-predictor-club img{width:24px;height:24px;object-fit:contain;flex:0 0 24px;}
+.alp-predictor-club span{min-width:0;overflow-wrap:anywhere;}
+.alp-table:not(.alp-check-table) .alp-predictor-club img{width:21px;height:21px;flex-basis:21px;}
+
 /* Season mode: prediction breakdown uses the existing club palette. */
 .alp-check-table{border-collapse:separate;border-spacing:0 5px;table-layout:fixed;}
 .alp-check-table th,.alp-check-table td{text-align:center !important;vertical-align:middle;}
@@ -11667,6 +11677,13 @@ function alpWireDragDrop_(){
   });
 }
 
+function alpPredictorClubHtml_(name,code){
+  const label=String(name||'');
+  // Current Eliza team logos use the site's existing filename convention.
+  // A-League clubs may not have local assets; keep an invisible fixed-size slot if absent.
+  const src='logo/'+teamLogoSlug(label)+'.png';
+  return '<span class="alp-predictor-club"><img src="'+alpEsc(src)+'" alt="" onerror="this.onerror=null;this.style.visibility=\'hidden\';"><span>'+alpEsc(label)+'</span></span>';
+}
 function alpRenderLeaderboard(rows){
   const body=document.getElementById('alpLeaderboardBody');
   if(!body) return;
@@ -11678,7 +11695,7 @@ function alpRenderLeaderboard(rows){
     const pos=Number(r.pos)||i+1;
     const team=r.teamName || r.team || '';
     const penalty=(r.totalPenalty!==undefined && r.totalPenalty!==null && r.totalPenalty!=='') ? r.totalPenalty : (r.penalty ?? '');
-    return `<tr><td>${pos}</td><td>${alpEsc(team)}</td><td>${alpEsc(penalty)}</td></tr>`;
+    return `<tr><td>${pos}</td><td>${alpPredictorClubHtml_(team)}</td><td>${alpEsc(penalty)}</td></tr>`;
   }).join('');
 }
 
@@ -11810,8 +11827,8 @@ async function alpShowAverage_(holder,state){
     return {team:t,average:scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:null};
   }).sort((a,b)=>(a.average??Infinity)-(b.average??Infinity)||String(a.team.name).localeCompare(String(b.team.name)));
   holder.innerHTML='<div class="alp-check-summary"><strong>Average predicted ladder</strong><span>'+predictions.length+' entries</span></div>'+
-    '<div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Average predicted position</th></tr></thead><tbody>'+
-    rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+alpEsc(r.team.name)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>').join('')+
+    '<div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Average position</th></tr></thead><tbody>'+
+    rows.map((r,i)=>{const c=alpTeamColour_(r.team);return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.team.name,r.team.code)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>';}).join('')+
     '</tbody></table></div>';
 }
 function alpWireCheckPrediction_(state){
@@ -11875,7 +11892,7 @@ function alpRenderAdminLadder_(teams){
 function alpRenderPredictionBreakdown_(h,p,teams){
   if(!p||!p.found){h.innerHTML='<p class="alp-muted">No prediction has been submitted for this team.</p>';return;}
   const rows=teams.map(t=>{const predicted=Number(p.picks&&p.picks[t.code]),actual=Number(t.actualPos);return {name:t.name,code:t.code,predicted,actual,penalty:Number.isFinite(predicted)&&Number.isFinite(actual)?Math.abs(predicted-actual):null};}).sort((a,b)=>a.predicted-b.predicted);
-  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map(r=>{const c=alpTeamColour_({code:r.code});return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+alpEsc(r.name)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>';}).join('')+'</tbody></table></div>';
+  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map((r,i)=>{const c=alpTeamColour_({code:r.code});return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.name,r.code)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
 
 function alpShowAdminMessage_(text,type=""){
@@ -11950,8 +11967,8 @@ async function epShowAverage_(holder,division,state){
     return {team:t,average:scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:null,count:scores.length};
   }).sort((a,b)=>(a.average??Infinity)-(b.average??Infinity)||String(a.team.name).localeCompare(String(b.team.name)));
   holder.innerHTML='<div class="alp-check-summary"><strong>Average predicted ladder</strong><span>'+predictions.length+' entries</span></div>'+
-    '<div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Average predicted position</th></tr></thead><tbody>'+
-    rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+alpEsc(r.team.name)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>').join('')+
+    '<div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Average position</th></tr></thead><tbody>'+
+    rows.map((r,i)=>{const c=alpTeamColour_(r.team);return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.team.name,r.team.code)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>';}).join('')+
     '</tbody></table></div>';
 }
 function epLeaderboard(){alpRenderLeaderboard(epState.leaderboard||[]);}
