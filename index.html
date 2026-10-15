@@ -5007,7 +5007,7 @@ const HONOUR_ROLL = {
     winners: [
       ["2024-25", "Inter Milanovic (1st)"],
       ["2023-24", "Victoryrules (1st)"],
-      ["2022-23", "Tomato Sauce FC (1st)"],
+      ["2022-23", "Tomatosauce FC (1st)"],
       ["2021-22", "Garry Wallah United FC (1st)"]
     ]
   },
@@ -5723,14 +5723,23 @@ function histTeamLink(name){
 // than parsing yet another sheet region, so it always matches what the Hall of Fame
 // page shows. parseHonourEntries already handles both single-winner seasons and the
 // split "Team (2A - 1st), Team (2B - 1st)" format used by Division 2/3.
+// Match historical names to the current team using Club Info's Previous Names.
+// Normalising spaces/punctuation also matches "Tomatosauce FC" to "Tomato Sauce FC".
+function trophyNameKey(name){
+  return (name||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
 function findTeamTrophies(teamName){
   const trophies = [];
-  const upperTeam = teamName.toUpperCase();
+  const currentKey = trophyNameKey(teamName);
+  const aliasKeys = new Set([currentKey]);
+  Object.entries(previousNameMap||{}).forEach(([oldName, currentName])=>{
+    if(trophyNameKey(currentName) === currentKey) aliasKeys.add(trophyNameKey(oldName));
+  });
   Object.keys(HONOUR_ROLL).forEach(compName=>{
     const comp = HONOUR_ROLL[compName];
     (comp.winners||[]).forEach(([season, winnerRaw])=>{
       parseHonourEntries(winnerRaw).forEach(e=>{
-        if(e.team.toUpperCase() === upperTeam){
+        if(aliasKeys.has(trophyNameKey(e.team))){
           trophies.push({ competition: compName, season, color: comp.color });
         }
       });
@@ -5885,10 +5894,12 @@ async function loadTeamProfile(teamName){
     cachedFetch(clubInfoCsvUrlFor()).then(r => r.text()).then(text => {
       const rows = Papa.parse(text, {skipEmptyLines:false}).data;
       clubInfo = findClubInfo(rows, teamName);
+      // Use this already-fetched Club Info sheet for historical trophy aliases.
+      previousNameMap = buildPreviousNameMap(rows);
     }).catch(err => console.error("Club info fetch failed", err))
   );
 
-  const trophies = findTeamTrophies(teamName); // static HONOUR_ROLL data — no fetch needed
+  // Resolve trophies after Club Info's Previous Names map is available.
 
   let trophyNote = "";
   const trophyLeadersDiv = DIVISIONS.find(d => d.id === "honour");
@@ -5909,6 +5920,7 @@ async function loadTeamProfile(teamName){
   );
 
   await Promise.all(fetches);
+  const trophies = findTeamTrophies(teamName);
   renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours });
 }
 
