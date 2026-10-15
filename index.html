@@ -1927,6 +1927,16 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 }
 .export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team.broadcast-home .fixture-team-name{text-align:right!important}
 .export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team.broadcast-away .fixture-team-name{text-align:left!important}
+
+/* Side-league social tables: stable left crest slot and compact narrow tables. */
+.export-sideleague .side-export-team-cell{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;min-width:0!important;width:100%!important;text-align:left!important}
+.export-sideleague .side-export-crest{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;height:40px!important}
+.export-sideleague .side-export-crest img.table-team-logo{display:block!important;width:auto!important;height:auto!important;max-width:38px!important;max-height:38px!important;object-fit:contain!important;aspect-ratio:auto!important;margin:0!important}
+.export-sideleague .side-export-team-name{display:block!important;flex:1!important;min-width:0!important;text-align:left!important;font-weight:700!important}
+.export-sideleague .side-export-team-name a{color:inherit!important;text-decoration:none!important}
+.export-sideleague.export-compact-overall .export-image-body table{table-layout:auto!important}
+.export-sideleague.export-compact-overall .export-image-body table th,
+.export-sideleague.export-compact-overall .export-image-body table td{padding-left:9px!important;padding-right:9px!important}
 </style>
 </head>
 <body>
@@ -12573,6 +12583,14 @@ if(installInstructionsOverlay){
         if(!n.classList.contains('side-export-page-tools'))content.appendChild(n.cloneNode(true));
         n=n.nextElementSibling;
       }
+      // Tipping's overall and round-by-round tables can be nested in the same
+      // container. The selected section must not include the other section.
+      const isRoundSection=/round.by.round/i.test(title);
+      if(!isRoundSection){
+        content.querySelectorAll('.tipping-round-by-round,.tipping-club-championship').forEach(e=>e.remove());
+      }else{
+        content.querySelectorAll('.tipping-overall-wrap,.tipping-club-championship').forEach(e=>e.remove());
+      }
       if(!content.children.length){alert('This section has no content to export yet.');return;}
     }
     content.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
@@ -12593,33 +12611,44 @@ if(installInstructionsOverlay){
     content.querySelectorAll('table.ucl-fantasy-table, table.tipping-round-table').forEach(table=>{
       const header=table.querySelector('thead tr');
       if(!header)return;
-      const cells=Array.from(header.children);
       const bodyRows=Array.from(table.querySelectorAll('tbody tr'));
-      const emptyRoundIndices=[];
-      cells.forEach((cell,index)=>{
-        const label=cell.textContent.trim();
-        if(!/^(?:R(?:OUND)?\s*[-.]?\s*\d+|\d+)$/i.test(label))return;
-        const hasScore=bodyRows.some(row=>{
-          const value=(row.children[index]?.textContent||'').trim().replace(/,/g,'');
-          if(!value||value==='—'||value==='-'||value==='–')return false;
-          const score=Number(value);
-          return Number.isFinite(score) ? score!==0 : false;
-        });
-        if(!hasScore)emptyRoundIndices.push(index);
-      });
-      // Remove from right to left so column indices remain stable.
-      emptyRoundIndices.reverse().forEach(index=>{
-        cells[index]?.remove();
+      const roundPattern=/^(?:MD\s*\d+|PO\s*\d+|R(?:OUND)?\s*[-.]?\s*\d+(?:\s*[-.]\s*\d+)?|\d+|(?:QF|SF|GF|FINAL|F)\s*[-.]?\s*\d*|(?:PLAYOFF|PLAYOFFS)\s*\d+)$/i;
+      const toRemove=Array.from(header.children).map((cell,index)=>({index,label:cell.textContent.trim()}))
+        .filter(({index,label})=>roundPattern.test(label)&&!bodyRows.some(row=>{
+          const raw=(row.children[index]?.textContent||'').trim().replace(/,/g,'');
+          const score=Number(raw);
+          return raw!==''&&Number.isFinite(score)&&score!==0;
+        })).map(x=>x.index).reverse();
+      toRemove.forEach(index=>{
+        header.children[index]?.remove();
         bodyRows.forEach(row=>row.children[index]?.remove());
+      });
+    });
+    // Keep crests in a consistent left-hand slot; names begin after that slot.
+    content.querySelectorAll('table tbody tr').forEach(row=>{
+      Array.from(row.children).forEach(cell=>{
+        const img=cell.querySelector(':scope > img.table-team-logo');
+        if(!img)return;
+        const wrap=document.createElement('span');wrap.className='side-export-team-cell';
+        const crest=document.createElement('span');crest.className='side-export-crest';
+        const name=document.createElement('span');name.className='side-export-team-name';
+        while(cell.firstChild){
+          const node=cell.firstChild;
+          if(node===img)crest.appendChild(node);else name.appendChild(node);
+        }
+        wrap.appendChild(crest);wrap.appendChild(name);cell.appendChild(wrap);
       });
     });
     // Three-column overall standings need a compact export canvas, not the
     // full 1190px reserved for detailed multi-column tables.
     const exportTables=Array.from(content.querySelectorAll('table'));
-    const compactOverall=exportTables.length>0 && exportTables.every(t=>t.querySelectorAll('thead th').length===3);
+    const maxColumns=Math.max(0,...exportTables.map(t=>t.querySelectorAll('thead th').length));
+    const compactOverall=exportTables.length>0 && maxColumns<=5;
     if(compactOverall){
       stage.classList.add('export-compact-overall');
-      stage.style.width='720px';
+      stage.style.width=(maxColumns<=3?'640px':maxColumns===4?'790px':'920px');
+    }else if(exportTables.length && maxColumns<=8){
+      stage.style.width=Math.min(1190,Math.max(820,470+maxColumns*82))+'px';
     }
     const cards=content.querySelectorAll('.fixture-card');
     if(cards.length && !content.querySelector('table')){
