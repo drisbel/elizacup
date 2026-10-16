@@ -3336,6 +3336,26 @@ function liveCaptainKey(p){
  return /^(C|CAPTAIN|TRUE|1)$/.test(value)?'C':/^(VC|V|VICE|VICE CAPTAIN)$/.test(value)?'VC':value;
 }
 function livePlayerIdentity(p){return liveKey(p?.name||'')+'|'+liveCaptainKey(p);}
+// A-League crests stored alongside the Eliza Cup team crests.
+function liveALeagueLogo(club){
+ const key=String(club||'').trim().toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'');
+ const aliases={
+  adelaide:'adelaide',adelaideunited:'adelaide',adl:'adelaide',
+  auckland:'auckland',aucklandfc:'auckland',akl:'auckland',
+  brisbane:'brisbane',brisbaneroar:'brisbane',bri:'brisbane',br:'brisbane',
+  centralcoast:'central-coast',centralcoastmariners:'central-coast',ccm:'central-coast',
+  macarthur:'macarthur',macarthurfc:'macarthur',mac:'macarthur',
+  melbournecity:'melbourne-city',melbournecityfc:'melbourne-city',mcy:'melbourne-city',melc:'melbourne-city',
+  melbournevictory:'melbourne-victory',melbournevictoryfc:'melbourne-victory',mvc:'melbourne-victory',melv:'melbourne-victory',
+  newcastle:'newcastle',newcastlejets:'newcastle',newcastlejetsfc:'newcastle',new:'newcastle',newj:'newcastle',
+  perth:'perth',perthglory:'perth',perthgloryfc:'perth',per:'perth',
+  sydney:'sydney',sydneyfc:'sydney',syd:'sydney',
+  wellington:'wellington',wellingtonphoenix:'wellington',wel:'wellington',wph:'wellington',
+  westernsydney:'western-sydney',westernsydneywanderers:'western-sydney',westernsydneywanderersfc:'western-sydney',wsw:'western-sydney'
+ };
+ const slug=aliases[key];
+ return slug?'logos/'+slug+'.png':'';
+}
 function livePlayerHtml(t,other){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
  const items=t.players||[];
@@ -3346,9 +3366,9 @@ function livePlayerHtml(t,other){
   const cap=String(p.captain||'').trim();
   const badge=cap?`<b class="live-captain" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
   const shared=!p.bench&&otherStarting.has(livePlayerIdentity(p));
-  // Reserve the crest slot now; actual A-League logo assets can be wired in later.
+  const crest=liveALeagueLogo(p.club);
   const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
-  return `<div class="live-player-row${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}><span class="live-player-club-logo" aria-hidden="true"></span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><strong>${liveEscape(p.points||'0')}</strong></div>`;
+  return `<div class="live-player-row${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="this.style.display='none'">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><strong>${liveEscape(p.points||'0')}</strong></div>`;
  }).join('')}`;
  return group(items.slice(0,11),'Starting XI')+group(items.slice(11,15),'Bench');
 }
