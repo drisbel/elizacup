@@ -1947,6 +1947,27 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .export-sideleague.export-compact-overall .export-image-body table{table-layout:auto!important}
 .export-sideleague.export-compact-overall .export-image-body table th,
 .export-sideleague.export-compact-overall .export-image-body table td{padding-left:9px!important;padding-right:9px!important}
+
+  /* Live Match Centre — intentionally follows existing section/table/card language. */
+  .live-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+  .live-controls select{font:600 13px 'Barlow',sans-serif;border:1px solid var(--line-light);background:#fff;border-radius:6px;padding:9px 12px;max-width:100%}
+  .live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+  .live-card{background:#fff;border:1px solid var(--line-light);border-radius:8px;overflow:hidden}
+  .live-card-head{background:var(--pitch);color:#fff;padding:10px 13px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .live-card-head strong{font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .live-card-body{padding:14px}
+  .live-card-team{display:flex;align-items:center;gap:9px;min-width:0}
+  .live-card-team img{width:32px;height:32px;object-fit:contain;flex-shrink:0}
+  .live-card-team span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+  .live-score{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;color:var(--pitch)}
+  .live-meta{font-size:12px;color:#526174;margin:8px 0}
+  .live-card details{border-top:1px solid var(--line-light);padding:0 12px}
+  .live-card summary{cursor:pointer;padding:11px 2px;font-weight:700;font-size:13px;color:var(--pitch)}
+  .live-players{width:100%;border-collapse:collapse;font-size:12px}
+  .live-players td,.live-players th{padding:7px 5px;border-bottom:1px solid var(--line-light);text-align:left}
+  .live-players td:last-child,.live-players th:last-child{text-align:right}
+  .live-players .live-bench td{opacity:.65}
+  .live-note{padding:14px 16px;border:1px solid var(--line-light);background:#fff;border-radius:7px;margin-bottom:15px;font-size:13px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -2061,6 +2082,11 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 
   <section id="homeSection" style="display:none;">
     <div id="homeContainer"></div>
+  </section>
+
+  <section id="liveSection" style="display:none;">
+    <div class="section-head"><h2>Live Match Centre</h2><span class="sub">Eliza Cup 26/27</span></div>
+    <div id="liveContainer" class="state-msg">Loading live teams…</div>
   </section>
 
   <section id="calendarSection" style="display:none;">
@@ -2258,6 +2284,7 @@ const SEASON_2526_SHEET_ID = "1amM4ua8f7x1IFSDeVJA18wpsKKptzyBOcQ4H8pEEswI";
 
 const DIVISIONS = [
   { id: "home", label: "Home",                    pill: "Home",    gid: null,         teams: 0,  color: "#000000", type: "home" },
+  { id: "live", label: "Live", pill: "Live", gid: null, teams: 0, color: "#28427c", type: "live" },
   { id: "calendar", label: "Calendar",            pill: "Calendar", gid: "2066314959", teams: 0, color: "#000000", type: "calendar" },
   { id: "d1",  label: "Division 1 (Eliza Cup)", pill: "Div. 1",  gid: "1124941542", sheetId: SHEET_ID, teams: 14, color: "#28427c", type: "division" },
   { id: "d2a", label: "Division 2A",            pill: "Div. 2A", gid: "919912875",  sheetId: SHEET_ID, teams: 12, color: "#bc3532", type: "division" },
@@ -2491,6 +2518,7 @@ let roddyDebug = {};
 const NAV_LAYOUT = [
   { type: "single", id: "home" },
   { type: "single", id: "calendar" },
+  { type: "single", id: "live" },
   { type: "single", id: "teams", label: "Team Profiles" },
   { type: "group", key: "divisions", label: "Divisions", ids: ["d1","d2a","d2b","d3a","d3b"] },
   { type: "group", key: "cups", label: "Cups", ids: ["roddy","facup","ecl"] },
@@ -3129,6 +3157,7 @@ function togglePageSections(){
   const isSideLeaguesHub = type === "sideleagueshub";
   const isHome = type === "home";
   const isCalendar = type === "calendar";
+  const isLive = type === "live";
   const isTeams = type === "teams";
   const isTeamProfile = type === "teamprofile";
   const isNews = type === "news";
@@ -3137,6 +3166,7 @@ function togglePageSections(){
   const isWhatsMyDiv = type === "whatsmydiv";
   document.getElementById('homeSection').style.display = isHome ? "" : "none";
   document.getElementById('calendarSection').style.display = isCalendar ? "" : "none";
+  document.getElementById('liveSection').style.display = isLive ? "" : "none";
   document.getElementById('tableSection').style.display = isDivision ? "" : "none";
   document.getElementById('fixturesSection').style.display = isDivision ? "" : "none";
   document.getElementById('roddySection').style.display = isRoddy ? "" : "none";
@@ -3211,6 +3241,64 @@ const ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKf
 // The spreadsheet remains the source of truth for A-League Predictor data.
 const ALEAGUE_PREDICTOR_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1mlX0ZdmvWQe0Odi0fejsqNkUXp82f_PguHElT1dvcQGS6Oq4sU7ET8hf18vcSTWm9w/exec";
 
+
+// Live Match Centre v1: read the new COWZA EXPORT without assuming status values.
+// Fixture pairing is intentionally deferred until the Live Draw schema is confirmed.
+const LIVE_EXPORT_SHEET = 'COWZA EXPORT';
+let liveExportTeams = [];
+let liveSelectedGameweek = '';
+function liveEscape(value){
+  return String(value == null ? '' : value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function liveField(row,head,key){ const index=head.indexOf(key); return index<0?'':String(row[index]??'').trim(); }
+function parseLiveExport(rows){
+  const header=(rows[0]||[]).map(v=>String(v||'').trim().toLowerCase());
+  if(!header.includes('team_name') || !header.includes('player_0_name')) throw Error('COWZA EXPORT headers not found. Check row 1 and sheet access.');
+  return rows.slice(1).map(row=>{
+    const name=String(row[0]||'').trim();
+    const fantasy=liveField(row,header,'team_name');
+    if(!name&&!fantasy)return null;
+    const players=Array.from({length:15},(_,i)=>({
+      name:liveField(row,header,`player_${i}_name`),
+      captain:liveField(row,header,`player_${i}_captain`),
+      position:liveField(row,header,`player_${i}_pos`),
+      club:liveField(row,header,`player_${i}_club`),
+      points:liveField(row,header,`player_${i}_points`),
+      status:liveField(row,header,`player_${i}_status`),
+      bench:i>=11
+    })).filter(p=>p.name);
+    return {name:name||fantasy,fantasy,gameweek:liveField(row,header,'gameweek'),score:liveField(row,header,'score'),chip:liveField(row,header,'chip'),scoreStatus:liveField(row,header,'score_status'),players};
+  }).filter(Boolean);
+}
+function renderLiveCentre(){
+  const el=document.getElementById('liveContainer'); if(!el)return;
+  el.className='';
+  if(!liveExportTeams.length){el.innerHTML='<div class="live-note">No team data has been published to COWZA EXPORT yet. The Live Match Centre is ready and will populate when rows are added from row 2.</div>';return;}
+  const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+  if(!weeks.includes(liveSelectedGameweek))liveSelectedGameweek=weeks[0]||'';
+  const entries=liveExportTeams.filter(t=>!liveSelectedGameweek||t.gameweek===liveSelectedGameweek).sort((a,b)=>a.name.localeCompare(b.name));
+  el.innerHTML=`<div class="live-note"><strong>Live team scores</strong> · This first version displays team scores and individual lineups from the player export. Head-to-head fixtures will be linked once the Live Draw structure is confirmed. Player and score statuses are shown as supplied, without assuming what their values mean.</div>
+  <div class="live-controls"><label for="liveGwSelect"><strong>Gameweek</strong></label><select id="liveGwSelect">${weeks.map(w=>`<option value="${liveEscape(w)}" ${w===liveSelectedGameweek?'selected':''}>GW ${liveEscape(w)}</option>`).join('')}</select><span class="sub">${entries.length} teams</span></div>
+  <div class="live-grid">${entries.map((t,index)=>{
+    const logo='logo/'+teamLogoSlug(t.name)+'.png';
+    return `<article class="live-card"><div class="live-card-head"><strong>${liveEscape(t.name)}</strong><span>GW ${liveEscape(t.gameweek||'—')}</span></div>
+      <div class="live-card-body"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div class="live-card-team"><img src="${logo}" alt="" onerror="this.style.display='none'"><span>${liveEscape(t.name)}</span></div><div class="live-score">${liveEscape(t.score||'—')}</div></div>
+      <div class="live-meta">${t.fantasy&&t.fantasy!==t.name?liveEscape(t.fantasy)+' · ':''}${t.chip?'Chip: '+liveEscape(t.chip)+' · ':''}${t.scoreStatus?'Status: '+liveEscape(t.scoreStatus):'Status pending'}</div></div>
+      <details><summary>View players (${t.players.length}/15)</summary><table class="live-players"><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th>Pts</th></tr></thead><tbody>${t.players.map(p=>`<tr class="${p.bench?'live-bench':''}"><td>${liveEscape(p.name)}${p.captain?' <strong>('+liveEscape(p.captain)+')</strong>':''}</td><td>${liveEscape(p.position)}</td><td>${liveEscape(p.status||'—')}</td><td>${liveEscape(p.points||'—')}</td></tr>`).join('')}</tbody></table></details></article>`;
+  }).join('')}</div>`;
+  const select=document.getElementById('liveGwSelect');if(select)select.addEventListener('change',e=>{liveSelectedGameweek=e.target.value;renderLiveCentre();});
+}
+async function loadLiveCentre(){
+  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live teams…';
+  try{
+    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(LIVE_EXPORT_SHEET)}&cachebust=${Date.now()}`;
+    const response=await cachedFetch(url);
+    if(!response.ok)throw Error('HTTP '+response.status);
+    liveExportTeams=parseLiveExport(Papa.parse(await response.text(),{skipEmptyLines:true}).data);
+    renderLiveCentre();setStatus('Live export loaded — '+new Date().toLocaleString());
+  }catch(err){console.error('Live export:',err);el.className='state-msg error';el.textContent='Unable to load COWZA EXPORT: '+err.message;setStatus('Live export unavailable',false);}
+}
+
 async function load(){
   togglePageSections();
 
@@ -3225,6 +3313,8 @@ async function load(){
   }
 
   setStatus("Connecting to live sheet…");
+
+  if(currentDivision.type === "live"){ await loadLiveCentre(); return; }
 
   if(currentDivision.type === "calendar"){
     document.getElementById('calendarContainer').innerHTML = "Loading calendar…";
