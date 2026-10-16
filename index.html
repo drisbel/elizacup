@@ -1990,13 +1990,17 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-match-side+ .live-match-side{border-left:1px solid var(--line-light)}
 .live-lineup-label{text-transform:uppercase;font-weight:800;font-size:10px;margin:3px 0 7px;color:var(--ink)}
 .live-lineup-label:not(:first-child){margin-top:13px}
-.live-player-row{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:22px;font-size:11px}
-.live-player-row strong{font-size:11px;flex-shrink:0}
-.live-player-name{display:flex;align-items:center;gap:4px;min-width:0}
-.live-player-name>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.live-player-dot{width:6px;height:6px;background:#1f8a4c;border-radius:50%;flex-shrink:0}
+/* Live match player rows: shared picks muted, unique picks prominent; status is not interpreted yet. */
+.live-player-row{display:flex;align-items:center;gap:5px;min-height:35px;padding:3px 0;font-size:11px;min-width:0}
+.live-player-row.live-player-shared{opacity:.45}
+.live-player-club-logo{width:22px;height:22px;flex:0 0 22px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:var(--chalk);border:1px solid var(--line-light);overflow:hidden}
+.live-player-club-logo img{width:100%;height:100%;object-fit:contain}
+.live-player-info{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:1;min-width:0}
+.live-player-name{display:flex;align-items:center;gap:4px;min-width:0;font-weight:600}
+.live-player-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.live-player-meta{font-size:9px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-player-row strong{font-size:11px;flex-shrink:0;margin-left:auto;font-variant-numeric:tabular-nums}
 .live-captain{background:var(--pitch);color:#fff;font-size:9px;border-radius:50%;min-width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-.live-player-done{opacity:.65}
 .live-no-data{font-size:11px;color:#64748b;padding:8px 0}
 @media(max-width:760px){.live-match-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:400px){.live-match-side{padding:8px 6px}.live-match-name{font-size:10px}.live-match-score{font-size:19px}}
@@ -3327,13 +3331,24 @@ const LIVE_COMPETITIONS=[
 ];
 function liveKey(v){return String(v||'').replace(/\s*\((?:D?[123][ABC]?|DIV(?:ISION)?\s*[123][ABC]?)\)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function liveFindTeam(name){const k=liveKey(name);return liveExportTeams.find(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);}
-function livePlayerHtml(t){
+function liveCaptainKey(p){
+ const value=String(p?.captain||'').trim().toUpperCase();
+ return /^(C|CAPTAIN|TRUE|1)$/.test(value)?'C':/^(VC|V|VICE|VICE CAPTAIN)$/.test(value)?'VC':value;
+}
+function livePlayerIdentity(p){return liveKey(p?.name||'')+'|'+liveCaptainKey(p);}
+function livePlayerHtml(t,other){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
  const items=t.players||[];
+ // Shared starting players with identical captaincy are muted on both sides.
+ // Different captaincy is a meaningful differential, even for the same player.
+ const otherStarting=new Set((other?.players||[]).filter(p=>!p.bench).map(livePlayerIdentity));
  const group=(players,title)=>`<div class="live-lineup-label">${title}</div>${players.map(p=>{
- const cap=String(p.captain||'').trim();const badge=cap?`<b class="live-captain">${liveEscape(cap)}</b>`:'';
- const status=String(p.status||'').toLowerCase();const done=/finish|played|complete/.test(status);
- return `<div class="live-player-row ${done?'live-player-done':''}"><span class="live-player-name"><i class="live-player-dot"></i><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><strong>${liveEscape(p.points||'0')}</strong></div>`;
+  const cap=String(p.captain||'').trim();
+  const badge=cap?`<b class="live-captain" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
+  const shared=!p.bench&&otherStarting.has(livePlayerIdentity(p));
+  // Reserve the crest slot now; actual A-League logo assets can be wired in later.
+  const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
+  return `<div class="live-player-row${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}><span class="live-player-club-logo" aria-hidden="true"></span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><strong>${liveEscape(p.points||'0')}</strong></div>`;
  }).join('')}`;
  return group(items.slice(0,11),'Starting XI')+group(items.slice(11,15),'Bench');
 }
@@ -3344,7 +3359,7 @@ function liveMatchHtml(f){
  <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
  <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
  <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
- </div><div class="live-match-body"><div class="live-match-side">${livePlayerHtml(a)}</div><div class="live-match-side">${livePlayerHtml(b)}</div></div></article>`;
+ </div><div class="live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div></article>`;
 }
 function parseLiveFixtures(blocks){
  const result=[];const probes=[];
