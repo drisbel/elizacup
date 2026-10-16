@@ -3317,13 +3317,13 @@ function parseLiveExport(rows){
   }).filter(Boolean);
 }
 const LIVE_COMPETITIONS=[
- {id:'d1',label:'Division 1',start:8,end:14,left:13,right:25},
+ {id:'d1',label:'Division 1',start:8,end:14,left:3,right:15},
  {id:'d2a',label:'Division 2A',start:17,end:22,left:3,right:15},
  {id:'d2b',label:'Division 2B',start:25,end:30,left:3,right:15},
- {id:'d3a',label:'Division 3A',start:17,end:23,left:24,right:36},
- {id:'d3b',label:'Division 3B',start:25,end:31,left:24,right:36},
- {id:'facup',label:'FA Cup',start:8,end:39,left:45,right:54},
- {id:'ecl',label:'ECL',start:8,end:15,left:64,right:71}
+ {id:'d3a',label:'Division 3A',start:33,end:39,left:3,right:15},
+ {id:'d3b',label:'Division 3B',start:42,end:48,left:3,right:15},
+ {id:'facup',label:'FA Cup',start:10,end:38,left:24,right:33},
+ {id:'ecl',label:'ECL',start:42,end:47,left:24,right:33}
 ];
 function liveKey(v){return String(v||'').replace(/\s*\((?:D?[123][ABC]?|DIV(?:ISION)?\s*[123][ABC]?)\)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function liveFindTeam(name){const k=liveKey(name);return liveExportTeams.find(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);}
@@ -3362,7 +3362,7 @@ function parseLiveFixtures(rows){
    // If the two fixed columns don't both contain names, scan only this
    // fixture row within that cup's defined block for recognised export teams.
    if((c.id==='facup'||c.id==='ecl')&&(!names[0]||!names[1]||!liveFindTeam(names[0])||!liveFindTeam(names[1]))){
-    const from=c.id==='facup'?44:63,to=c.id==='facup'?61:76;
+    const from=24,to=33;
     const matches=[];
     for(let i=from;i<=to;i++){
      const candidate=String(row[i]||'').trim();
@@ -3374,7 +3374,7 @@ function parseLiveFixtures(rows){
    if(names.length>=2&&names[0]&&names[1]&&liveKey(names[0])!==liveKey(names[1])&&((c.id!=='facup'&&c.id!=='ecl')||(liveFindTeam(names[0])&&liveFindTeam(names[1]))))result.push({comp:c.id,a:names[0],b:names[1]});
   }
  }
- liveFixtureDiagnostics='Rows returned: '+rows.length+'; X5: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ')+'; FA Cup rows 8–11: '+[8,9,10,11].map(n=>{const a=rows[n-1]||[];return n+': AT='+JSON.stringify(a[45]||'')+', BC='+JSON.stringify(a[54]||'')+', nearby='+JSON.stringify(a.slice(44,61).filter(Boolean).slice(0,8));}).join(' | ');
+ liveFixtureDiagnostics='Rows returned: '+rows.length+'; X5: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ')+'; FA Cup rows 10–13: '+[10,11,12,13].map(n=>{const a=rows[n-1]||[];return n+': Y='+JSON.stringify(a[24]||'')+', AH='+JSON.stringify(a[33]||'')+', nearby='+JSON.stringify(a.slice(24,34).filter(Boolean).slice(0,8));}).join(' | ');
  return result;
 }
 function renderLiveCentre(){
@@ -3402,9 +3402,9 @@ async function loadLiveCentre(){
  // The Current Round sheet is a formatted dashboard, not a simple table.
  // CSV exports can discard its leading blank rows/columns and shift the
  // coordinates. Request a fixed range in Visualization JSON with headers=0,
- // preserving the original A1:BY38 cell positions (including empty cells).
+ // preserving the original A1:BY48 cell positions (including empty cells).
  const fetchCurrentRound=async()=>{
-  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Current Round')}&range=A1%3ABY38&headers=0&cachebust=${Date.now()}`;
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Current Round')}&range=A1%3ABY48&headers=0&cachebust=${Date.now()}`;
   const response=await cachedFetch(url);if(!response.ok)throw Error('Current Round: HTTP '+response.status);
   const body=await response.text();
   const start=body.indexOf('{'),end=body.lastIndexOf('}');
