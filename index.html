@@ -1948,7 +1948,10 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .export-sideleague.export-compact-overall .export-image-body table th,
 .export-sideleague.export-compact-overall .export-image-body table td{padding-left:9px!important;padding-right:9px!important}
 
-  /* Live Match Centre — intentionally follows existing section/table/card language. */
+  /* Live Match Centre — competition metadata and team search. */
+.live-match-context{padding:7px 12px;background:#eeeae0;color:#17251e;font:700 11px 'Barlow',sans-serif;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line-light)}
+.live-controls input[type="search"]{flex:1;min-width:180px;max-width:440px;padding:10px 12px;border:1px solid var(--line-light);border-radius:6px;background:#fff;color:var(--ink);font:600 13px 'Barlow',sans-serif}
+/* Live Match Centre — intentionally follows existing section/table/card language. */
   .live-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
   .live-controls select{font:600 13px 'Barlow',sans-serif;border:1px solid var(--line-light);background:#fff;border-radius:6px;padding:9px 12px;max-width:100%}
   .live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
@@ -3284,7 +3287,8 @@ const LIVE_EXPORT_SHEET = 'COWZA EXPORT';
 let liveExportTeams = [];
 let liveCurrentRound = '';
 let liveFixtures = [];
-let liveCompetition = 'all';
+let liveCompetition = '';
+let liveTeamSearch = '';
 let liveFixtureDiagnostics = '';
 function liveEscape(value){
   return String(value == null ? '' : value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3329,7 +3333,7 @@ const LIVE_COMPETITIONS=[
  {id:'facup',label:'FA Cup',start:10,end:38,left:24,right:33},
  {id:'ecl',label:'ECL',start:42,end:47,left:24,right:33}
 ];
-function liveKey(v){return String(v||'').replace(/\s*\((?:D?[123][ABC]?|DIV(?:ISION)?\s*[123][ABC]?)\)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+function liveKey(v){return String(v||'').replace(/\s*\((?:D(?:IV(?:ISION)?)?\s*)?[123](?:[ABC])?)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function liveFindTeam(name){const k=liveKey(name);return liveExportTeams.find(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);}
 function liveCaptainKey(p){
  const value=String(p?.captain||'').trim().toUpperCase();
@@ -3374,8 +3378,10 @@ function livePlayerHtml(t,other){
 }
 function liveMatchHtml(f){
  const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
- const logo=(n)=>'logo/'+teamLogoSlug(n)+'.png';
- return `<article class="live-match"><div class="live-match-head">
+ const logo=(n)=>'logo/'+teamLogoSlug(String(n||'').replace(/\s*\((?:D(?:IV(?:ISION)?)?\s*)?[123](?:[ABC])?)\s*$/i,'').trim())+'.png';
+ const competition=LIVE_COMPETITIONS.find(c=>c.id===f.comp)?.label||f.comp;
+ const week=liveCurrentRound||liveExportTeams.find(t=>t.gameweek)?.gameweek||'';
+ return `<article class="live-match"><div class="live-match-context">${liveEscape(competition)}${week?` · Gameweek ${liveEscape(week)}`:''}</div><div class="live-match-head">
  <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
  <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
  <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
@@ -3407,15 +3413,30 @@ function renderLiveCentre(){
  const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
  const week=weeks[0]||liveCurrentRound||'—';
  const active=LIVE_COMPETITIONS.filter(c=>liveFixtures.some(f=>f.comp===c.id));
- if(liveCompetition!=='all'&&!active.some(c=>c.id===liveCompetition))liveCompetition='all';
- const shown=liveFixtures.filter(f=>liveCompetition==='all'||f.comp===liveCompetition);
+ if(!active.some(c=>c.id===liveCompetition))liveCompetition=active[0]?.id||'';
+ const query=liveKey(liveTeamSearch);
+ // Searching spans every competition, even when a different tab was selected.
+ const shown=liveFixtures.filter(f=>query?(liveKey(f.a).includes(query)||liveKey(f.b).includes(query)):f.comp===liveCompetition);
  const logos={d1:'logo/division-1-logo.png',d2a:'logo/division-2-logo.png',d2b:'logo/division-2-logo.png',d3a:'logo/division-3-logo.png',d3b:'logo/division-3-logo.png',facup:'logo/fa-cup-logo.png',ecl:'logo/ecl-logo.png'};
- const choices=[{id:'all',label:'All competitions'},...active];
- el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span></div>
- <div class="live-comp-tabs" role="group" aria-label="Select competition">${choices.map(c=>`<button type="button" class="live-comp-tab ${liveCompetition===c.id?'active':''}" data-live-comp="${c.id}" aria-pressed="${liveCompetition===c.id}">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}${liveEscape(c.label)}</button>`).join('')}</div>
- ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:'<div class="live-note">No fixtures available for this round yet. Fixtures will appear when Current Round is populated.</div>'}
+ el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
+ <div class="live-comp-tabs" role="group" aria-label="Select competition">${active.map(c=>`<button type="button" class="live-comp-tab ${!query&&liveCompetition===c.id?'active':''}" data-live-comp="${c.id}" aria-pressed="${!query&&liveCompetition===c.id}">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}${liveEscape(c.label)}</button>`).join('')}</div>
+ ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:`<div class="live-note">${query?'No matchups found for that team.':'No fixtures available for this competition yet.'}</div>`}
  ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
- el.querySelectorAll('[data-live-comp]').forEach(btn=>btn.addEventListener('click',()=>{liveCompetition=btn.dataset.liveComp;renderLiveCentre();}));
+ el.querySelectorAll('[data-live-comp]').forEach(btn=>btn.addEventListener('click',()=>{liveCompetition=btn.dataset.liveComp;liveTeamSearch='';renderLiveCentre();}));
+ const search=el.querySelector('#liveTeamSearch');
+ search?.addEventListener('input',()=>{
+  liveTeamSearch=search.value;
+  const q=liveKey(liveTeamSearch);
+  const results=liveFixtures.filter(f=>q?(liveKey(f.a).includes(q)||liveKey(f.b).includes(q)):f.comp===liveCompetition);
+  const grid=el.querySelector('.live-match-grid');
+  const note=el.querySelector('.live-note');
+  const html=results.length?results.map(liveMatchHtml).join(''):'';
+  if(grid){grid.innerHTML=html;grid.style.display=results.length?'':'none';}
+  if(note){note.textContent=q?'No matchups found for that team.':'No fixtures available for this competition yet.';note.style.display=results.length?'none':'';}
+  if(!grid&&results.length){const target=el.querySelector('.live-comp-tabs');target.insertAdjacentHTML('afterend',`<div class="live-match-grid">${html}</div>`);}
+  if(!note&&!results.length){const target=el.querySelector('.live-match-grid')||el.querySelector('.live-comp-tabs');target.insertAdjacentHTML('afterend','<div class="live-note">No matchups found for that team.</div>');}
+  el.querySelectorAll('[data-live-comp]').forEach(btn=>{btn.classList.toggle('active',!q&&btn.dataset.liveComp===liveCompetition);btn.setAttribute('aria-pressed',String(!q&&btn.dataset.liveComp===liveCompetition));});
+ });
 }
 async function loadLiveCentre(){
  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live fixtures…';
