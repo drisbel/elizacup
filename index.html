@@ -620,6 +620,25 @@
   .club-squad-bench .club-squad-line{margin:12px 0 4px;}
   @media(max-width:600px){.club-squad-pitch{padding:14px 5px}.club-squad-shirt{height:31px;width:31px;font-size:18px}.club-squad-player-name{font-size:10px}.club-squad-player-meta{font-size:9px}.club-squad-line{gap:2px;margin:18px 0 24px}}
 
+
+  /* Club profile overview: history and live squad share the top row on wide screens. */
+  .club-profile-top-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start;margin:18px 0 24px;}
+  .club-profile-top-grid #clubHistoryChartSlot,.club-profile-top-grid .club-squad-section{min-width:0;}
+  .club-profile-top-grid .club-history-chart{max-width:none;width:100%;margin:0;}
+  .club-profile-top-grid .club-squad-section{margin:0!important;}
+  .club-profile-top-grid .club-squad-pitch{padding:12px 6px;}
+  .club-profile-top-grid .club-squad-line{margin:17px 0 22px;gap:2px;}
+  .club-profile-top-grid .club-squad-player{gap:3px;}
+  .club-squad-crest-wrap{width:47px;height:47px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
+  .club-squad-crest{width:100%;height:100%;object-fit:contain;transform:scale(1.23);filter:drop-shadow(0 2px 3px #001e15aa);}
+  .club-squad-cap{position:absolute;top:-6px;right:-8px;z-index:2;border:1px solid white;border-radius:50%;background:#f7d34d;color:#18281c;font:900 10px Barlow,sans-serif;width:20px;height:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px #0008;}
+  .club-squad-cap.vice{background:#e6ecff;color:#1a326b;}
+  .club-squad-club{font:800 10px Barlow,sans-serif;letter-spacing:.05em;color:#fff;text-shadow:0 1px 3px #002919;}
+  .club-squad-player-points{font:800 12px Barlow,sans-serif;background:#ffffffed;color:#103d2c;border-radius:5px;padding:2px 8px;min-width:30px;}
+  .club-squad-player-name{font-size:11px;}
+  @media(min-width:850px){.club-profile-top-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}.club-profile-top-grid .club-history-chart{margin:0;}}
+  @media(max-width:600px){.club-squad-crest-wrap{width:36px;height:36px}.club-squad-crest{transform:scale(1.26)}.club-squad-cap{width:17px;height:17px;font-size:9px;right:-5px}.club-squad-club{font-size:9px}.club-squad-player-points{font-size:11px;padding:2px 5px}.club-squad-player-name{font-size:10px}}
+
   /* ---------- Team profile header ---------- */
   .team-profile-top{
     display:flex;align-items:center;gap:28px;margin-bottom:28px;justify-content:space-between;
@@ -7844,17 +7863,25 @@ async function populateClubHistoryChart(teamName,currentDivision){
 }
 
 
+function clubSquadClubAbbr(club){
+  const key=String(club||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const aliases={adelaide:'ADL',adelaideunited:'ADL',adl:'ADL',auckland:'AKL',aucklandfc:'AKL',akl:'AKL',brisbane:'BRI',brisbaneroar:'BRI',bri:'BRI',centralcoast:'CCM',centralcoastmariners:'CCM',ccm:'CCM',macarthur:'MAC',macarthurfc:'MAC',mac:'MAC',melbournecity:'MCY',melbournecityfc:'MCY',mcy:'MCY',melbournevictory:'MVC',melbournevictoryfc:'MVC',mvc:'MVC',newcastle:'NEW',newcastlejets:'NEW',newcastlejetsfc:'NEW',new:'NEW',perth:'PER',perthglory:'PER',per:'PER',sydney:'SYD',sydneyfc:'SYD',syd:'SYD',wellington:'WEL',wellingtonphoenix:'WEL',wel:'WEL',westernsydney:'WSW',westernsydneywanderers:'WSW',westernsydneywanderersfc:'WSW',wsw:'WSW'};
+  return aliases[key]||String(club||'').trim().slice(0,3).toUpperCase()||'—';
+}
 function clubSquadHtml(squad){
   if(!squad || !squad.players || squad.players.length<11) return '';
   const starters=squad.players.slice(0,11), bench=squad.players.slice(11,15);
   const position=p=>String(p.position||'').toUpperCase();
   const kind=p=>{const x=position(p);return /^(GK|GKP|GOAL)/.test(x)?'GK':/^(DEF|DF|D$)/.test(x)?'DEF':/^(MID|MF|M$)/.test(x)?'MID':/^(FWD|FW|ATT|ST)/.test(x)?'FWD':'';};
   const lines=['GK','DEF','MID','FWD'].map(k=>starters.filter(p=>kind(p)===k));
-  // Preserve original source order; if the export uses unfamiliar position labels,
-  // display the original 11 rather than silently dropping players.
   if(lines.reduce((n,a)=>n+a.length,0)!==starters.length){lines.splice(0,lines.length,...[starters.slice(0,1),starters.slice(1,5),starters.slice(5,9),starters.slice(9,11)]);}
-  const player=p=>`<div class="club-squad-player"><div class="club-squad-shirt" aria-hidden="true">♟</div><div class="club-squad-player-name">${liveEscape(p.name)}</div><div class="club-squad-player-meta">${liveEscape(p.club||p.position||'')}</div></div>`;
-  return `<section class="club-squad-section" style="margin-top:28px"><div class="section-head"><h2 style="font-size:18px">Current Squad</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
+  const player=p=>{
+    const crest=liveALeagueLogo(p.club),cap=liveCaptainKey(p),abbr=clubSquadClubAbbr(p.club);
+    const capHtml=cap==='C'||cap==='VC'?`<span class="club-squad-cap${cap==='VC'?' vice':''}" title="${cap==='C'?'Captain':'Vice-captain'}">${cap}</span>`:'';
+    const icon=crest?`<img class="club-squad-crest" src="${liveEscape(crest)}" alt="${liveEscape(p.club)}" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:'<span aria-hidden="true">⚽</span>';
+    return `<div class="club-squad-player"><div class="club-squad-crest-wrap">${icon}${capHtml}</div><div class="club-squad-club">${liveEscape(abbr)}</div><div class="club-squad-player-name">${liveEscape(p.name)}</div><div class="club-squad-player-points" title="Current player points">${liveEscape(p.points===''?'—':p.points)}</div></div>`;
+  };
+  return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">Current Squad</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
 }
 
 function renderTeamProfile(data){
@@ -7908,10 +7935,9 @@ function renderTeamProfile(data){
     <img src="${logoSrc}" alt="" class="team-profile-logo" onerror="${logoOnError}">
   </div>`;
 
-  html += `<div id="clubHistoryChartSlot"></div>`;
+  html += `<div class="club-profile-top-grid"><div id="clubHistoryChartSlot"></div>${clubSquadHtml(currentSquad)}</div>`;
 
   html += teamTrophiesHtml(trophies, trophyNote);
-  html += clubSquadHtml(currentSquad);
 
   html += `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Overview</h2></div>
     <div class="team-profile-cards">
