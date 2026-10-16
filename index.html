@@ -3346,35 +3346,25 @@ function liveMatchHtml(f){
  <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
  </div><div class="live-match-body"><div class="live-match-side">${livePlayerHtml(a)}</div><div class="live-match-side">${livePlayerHtml(b)}</div></div></article>`;
 }
-function parseLiveFixtures(rows){
- const result=[];liveCurrentRound=String(rows[4]?.[23]||'').trim();
- const probes=[];
+function parseLiveFixtures(blocks){
+ const result=[];const probes=[];
  for(const c of LIVE_COMPETITIONS){
-  for(let r=c.start-1;r<c.end;r++){
-   const row=rows[r]||[];let names=[];
-   if(c.left!==undefined){names=[String(row[c.left]||'').trim(),String(row[c.right]||'').trim()];}
-   else{
-    // Cup sections contain additional fields; recognise actual team names from the export.
-    // This avoids incorrectly treating scores or fixture labels as team names.
-    for(let i=c.from;i<=c.to;i++){const v=String(row[i]||'').trim();if(v&&liveFindTeam(v)&&!names.some(n=>liveKey(n)===liveKey(v)))names.push(v);}
+  const rows=blocks[c.id]||[];
+  const width=c.id==='facup'||c.id==='ecl'?10:13;
+  let found=0;
+  for(let i=0;i<rows.length;i++){
+   const row=rows[i]||[];
+   // Each response is a narrow range starting at the HOME team column.
+   // Avoid indexing a whole dashboard whose empty rows can be suppressed.
+   const a=String(row[0]||'').trim();
+   const b=String(row[width-1]||'').trim();
+   if(a&&b&&liveKey(a)!==liveKey(b)){
+    result.push({comp:c.id,a,b});found++;
    }
-   // Cup brackets can place the display names in merged or offset cells.
-   // If the two fixed columns don't both contain names, scan only this
-   // fixture row within that cup's defined block for recognised export teams.
-   if((c.id==='facup'||c.id==='ecl')&&(!names[0]||!names[1]||!liveFindTeam(names[0])||!liveFindTeam(names[1]))){
-    const from=24,to=33;
-    const matches=[];
-    for(let i=from;i<=to;i++){
-     const candidate=String(row[i]||'').trim();
-     if(candidate&&liveFindTeam(candidate)&&!matches.some(n=>liveKey(n)===liveKey(candidate)))matches.push(candidate);
-    }
-    if(matches.length===2)names=matches;
-   }
-   if(r===c.start-1)probes.push(c.id+': '+JSON.stringify(names));
-   if(names.length>=2&&names[0]&&names[1]&&liveKey(names[0])!==liveKey(names[1])&&((c.id!=='facup'&&c.id!=='ecl')||(liveFindTeam(names[0])&&liveFindTeam(names[1]))))result.push({comp:c.id,a:names[0],b:names[1]});
   }
+  probes.push(c.id+': '+found+'/'+rows.length+' fixtures, first='+JSON.stringify([rows[0]?.[0]||'',rows[0]?.[width-1]||'']));
  }
- liveFixtureDiagnostics='Rows returned: '+rows.length+'; X5: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ')+'; FA Cup rows 10–13: '+[10,11,12,13].map(n=>{const a=rows[n-1]||[];return n+': Y='+JSON.stringify(a[24]||'')+', AH='+JSON.stringify(a[33]||'')+', nearby='+JSON.stringify(a.slice(24,34).filter(Boolean).slice(0,8));}).join(' | ');
+ liveFixtureDiagnostics='Round: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ');
  return result;
 }
 function renderLiveCentre(){
@@ -3399,30 +3389,31 @@ async function loadLiveCentre(){
   const response=await cachedFetch(url);if(!response.ok)throw Error(name+': HTTP '+response.status);
   return Papa.parse(await response.text(),{skipEmptyLines:false}).data;
  };
- // The Current Round sheet is a formatted dashboard, not a simple table.
- // CSV exports can discard its leading blank rows/columns and shift the
- // coordinates. Request a fixed range in Visualization JSON with headers=0,
- // preserving the original A1:BY48 cell positions (including empty cells).
- const fetchCurrentRound=async()=>{
-  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Current Round')}&range=A1%3ABY48&headers=0&cachebust=${Date.now()}`;
-  const response=await cachedFetch(url);if(!response.ok)throw Error('Current Round: HTTP '+response.status);
+ // Request each fixture block directly rather than one enormous dashboard range.
+ // Google's Visualization response may omit empty dashboard rows; that shifted
+ // all later sections and caused the missing cup games and partial D1 fixtures.
+ const fetchGridRange=async(range,width)=>{
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Current Round')}&range=${encodeURIComponent(range)}&headers=0&cachebust=${Date.now()}`;
+  const response=await cachedFetch(url);
+  if(!response.ok)throw Error('Current Round '+range+': HTTP '+response.status);
   const body=await response.text();
   const start=body.indexOf('{'),end=body.lastIndexOf('}');
-  if(start<0||end<start)throw Error('Current Round: invalid sheet response');
+  if(start<0||end<start)throw Error('Current Round '+range+': invalid response');
   const payload=JSON.parse(body.slice(start,end+1));
-  if(payload.status==='error')throw Error('Current Round: '+(payload.errors||[]).map(e=>e.message).join('; '));
-  const table=payload.table||{};
-  return (table.rows||[]).map(row=>{
-   const cells=row.c||[];
-   return Array.from({length:77},(_,i)=>{
-    const cell=cells[i];
-    if(!cell)return '';
-    return String(cell.f??cell.v??'').trim();
-   });
-  });
+  if(payload.status==='error')throw Error('Current Round '+range+': '+(payload.errors||[]).map(e=>e.message).join('; '));
+  return (payload.table?.rows||[]).map(row=>Array.from({length:width},(_,i)=>{
+   const cell=row.c?.[i];return cell?String(cell.f??cell.v??'').trim():'';
+  }));
+ };
+ const ranges={d1:['D8:P14',13],d2a:['D17:P22',13],d2b:['D25:P30',13],d3a:['D33:P39',13],d3b:['D42:P48',13],facup:['Y10:AH38',10],ecl:['Y42:AH47',10]};
+ const fetchFixtureBlocks=async()=>{
+  const entries=await Promise.all(Object.entries(ranges).map(async([key,[range,width]])=>[key,await fetchGridRange(range,width)]));
+  const round=await fetchGridRange('X5:X5',1);
+  liveCurrentRound=String(round[0]?.[0]||'').trim();
+  return Object.fromEntries(entries);
  };
  try{
-  const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchCurrentRound()]);
+  const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchFixtureBlocks()]);
   liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);renderLiveCentre();
   setStatus('Live scores loaded — '+new Date().toLocaleString());
  }catch(err){console.error('Live match centre:',err);el.className='state-msg error';el.textContent='Unable to load Live Match Centre: '+err.message;setStatus('Live scores unavailable',false);}
