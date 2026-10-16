@@ -2232,6 +2232,28 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-pitch-corner-crest{position:absolute;right:13px;top:14px;width:48px;height:48px;object-fit:contain;z-index:2;opacity:.7;pointer-events:none;filter:drop-shadow(0 1px 3px #0008)}
 @media(max-width:420px){.live-pitch-corner-crest{width:37px;height:37px;right:8px;top:9px}}
 
+
+/* Score dash is fixed to the exact horizontal centre and to the list-view divider. */
+.live-comp-section .live-match-head{grid-template-columns:minmax(0,1fr) 78px minmax(0,1fr)!important;gap:0!important;padding:8px 8px!important}
+.live-comp-section .live-match-name{display:flex;align-items:center;min-width:0;gap:5px;line-height:1.15}
+.live-comp-section .live-match-name img{order:initial!important;width:30px;height:30px;flex:0 0 30px;object-fit:contain}
+.live-comp-section .live-match-name span{order:initial!important;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.live-comp-section .live-match-left{justify-content:flex-end;text-align:right;padding-right:4px}
+.live-comp-section .live-match-right{justify-content:flex-start;text-align:left;padding-left:4px}
+.live-comp-section .live-match-score{display:grid;grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr);align-items:center;justify-items:center;width:78px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center}
+.live-comp-section .live-score-dash{justify-self:center;text-align:center}
+/* Small corner expand affordance: overlay only, never reserves grid width. */
+.live-comp-section .live-match-summary .live-match-head:after{right:0!important;top:0!important;width:12px!important;height:12px!important;font-size:10px!important}
+.live-pitch-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px;background:#fff}
+.live-pitch-grid[hidden]{display:none!important}
+.live-pitch-grid .live-formation-side-title{margin-bottom:0!important;border-radius:7px 7px 0 0}
+.live-pitch-grid .live-formation-pitch-wrap{margin-top:0!important}
+.live-pitch-grid .club-squad-section>.section-head{display:none}
+.live-pitch-grid .club-squad-section{margin:0!important}
+.live-pitch-grid .club-squad-pitch{margin:0!important}
+.live-pitch-grid .club-squad-bench{margin-top:0!important}
+@media(max-width:760px){.live-pitch-grid{grid-template-columns:1fr;gap:10px}}
+@media(max-width:420px){.live-comp-section .live-match-head{grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr)!important;padding:8px 5px!important}.live-comp-section .live-match-score{width:64px;font-size:19px}.live-comp-section .live-match-name img{width:24px;height:24px;flex-basis:24px}}
 </style>
 </head>
 <body>
@@ -3629,10 +3651,10 @@ function liveMatchHtml(f){
  const theme=liveCompetitionTheme(f.comp);
  const themed=`background:${theme.background};color:${theme.foreground}`;
  return `<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="${themed}">
- <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
- <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
- <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
- </div></summary><div class="live-match-detail live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div><div class="live-match-detail live-formation-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap"><img class="live-pitch-corner-crest" src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'">${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap"><img class="live-pitch-corner-crest" src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'">${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="formation">Formation</button></div></details>`;
+ <div class="live-match-name live-match-left"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"></div>
+ <strong class="live-match-score"><span>${liveEscape(a?.score||'—')}</span><span class="live-score-dash">–</span><span>${liveEscape(b?.score||'—')}</span></strong>
+ <div class="live-match-name live-match-right"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span></div>
+ </div></summary><div class="live-match-detail live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div><div class="live-match-detail live-pitch-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></details>`;
 }
 function parseLiveFixtures(blocks){
  const result=[];const probes=[];
@@ -3663,10 +3685,10 @@ function liveInstallViewToggle(){
   const btn=event.target.closest('.live-view-btn');
   if(!btn||!el.contains(btn))return;
   const match=btn.closest('.live-match');if(!match)return;
-  const formation=btn.dataset.view==='formation';
+  const formation=btn.dataset.view==='pitch';
   match.querySelectorAll('.live-view-btn').forEach(b=>b.classList.toggle('active',b===btn));
   const list=match.querySelector('.live-match-body');
-  const pitch=match.querySelector('.live-formation-grid');
+  const pitch=match.querySelector('.live-pitch-grid');
   if(list)list.hidden=formation;
   if(pitch)pitch.hidden=!formation;
  });
