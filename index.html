@@ -3374,8 +3374,30 @@ async function loadLiveCentre(){
   const response=await cachedFetch(url);if(!response.ok)throw Error(name+': HTTP '+response.status);
   return Papa.parse(await response.text(),{skipEmptyLines:false}).data;
  };
+ // The Current Round sheet is a formatted dashboard, not a simple table.
+ // CSV exports can discard its leading blank rows/columns and shift the
+ // coordinates. Request a fixed range in Visualization JSON with headers=0,
+ // preserving the original A1:BY38 cell positions (including empty cells).
+ const fetchCurrentRound=async()=>{
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Current Round')}&range=A1%3ABY38&headers=0&cachebust=${Date.now()}`;
+  const response=await cachedFetch(url);if(!response.ok)throw Error('Current Round: HTTP '+response.status);
+  const body=await response.text();
+  const start=body.indexOf('{'),end=body.lastIndexOf('}');
+  if(start<0||end<start)throw Error('Current Round: invalid sheet response');
+  const payload=JSON.parse(body.slice(start,end+1));
+  if(payload.status==='error')throw Error('Current Round: '+(payload.errors||[]).map(e=>e.message).join('; '));
+  const table=payload.table||{};
+  return (table.rows||[]).map(row=>{
+   const cells=row.c||[];
+   return Array.from({length:77},(_,i)=>{
+    const cell=cells[i];
+    if(!cell)return '';
+    return String(cell.f??cell.v??'').trim();
+   });
+  });
+ };
  try{
-  const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchSheet('Current Round')]);
+  const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchCurrentRound()]);
   liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);renderLiveCentre();
   setStatus('Live scores loaded — '+new Date().toLocaleString());
  }catch(err){console.error('Live match centre:',err);el.className='state-msg error';el.textContent='Unable to load Live Match Centre: '+err.message;setStatus('Live scores unavailable',false);}
