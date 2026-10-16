@@ -2283,6 +2283,18 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-pitch-grid .club-squad-line{min-width:0}
 .live-pitch-grid .club-squad-player-meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 @media(max-width:760px){.live-pitch-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* One shared heading across both lineups; consistent centred scores. */
+.live-match-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:0;row-gap:0}
+.live-match-body .live-lineup-wide{grid-column:1/-1;text-align:center;margin:0;padding:9px 8px 5px;background:#f6f5f0;border-bottom:1px solid var(--line-light);font-size:11px;letter-spacing:.055em}
+.live-match-body .live-match-side{min-width:0;padding-top:7px;padding-bottom:8px}
+.live-match-body .live-match-side:nth-child(3),.live-match-body .live-match-side:nth-child(6){border-left:1px solid var(--line-light)}
+.live-match-body .live-player-row strong{font-size:15px;line-height:1.1;font-weight:800;flex:0 0 29px;min-width:29px;font-variant-numeric:tabular-nums}
+.live-match-body .live-captain{background:#f7d34d;color:#18281c;border:1px solid #fff;box-shadow:0 1px 3px #0003;font-size:9px;font-weight:900;min-width:17px;height:17px;border-radius:50%}
+.live-match-body .live-captain.vice{background:#e6ecff;color:#1a326b}
+/* Smaller C/VC pitch badges prevent clipping at the outside edges. */
+.live-pitch-grid .club-squad-cap{width:15px;height:15px;font-size:8px;top:-3px;right:-3px;border-width:1px;box-shadow:0 1px 3px #0005}
+
 </style>
 </head>
 <body>
@@ -3656,15 +3668,15 @@ function liveALeagueLogo(club){
  const slug=aliases[key];
  return slug?'logo/'+slug+'.png':'';
 }
-function livePlayerHtml(t,other,rightSide=false){
+function livePlayerHtml(t,other,rightSide=false,title='starters'){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
  const items=t.players||[];
  // Shared starting players with identical captaincy are muted on both sides.
  // Different captaincy is a meaningful differential, even for the same player.
  const otherStarting=new Set((other?.players||[]).filter(p=>!p.bench).map(livePlayerIdentity));
- const group=(players,title)=>`<div class="live-lineup-label">${title}</div>${players.map(p=>{
+ const group=(players)=>`${players.map(p=>{
   const cap=String(p.captain||'').trim();
-  const badge=cap?`<b class="live-captain" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
+  const badge=cap?`<b class="live-captain${liveCaptainKey(p)==='VC'?' vice':''}" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
   const shared=!p.bench&&otherStarting.has(livePlayerIdentity(p));
   const crest=liveALeagueLogo(p.club);
   const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
@@ -3674,7 +3686,7 @@ function livePlayerHtml(t,other,rightSide=false){
  const bench=items.filter(p=>p.bench);
  const unique=starters.filter(p=>!otherStarting.has(livePlayerIdentity(p)));
  const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p)));
- return group([...unique,...common],'Starting XI')+group(bench.length?bench:items.slice(11,15),'Bench');
+ return group(title==='bench'?(bench.length?bench:items.slice(11,15)):[...unique,...common]);
 }
 function liveMatchHtml(f){
  const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
@@ -3687,7 +3699,7 @@ function liveMatchHtml(f){
  <div class="live-match-name live-match-left"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"></div>
  <strong class="live-match-score"><span>${liveEscape(a?.score||'—')}</span><span class="live-score-dash">–</span><span>${liveEscape(b?.score||'—')}</span></strong>
  <div class="live-match-name live-match-right"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span></div>
- </div></summary><div class="live-match-detail live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a,true)}</div></div><div class="live-match-detail live-pitch-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></details>`;
+ </div></summary><div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI</div><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a,true)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench')}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench')}</div></div><div class="live-match-detail live-pitch-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></details>`;
 }
 function parseLiveFixtures(blocks){
  const result=[];const probes=[];
