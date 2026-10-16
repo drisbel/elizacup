@@ -2208,6 +2208,30 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 @media(max-width:760px){.live-all-sections{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:420px){.live-comp-section .live-match-head{grid-template-columns:minmax(0,1fr) 68px minmax(0,1fr);gap:4px;padding:8px 7px}.live-comp-section .live-match-name{font-size:10px}.live-comp-section .live-match-name img{width:24px;height:24px;flex-basis:24px}.live-comp-section .live-match-score{font-size:19px}}
 
+
+/* Live centre clarity and screenshot-friendly match layout */
+.live-comp-heading{background:#090909!important;color:#fff!important}
+.live-comp-heading img{width:31px;height:31px;object-fit:contain}
+.live-comp-section .live-match-summary .live-match-head{position:relative}
+.live-comp-section .live-match-summary .live-match-head:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
+.live-comp-section .live-match-summary:hover .live-match-head:before,.live-comp-section .live-match[open] .live-match-head:before{background:#ffdd00}
+.live-comp-section .live-match-summary:focus-visible{outline:3px solid #ffdd00;outline-offset:-3px}
+.live-comp-section .live-match-summary .live-match-head{cursor:pointer}
+.live-comp-section .live-match-summary .live-match-head:after{content:"+"!important;display:flex!important;align-items:center;justify-content:center;position:absolute;right:1px;top:1px;transform:none;width:15px;height:15px;border-radius:0 0 0 5px;background:rgba(0,0,0,.27);font:700 12px 'Barlow',sans-serif;pointer-events:none}
+.live-comp-section .live-match[open] .live-match-head:after{content:"−"!important}
+.live-comp-section .live-match-head{padding-right:17px!important}
+.live-view-controls{border-top:1px solid var(--line-light);border-bottom:0;justify-content:center;padding:8px;background:#f3f1eb}
+.live-view-caption{font-size:10px;font-weight:800;letter-spacing:.06em;align-self:center;margin-right:5px;color:#4b5563}
+.live-formation-side-title{display:flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:8px 6px;background:var(--live-theme,#28427c);color:#fff;border-radius:7px 7px 0 0;font:800 15px 'Barlow Condensed',sans-serif;text-transform:uppercase;line-height:1.1}
+.live-formation-side-title img{width:32px;height:32px;object-fit:contain;flex:0 0 32px}
+.live-formation-pitch-wrap{position:relative;border:3px solid var(--live-theme,#28427c);border-top:0;border-radius:0 0 8px 8px;overflow:hidden}
+.live-formation-pitch-wrap .club-squad-section{margin:0}
+.live-formation-pitch-wrap .club-squad-pitch{border:0;border-radius:0 0 0 0}
+.live-formation-pitch-wrap .club-squad-bench{margin-top:0!important;border-radius:0!important;border-top:0!important}
+.live-formation-pitch-wrap .club-squad-line:last-child{margin-bottom:0}
+.live-pitch-corner-crest{position:absolute;right:13px;top:14px;width:48px;height:48px;object-fit:contain;z-index:2;opacity:.7;pointer-events:none;filter:drop-shadow(0 1px 3px #0008)}
+@media(max-width:420px){.live-pitch-corner-crest{width:37px;height:37px;right:8px;top:9px}}
+
 </style>
 </head>
 <body>
@@ -3608,7 +3632,7 @@ function liveMatchHtml(f){
  <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
  <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
  <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
- </div></summary><div class="live-view-controls" role="group" aria-label="Matchup view"><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="formation">Formation</button></div><div class="live-match-detail live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div><div class="live-match-detail live-formation-grid" hidden><div class="live-formation-side"><div class="live-formation-side-title">${liveEscape(f.a)}</div>${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div><div class="live-formation-side"><div class="live-formation-side-title">${liveEscape(f.b)}</div>${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></details>`;
+ </div></summary><div class="live-match-detail live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div><div class="live-match-detail live-formation-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap"><img class="live-pitch-corner-crest" src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'">${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap"><img class="live-pitch-corner-crest" src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'">${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="formation">Formation</button></div></details>`;
 }
 function parseLiveFixtures(blocks){
  const result=[];const probes=[];
@@ -3660,7 +3684,7 @@ function renderLiveCentre(){
   const theme=liveCompetitionTheme(c.id);
   const round=liveRoundLabels[c.id]||'';
   return `<section class="live-comp-section" id="live-comp-${c.id}">
-   <h3 class="live-comp-heading" style="background:${theme.background};color:${theme.foreground}">
+   <h3 class="live-comp-heading">
     ${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="this.style.display='none'">`:''}
     <span>${liveEscape(c.label)}</span>${round?`<small>${liveEscape(round)}</small>`:''}
    </h3><div class="live-match-grid">${fixtures.map(liveMatchHtml).join('')}</div></section>`;
