@@ -3354,7 +3354,7 @@ function liveALeagueLogo(club){
   westernsydney:'western-sydney',westernsydneywanderers:'western-sydney',westernsydneywanderersfc:'western-sydney',wsw:'western-sydney'
  };
  const slug=aliases[key];
- return slug?'logos/'+slug+'.png':'';
+ return slug?'logo/'+slug+'.png':'';
 }
 function livePlayerHtml(t,other){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
@@ -3368,7 +3368,7 @@ function livePlayerHtml(t,other){
   const shared=!p.bench&&otherStarting.has(livePlayerIdentity(p));
   const crest=liveALeagueLogo(p.club);
   const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
-  return `<div class="live-player-row${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="this.style.display='none'">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><strong>${liveEscape(p.points||'0')}</strong></div>`;
+  return `<div class="live-player-row${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><strong>${liveEscape(p.points||'0')}</strong></div>`;
  }).join('')}`;
  return group(items.slice(0,11),'Starting XI')+group(items.slice(11,15),'Bench');
 }
@@ -3412,7 +3412,7 @@ function renderLiveCentre(){
  const logos={d1:'logo/division-1-logo.png',d2a:'logo/division-2-logo.png',d2b:'logo/division-2-logo.png',d3a:'logo/division-3-logo.png',d3b:'logo/division-3-logo.png',facup:'logo/fa-cup-logo.png',ecl:'logo/ecl-logo.png'};
  const choices=[{id:'all',label:'All competitions'},...active];
  el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span></div>
- <div class="live-comp-tabs" role="group" aria-label="Select competition">${choices.map(c=>`<button type="button" class="live-comp-tab ${liveCompetition===c.id?'active':''}" data-live-comp="${c.id}" aria-pressed="${liveCompetition===c.id}">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="this.style.display='none'">`:''}${liveEscape(c.label)}</button>`).join('')}</div>
+ <div class="live-comp-tabs" role="group" aria-label="Select competition">${choices.map(c=>`<button type="button" class="live-comp-tab ${liveCompetition===c.id?'active':''}" data-live-comp="${c.id}" aria-pressed="${liveCompetition===c.id}">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}${liveEscape(c.label)}</button>`).join('')}</div>
  ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:'<div class="live-note">No fixtures available for this round yet. Fixtures will appear when Current Round is populated.</div>'}
  ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
  el.querySelectorAll('[data-live-comp]').forEach(btn=>btn.addEventListener('click',()=>{liveCompetition=btn.dataset.liveComp;renderLiveCentre();}));
