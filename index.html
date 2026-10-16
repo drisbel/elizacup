@@ -607,6 +607,19 @@
     .home-champ-half .home-champ-season{font-size:11.5px;margin-top:5px;}
   }
 
+
+  /* Club profile: live 15-player squad from COWZA EXPORT. */
+  .club-squad-pitch{background:repeating-linear-gradient(180deg,#187a49 0,#187a49 65px,#126e40 65px,#126e40 130px);border:3px solid #12633c;border-radius:12px;padding:18px 12px;color:#fff;position:relative;overflow:hidden;}
+  .club-squad-pitch:before{content:"";position:absolute;inset:10px;border:1px solid #ffffff65;pointer-events:none;border-radius:2px;}
+  .club-squad-line{position:relative;display:flex;justify-content:space-around;align-items:flex-start;gap:5px;margin:20px 0 28px;z-index:1;}
+  .club-squad-player{flex:1;min-width:0;max-width:135px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .club-squad-shirt{height:40px;width:40px;border-radius:11px 11px 7px 7px;background:#f8f5ed;color:#20345b;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 3px 8px #0004;border:2px solid #e7e5df;}
+  .club-squad-player-name{font-size:12px;font-weight:700;line-height:1.15;text-shadow:0 1px 4px #082f20;overflow-wrap:anywhere;}
+  .club-squad-player-meta{font-size:10px;color:#e1f6e9;text-shadow:0 1px 3px #082f20;}
+  .club-squad-bench{background:#103d2c;border-radius:10px;margin-top:12px;padding:14px 8px;color:#fff;}
+  .club-squad-bench .club-squad-line{margin:12px 0 4px;}
+  @media(max-width:600px){.club-squad-pitch{padding:14px 5px}.club-squad-shirt{height:31px;width:31px;font-size:18px}.club-squad-player-name{font-size:10px}.club-squad-player-meta{font-size:9px}.club-squad-line{gap:2px;margin:18px 0 24px}}
+
   /* ---------- Team profile header ---------- */
   .team-profile-top{
     display:flex;align-items:center;gap:28px;margin-bottom:28px;justify-content:space-between;
@@ -6122,6 +6135,15 @@ async function loadTeamProfile(teamName){
   parseRoddy(roddyRows);
   const roddyEntry = roddyEntries.find(e => (e.team||"").toUpperCase() === teamName.toUpperCase()) || null;
 
+  // Reuse the same 15-player COWZA EXPORT feed as Live Match Centre.
+  let currentSquad = null;
+  const squadPromise = (async () => {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(LIVE_EXPORT_SHEET)}&cachebust=${Date.now()}`;
+    const response = await cachedFetch(url);
+    if(!response.ok) throw new Error('Squad export HTTP '+response.status);
+    const rows = Papa.parse(await response.text(),{skipEmptyLines:false}).data;
+    currentSquad = parseLiveExport(rows).find(t=>liveKey(t.name)===liveKey(teamName)||liveKey(t.fantasy)===liveKey(teamName)) || null;
+  })().catch(err=>console.warn('Club squad unavailable:',err));
   let divisionData = null;
   let facupSummary = [];
   let eclSummary = null;
@@ -6284,9 +6306,9 @@ async function loadTeamProfile(teamName){
     }).catch(err => console.error("Side league honours fetch failed", err))
   );
 
-  await Promise.all(fetches);
+  await Promise.all([...fetches, squadPromise]);
   const trophies = findTeamTrophies(teamName);
-  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours });
+  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad });
 }
 
 // ---------- Historical Record (dedicated tab, gid 1444343417) ----------
@@ -7821,10 +7843,24 @@ async function populateClubHistoryChart(teamName,currentDivision){
   }catch(err){console.warn('Club history chart:',err);if(document.getElementById('clubHistoryChartSlot')===slot)slot.innerHTML='<p class="club-history-note">Historical chart could not load.</p>';}
 }
 
+
+function clubSquadHtml(squad){
+  if(!squad || !squad.players || squad.players.length<11) return '';
+  const starters=squad.players.slice(0,11), bench=squad.players.slice(11,15);
+  const position=p=>String(p.position||'').toUpperCase();
+  const kind=p=>{const x=position(p);return /^(GK|GKP|GOAL)/.test(x)?'GK':/^(DEF|DF|D$)/.test(x)?'DEF':/^(MID|MF|M$)/.test(x)?'MID':/^(FWD|FW|ATT|ST)/.test(x)?'FWD':'';};
+  const lines=['GK','DEF','MID','FWD'].map(k=>starters.filter(p=>kind(p)===k));
+  // Preserve original source order; if the export uses unfamiliar position labels,
+  // display the original 11 rather than silently dropping players.
+  if(lines.reduce((n,a)=>n+a.length,0)!==starters.length){lines.splice(0,lines.length,...[starters.slice(0,1),starters.slice(1,5),starters.slice(5,9),starters.slice(9,11)]);}
+  const player=p=>`<div class="club-squad-player"><div class="club-squad-shirt" aria-hidden="true">♟</div><div class="club-squad-player-name">${liveEscape(p.name)}</div><div class="club-squad-player-meta">${liveEscape(p.club||p.position||'')}</div></div>`;
+  return `<section class="club-squad-section" style="margin-top:28px"><div class="section-head"><h2 style="font-size:18px">Current Squad</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
+}
+
 function renderTeamProfile(data){
   const container = document.getElementById('teamProfileContainer');
   container.className = "";
-  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours } = data;
+  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad } = data;
 
   const hasAnyData = !!(roddyEntry || divisionData
     || (facupSummary && facupSummary.length)
@@ -7875,6 +7911,7 @@ function renderTeamProfile(data){
   html += `<div id="clubHistoryChartSlot"></div>`;
 
   html += teamTrophiesHtml(trophies, trophyNote);
+  html += clubSquadHtml(currentSquad);
 
   html += `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Overview</h2></div>
     <div class="team-profile-cards">
