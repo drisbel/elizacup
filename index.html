@@ -641,14 +641,22 @@
 
 
   /* Club profile revised layout: crest / details / honours, overview, then squad + fixtures. */
-  .team-profile-top.club-profile-header{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(230px,350px);gap:22px;align-items:start;}
-  .club-profile-header .team-profile-logo{grid-column:1;grid-row:1;width:145px;height:145px;}
+  .team-profile-top.club-profile-header{display:grid;grid-template-columns:125px minmax(0,1fr) minmax(340px,440px);gap:16px;align-items:start;}
+  .club-profile-header .team-profile-logo{grid-column:1;grid-row:1;width:125px;height:125px;}
   .club-profile-header .team-profile-main{grid-column:2;grid-row:1;}
   .club-profile-header .team-profile-heading{margin-bottom:0;}
   .club-profile-header .club-profile-trophies{grid-column:3;grid-row:1;min-width:0;border:1px solid var(--line-light);border-radius:9px;background:#fff;padding:10px 13px;max-height:235px;overflow-y:auto;}
   .club-profile-trophies .section-head{margin-top:0!important;margin-bottom:7px;}
-  .club-profile-trophies > div:not(.section-head){flex-wrap:wrap;gap:5px!important;}
-  .club-profile-trophies > div:not(.section-head) > div:first-child{width:auto!important;min-width:110px!important;}
+  /* Compact trophy rows: keep competition and its seasons together where width allows. */
+  .club-profile-trophies .club-trophy-row{gap:6px!important;align-items:center!important;}
+  .club-profile-trophies .club-trophy-name{width:94px!important;min-width:94px!important;gap:5px!important;}
+  .club-profile-trophies .club-trophy-seasons{flex-wrap:nowrap!important;gap:4px!important;min-width:0;}
+  .club-profile-trophies .club-trophy-season{padding:4px 5px!important;font-size:10px!important;gap:3px!important;}
+  @media (min-width:851px) and (max-width:1050px){
+    .team-profile-top.club-profile-header{grid-template-columns:100px minmax(0,1fr) minmax(315px,410px);gap:12px;}
+    .club-profile-header .team-profile-logo{width:100px;height:100px;}
+  }
+  @media (max-width:850px){.club-profile-trophies .club-trophy-seasons{flex-wrap:wrap!important;}}
   .club-profile-fixture-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start;margin-top:24px;}
   .club-profile-fixture-grid > *{min-width:0;}
   .club-profile-fixture-grid .club-squad-section{margin:0!important;}
@@ -7514,8 +7522,8 @@ function teamVsTeamSectionHtml(teamName, opponents){
     </div>`;
 }
 
-function resultPillRow(label, opponent, isHome, homeScore, awayScore, played){
-  const scoreText = played ? `${homeScore} – ${awayScore}` : (opponent ? "vs" : "");
+function resultPillRow(label, opponent, isHome, homeScore, awayScore, played, ownScoreFirst=false){
+  const scoreText = played ? (ownScoreFirst && !isHome ? `${awayScore} – ${homeScore}` : `${homeScore} – ${awayScore}`) : (opponent ? "vs" : "");
   let result = "";
   if(played){
     if(isHome) result = homeScore > awayScore ? "W" : homeScore < awayScore ? "L" : "D";
@@ -7541,7 +7549,7 @@ function shortenFACupRound(name){
 }
 
 function teamProfileFixtureRow(f){
-  return resultPillRow("R" + f.round, f.opponent, f.isHome, f.homeScore, f.awayScore, f.played);
+  return resultPillRow("R" + f.round, f.opponent, f.isHome, f.homeScore, f.awayScore, f.played, true);
 }
 
 function ordinal(n){
@@ -7619,12 +7627,12 @@ function teamTrophiesHtml(trophies, trophyNote){
     const icon = logo
       ? `<img src="${logo}" alt="" style="width:24px;height:24px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none';">`
       : `<span style="width:24px;display:inline-flex;justify-content:center;flex-shrink:0;">🏆</span>`;
-    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:5px 0;border-bottom:1px solid var(--line-light);">
-      <div style="display:flex;align-items:center;gap:8px;width:150px;min-width:150px;min-height:30px;">
+    return `<div class="club-trophy-row" style="display:flex;align-items:flex-start;gap:12px;padding:5px 0;border-bottom:1px solid var(--line-light);">
+      <div class="club-trophy-name" style="display:flex;align-items:center;gap:8px;width:150px;min-width:150px;min-height:30px;">
         ${icon}<span style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;line-height:1.1;">${groupName}</span>
       </div>
-      <div style="display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:5px;min-height:30px;">
-        ${items.map(t=>`<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line-light);border-left:3px solid ${t.color};border-radius:4px;padding:5px 8px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:650;white-space:nowrap;">${groupIndex===5 ? `<span style="font-weight:600;">${t.competition}</span><span style="opacity:.55;">·</span>` : ""}🏆 ${t.season}</span>`).join("")}
+      <div class="club-trophy-seasons" style="display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:5px;min-height:30px;">
+        ${items.map(t=>`<span class="club-trophy-season" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line-light);border-left:3px solid ${t.color};border-radius:4px;padding:5px 8px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:650;white-space:nowrap;">${groupIndex===5 ? `<span style="font-weight:600;">${t.competition}</span><span style="opacity:.55;">·</span>` : ""}🏆 ${t.season}</span>`).join("")}
       </div>
     </div>`;
   }).join("");
