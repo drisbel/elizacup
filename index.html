@@ -2007,6 +2007,19 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-no-data{font-size:11px;color:#64748b;padding:8px 0}
 @media(max-width:760px){.live-match-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:400px){.live-match-side{padding:8px 6px}.live-match-name{font-size:10px}.live-match-score{font-size:19px}}
+
+/* A-League Ladder Predictor: black outlines, compact numbers, readable club names. */
+.alp-page:not(.ep-page) .alp-check-table{table-layout:fixed;width:100%;border-spacing:0 3px;}
+.alp-page:not(.ep-page) .alp-check-table th,.alp-page:not(.ep-page) .alp-check-table td{box-sizing:border-box;}
+.alp-page:not(.ep-page) .alp-check-table th:first-child,.alp-page:not(.ep-page) .alp-check-table td:first-child{width:44px!important;}
+.alp-page:not(.ep-page) .alp-check-table th:nth-child(2),.alp-page:not(.ep-page) .alp-check-table td:nth-child(2){width:auto!important;text-align:left!important;}
+.alp-page:not(.ep-page) .alp-check-table th:nth-child(n+3),.alp-page:not(.ep-page) .alp-check-table td:nth-child(n+3){width:49px!important;padding:7px 3px!important;}
+.alp-page:not(.ep-page) .alp-check-table tbody td{border-top:2px solid #000!important;border-bottom:2px solid #000!important;}
+.alp-page:not(.ep-page) .alp-check-table tbody td:first-child{border-left:2px solid #000!important;border-radius:0;}
+.alp-page:not(.ep-page) .alp-check-table tbody td:last-child{border-right:2px solid #000!important;border-radius:0;}
+.alp-page:not(.ep-page) .alp-check-table .alp-predictor-club span{overflow-wrap:normal;word-break:normal;}
+@media(max-width:600px){.alp-page:not(.ep-page) .alp-check-table th:nth-child(n+3),.alp-page:not(.ep-page) .alp-check-table td:nth-child(n+3){width:42px!important;font-size:11px;}.alp-page:not(.ep-page) .alp-check-table th:first-child,.alp-page:not(.ep-page) .alp-check-table td:first-child{width:34px!important;}.alp-page:not(.ep-page) .alp-check-table .alp-predictor-club{gap:4px;}.alp-page:not(.ep-page) .alp-check-table .alp-predictor-club img{width:19px;height:19px;flex-basis:19px;}}
+
 </style>
 </head>
 <body>
@@ -11807,6 +11820,8 @@ function alpColourText_(hex){
   return ((r*299+g*587+b*114)/1000)>150 ? '#0d1011' : '#fafafa';
 }
 
+function alpClubText_(code,primary){ const key=String(code||'').toUpperCase(); return key==='WSW'?'#000000':key==='MCY'?'#d61823':key==='CCM'?'#1455a0':alpColourText_(primary); }
+
 function alpTeamColour_(team){
   const c=ALP_TEAM_COLOURS[String(team.code||'').toUpperCase()];
   if(!c && String(team.code||'').startsWith('D1-')) return {primary:'#28427c',secondary:'#ffdd00'};
@@ -11945,10 +11960,25 @@ function alpWireDragDrop_(){
 
 function alpPredictorClubHtml_(name,code){
   const label=String(name||'');
-  // Current Eliza team logos use the site's existing filename convention.
-  // A-League clubs may not have local assets; keep an invisible fixed-size slot if absent.
-  const src='logo/'+teamLogoSlug(label)+'.png';
-  return '<span class="alp-predictor-club"><img src="'+alpEsc(src)+'" alt="" onerror="this.onerror=null;this.style.visibility=\'hidden\';"><span>'+alpEsc(label)+'</span></span>';
+  const aliases={
+    ADE:'adelaide',AKL:'auckland',BRI:'brisbane',CCM:'central-coast',
+    MAC:'macarthur',MCY:'melbourne-city',MVC:'melbourne-victory',
+    NEW:'newcastle',PER:'perth',SYD:'sydney',WEL:'wellington',WSW:'western-sydney'
+  };
+  const key=String(code||'').toUpperCase().trim();
+  const normal=label.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const names=[
+    [/^(adelaide|adelaide united)/,'adelaide'],[/^(auckland|auckland fc)/,'auckland'],
+    [/^(brisbane|brisbane roar)/,'brisbane'],[/^(central coast|central coast mariners)/,'central-coast'],
+    [/^(macarthur|macarthur fc)/,'macarthur'],[/^(melbourne city|melbourne city fc)/,'melbourne-city'],
+    [/^(melbourne victory|melbourne victory fc)/,'melbourne-victory'],
+    [/^(newcastle|newcastle jets)/,'newcastle'],[/^(perth|perth glory)/,'perth'],
+    [/^(sydney|sydney fc)/,'sydney'],[/^(wellington|wellington phoenix)/,'wellington'],
+    [/^(western sydney|western sydney wanderers)/,'western-sydney']
+  ];
+  const slug=aliases[key] || (names.find(([re])=>re.test(normal))||[])[1] || teamLogoSlug(label);
+  const src='logos/'+slug+'.png';
+  return `<span class="alp-predictor-club"><img src="${alpEsc(src)}" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='logo/${alpEsc(slug)}.png';}else{this.style.visibility='hidden';}"><span>${alpEsc(label)}</span></span>`;
 }
 function alpRenderLeaderboard(rows){
   const body=document.getElementById('alpLeaderboardBody');
@@ -12094,7 +12124,7 @@ async function alpShowAverage_(holder,state){
   }).sort((a,b)=>(a.average??Infinity)-(b.average??Infinity)||String(a.team.name).localeCompare(String(b.team.name)));
   holder.innerHTML='<div class="alp-check-summary"><strong>Average predicted ladder</strong><span>'+predictions.length+' entries</span></div>'+
     '<div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Average position</th></tr></thead><tbody>'+
-    rows.map((r,i)=>{const c=alpTeamColour_(r.team);return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.team.name,r.team.code)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>';}).join('')+
+    rows.map((r,i)=>{const c=alpTeamColour_(r.team);return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpClubText_(r.team.code,c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.team.name,r.team.code)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>';}).join('')+
     '</tbody></table></div>';
 }
 function alpWireCheckPrediction_(state){
@@ -12158,7 +12188,7 @@ function alpRenderAdminLadder_(teams){
 function alpRenderPredictionBreakdown_(h,p,teams){
   if(!p||!p.found){h.innerHTML='<p class="alp-muted">No prediction has been submitted for this team.</p>';return;}
   const rows=teams.map(t=>{const predicted=Number(p.picks&&p.picks[t.code]),actual=Number(t.actualPos);return {name:t.name,code:t.code,predicted,actual,penalty:Number.isFinite(predicted)&&Number.isFinite(actual)?Math.abs(predicted-actual):null};}).sort((a,b)=>a.predicted-b.predicted);
-  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map((r,i)=>{const c=alpTeamColour_({code:r.code});return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.name,r.code)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>';}).join('')+'</tbody></table></div>';
+  h.innerHTML='<div class="alp-check-summary"><strong>'+alpEsc(p.teamName)+'</strong><span>Total penalty: <b>'+alpEsc(p.totalPenalty??"—")+'</b></span></div><div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Predicted</th><th>Actual</th><th>Penalty</th></tr></thead><tbody>'+rows.map((r,i)=>{const c=alpTeamColour_({code:r.code});return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpClubText_(r.code,c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.name,r.code)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td>'+r.penalty+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
 
 function alpShowAdminMessage_(text,type=""){
@@ -12234,7 +12264,7 @@ async function epShowAverage_(holder,division,state){
   }).sort((a,b)=>(a.average??Infinity)-(b.average??Infinity)||String(a.team.name).localeCompare(String(b.team.name)));
   holder.innerHTML='<div class="alp-check-summary"><strong>Average predicted ladder</strong><span>'+predictions.length+' entries</span></div>'+
     '<div class="alp-table-wrap"><table class="alp-table alp-check-table"><thead><tr><th>Rank</th><th>Club</th><th>Average position</th></tr></thead><tbody>'+
-    rows.map((r,i)=>{const c=alpTeamColour_(r.team);return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpColourText_(c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.team.name,r.team.code)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>';}).join('')+
+    rows.map((r,i)=>{const c=alpTeamColour_(r.team);return '<tr style="--alp-primary:'+c.primary+';--alp-secondary:'+c.secondary+';--alp-text:'+alpClubText_(r.team.code,c.primary)+'"><td>'+(i+1)+'</td><td>'+alpPredictorClubHtml_(r.team.name,r.team.code)+'</td><td>'+(r.average===null?'—':r.average.toFixed(2))+'</td></tr>';}).join('')+
     '</tbody></table></div>';
 }
 function epLeaderboard(){alpRenderLeaderboard(epState.leaderboard||[]);}
