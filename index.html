@@ -1968,6 +1968,33 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   .live-players td:last-child,.live-players th:last-child{text-align:right}
   .live-players .live-bench td{opacity:.65}
   .live-note{padding:14px 16px;border:1px solid var(--line-light);background:#fff;border-radius:7px;margin-bottom:15px;font-size:13px;line-height:1.5}
+
+/* Compact two-column Live Match Centre, inspired by FPL matchup cards. */
+.live-match-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.live-current-gw{font-weight:800;font-size:15px;color:var(--pitch);margin-right:auto}
+.live-controls label{font-weight:700;font-size:13px}
+.live-match{border:1px solid var(--line-light);border-radius:8px;background:#fff;overflow:hidden;min-width:0}
+.live-match-head{background:var(--pitch);color:#fff;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;padding:12px 10px;min-height:60px}
+.live-match-name{display:flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:800}
+.live-match-name img{width:22px;height:22px;object-fit:contain;flex:0 0 22px}
+.live-match-name span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-match-right{justify-content:flex-end;text-align:right}
+.live-match-score{font-family:'Barlow Condensed',sans-serif;font-size:22px;white-space:nowrap;font-weight:800}
+.live-match-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.live-match-side{padding:10px 9px 12px;min-width:0}
+.live-match-side+ .live-match-side{border-left:1px solid var(--line-light)}
+.live-lineup-label{text-transform:uppercase;font-weight:800;font-size:10px;margin:3px 0 7px;color:var(--ink)}
+.live-lineup-label:not(:first-child){margin-top:13px}
+.live-player-row{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:22px;font-size:11px}
+.live-player-row strong{font-size:11px;flex-shrink:0}
+.live-player-name{display:flex;align-items:center;gap:4px;min-width:0}
+.live-player-name>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.live-player-dot{width:6px;height:6px;background:#1f8a4c;border-radius:50%;flex-shrink:0}
+.live-captain{background:var(--pitch);color:#fff;font-size:9px;border-radius:50%;min-width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.live-player-done{opacity:.65}
+.live-no-data{font-size:11px;color:#64748b;padding:8px 0}
+@media(max-width:760px){.live-match-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:400px){.live-match-side{padding:8px 6px}.live-match-name{font-size:10px}.live-match-score{font-size:19px}}
 </style>
 </head>
 <body>
@@ -3246,7 +3273,9 @@ const ALEAGUE_PREDICTOR_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AK
 // Fixture pairing will use Current Round, not Live Draw.
 const LIVE_EXPORT_SHEET = 'COWZA EXPORT';
 let liveExportTeams = [];
-let liveSelectedGameweek = '';
+let liveCurrentRound = '';
+let liveFixtures = [];
+let liveCompetition = 'all';
 function liveEscape(value){
   return String(value == null ? '' : value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -3281,33 +3310,75 @@ function parseLiveExport(rows){
     return {name:name||fantasy,fantasy,gameweek:liveField(row,header,'gameweek'),score:liveField(row,header,'score'),chip:liveField(row,header,'chip'),scoreStatus:liveField(row,header,'score_status'),players};
   }).filter(Boolean);
 }
+const LIVE_COMPETITIONS=[
+ {id:'d1',label:'Division 1',start:8,end:14,left:13,right:25},
+ {id:'d2a',label:'Division 2A',start:17,end:22,left:3,right:15},
+ {id:'d2b',label:'Division 2B',start:25,end:30,left:3,right:15},
+ {id:'d3a',label:'Division 3A',start:17,end:23,left:24,right:36},
+ {id:'d3b',label:'Division 3B',start:25,end:31,left:24,right:36},
+ {id:'facup',label:'FA Cup',start:9,end:38,from:44,to:62},
+ {id:'ecl',label:'ECL',start:9,end:14,from:63,to:76}
+];
+function liveKey(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+function liveFindTeam(name){const k=liveKey(name);return liveExportTeams.find(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);}
+function livePlayerHtml(t){
+ if(!t)return '<div class="live-no-data">Awaiting team export</div>';
+ const items=t.players||[];
+ const group=(players,title)=>`<div class="live-lineup-label">${title}</div>${players.map(p=>{
+ const cap=String(p.captain||'').trim();const badge=cap?`<b class="live-captain">${liveEscape(cap)}</b>`:'';
+ const status=String(p.status||'').toLowerCase();const done=/finish|played|complete/.test(status);
+ return `<div class="live-player-row ${done?'live-player-done':''}"><span class="live-player-name"><i class="live-player-dot"></i><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><strong>${liveEscape(p.points||'0')}</strong></div>`;
+ }).join('')}`;
+ return group(items.slice(0,11),'Starting XI')+group(items.slice(11,15),'Bench');
+}
+function liveMatchHtml(f){
+ const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
+ const logo=(n)=>'logo/'+teamLogoSlug(n)+'.png';
+ return `<article class="live-match"><div class="live-match-head">
+ <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
+ <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
+ <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
+ </div><div class="live-match-body"><div class="live-match-side">${livePlayerHtml(a)}</div><div class="live-match-side">${livePlayerHtml(b)}</div></div></article>`;
+}
+function parseLiveFixtures(rows){
+ const result=[];liveCurrentRound=String(rows[4]?.[23]||'').trim();
+ for(const c of LIVE_COMPETITIONS){
+  for(let r=c.start-1;r<c.end;r++){
+   const row=rows[r]||[];let names=[];
+   if(c.left!==undefined){names=[String(row[c.left]||'').trim(),String(row[c.right]||'').trim()];}
+   else{
+    // Cup sections contain additional fields; recognise actual team names from the export.
+    // This avoids incorrectly treating scores or fixture labels as team names.
+    for(let i=c.from;i<=c.to;i++){const v=String(row[i]||'').trim();if(v&&liveFindTeam(v)&&!names.some(n=>liveKey(n)===liveKey(v)))names.push(v);}
+   }
+   if(names.length>=2&&names[0]&&names[1]&&liveKey(names[0])!==liveKey(names[1]))result.push({comp:c.id,a:names[0],b:names[1]});
+  }
+ }
+ return result;
+}
 function renderLiveCentre(){
-  const el=document.getElementById('liveContainer'); if(!el)return;
-  el.className='';
-  if(!liveExportTeams.length){el.innerHTML='<div class="live-note">No team data has been published to COWZA EXPORT yet. The Live Match Centre is ready and will populate when rows are added from row 2.</div>';return;}
-  const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
-  if(!weeks.includes(liveSelectedGameweek))liveSelectedGameweek=weeks[0]||'';
-  const entries=liveExportTeams.filter(t=>!liveSelectedGameweek||t.gameweek===liveSelectedGameweek).sort((a,b)=>a.name.localeCompare(b.name));
-  el.innerHTML=`<div class="live-note"><strong>Live team scores</strong> · This first version displays team scores and individual lineups from the player export. Head-to-head fixtures will be linked from the Current Round tab. Player and score statuses are shown as supplied, without assuming what their values mean.</div>
-  <div class="live-controls"><label for="liveGwSelect"><strong>Gameweek</strong></label><select id="liveGwSelect">${weeks.map(w=>`<option value="${liveEscape(w)}" ${w===liveSelectedGameweek?'selected':''}>GW ${liveEscape(w)}</option>`).join('')}</select><span class="sub">${entries.length} teams</span></div>
-  <div class="live-grid">${entries.map((t,index)=>{
-    const logo='logo/'+teamLogoSlug(t.name)+'.png';
-    return `<article class="live-card"><div class="live-card-head"><strong>${liveEscape(t.name)}</strong><span>GW ${liveEscape(t.gameweek||'—')}</span></div>
-      <div class="live-card-body"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div class="live-card-team"><img src="${logo}" alt="" onerror="this.style.display='none'"><span>${liveEscape(t.name)}</span></div><div class="live-score">${liveEscape(t.score||'—')}</div></div>
-      <div class="live-meta">${t.fantasy&&t.fantasy!==t.name?liveEscape(t.fantasy)+' · ':''}${t.chip?'Chip: '+liveEscape(t.chip)+' · ':''}${t.scoreStatus?'Status: '+liveEscape(t.scoreStatus):'Status pending'}</div></div>
-      <details><summary>View players (${t.players.length}/15)</summary><table class="live-players"><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th>Pts</th></tr></thead><tbody>${t.players.map(p=>`<tr class="${p.bench?'live-bench':''}"><td>${liveEscape(p.name)}${p.captain?' <strong>('+liveEscape(p.captain)+')</strong>':''}</td><td>${liveEscape(p.position)}</td><td>${liveEscape(p.status||'—')}</td><td>${liveEscape(p.points||'—')}</td></tr>`).join('')}</tbody></table></details></article>`;
-  }).join('')}</div>`;
-  const select=document.getElementById('liveGwSelect');if(select)select.addEventListener('change',e=>{liveSelectedGameweek=e.target.value;renderLiveCentre();});
+ const el=document.getElementById('liveContainer');if(!el)return;el.className='';
+ const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+ const week=weeks[0]||liveCurrentRound||'—';
+ const active=LIVE_COMPETITIONS.filter(c=>liveFixtures.some(f=>f.comp===c.id));
+ if(liveCompetition!=='all'&&!active.some(c=>c.id===liveCompetition))liveCompetition='all';
+ const shown=liveFixtures.filter(f=>liveCompetition==='all'||f.comp===liveCompetition);
+ el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><label for="liveCompSelect">Competition</label><select id="liveCompSelect"><option value="all">All competitions</option>${active.map(c=>`<option value="${c.id}" ${liveCompetition===c.id?'selected':''}>${liveEscape(c.label)}</option>`).join('')}</select></div>
+ ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:'<div class="live-note">No fixtures available for this round yet. Fixtures will appear when Current Round is populated.</div>'}`;
+ document.getElementById('liveCompSelect')?.addEventListener('change',e=>{liveCompetition=e.target.value;renderLiveCentre();});
 }
 async function loadLiveCentre(){
-  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live teams…';
-  try{
-    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(LIVE_EXPORT_SHEET)}&cachebust=${Date.now()}`;
-    const response=await cachedFetch(url);
-    if(!response.ok)throw Error('HTTP '+response.status);
-    liveExportTeams=parseLiveExport(Papa.parse(await response.text(),{skipEmptyLines:true}).data);
-    renderLiveCentre();setStatus('Live export loaded — '+new Date().toLocaleString());
-  }catch(err){console.error('Live export:',err);el.className='state-msg error';el.textContent='Unable to load COWZA EXPORT: '+err.message;setStatus('Live export unavailable',false);}
+ const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live fixtures…';
+ const fetchSheet=async name=>{
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&cachebust=${Date.now()}`;
+  const response=await cachedFetch(url);if(!response.ok)throw Error(name+': HTTP '+response.status);
+  return Papa.parse(await response.text(),{skipEmptyLines:false}).data;
+ };
+ try{
+  const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchSheet('Current Round')]);
+  liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);renderLiveCentre();
+  setStatus('Live scores loaded — '+new Date().toLocaleString());
+ }catch(err){console.error('Live match centre:',err);el.className='state-msg error';el.textContent='Unable to load Live Match Centre: '+err.message;setStatus('Live scores unavailable',false);}
 }
 
 async function load(){
