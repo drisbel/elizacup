@@ -2020,6 +2020,36 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .alp-page:not(.ep-page) .alp-check-table .alp-predictor-club span{overflow-wrap:normal;word-break:normal;}
 @media(max-width:600px){.alp-page:not(.ep-page) .alp-check-table th:nth-child(n+3),.alp-page:not(.ep-page) .alp-check-table td:nth-child(n+3){width:42px!important;font-size:11px;}.alp-page:not(.ep-page) .alp-check-table th:first-child,.alp-page:not(.ep-page) .alp-check-table td:first-child{width:34px!important;}.alp-page:not(.ep-page) .alp-check-table .alp-predictor-club{gap:4px;}.alp-page:not(.ep-page) .alp-check-table .alp-predictor-club img{width:19px;height:19px;flex-basis:19px;}}
 
+
+/* A-League Ladder Predictor only: neutral club cards and larger transparent crests. */
+.alp-page:not(.ep-page) .alp-pick-row{
+  background:#fff!important;color:#000!important;border-color:#000!important;
+}
+.alp-page:not(.ep-page) .alp-pick-team,
+.alp-page:not(.ep-page) .alp-pick-number{color:#000!important;}
+.alp-page:not(.ep-page) .alp-check-table tbody tr,
+.alp-page:not(.ep-page) .alp-check-table tbody td{
+  background:#fff!important;color:#000!important;
+}
+.alp-page:not(.ep-page) .alp-check-table tbody td{
+  border-color:#000!important;
+}
+.alp-page:not(.ep-page) .alp-predictor-club{
+  gap:9px;min-height:38px;
+}
+.alp-page:not(.ep-page) .alp-predictor-club img,
+.alp-page:not(.ep-page) .alp-table:not(.alp-check-table) .alp-predictor-club img{
+  width:34px!important;height:34px!important;flex:0 0 34px!important;
+  object-fit:contain;transform:scale(1.2);transform-origin:center;
+}
+@media(max-width:600px){
+  .alp-page:not(.ep-page) .alp-predictor-club{gap:7px;min-height:32px;}
+  .alp-page:not(.ep-page) .alp-predictor-club img{
+    width:29px!important;height:29px!important;flex-basis:29px!important;
+    transform:scale(1.2);
+  }
+}
+
 </style>
 </head>
 <body>
