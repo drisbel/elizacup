@@ -3276,6 +3276,7 @@ let liveExportTeams = [];
 let liveCurrentRound = '';
 let liveFixtures = [];
 let liveCompetition = 'all';
+let liveFixtureDiagnostics = '';
 function liveEscape(value){
   return String(value == null ? '' : value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -3316,8 +3317,8 @@ const LIVE_COMPETITIONS=[
  {id:'d2b',label:'Division 2B',start:25,end:30,left:3,right:15},
  {id:'d3a',label:'Division 3A',start:17,end:23,left:24,right:36},
  {id:'d3b',label:'Division 3B',start:25,end:31,left:24,right:36},
- {id:'facup',label:'FA Cup',start:9,end:38,from:44,to:62},
- {id:'ecl',label:'ECL',start:9,end:14,from:63,to:76}
+ {id:'facup',label:'FA Cup',start:9,end:38,left:45,right:54},
+ {id:'ecl',label:'ECL',start:9,end:14,left:64,right:71}
 ];
 function liveKey(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function liveFindTeam(name){const k=liveKey(name);return liveExportTeams.find(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);}
@@ -3342,6 +3343,7 @@ function liveMatchHtml(f){
 }
 function parseLiveFixtures(rows){
  const result=[];liveCurrentRound=String(rows[4]?.[23]||'').trim();
+ const probes=[];
  for(const c of LIVE_COMPETITIONS){
   for(let r=c.start-1;r<c.end;r++){
    const row=rows[r]||[];let names=[];
@@ -3351,9 +3353,11 @@ function parseLiveFixtures(rows){
     // This avoids incorrectly treating scores or fixture labels as team names.
     for(let i=c.from;i<=c.to;i++){const v=String(row[i]||'').trim();if(v&&liveFindTeam(v)&&!names.some(n=>liveKey(n)===liveKey(v)))names.push(v);}
    }
+   if(r===c.start-1)probes.push(c.id+': '+JSON.stringify(names));
    if(names.length>=2&&names[0]&&names[1]&&liveKey(names[0])!==liveKey(names[1]))result.push({comp:c.id,a:names[0],b:names[1]});
   }
  }
+ liveFixtureDiagnostics='Rows returned: '+rows.length+'; X5: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ');
  return result;
 }
 function renderLiveCentre(){
