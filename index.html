@@ -3322,8 +3322,8 @@ const LIVE_COMPETITIONS=[
  {id:'d2b',label:'Division 2B',start:25,end:30,left:3,right:15},
  {id:'d3a',label:'Division 3A',start:17,end:23,left:24,right:36},
  {id:'d3b',label:'Division 3B',start:25,end:31,left:24,right:36},
- {id:'facup',label:'FA Cup',start:9,end:38,left:45,right:54},
- {id:'ecl',label:'ECL',start:9,end:14,left:64,right:71}
+ {id:'facup',label:'FA Cup',start:8,end:39,left:45,right:54},
+ {id:'ecl',label:'ECL',start:8,end:15,left:64,right:71}
 ];
 function liveKey(v){return String(v||'').replace(/\s*\((?:D?[123][ABC]?|DIV(?:ISION)?\s*[123][ABC]?)\)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function liveFindTeam(name){const k=liveKey(name);return liveExportTeams.find(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);}
@@ -3371,10 +3371,10 @@ function parseLiveFixtures(rows){
     if(matches.length===2)names=matches;
    }
    if(r===c.start-1)probes.push(c.id+': '+JSON.stringify(names));
-   if(names.length>=2&&names[0]&&names[1]&&liveKey(names[0])!==liveKey(names[1]))result.push({comp:c.id,a:names[0],b:names[1]});
+   if(names.length>=2&&names[0]&&names[1]&&liveKey(names[0])!==liveKey(names[1])&&((c.id!=='facup'&&c.id!=='ecl')||(liveFindTeam(names[0])&&liveFindTeam(names[1]))))result.push({comp:c.id,a:names[0],b:names[1]});
   }
  }
- liveFixtureDiagnostics='Rows returned: '+rows.length+'; X5: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ');
+ liveFixtureDiagnostics='Rows returned: '+rows.length+'; X5: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ')+'; FA Cup rows 8–11: '+[8,9,10,11].map(n=>{const a=rows[n-1]||[];return n+': AT='+JSON.stringify(a[45]||'')+', BC='+JSON.stringify(a[54]||'')+', nearby='+JSON.stringify(a.slice(44,61).filter(Boolean).slice(0,8));}).join(' | ');
  return result;
 }
 function renderLiveCentre(){
@@ -3388,7 +3388,8 @@ function renderLiveCentre(){
  const choices=[{id:'all',label:'All competitions'},...active];
  el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span></div>
  <div class="live-comp-tabs" role="group" aria-label="Select competition">${choices.map(c=>`<button type="button" class="live-comp-tab ${liveCompetition===c.id?'active':''}" data-live-comp="${c.id}" aria-pressed="${liveCompetition===c.id}">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="this.style.display='none'">`:''}${liveEscape(c.label)}</button>`).join('')}</div>
- ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:'<div class="live-note">No fixtures available for this round yet. Fixtures will appear when Current Round is populated.</div>'}`;
+ ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:'<div class="live-note">No fixtures available for this round yet. Fixtures will appear when Current Round is populated.</div>'}
+ ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
  el.querySelectorAll('[data-live-comp]').forEach(btn=>btn.addEventListener('click',()=>{liveCompetition=btn.dataset.liveComp;renderLiveCentre();}));
 }
 async function loadLiveCentre(){
