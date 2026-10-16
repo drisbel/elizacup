@@ -3243,7 +3243,7 @@ const ALEAGUE_PREDICTOR_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AK
 
 
 // Live Match Centre v1: read the new COWZA EXPORT without assuming status values.
-// Fixture pairing is intentionally deferred until the Live Draw schema is confirmed.
+// Fixture pairing will use Current Round, not Live Draw.
 const LIVE_EXPORT_SHEET = 'COWZA EXPORT';
 let liveExportTeams = [];
 let liveSelectedGameweek = '';
@@ -3252,12 +3252,23 @@ function liveEscape(value){
 }
 function liveField(row,head,key){ const index=head.indexOf(key); return index<0?'':String(row[index]??'').trim(); }
 function parseLiveExport(rows){
-  const header=(rows[0]||[]).map(v=>String(v||'').trim().toLowerCase());
-  if(!header.includes('team_name') || !header.includes('player_0_name')) throw Error('COWZA EXPORT headers not found. Check row 1 and sheet access.');
-  return rows.slice(1).map(row=>{
+  // Google Visualization CSV may omit the header when there are no records.
+  // Accept either a header row or data-only rows in the known export layout.
+  const clean=rows.filter(row=>row.some(v=>String(v??'').trim()));
+  if(!clean.length)return [];
+  const expected=['eliza name','team_name','gameweek','score','score_without_chip','rank','gameweek_rank','season_points','chip','score_status'];
+  for(let i=0;i<15;i++)for(const suffix of ['name','captain','pos','club','points','status'])expected.push(`player_${i}_${suffix}`);
+  const first=clean[0].map(v=>String(v??'').trim().toLowerCase());
+  const hasHeader=first.includes('team_name')&&first.includes('player_0_name');
+  // With no published teams, gviz sometimes supplies only its labels or an
+  // empty-looking first record. Do not mistake that for a broken website.
+  if(!hasHeader && clean.length===1 && clean[0].every(v=>!String(v??'').trim()))return [];
+  const header=hasHeader?first:expected;
+  return (hasHeader?clean.slice(1):clean).map(row=>{
     const name=String(row[0]||'').trim();
     const fantasy=liveField(row,header,'team_name');
     if(!name&&!fantasy)return null;
+    if(/^eliza name$/i.test(name)&&/^team_name$/i.test(fantasy))return null;
     const players=Array.from({length:15},(_,i)=>({
       name:liveField(row,header,`player_${i}_name`),
       captain:liveField(row,header,`player_${i}_captain`),
@@ -3277,7 +3288,7 @@ function renderLiveCentre(){
   const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
   if(!weeks.includes(liveSelectedGameweek))liveSelectedGameweek=weeks[0]||'';
   const entries=liveExportTeams.filter(t=>!liveSelectedGameweek||t.gameweek===liveSelectedGameweek).sort((a,b)=>a.name.localeCompare(b.name));
-  el.innerHTML=`<div class="live-note"><strong>Live team scores</strong> · This first version displays team scores and individual lineups from the player export. Head-to-head fixtures will be linked once the Live Draw structure is confirmed. Player and score statuses are shown as supplied, without assuming what their values mean.</div>
+  el.innerHTML=`<div class="live-note"><strong>Live team scores</strong> · This first version displays team scores and individual lineups from the player export. Head-to-head fixtures will be linked from the Current Round tab. Player and score statuses are shown as supplied, without assuming what their values mean.</div>
   <div class="live-controls"><label for="liveGwSelect"><strong>Gameweek</strong></label><select id="liveGwSelect">${weeks.map(w=>`<option value="${liveEscape(w)}" ${w===liveSelectedGameweek?'selected':''}>GW ${liveEscape(w)}</option>`).join('')}</select><span class="sub">${entries.length} teams</span></div>
   <div class="live-grid">${entries.map((t,index)=>{
     const logo='logo/'+teamLogoSlug(t.name)+'.png';
