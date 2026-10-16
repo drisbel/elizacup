@@ -2082,6 +2082,41 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 @media(max-width:760px){.live-match-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:400px){.live-match-side{padding:8px 6px}.live-match-name{font-size:10px}.live-match-score{font-size:19px}}
 
+
+/* Home page Live Match Centre banner */
+.home-live-banner{display:flex;align-items:center;justify-content:center;gap:14px;position:relative;text-align:center;background:#28427c;color:#fff;text-decoration:none;padding:14px 18px;margin:-14px 0 25px;font:800 23px 'Barlow Condensed',sans-serif;letter-spacing:.04em;border-radius:3px}
+.home-live-banner:hover{background:#1c3265}
+.home-live-dot{width:11px;height:11px;border-radius:50%;background:#4df0a1;box-shadow:0 0 0 4px #4df0a133;flex-shrink:0;position:absolute;left:18px;top:50%;transform:translateY(-50%)}
+.home-live-arrow{font:700 10px 'Barlow',sans-serif;letter-spacing:.04em;position:absolute;right:18px;top:50%;transform:translateY(-50%)}
+@media(max-width:600px){.home-live-banner{font-size:19px;padding:13px 12px;gap:9px}.home-live-arrow{font-size:9px;right:10px}.home-live-dot{left:10px;width:8px;height:8px}}
+@media(max-width:420px){.home-live-arrow{display:none}}
+/* Live match results are a vertical, initially collapsed scoreboard. */
+.live-match-grid{display:flex;flex-direction:column;gap:9px}
+.live-match{width:100%}
+.live-match-summary{display:block;cursor:pointer;list-style:none}
+.live-match-summary::-webkit-details-marker{display:none}
+.live-match-summary:focus-visible{outline:3px solid #f5c842;outline-offset:-3px}
+.live-match-summary .live-match-head{position:relative;padding-right:38px}
+.live-match-summary .live-match-head:after{content:'⌄';position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:22px;line-height:1}
+.live-match[open] .live-match-summary .live-match-head:after{content:'⌃'}
+.live-match-summary:hover .live-match-head{filter:brightness(1.1)}
+.live-view-controls{display:flex;justify-content:flex-end;gap:7px;padding:10px 12px;background:#f4f2eb;border-bottom:1px solid var(--line-light)}
+.live-view-btn{border:1px solid #9aa9a1;border-radius:6px;padding:6px 12px;background:#fff;color:#152c21;font:700 12px 'Barlow',sans-serif;cursor:pointer}
+.live-view-btn.active{background:#28427c;color:#fff;border-color:#28427c}
+.live-match-detail[hidden]{display:none!important}\n.live-formation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px;background:#fff}
+.live-formation-side{min-width:0}
+.live-formation-side .club-squad-section>.section-head{display:none}
+.live-formation-side .club-squad-pitch{padding:10px 4px}
+.live-formation-side .club-squad-line{gap:1px;margin:13px 0 20px}
+.live-formation-side .club-squad-player{gap:2px}
+.live-formation-side .club-squad-crest-wrap{width:34px;height:34px}
+.live-formation-side .club-squad-player-name{font-size:9px}
+.live-formation-side .club-squad-club{font-size:8px}
+.live-formation-side .club-squad-player-points{font-size:10px;padding:2px 5px}
+.live-formation-side .club-squad-bench{padding:8px 3px}
+.live-formation-side-title{text-align:center;font-weight:800;font-size:12px;margin-bottom:7px;overflow-wrap:anywhere}
+@media(max-width:640px){.live-formation-grid{grid-template-columns:1fr}.live-formation-side .club-squad-crest-wrap{width:40px;height:40px}.live-match-head{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}}
+
 /* A-League Ladder Predictor: black outlines, compact numbers, readable club names. */
 .alp-page:not(.ep-page) .alp-check-table{table-layout:fixed;width:100%;border-spacing:0 3px;}
 .alp-page:not(.ep-page) .alp-check-table th,.alp-page:not(.ep-page) .alp-check-table td{box-sizing:border-box;}
@@ -3543,11 +3578,11 @@ function liveMatchHtml(f){
  const round=liveRoundLabels[f.comp]||'';
  const theme=liveCompetitionTheme(f.comp);
  const themed=`background:${theme.background};color:${theme.foreground}`;
- return `<article class="live-match"><div class="live-match-context" style="${themed}">${liveEscape(competition)}${round?` · ${liveEscape(round)}`:''}</div><div class="live-match-head" style="${themed}">
+ return `<details class="live-match"><summary class="live-match-summary"><div class="live-match-context" style="${themed}">${liveEscape(competition)}${round?` · ${liveEscape(round)}`:''}</div><div class="live-match-head" style="${themed}">
  <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
  <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
  <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
- </div><div class="live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div></article>`;
+ </div></summary><div class="live-view-controls" role="group" aria-label="Matchup view"><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="formation">Formation</button></div><div class="live-match-detail live-match-body"><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a)}</div></div><div class="live-match-detail live-formation-grid" hidden><div class="live-formation-side"><div class="live-formation-side-title">${liveEscape(f.a)}</div>${clubSquadHtml(a)||'<div class="live-no-data">Awaiting team export</div>'}</div><div class="live-formation-side"><div class="live-formation-side-title">${liveEscape(f.b)}</div>${clubSquadHtml(b)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></details>`;
 }
 function parseLiveFixtures(blocks){
  const result=[];const probes=[];
@@ -3570,8 +3605,24 @@ function parseLiveFixtures(blocks){
  liveFixtureDiagnostics='Round: '+JSON.stringify(liveCurrentRound)+'; '+probes.join('; ');
  return result;
 }
+function liveInstallViewToggle(){
+ const el=document.getElementById('liveContainer');
+ if(!el||el.dataset.viewToggleInstalled)return;
+ el.dataset.viewToggleInstalled='1';
+ el.addEventListener('click',event=>{
+  const btn=event.target.closest('.live-view-btn');
+  if(!btn||!el.contains(btn))return;
+  const match=btn.closest('.live-match');if(!match)return;
+  const formation=btn.dataset.view==='formation';
+  match.querySelectorAll('.live-view-btn').forEach(b=>b.classList.toggle('active',b===btn));
+  const list=match.querySelector('.live-match-body');
+  const pitch=match.querySelector('.live-formation-grid');
+  if(list)list.hidden=formation;
+  if(pitch)pitch.hidden=!formation;
+ });
+}
 function renderLiveCentre(){
- const el=document.getElementById('liveContainer');if(!el)return;el.className='';
+ const el=document.getElementById('liveContainer');if(!el)return;liveInstallViewToggle();el.className='';
  const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
  const week=weeks[0]||liveCurrentRound||'—';
  const active=LIVE_COMPETITIONS.filter(c=>liveFixtures.some(f=>f.comp===c.id) && (!Object.prototype.hasOwnProperty.call(liveRoundLabels,c.id)||!!liveRoundLabels[c.id]));
@@ -12838,6 +12889,7 @@ function renderHome(){
         <img src="logo/eliza-logo.png" alt="Eliza Cup" onerror="this.style.display='none';">
         <div class="home-hero-banner-text">ELIZA CUP</div>
       </div>
+      <a class="home-live-banner" href="#live" onclick="goToDivision(DIVISIONS.find(d=>d.id==='live'));return false;" aria-label="Open Live Match Centre"><span class="home-live-dot"></span><span>LIVE MATCH CENTRE</span><span class="home-live-arrow">VIEW LIVE SCORES →</span></a>
       <div class="home-hero-sub">
         <p>Welcome to the official website of the Eliza Cup, the greatest fantasy league in the world.</p>
         <p>The Eliza Cup is a fully integrated 3 tier system A-League Fantasy competition with promotion and relegation across seasons. Winners of the Eliza Cup receive a physical engraved trophy at the end of the season. Running alongside the Head-to-Head leagues, the Eliza Cup also runs an overall league, an FA Cup-style knockout competition, and a Champions League as well as various side leagues for other fantasy competitions.</p>
