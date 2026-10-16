@@ -639,6 +639,39 @@
   @media(min-width:850px){.club-profile-top-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}.club-profile-top-grid .club-history-chart{margin:0;}}
   @media(max-width:600px){.club-squad-crest-wrap{width:36px;height:36px}.club-squad-crest{transform:scale(1.26)}.club-squad-cap{width:17px;height:17px;font-size:9px;right:-5px}.club-squad-club{font-size:9px}.club-squad-player-points{font-size:11px;padding:2px 5px}.club-squad-player-name{font-size:10px}}
 
+
+  /* Club profile revised layout: crest / details / honours, overview, then squad + fixtures. */
+  .team-profile-top.club-profile-header{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(230px,350px);gap:22px;align-items:start;}
+  .club-profile-header .team-profile-logo{grid-column:1;grid-row:1;width:145px;height:145px;}
+  .club-profile-header .team-profile-main{grid-column:2;grid-row:1;}
+  .club-profile-header .team-profile-heading{margin-bottom:0;}
+  .club-profile-header .club-profile-trophies{grid-column:3;grid-row:1;min-width:0;border:1px solid var(--line-light);border-radius:9px;background:#fff;padding:10px 13px;max-height:235px;overflow-y:auto;}
+  .club-profile-trophies .section-head{margin-top:0!important;margin-bottom:7px;}
+  .club-profile-trophies > div:not(.section-head){flex-wrap:wrap;gap:5px!important;}
+  .club-profile-trophies > div:not(.section-head) > div:first-child{width:auto!important;min-width:110px!important;}
+  .club-profile-fixture-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start;margin-top:24px;}
+  .club-profile-fixture-grid > *{min-width:0;}
+  .club-profile-fixture-grid .club-squad-section{margin:0!important;}
+  .club-profile-fixture-grid .club-squad-pitch{padding:12px 6px;}
+  .club-profile-fixture-grid .club-squad-line{margin:17px 0 22px;gap:2px;}
+  .club-profile-fixture-grid .club-squad-player{gap:3px;}
+  .club-profile-fixture-grid .club-profile-fixtures .section-head{margin-top:0!important;}
+  .club-profile-fixture-grid .club-profile-fixtures .club-profile-fixture-list{width:100%;max-width:none;}
+  .club-profile-history{margin-top:26px;}
+  @media(max-width:850px){
+    .team-profile-top.club-profile-header{grid-template-columns:110px minmax(0,1fr);gap:14px;}
+    .club-profile-header .team-profile-logo{width:110px;height:110px;}
+    .club-profile-header .club-profile-trophies{grid-column:1 / -1;grid-row:2;max-height:none;}
+    .club-profile-fixture-grid{grid-template-columns:minmax(0,1fr);}
+  }
+  @media(max-width:600px){
+    .team-profile-top.club-profile-header{display:grid;text-align:left;grid-template-columns:90px minmax(0,1fr);align-items:center;}
+    .club-profile-header .team-profile-logo{width:90px;height:90px;order:0;}
+    .club-profile-header .team-profile-heading{align-items:flex-start;}
+    .club-profile-header .team-profile-name{font-size:27px;}
+    .club-profile-header .club-profile-trophies{grid-column:1 / -1;grid-row:2;}
+  }
+
   /* ---------- Team profile header ---------- */
   .team-profile-top{
     display:flex;align-items:center;gap:28px;margin-bottom:28px;justify-content:space-between;
@@ -7918,7 +7951,8 @@ function renderTeamProfile(data){
   const leagueVal = (divisionData && divisionData.standingsRow) ? `${leagueIsChampion ? "🏆 " : ""}${ordinal(divisionData.standingsRow.pos)} · ${divLabel}` : "—";
   const roddyVal = roddyEntry ? `${roddyIsChampion ? "🏆 " : ""}${ordinal(roddyEntry.pos)} · ${roddyEntry.total} pts` : "Not entered";
 
-  let html = `<div class="team-profile-top">
+  let html = `<div class="team-profile-top club-profile-header">
+    <img src="${logoSrc}" alt="${liveEscape(teamName)} club crest" class="team-profile-logo" onerror="${logoOnError}">
     <div class="team-profile-main">
       <div class="team-profile-heading">
         <h2 class="team-profile-name">${teamName}</h2>
@@ -7932,14 +7966,10 @@ function renderTeamProfile(data){
         ${clubInfo && clubInfo.previousNames ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#a8a296;">Previously: ${clubInfo.previousNames}</div>` : ""}
       </div>
     </div>
-    <img src="${logoSrc}" alt="" class="team-profile-logo" onerror="${logoOnError}">
+    <aside class="club-profile-trophies">${teamTrophiesHtml(trophies, trophyNote)}</aside>
   </div>`;
 
-  html += `<div class="club-profile-top-grid"><div id="clubHistoryChartSlot"></div>${clubSquadHtml(currentSquad)}</div>`;
-
-  html += teamTrophiesHtml(trophies, trophyNote);
-
-  html += `<div class="section-head" style="margin-top:28px;"><h2 style="font-size:18px;">Overview</h2></div>
+  html += `<div class="section-head" style="margin-top:12px;"><h2 style="font-size:18px;">Season Overview</h2></div>
     <div class="team-profile-cards">
       ${overviewCardHtml("League Position", leagueVal, divColor)}
       ${overviewCardHtml("Roddy Position", roddyVal, "#ffdd00")}
@@ -7947,13 +7977,14 @@ function renderTeamProfile(data){
       ${overviewCardHtml("ECL", eclStatusText(eclSummary, eclMatches), "#111111")}
     </div>`;
 
-  // Season fixtures
-  if(divisionData){
-    if(divisionData.fixtures.length){
-      html += `<div class="section-head" style="margin-top:8px;"><h2 style="font-size:18px;">Season Fixtures &amp; Results</h2></div>
-        <div style="max-width:480px;">${divisionData.fixtures.map(teamProfileFixtureRow).join("")}</div>`;
-    }
-  }
+  const fixturesHtml = divisionData && divisionData.fixtures && divisionData.fixtures.length
+    ? divisionData.fixtures.map(teamProfileFixtureRow).join("")
+    : `<p style="font-family:'Barlow',sans-serif;font-size:13px;">No season fixtures available.</p>`;
+  html += `<div class="club-profile-fixture-grid">
+    ${clubSquadHtml(currentSquad)}
+    <section class="club-profile-fixtures"><div class="section-head"><h2 style="font-size:18px;">Season Fixtures &amp; Results</h2></div><div class="club-profile-fixture-list">${fixturesHtml}</div></section>
+  </div>`;
+  html += `<div class="club-profile-history" id="clubHistoryChartSlot"></div>`;
 
   // FA Cup status
   if(facupSummary && facupSummary.length){
