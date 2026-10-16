@@ -2182,6 +2182,32 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   table.standings.compact.roddy-table tbody td:nth-child(2){
     background-color:inherit;
   }
+
+/* Live Match Centre: all competitions together in two desktop columns. */
+.live-all-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.live-comp-section{min-width:0;border:1px solid var(--line-light);border-radius:8px;overflow:hidden;background:#fff;scroll-margin-top:80px}
+.live-comp-heading{margin:0;padding:11px 12px;display:flex;align-items:center;gap:9px;font:800 17px 'Barlow Condensed',sans-serif;text-transform:uppercase}
+.live-comp-heading img{width:26px;height:26px;object-fit:contain;flex-shrink:0}
+.live-comp-heading small{margin-left:auto;font:700 11px 'Barlow',sans-serif;text-transform:uppercase}
+.live-comp-section .live-match-grid{display:flex;flex-direction:column;gap:0}
+.live-comp-section .live-match{border:0;border-bottom:1px solid #d8d5cb;border-radius:0;overflow:hidden}
+.live-comp-section .live-match:last-child{border-bottom:0}
+.live-comp-section .live-match-head{height:66px;min-height:66px;box-sizing:border-box;grid-template-columns:minmax(0,1fr) 85px minmax(0,1fr);gap:8px;padding:8px 13px}
+.live-comp-section .live-match-name{display:flex;min-width:0;gap:6px;justify-content:flex-end;text-align:right;font-size:12px;line-height:1.15}
+.live-comp-section .live-match-name img{order:2;width:30px;height:30px;flex:0 0 30px;object-fit:contain}
+.live-comp-section .live-match-name span{order:1;white-space:normal;overflow:hidden;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.live-comp-section .live-match-score{text-align:center;font-size:23px}
+.live-comp-section .live-match-summary .live-match-head{padding-right:13px}
+.live-comp-section .live-match-summary .live-match-head:after{content:none!important}
+.live-comp-section .live-match-summary{cursor:pointer}
+.live-comp-section .live-match-summary:hover .live-match-head{filter:brightness(1.13)}
+.live-comp-section .live-match[open] .live-match-head{box-shadow:inset 0 -3px 0 rgba(255,255,255,.45)}
+.live-jump-row{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin:0 0 14px}
+.live-jump-row label{font-size:12px;font-weight:700}
+.live-jump-row select{max-width:220px;border:1px solid var(--line-light);background:#fff;border-radius:6px;padding:8px;font:600 12px 'Barlow',sans-serif}
+@media(max-width:760px){.live-all-sections{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:420px){.live-comp-section .live-match-head{grid-template-columns:minmax(0,1fr) 68px minmax(0,1fr);gap:4px;padding:8px 7px}.live-comp-section .live-match-name{font-size:10px}.live-comp-section .live-match-name img{width:24px;height:24px;flex-basis:24px}.live-comp-section .live-match-score{font-size:19px}}
+
 </style>
 </head>
 <body>
@@ -3578,7 +3604,7 @@ function liveMatchHtml(f){
  const round=liveRoundLabels[f.comp]||'';
  const theme=liveCompetitionTheme(f.comp);
  const themed=`background:${theme.background};color:${theme.foreground}`;
- return `<details class="live-match"><summary class="live-match-summary"><div class="live-match-context" style="${themed}">${liveEscape(competition)}${round?` · ${liveEscape(round)}`:''}</div><div class="live-match-head" style="${themed}">
+ return `<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="${themed}">
  <div class="live-match-name"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span></div>
  <strong class="live-match-score">${liveEscape(a?.score||'—')} - ${liveEscape(b?.score||'—')}</strong>
  <div class="live-match-name live-match-right"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"></div>
@@ -3626,30 +3652,27 @@ function renderLiveCentre(){
  const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
  const week=weeks[0]||liveCurrentRound||'—';
  const active=LIVE_COMPETITIONS.filter(c=>liveFixtures.some(f=>f.comp===c.id) && (!Object.prototype.hasOwnProperty.call(liveRoundLabels,c.id)||!!liveRoundLabels[c.id]));
- if(!active.some(c=>c.id===liveCompetition))liveCompetition=active[0]?.id||'';
- const query=liveKey(liveTeamSearch);
- // Searching spans every competition, even when a different tab was selected.
- const shown=liveFixtures.filter(f=>active.some(c=>c.id===f.comp) && (query?(liveKey(f.a).includes(query)||liveKey(f.b).includes(query)):f.comp===liveCompetition));
  const logos={d1:'logo/division-1-logo.png',d2a:'logo/division-2-logo.png',d2b:'logo/division-2-logo.png',d3a:'logo/division-3-logo.png',d3b:'logo/division-3-logo.png',facup:'logo/fa-cup-logo.png',ecl:'logo/ecl-logo.png'};
- el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
- <div class="live-comp-tabs" role="group" aria-label="Select competition">${active.map(c=>`<button type="button" class="live-comp-tab ${!query&&liveCompetition===c.id?'active':''}" data-live-comp="${c.id}" aria-pressed="${!query&&liveCompetition===c.id}">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}${liveEscape(c.label)}</button>`).join('')}</div>
- ${shown.length?`<div class="live-match-grid">${shown.map(liveMatchHtml).join('')}</div>`:`<div class="live-note">${query?'No matchups found for that team.':'No fixtures available for this competition yet.'}</div>`}
- ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
- el.querySelectorAll('[data-live-comp]').forEach(btn=>btn.addEventListener('click',()=>{liveCompetition=btn.dataset.liveComp;liveTeamSearch='';renderLiveCentre();}));
- const search=el.querySelector('#liveTeamSearch');
- search?.addEventListener('input',()=>{
-  liveTeamSearch=search.value;
+ const sectionHtml=()=>active.map(c=>{
   const q=liveKey(liveTeamSearch);
-  const results=liveFixtures.filter(f=>active.some(c=>c.id===f.comp) && (q?(liveKey(f.a).includes(q)||liveKey(f.b).includes(q)):f.comp===liveCompetition));
-  const grid=el.querySelector('.live-match-grid');
-  const note=el.querySelector('.live-note');
-  const html=results.length?results.map(liveMatchHtml).join(''):'';
-  if(grid){grid.innerHTML=html;grid.style.display=results.length?'':'none';}
-  if(note){note.textContent=q?'No matchups found for that team.':'No fixtures available for this competition yet.';note.style.display=results.length?'none':'';}
-  if(!grid&&results.length){const target=el.querySelector('.live-comp-tabs');target.insertAdjacentHTML('afterend',`<div class="live-match-grid">${html}</div>`);}
-  if(!note&&!results.length){const target=el.querySelector('.live-match-grid')||el.querySelector('.live-comp-tabs');target.insertAdjacentHTML('afterend','<div class="live-note">No matchups found for that team.</div>');}
-  el.querySelectorAll('[data-live-comp]').forEach(btn=>{btn.classList.toggle('active',!q&&btn.dataset.liveComp===liveCompetition);btn.setAttribute('aria-pressed',String(!q&&btn.dataset.liveComp===liveCompetition));});
- });
+  const fixtures=liveFixtures.filter(f=>f.comp===c.id&&(!q||liveKey(f.a).includes(q)||liveKey(f.b).includes(q)));
+  if(!fixtures.length)return '';
+  const theme=liveCompetitionTheme(c.id);
+  const round=liveRoundLabels[c.id]||'';
+  return `<section class="live-comp-section" id="live-comp-${c.id}">
+   <h3 class="live-comp-heading" style="background:${theme.background};color:${theme.foreground}">
+    ${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="this.style.display='none'">`:''}
+    <span>${liveEscape(c.label)}</span>${round?`<small>${liveEscape(round)}</small>`:''}
+   </h3><div class="live-match-grid">${fixtures.map(liveMatchHtml).join('')}</div></section>`;
+ }).join('');
+ el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
+ <div class="live-jump-row"><label for="liveJumpTo">Jump to</label><select id="liveJumpTo" aria-label="Jump to competition"><option value="">Select competition…</option>${active.map(c=>`<option value="${c.id}">${liveEscape(c.label)}</option>`).join('')}</select></div>
+ <div id="liveAllSections" class="live-all-sections">${sectionHtml()}</div>
+ ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
+ const jump=el.querySelector('#liveJumpTo');
+ jump?.addEventListener('change',()=>{const target=el.querySelector('#live-comp-'+jump.value);if(target)target.scrollIntoView({behavior:'smooth',block:'start'});});
+ const search=el.querySelector('#liveTeamSearch');
+ search?.addEventListener('input',()=>{liveTeamSearch=search.value;el.querySelector('#liveAllSections').innerHTML=sectionHtml()||'<div class="live-note">No matchups found for that team.</div>';});
 }
 async function loadLiveCentre(){
  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live fixtures…';
