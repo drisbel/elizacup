@@ -645,13 +645,14 @@
   .club-profile-header .team-profile-logo{grid-column:1;grid-row:1;width:125px;height:125px;}
   .club-profile-header .team-profile-main{grid-column:2;grid-row:1;}
   .club-profile-header .team-profile-heading{margin-bottom:0;}
-  .club-profile-header .club-profile-trophies{grid-column:3;grid-row:1;min-width:0;border:1px solid var(--line-light);border-radius:9px;background:#fff;padding:10px 13px;max-height:235px;overflow-y:auto;}
+  .club-profile-header .club-profile-trophies{grid-column:3;grid-row:1;min-width:0;border:1px solid var(--line-light);border-radius:9px;background:#fff;padding:10px 13px;max-height:none;overflow:visible;}
   .club-profile-trophies .section-head{margin-top:0!important;margin-bottom:7px;}
   /* Compact trophy rows: keep competition and its seasons together where width allows. */
-  .club-profile-trophies .club-trophy-row{gap:6px!important;align-items:center!important;}
-  .club-profile-trophies .club-trophy-name{width:94px!important;min-width:94px!important;gap:5px!important;}
-  .club-profile-trophies .club-trophy-seasons{flex-wrap:nowrap!important;gap:4px!important;min-width:0;}
-  .club-profile-trophies .club-trophy-season{padding:4px 5px!important;font-size:10px!important;gap:3px!important;}
+  .club-profile-trophies .club-trophy-row{gap:6px!important;align-items:center!important;padding:3px 0!important;}
+  .club-profile-trophies .club-trophy-name{width:94px!important;min-width:94px!important;min-height:25px!important;gap:5px!important;}
+  .club-profile-trophies .club-trophy-seasons{flex-wrap:nowrap!important;gap:4px!important;min-width:0;min-height:25px!important;}
+  .club-profile-trophies .club-trophy-season{padding:3px 5px!important;font-size:10px!important;gap:3px!important;}
+  @media(min-width:1051px){.club-profile-header .team-profile-logo{width:145px;height:145px;max-width:100%;}.team-profile-top.club-profile-header{grid-template-columns:145px minmax(0,1fr) minmax(340px,440px);}}
   @media (min-width:851px) and (max-width:1050px){
     .team-profile-top.club-profile-header{grid-template-columns:100px minmax(0,1fr) minmax(315px,410px);gap:12px;}
     .club-profile-header .team-profile-logo{width:100px;height:100px;}
