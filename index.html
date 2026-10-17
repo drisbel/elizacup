@@ -2497,6 +2497,14 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-export-stage .live-comp-heading small{margin-left:auto}
 @media(max-width:600px){.live-jump-row{justify-content:flex-start;gap:7px}.live-jump-row select{max-width:170px}.live-jump-row .live-export-btn{white-space:nowrap}}
 
+
+/* Image exports keep desktop-size crests even when triggered on a phone. */
+@media(max-width:700px){
+ .live-export-stage .live-comp-heading img{width:26px!important;height:26px!important}
+ .live-export-stage .live-match-name img{width:32px!important;height:32px!important;flex:0 0 32px!important}
+ .live-export-stage .live-match-head{grid-template-columns:minmax(0,1fr) 85px minmax(0,1fr)!important;gap:8px!important;padding:8px 13px!important;height:66px!important;min-height:66px!important}
+ .live-export-stage .live-match-name{font-size:12px!important}
+}
 </style>
 </head>
 <body>
@@ -4012,7 +4020,9 @@ async function exportLiveCentreImage(){
    stage.className='live-export-stage';
    // Match the width of the actual competition on screen, without any surrounding whitespace.
    const sourceWidth=Math.ceil(section.getBoundingClientRect().width);
-   stage.style.width=Math.max(320,sourceWidth||552)+'px';
+   // Mobile's narrow card layout reduces the pixels available to each crest.
+   // Render at the standard desktop card width for crisp, shareable exports.
+   stage.style.width=Math.max(552,sourceWidth||552)+'px';
    const grid=document.createElement('div');
    grid.className='live-all-sections';
    stage.appendChild(grid);
@@ -4030,20 +4040,32 @@ async function exportLiveCentreImage(){
    document.body.appendChild(stage);
    try{
     await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,4000)})));
-    // html2canvas can stretch flexbox <img> elements, even when object-fit:contain.
-    // Render each logo as a contain-sized background inside the same image footprint.
-    // This preserves the source artwork's aspect ratio in exported PNGs.
+    // Keep real image elements (not CSS background images) for sharp exports.
+    // Fit each crest into its existing slot using its intrinsic aspect ratio,
+    // with explicit dimensions so html2canvas cannot stretch it.
     stage.querySelectorAll('.live-comp-heading img, .live-match-name img, .live-formation-side-title img').forEach(img=>{
      if(!img.naturalWidth||!img.naturalHeight)return;
      const rect=img.getBoundingClientRect();
-     const width=Math.max(1,Math.round(rect.width));
-     const height=Math.max(1,Math.round(rect.height));
-     const replacement=document.createElement('span');
-     replacement.setAttribute('aria-hidden','true');
-     replacement.style.cssText=`display:inline-block;flex:0 0 ${width}px;width:${width}px;height:${height}px;min-width:${width}px;min-height:${height}px;background-image:url(${JSON.stringify(img.currentSrc||img.src)});background-repeat:no-repeat;background-position:center;background-size:contain;vertical-align:middle;`;
-     img.replaceWith(replacement);
+     const boxWidth=Math.max(1,rect.width);
+     const boxHeight=Math.max(1,rect.height);
+     const ratio=Math.min(boxWidth/img.naturalWidth,boxHeight/img.naturalHeight);
+     const width=img.naturalWidth*ratio;
+     const height=img.naturalHeight*ratio;
+     const holder=document.createElement('span');
+     holder.setAttribute('aria-hidden','true');
+     holder.style.cssText=`display:inline-flex;align-items:center;justify-content:center;flex:0 0 ${boxWidth}px;width:${boxWidth}px;height:${boxHeight}px;min-width:${boxWidth}px;min-height:${boxHeight}px;vertical-align:middle;`;
+     img.style.setProperty('width',width+'px','important');
+     img.style.setProperty('height',height+'px','important');
+     img.style.setProperty('min-width',width+'px','important');
+     img.style.setProperty('min-height',height+'px','important');
+     img.style.setProperty('max-width',width+'px','important');
+     img.style.setProperty('max-height',height+'px','important');
+     img.style.setProperty('flex','none','important');
+     img.style.setProperty('object-fit','fill','important');
+     img.parentNode.insertBefore(holder,img);
+     holder.appendChild(img);
     });
-    const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:Math.max(1200,stage.offsetWidth)});
+    const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:3,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:Math.max(1200,stage.offsetWidth)});
     const link=document.createElement('a');
     const name=section.id.replace(/^live-comp-/,'');
     link.download='eliza-live-match-centre-'+name+'.png';
