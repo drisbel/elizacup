@@ -2484,8 +2484,9 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-jump-row{flex-wrap:wrap}
 .live-jump-row .live-export-btn{border:0;border-radius:6px;background:#171717;color:#fff;padding:9px 12px;font:700 12px 'Barlow',sans-serif;cursor:pointer}
 .live-jump-row .live-export-btn:disabled{opacity:.6;cursor:wait}
-.live-export-stage{position:fixed;left:-20000px;top:0;width:1120px;padding:16px;background:#fff;z-index:-1;box-sizing:border-box}
-.live-export-stage .live-all-sections{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important}
+.live-export-stage{position:fixed;left:-20000px;top:0;width:552px;padding:0;background:#fff;z-index:-1;box-sizing:border-box}
+.live-export-stage .live-all-sections{display:block!important;width:100%!important;gap:0!important}
+.live-export-stage .live-comp-section{width:100%!important;box-sizing:border-box;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden}
 .live-export-stage .live-comp-table-link{display:none!important}
 .live-export-stage .live-match-summary .live-match-head:after,.live-export-stage .live-match-summary .live-match-head:before{display:none!important;content:none!important}
 .live-export-stage .live-match-summary{cursor:default}
@@ -4000,39 +4001,46 @@ async function exportLiveCentreImage(){
  if(typeof html2canvas!=='function'){alert('Image exporter could not load. Check your connection and try again.');return;}
  const source=[...root.querySelectorAll('#liveAllSections > .live-comp-section')].filter(section=>choice==='all'||section.id==='live-comp-'+choice);
  if(!source.length){alert('There are no active matchups to export for that competition.');return;}
- const stage=document.createElement('div');
- stage.className='live-export-stage';
- const grid=document.createElement('div');
- grid.className='live-all-sections';
- stage.appendChild(grid);
- // Clone the actual displayed match cards, including expanded List/Pitch views.
- // No alternate export card template or extra score-card borders are introduced.
- source.forEach(section=>{
-  const copy=section.cloneNode(true);
-  copy.querySelectorAll('.live-comp-table-link').forEach(el=>el.remove());
-  copy.querySelectorAll('.live-match').forEach((match,i)=>{
-   const original=section.querySelectorAll('.live-match')[i];
-   match.open=original.open;
-   const view=original.querySelector('.live-pitch-grid');
-   const pitch=match.querySelector('.live-pitch-grid');
-   const list=match.querySelector('.live-match-body');
-   if(pitch&&list){pitch.hidden=view?.hidden??true;list.hidden=!pitch.hidden;}
-  });
-  grid.appendChild(copy);
- });
- document.body.appendChild(stage);
  const previous=button.textContent;
- button.disabled=true;button.textContent='Exporting…';
+ button.disabled=true;
+ let completed=0;
  try{
-  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,4000)})));
-  const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1200});
-  const link=document.createElement('a');
-  const name=choice==='all'?'all-active-competitions':choice;
-  link.download='eliza-live-match-centre-'+name+'.png';
-  link.href=canvas.toDataURL('image/png');
-  document.body.appendChild(link);link.click();link.remove();
- }catch(error){console.error('Live match centre export failed:',error);alert('Unable to export image. Please try again.');}
- finally{stage.remove();button.disabled=false;button.textContent=previous;}
+  // Export each competition separately, preserving the exact displayed cards.
+  for(const section of source){
+   button.textContent=source.length>1?`Exporting ${completed+1}/${source.length}…`:'Exporting…';
+   const stage=document.createElement('div');
+   stage.className='live-export-stage';
+   // Match the width of the actual competition on screen, without any surrounding whitespace.
+   const sourceWidth=Math.ceil(section.getBoundingClientRect().width);
+   stage.style.width=Math.max(320,sourceWidth||552)+'px';
+   const grid=document.createElement('div');
+   grid.className='live-all-sections';
+   stage.appendChild(grid);
+   const copy=section.cloneNode(true);
+   copy.querySelectorAll('.live-comp-table-link').forEach(el=>el.remove());
+   copy.querySelectorAll('.live-match').forEach((match,i)=>{
+    const original=section.querySelectorAll('.live-match')[i];
+    match.open=original.open;
+    const view=original.querySelector('.live-pitch-grid');
+    const pitch=match.querySelector('.live-pitch-grid');
+    const list=match.querySelector('.live-match-body');
+    if(pitch&&list){pitch.hidden=view?.hidden??true;list.hidden=!pitch.hidden;}
+   });
+   grid.appendChild(copy);
+   document.body.appendChild(stage);
+   try{
+    await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,4000)})));
+    const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:Math.max(1200,stage.offsetWidth)});
+    const link=document.createElement('a');
+    const name=section.id.replace(/^live-comp-/,'');
+    link.download='eliza-live-match-centre-'+name+'.png';
+    link.href=canvas.toDataURL('image/png');
+    document.body.appendChild(link);link.click();link.remove();
+    completed++;
+   }finally{stage.remove();}
+  }
+ }catch(error){console.error('Live match centre export failed:',error);alert(`Exported ${completed} of ${source.length} competitions. Please try again for the remaining images.`);}
+ finally{button.disabled=false;button.textContent=previous;}
 }
 async function loadLiveCentre(){
  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live fixtures…';
