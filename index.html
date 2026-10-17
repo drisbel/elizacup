@@ -4030,6 +4030,19 @@ async function exportLiveCentreImage(){
    document.body.appendChild(stage);
    try{
     await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,4000)})));
+    // html2canvas can stretch flexbox <img> elements, even when object-fit:contain.
+    // Render each logo as a contain-sized background inside the same image footprint.
+    // This preserves the source artwork's aspect ratio in exported PNGs.
+    stage.querySelectorAll('.live-comp-heading img, .live-match-name img, .live-formation-side-title img').forEach(img=>{
+     if(!img.naturalWidth||!img.naturalHeight)return;
+     const rect=img.getBoundingClientRect();
+     const width=Math.max(1,Math.round(rect.width));
+     const height=Math.max(1,Math.round(rect.height));
+     const replacement=document.createElement('span');
+     replacement.setAttribute('aria-hidden','true');
+     replacement.style.cssText=`display:inline-block;flex:0 0 ${width}px;width:${width}px;height:${height}px;min-width:${width}px;min-height:${height}px;background-image:url(${JSON.stringify(img.currentSrc||img.src)});background-repeat:no-repeat;background-position:center;background-size:contain;vertical-align:middle;`;
+     img.replaceWith(replacement);
+    });
     const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:Math.max(1200,stage.offsetWidth)});
     const link=document.createElement('a');
     const name=section.id.replace(/^live-comp-/,'');
