@@ -2402,6 +2402,22 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .ownership-ranking-search input{flex:1 1 190px;max-width:370px;min-width:0;padding:9px 11px;border:1px solid var(--line-light);border-radius:6px;background:#fff;font:inherit}
 .ownership-table tr[hidden]{display:none!important}
 @media(max-width:600px){.ownership-ranking-search input{max-width:none}}
+
+/* Ownership category navigation above a compact, single-row division/search toolbar. */
+.ownership-stats .ownership-controls{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.ownership-stats .ownership-categories{display:flex;width:100%;flex-wrap:wrap;gap:6px}
+.ownership-stats .ownership-filter-row{display:flex;align-items:end;gap:14px;width:100%;min-width:0}
+.ownership-stats .ownership-filter-row label{display:flex;flex-direction:column;align-items:stretch;gap:5px;min-width:0;flex:0 1 220px}
+.ownership-stats .ownership-filter-row .ownership-filter-search{flex:1 1 280px}
+.ownership-stats .ownership-filter-row input,.ownership-stats .ownership-filter-row select{box-sizing:border-box;width:100%;height:39px;min-width:0;padding:8px 10px;border:1px solid var(--line-light);border-radius:6px;background:#fff;font:500 13px 'Barlow',sans-serif}
+@media(max-width:600px){.ownership-stats .ownership-filter-row{gap:8px}.ownership-stats .ownership-filter-row label{flex:0 1 42%;font-size:11px}.ownership-stats .ownership-filter-row .ownership-filter-search{flex:1 1 58%}.ownership-stats .ownership-filter-row input,.ownership-stats .ownership-filter-row select{font-size:12px;padding:7px 6px}}
+
+
+/* Player ownership: fantasy team names link directly to club profiles. */
+.ownership-owner-team-link{appearance:none;background:transparent;border:0;padding:0;margin:0;color:inherit;font:inherit;font-weight:700;text-align:left;line-height:1.3;cursor:pointer;overflow-wrap:anywhere;min-width:0}
+.ownership-owner-team-link:hover{text-decoration:underline;text-underline-offset:2px;color:#245b93}
+.ownership-owner-team-link:focus-visible{outline:2px solid #245b93;outline-offset:3px;border-radius:2px}
+
 </style>
 </head>
 <body>
@@ -7163,10 +7179,11 @@ function renderPlayerOwnershipTab(){
  const unknown=ownershipTeams.filter(t=>!t.division).length;
  el.className='ownership-stats';
  el.innerHTML=`<div class="ownership-controls">
- <label>Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
- <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['differentials','Biggest Differentials'],['clubs','A-League Clubs'],['lookup','Who Owns This Player?']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div></div>
-
- ${['owned','captained','differentials'].includes(category)?`<div class="ownership-ranking-search"><label for="ownershipTableSearch">Search players</label><input id="ownershipTableSearch" type="search" placeholder="Search by player name or club…" value="${liveEscape(ownershipTableSearch)}" autocomplete="off" aria-label="Search player rankings"></div>`:''}
+ <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['differentials','Biggest Differentials'],['clubs','A-League Clubs'],['lookup','Who Owns This Player?']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div>
+ <div class="ownership-filter-row">
+ <label for="ownershipDivision">Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
+ ${['owned','captained','differentials'].includes(category)?`<label for="ownershipTableSearch" class="ownership-filter-search">Search players <input id="ownershipTableSearch" type="search" placeholder="Search by player name or club…" value="${liveEscape(ownershipTableSearch)}" autocomplete="off" aria-label="Search player rankings"></label>`:''}
+ </div></div>
  ${category==='lookup'?`<div class="ownership-lookup"><label for="ownershipSearch">Find a player</label><input id="ownershipSearch" type="search" placeholder="Search player name…" value="${liveEscape(ownershipSearch)}" autocomplete="off"><label for="ownershipStatus">Squad position</label><select id="ownershipStatus"><option value="all"${ownershipStatus==='all'?' selected':''}>Starting XI + Bench</option><option value="starting"${ownershipStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipStatus==='bench'?' selected':''}>Bench</option></select></div><div id="ownershipLookupResults"></div>`:''}
  ${!teams.length?'<div class="state-msg">No squads matched this division. Check division labels in Roddy.</div>':
  category==='lookup'?``:
@@ -7223,7 +7240,11 @@ function openOwnershipModal(key){
  if(!modal){modal=document.createElement('div');modal.id='ownershipModal';modal.className='ownership-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Player ownership details');document.body.appendChild(modal);}
  modal.hidden=false;
  renderOwnershipModal();
- modal.onclick=e=>{if(e.target===modal||e.target.closest('[data-owner-close]'))closeOwnershipModal()};
+ modal.onclick=e=>{
+  const teamButton=e.target.closest('[data-owner-team]');
+  if(teamButton){const teamName=teamButton.dataset.ownerTeam;closeOwnershipModal();goToTeam(teamName);return;}
+  if(e.target===modal||e.target.closest('[data-owner-close]'))closeOwnershipModal();
+ };
  document.addEventListener('keydown',ownershipModalEscape);
 }
 function ownershipModalEscape(e){if(e.key==='Escape')closeOwnershipModal()}
@@ -7237,7 +7258,7 @@ function renderOwnershipModal(){
  const player=ownershipPlayerCatalog().find(p=>p.key===ownershipSelectedPlayer);if(!player)return;
  const owners=ownershipOwners(ownershipSelectedPlayer,ownershipModalDivision,ownershipModalStatus);
  const total=ownershipOwners(ownershipSelectedPlayer,'all','all').length;
- modal.innerHTML=`<div class="ownership-modal-panel"><div class="ownership-modal-header"><div>${ownershipClubLogo(player.club)}<div><h3>${liveEscape(player.name)}</h3><small>${total} ${total===1?'team owns':'teams own'} this player</small></div></div><button type="button" class="ownership-modal-close" data-owner-close aria-label="Close">×</button></div><div class="ownership-modal-filters"><label>Division<select id="ownershipModalDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipModalDivision?' selected':''}>${label}</option>`).join('')}</select></label><label>Squad position<select id="ownershipModalStatus"><option value="all"${ownershipModalStatus==='all'?' selected':''}>All</option><option value="starting"${ownershipModalStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipModalStatus==='bench'?' selected':''}>Bench</option></select></label></div><div class="ownership-modal-count">${owners.length} matching ${owners.length===1?'team':'teams'}</div><div class="ownership-owner-list">${owners.length?owners.sort((a,b)=>a.team.division.localeCompare(b.team.division)||a.team.name.localeCompare(b.team.name)).map(({team,player:p})=>`<div class="ownership-owner-row"><span class="ownership-owner-name"><img class="ownership-owner-team-logo" src="logo/${teamLogoSlug(team.name)}.png" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}" data-team-name="${liveEscape(team.name)}"><span>${liveEscape(team.name)}</span></span><span class="ownership-owner-division" style="background:${ownershipDivisionColor(team.division)}">${liveEscape(OWNERSHIP_DIVISIONS.find(d=>d[0]===team.division)?.[1]||'Division unknown')}</span><span class="ownership-owner-position ${p.bench?'is-bench':'is-starting'}">${p.bench?'Bench':'Starting XI'}</span>${liveCaptainKey(p)==='C'?'<span class="ownership-owner-captain">C</span>':''}</div>`).join(''):'<p class="state-msg">No owners match these filters.</p>'}</div></div>`;
+ modal.innerHTML=`<div class="ownership-modal-panel"><div class="ownership-modal-header"><div>${ownershipClubLogo(player.club)}<div><h3>${liveEscape(player.name)}</h3><small>${total} ${total===1?'team owns':'teams own'} this player</small></div></div><button type="button" class="ownership-modal-close" data-owner-close aria-label="Close">×</button></div><div class="ownership-modal-filters"><label>Division<select id="ownershipModalDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipModalDivision?' selected':''}>${label}</option>`).join('')}</select></label><label>Squad position<select id="ownershipModalStatus"><option value="all"${ownershipModalStatus==='all'?' selected':''}>All</option><option value="starting"${ownershipModalStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipModalStatus==='bench'?' selected':''}>Bench</option></select></label></div><div class="ownership-modal-count">${owners.length} matching ${owners.length===1?'team':'teams'}</div><div class="ownership-owner-list">${owners.length?owners.sort((a,b)=>a.team.division.localeCompare(b.team.division)||a.team.name.localeCompare(b.team.name)).map(({team,player:p})=>`<div class="ownership-owner-row"><span class="ownership-owner-name"><img class="ownership-owner-team-logo" src="logo/${teamLogoSlug(team.name)}.png" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}" data-team-name="${liveEscape(team.name)}"><button type="button" class="ownership-owner-team-link" data-owner-team="${liveEscape(team.name)}" title="View ${liveEscape(team.name)} club profile">${liveEscape(team.name)}</button></span><span class="ownership-owner-division" style="background:${ownershipDivisionColor(team.division)}">${liveEscape(OWNERSHIP_DIVISIONS.find(d=>d[0]===team.division)?.[1]||'Division unknown')}</span><span class="ownership-owner-position ${p.bench?'is-bench':'is-starting'}">${p.bench?'Bench':'Starting XI'}</span>${liveCaptainKey(p)==='C'?'<span class="ownership-owner-captain">C</span>':''}</div>`).join(''):'<p class="state-msg">No owners match these filters.</p>'}</div></div>`;
  modal.querySelector('#ownershipModalDivision')?.addEventListener('change',e=>{ownershipModalDivision=e.target.value;renderOwnershipModal()});
  modal.querySelector('#ownershipModalStatus')?.addEventListener('change',e=>{ownershipModalStatus=e.target.value;renderOwnershipModal()});
  modal.querySelector('[data-owner-close]')?.focus();
