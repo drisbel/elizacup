@@ -2308,6 +2308,45 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .ownership-bar{display:inline-block;width:65px;height:6px;background:#e6e6e6;border-radius:4px;vertical-align:middle;margin-right:9px;overflow:hidden}
 .ownership-bar span{display:block;height:100%;background:#257b60}
 
+
+/* Ownership statistics: responsive without horizontal table scrolling. */
+.ownership-stats{min-width:0;width:100%}
+.ownership-table-wrap{width:100%;overflow-x:visible}
+.ownership-table{table-layout:fixed;width:100%;min-width:0}
+.ownership-table td,.ownership-table th{overflow-wrap:anywhere}
+.ownership-table th:first-child,.ownership-table td:first-child{width:6%}
+.ownership-table th:nth-child(2),.ownership-table td:nth-child(2){width:35%}
+.ownership-table th:nth-child(3),.ownership-table td:nth-child(3){width:22%}
+.ownership-table th:nth-child(4),.ownership-table td:nth-child(4){width:13%}
+.ownership-table th:nth-child(5),.ownership-table td:nth-child(5){width:24%}
+.ownership-club-cell{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.ownership-club-logo{width:22px;height:22px;object-fit:contain;flex-shrink:0}
+.ownership-club-short{display:none}
+@media(max-width:600px){
+ .ownership-table{font-size:11px}
+ .ownership-table th{padding:8px 3px;white-space:normal;line-height:1.15}
+ .ownership-table td{padding:7px 3px}
+ .ownership-table th:first-child,.ownership-table td:first-child{width:7%}
+ .ownership-table th:nth-child(2),.ownership-table td:nth-child(2){width:37%}
+ .ownership-table th:nth-child(3),.ownership-table td:nth-child(3){width:21%}
+ .ownership-table th:nth-child(4),.ownership-table td:nth-child(4){width:12%}
+ .ownership-table th:nth-child(5),.ownership-table td:nth-child(5){width:23%}
+ .ownership-club-full{display:none}
+ .ownership-club-short{display:inline}
+ .ownership-club-logo{width:18px;height:18px}
+ .ownership-club-cell{gap:3px}
+ .ownership-bar{display:none}
+ .ownership-controls{align-items:stretch}
+ .ownership-categories{width:100%}
+ .ownership-categories .round-tab{flex:1 1 auto;font-size:11px;padding:7px 6px}
+ .ownership-table td:last-child{white-space:nowrap}
+}
+/* A-League clubs table has four columns, not five. */
+.ownership-table:has(th:nth-child(4):last-child) th:nth-child(1),.ownership-table:has(th:nth-child(4):last-child) td:nth-child(1){width:8%}
+.ownership-table:has(th:nth-child(4):last-child) th:nth-child(2),.ownership-table:has(th:nth-child(4):last-child) td:nth-child(2){width:43%}
+.ownership-table:has(th:nth-child(4):last-child) th:nth-child(3),.ownership-table:has(th:nth-child(4):last-child) td:nth-child(3){width:20%}
+.ownership-table:has(th:nth-child(4):last-child) th:nth-child(4),.ownership-table:has(th:nth-child(4):last-child) td:nth-child(4){width:29%}
+
 </style>
 </head>
 <body>
@@ -7010,7 +7049,7 @@ let ownershipCategory='owned';
 const OWNERSHIP_DIVISIONS=[['all','All Divisions'],['d1','Division 1'],['d2a','Division 2A'],['d2b','Division 2B'],['d3a','Division 3A'],['d3b','Division 3B'],['d3c','Division 3C']];
 function ownershipDivisionId(value){
  const x=String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
- return ({division1:'d1',div1:'d1',d1:'d1',division2a:'d2a',div2a:'d2a',d2a:'d2a',division2b:'d2b',div2b:'d2b',d2b:'d2b',division3a:'d3a',div3a:'d3a',d3a:'d3a',division3b:'d3b',div3b:'d3b',d3b:'d3b',division3c:'d3c',div3c:'d3c',d3c:'d3c'})[x]||'';
+ return ({eliza:'d1',elizacup:'d1',division1:'d1',div1:'d1',d1:'d1',division2a:'d2a',div2a:'d2a',d2a:'d2a',division2b:'d2b',div2b:'d2b',d2b:'d2b',division3a:'d3a',div3a:'d3a',d3a:'d3a',division3b:'d3b',div3b:'d3b',d3b:'d3b',division3c:'d3c',div3c:'d3c',d3c:'d3c'})[x]||'';
 }
 async function loadPlayerOwnershipTab(){
  const el=document.getElementById('statsContainer');
@@ -7027,6 +7066,15 @@ async function loadPlayerOwnershipTab(){
   ownershipTeams=teams.map(t=>({...t,division:divisions.get(liveKey(t.name))||divisions.get(liveKey(t.fantasy))||''}));
   renderPlayerOwnershipTab();
  }catch(err){el.className='state-msg error';el.textContent='Unable to load ownership statistics: '+err.message;}
+}
+function ownershipClubShort(club){
+ const key=String(club||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const codes={adelaide:'ADL',adelaideunited:'ADL',auckland:'AKL',aucklandfc:'AKL',brisbane:'BRI',brisbaneroar:'BRI',centralcoast:'CCM',centralcoastmariners:'CCM',macarthur:'MAC',macarthurfc:'MAC',melbournecity:'MCY',melbournevictory:'MVC',newcastle:'NEW',newcastlejets:'NEW',perth:'PER',perthglory:'PER',sydney:'SYD',sydneyfc:'SYD',wellington:'WEL',wellingtonphoenix:'WEL'};
+ return codes[key]||String(club||'—').slice(0,3).toUpperCase();
+}
+function ownershipClubLogo(club){
+ const src=liveALeagueLogo(club);
+ return src?`<img class="ownership-club-logo" src="${liveEscape(src)}" alt="" loading="lazy" onerror="this.style.display='none'">`:'';
 }
 function renderPlayerOwnershipTab(){
  const el=document.getElementById('statsContainer');if(!el)return;
@@ -7056,10 +7104,10 @@ function renderPlayerOwnershipTab(){
  el.innerHTML=`<div class="ownership-controls">
  <label>Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
  <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['differentials','Biggest Differentials'],['clubs','A-League Clubs']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div></div>
- <p class="sub">Current COWZA EXPORT snapshot · ${teams.length} squads${ownershipDivision==='all'&&unknown?` · ${unknown} without a matched division`:''}. Ownership includes all 15 squad players.</p>
+
  ${!teams.length?'<div class="state-msg">No squads matched this division. Check division labels in Roddy.</div>':
- category==='clubs'?`<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>A-League Club</th><th>Selections</th><th>Share of squad slots</th></tr></thead><tbody>${clubRows.map(([club,n],i)=>`<tr><td>${i+1}</td><td>${liveEscape(club)}</td><td>${n}</td><td>${(100*n/(teams.length*15)).toFixed(1)}%</td></tr>`).join('')}</tbody></table></div>`:
- `<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>Player</th><th>Club</th><th>${category==='captained'?'Captained':'Owned'}</th><th>${category==='captained'?'Captaincy %':'Ownership %'}</th></tr></thead><tbody>${ranked.map((p,i)=>{const n=category==='captained'?p.captained:p.owned;const pct=100*n/denom;return `<tr><td>${i+1}</td><td>${liveEscape(p.name)}</td><td>${liveEscape(p.club)}</td><td>${n}</td><td><div class="ownership-bar"><span style="width:${pct}%"></span></div>${pct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table></div>`}`;
+ category==='clubs'?`<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>A-League Club</th><th>Selections</th><th>Share of squad slots</th></tr></thead><tbody>${clubRows.map(([club,n],i)=>`<tr><td>${i+1}</td><td><span class="ownership-club-cell">${ownershipClubLogo(club)}<span class="ownership-club-full">${liveEscape(club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(club))}</span></span></td><td>${n}</td><td>${(100*n/(teams.length*15)).toFixed(1)}%</td></tr>`).join('')}</tbody></table></div>`:
+ `<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>Player</th><th>Club</th><th>${category==='captained'?'Captained':'Owned'}</th><th>${category==='captained'?'Captaincy %':'Ownership %'}</th></tr></thead><tbody>${ranked.map((p,i)=>{const n=category==='captained'?p.captained:p.owned;const pct=100*n/denom;return `<tr><td>${i+1}</td><td>${liveEscape(p.name)}</td><td><span class="ownership-club-cell">${ownershipClubLogo(p.club)}<span class="ownership-club-full">${liveEscape(p.club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(p.club))}</span></span></td><td>${n}</td><td><div class="ownership-bar"><span style="width:${pct}%"></span></div>${pct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table></div>`}`;
  el.querySelector('#ownershipDivision')?.addEventListener('change',e=>{ownershipDivision=e.target.value;renderPlayerOwnershipTab()});
  el.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{ownershipCategory=b.dataset.category;renderPlayerOwnershipTab()}));
 }
