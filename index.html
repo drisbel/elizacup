@@ -3819,6 +3819,14 @@ function liveCaptainKey(p){
  const value=String(p?.captain||'').trim().toUpperCase();
  return /^(C|CAPTAIN|TRUE|1)$/.test(value)?'C':/^(VC|V|VICE|VICE CAPTAIN)$/.test(value)?'VC':value;
 }
+// Double a starting captain's displayed points, without modifying COWZA EXPORT values.
+function liveDisplayPlayerPoints(p){
+ const raw=String(p?.points??'').trim();
+ if(!raw)return '—';
+ const numeric=Number(raw.replace(/,/g,''));
+ if(!Number.isFinite(numeric))return raw;
+ return String(!p.bench && liveCaptainKey(p)==='C'?numeric*2:numeric);
+}
 function livePlayerIdentity(p){return liveKey(p?.name||'')+'|'+liveCaptainKey(p);}
 // A-League crests stored alongside the Eliza Cup team crests.
 function liveALeagueLogo(club){
@@ -3852,7 +3860,7 @@ function livePlayerHtml(t,other,rightSide=false,title='starters'){
   const shared=!p.bench&&otherStarting.has(livePlayerIdentity(p));
   const crest=liveALeagueLogo(p.club);
   const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
-  return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(p.points||'0')}</strong><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><strong>${liveEscape(p.points||'0')}</strong>`}</div>`;
+  return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(liveDisplayPlayerPoints(p))}</strong><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><strong>${liveEscape(liveDisplayPlayerPoints(p))}</strong>`}</div>`;
  }).join('')}`;
  const starters=items.filter(p=>!p.bench).slice(0,11);
  const bench=items.filter(p=>p.bench);
@@ -8458,7 +8466,7 @@ function clubSquadHtml(squad){
     const crest=liveALeagueLogo(p.club),cap=liveCaptainKey(p),abbr=clubSquadClubAbbr(p.club);
     const capHtml=cap==='C'||cap==='VC'?`<span class="club-squad-cap${cap==='VC'?' vice':''}" title="${cap==='C'?'Captain':'Vice-captain'}">${cap}</span>`:'';
     const icon=crest?`<img class="club-squad-crest" src="${liveEscape(crest)}" alt="${liveEscape(p.club)}" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:'<span aria-hidden="true">⚽</span>';
-    return `<div class="club-squad-player"><div class="club-squad-crest-wrap">${icon}${capHtml}</div><div class="club-squad-club">${liveEscape(abbr)}</div><div class="club-squad-player-name">${liveEscape(p.name)}</div><div class="club-squad-player-points" title="Current player points">${liveEscape(p.points===''?'—':p.points)}</div></div>`;
+    return `<div class="club-squad-player"><div class="club-squad-crest-wrap">${icon}${capHtml}</div><div class="club-squad-club">${liveEscape(abbr)}</div><div class="club-squad-player-name">${liveEscape(p.name)}</div><div class="club-squad-player-points" title="Current player points">${liveEscape(liveDisplayPlayerPoints(p))}</div></div>`;
   };
   return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">Current Squad</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
 }
