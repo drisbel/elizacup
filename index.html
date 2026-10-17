@@ -2396,6 +2396,12 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .spooners-days-counter .spooners-days-since{font:500 11px/1.3 'Barlow',sans-serif;color:#60736a;margin-top:4px}
 @media(max-width:600px){.spooners-days-counter{gap:11px;padding:10px 13px}.spooners-days-counter .spooners-days-label{font-size:14px}}
 
+
+.ownership-ranking-search{display:flex;align-items:center;gap:10px;margin:14px 0 8px;flex-wrap:wrap}
+.ownership-ranking-search label{font-weight:700;font-size:12px}
+.ownership-ranking-search input{flex:1 1 190px;max-width:370px;min-width:0;padding:9px 11px;border:1px solid var(--line-light);border-radius:6px;background:#fff;font:inherit}
+.ownership-table tr[hidden]{display:none!important}
+@media(max-width:600px){.ownership-ranking-search input{max-width:none}}
 </style>
 </head>
 <body>
@@ -7048,7 +7054,7 @@ function findLosingStreaks(matchLogRows, latestRoundByComp){
 // ---------- Statistics page: view toggle (Streaks / Match Log) ----------
 // Same round-tabs toggle pattern as the About page — one content mount point
 // (#statsContainer) that each tab's loader takes over entirely.
-let statsActiveTab = "streaks"; // "streaks" | "matchlog"
+let statsActiveTab = "ownership"; // default statistics view
 
 function renderStatsPage(){
   const toggleEl = document.getElementById('statsViewToggle');
@@ -7096,6 +7102,7 @@ let ownershipTeams=[];
 let ownershipDivision='all';
 let ownershipCategory='owned';
 let ownershipSearch='';
+let ownershipTableSearch='';
 let ownershipStatus='all';
 let ownershipSelectedPlayer='';
 let ownershipModalDivision='all';
@@ -7159,11 +7166,21 @@ function renderPlayerOwnershipTab(){
  <label>Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
  <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['differentials','Biggest Differentials'],['clubs','A-League Clubs'],['lookup','Who Owns This Player?']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div></div>
 
+ ${['owned','captained','differentials'].includes(category)?`<div class="ownership-ranking-search"><label for="ownershipTableSearch">Search players</label><input id="ownershipTableSearch" type="search" placeholder="Search by player name or club…" value="${liveEscape(ownershipTableSearch)}" autocomplete="off" aria-label="Search player rankings"></div>`:''}
  ${category==='lookup'?`<div class="ownership-lookup"><label for="ownershipSearch">Find a player</label><input id="ownershipSearch" type="search" placeholder="Search player name…" value="${liveEscape(ownershipSearch)}" autocomplete="off"><label for="ownershipStatus">Squad position</label><select id="ownershipStatus"><option value="all"${ownershipStatus==='all'?' selected':''}>Starting XI + Bench</option><option value="starting"${ownershipStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipStatus==='bench'?' selected':''}>Bench</option></select></div><div id="ownershipLookupResults"></div>`:''}
  ${!teams.length?'<div class="state-msg">No squads matched this division. Check division labels in Roddy.</div>':
  category==='lookup'?``:
  category==='clubs'?`<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>A-League Club</th><th>Selections</th><th>Share of squad slots</th></tr></thead><tbody>${clubRows.map(([club,n],i)=>`<tr><td>${i+1}</td><td><span class="ownership-club-cell">${ownershipClubLogo(club)}<span class="ownership-club-full">${liveEscape(club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(club))}</span></span></td><td>${n}</td><td>${(100*n/(teams.length*15)).toFixed(1)}%</td></tr>`).join('')}</tbody></table></div>`:
- `<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>Player</th><th>Club</th><th>${category==='captained'?'Captained':'Owned'}</th><th>${category==='captained'?'Captaincy %':'Ownership %'}</th></tr></thead><tbody>${ranked.map((p,i)=>{const n=category==='captained'?p.captained:p.owned;const pct=100*n/denom;return `<tr><td>${i+1}</td><td><button type="button" class="ownership-player-link" data-owner-player="${liveEscape(liveKey(p.name))}">${liveEscape(p.name)}</button></td><td><span class="ownership-club-cell">${ownershipClubLogo(p.club)}<span class="ownership-club-full">${liveEscape(p.club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(p.club))}</span></span></td><td>${n}</td><td><div class="ownership-bar"><span style="width:${pct}%"></span></div>${pct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table></div>`}`;
+ `<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>Player</th><th>Club</th><th>${category==='captained'?'Captained':'Owned'}</th><th>${category==='captained'?'Captaincy %':'Ownership %'}</th></tr></thead><tbody>${ranked.map((p,i)=>{const n=category==='captained'?p.captained:p.owned;const pct=100*n/denom;return `<tr data-ranking-search="${liveEscape((p.name+' '+p.club).toLowerCase())}"><td>${i+1}</td><td><button type="button" class="ownership-player-link" data-owner-player="${liveEscape(liveKey(p.name))}">${liveEscape(p.name)}</button></td><td><span class="ownership-club-cell">${ownershipClubLogo(p.club)}<span class="ownership-club-full">${liveEscape(p.club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(p.club))}</span></span></td><td>${n}</td><td><div class="ownership-bar"><span style="width:${pct}%"></span></div>${pct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table></div>`}`;
+ const rankingInput=el.querySelector('#ownershipTableSearch');
+ if(rankingInput){
+  const applySearch=()=>{
+   const q=rankingInput.value.trim().toLowerCase();
+   el.querySelectorAll('[data-ranking-search]').forEach(row=>{row.hidden=!!q&&!row.dataset.rankingSearch.includes(q)});
+  };
+  rankingInput.addEventListener('input',()=>{ownershipTableSearch=rankingInput.value;applySearch()});
+  applySearch();
+ }
  if(category==='lookup'){
   const input=el.querySelector('#ownershipSearch');
   input?.addEventListener('input',()=>{ownershipSearch=input.value;renderOwnershipLookupResults()});
