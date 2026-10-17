@@ -2388,6 +2388,14 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .ownership-owner-division{display:inline-flex;align-items:center;justify-content:center;min-height:25px;border-radius:5px;padding:5px 7px;color:#fff!important;font-size:10px;font-weight:800;text-align:center;line-height:1.1}
 @media(max-width:600px){.ownership-owner-team-logo{width:25px;height:25px;flex-basis:25px}.ownership-owner-name{gap:5px}.ownership-owner-division{font-size:9px;padding:4px 3px}}
 
+
+/* Spooners FC club-profile-only running days counter */
+.spooners-days-counter{display:inline-flex;align-items:center;gap:15px;padding:12px 20px;margin:0 0 16px;border-left:5px solid #1e483b;border-radius:0 9px 9px 0;background:#f0f4f0;color:#19392f;max-width:100%;box-sizing:border-box}
+.spooners-days-counter .spooners-days-number{font:800 clamp(30px,4vw,43px)/1 'Barlow Condensed',sans-serif;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
+.spooners-days-counter .spooners-days-label{font:700 16px/1.15 'Barlow Condensed',sans-serif;letter-spacing:.01em}
+.spooners-days-counter .spooners-days-since{font:500 11px/1.3 'Barlow',sans-serif;color:#60736a;margin-top:4px}
+@media(max-width:600px){.spooners-days-counter{gap:11px;padding:10px 13px}.spooners-days-counter .spooners-days-label{font-size:14px}}
+
 </style>
 </head>
 <body>
@@ -7994,6 +8002,14 @@ function overviewCardHtml(label, value, color){
   </div>`;
 }
 
+function spoonersDaysSinceDivisionOne(){
+  // Use Melbourne calendar dates to avoid UTC and daylight-saving off-by-one errors.
+  const parts = new Intl.DateTimeFormat('en-GB', {timeZone:'Australia/Melbourne',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const part = name => Number(parts.find(p=>p.type===name)?.value||0);
+  const today = Date.UTC(part('year'),part('month')-1,part('day'));
+  const start = Date.UTC(2026,3,26);
+  return Math.max(0,Math.floor((today-start)/86400000)).toLocaleString('en-AU');
+}
 function teamTrophiesHtml(trophies, trophyNote){
   const noteHtml = trophyNote
     ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:10px;">${trophyNote}</div>`
@@ -8377,6 +8393,14 @@ function renderTeamProfile(data){
     </div>
     <aside class="club-profile-trophies">${teamTrophiesHtml(trophies, trophyNote)}</aside>
   </div>`;
+
+  if(liveKey(teamName) === liveKey('Spooners FC')){
+    html += `<div class="spooners-days-counter" role="status" aria-label="Days since Spooners FC was in Division 1">
+      <span class="spooners-days-number" id="spoonersDaysNumber">${spoonersDaysSinceDivisionOne()}</span>
+      <div><div class="spooners-days-label">Days since Spooners FC was in Division 1</div>
+      <div class="spooners-days-since">Since Sunday, 26 April 2026</div></div>
+    </div>`;
+  }
 
   html += `<div class="section-head" style="margin-top:12px;"><h2 style="font-size:18px;">Season Overview</h2></div>
     <div class="team-profile-cards">
