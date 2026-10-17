@@ -2479,6 +2479,23 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .competition-live-link-row{display:flex;justify-content:flex-end;margin:0 0 12px}
 @media(max-width:530px){.live-comp-heading{gap:6px;font-size:14px}.live-comp-heading img{width:25px;height:25px}.live-comp-heading small{font-size:9px}.live-comp-heading .live-comp-table-link{font-size:9px;padding:6px 5px}.fixture-live-link{font-size:10px;padding:7px 8px}}
 
+
+/* Live Match Centre image export: controls and pixel-faithful match cards. */
+.live-jump-row{flex-wrap:wrap}
+.live-jump-row .live-export-btn{border:0;border-radius:6px;background:#171717;color:#fff;padding:9px 12px;font:700 12px 'Barlow',sans-serif;cursor:pointer}
+.live-jump-row .live-export-btn:disabled{opacity:.6;cursor:wait}
+.live-export-stage{position:fixed;left:-20000px;top:0;width:1120px;padding:16px;background:#fff;z-index:-1;box-sizing:border-box}
+.live-export-stage .live-all-sections{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important}
+.live-export-stage .live-comp-table-link{display:none!important}
+.live-export-stage .live-match-summary .live-match-head:after,.live-export-stage .live-match-summary .live-match-head:before{display:none!important;content:none!important}
+.live-export-stage .live-match-summary{cursor:default}
+.live-export-stage .live-match-summary:hover .live-match-head{filter:none!important}
+.live-export-stage .live-match-summary:focus-visible{outline:none!important}
+.live-export-stage .live-match-summary::-webkit-details-marker{display:none!important}
+.live-export-stage .live-match-summary::marker{content:''}
+.live-export-stage .live-comp-heading small{margin-left:auto}
+@media(max-width:600px){.live-jump-row{justify-content:flex-start;gap:7px}.live-jump-row select{max-width:170px}.live-jump-row .live-export-btn{white-space:nowrap}}
+
 </style>
 </head>
 <body>
@@ -3966,13 +3983,56 @@ function renderLiveCentre(){
    </h3><div class="live-match-grid">${fixtures.map(liveMatchHtml).join('')}</div></section>`;
  }).join('');
  el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
- <div class="live-jump-row"><label for="liveJumpTo">Jump to</label><select id="liveJumpTo" aria-label="Jump to competition"><option value="">Select competition…</option>${active.map(c=>`<option value="${c.id}">${liveEscape(c.label)}</option>`).join('')}</select></div>
+ <div class="live-jump-row"><label for="liveJumpTo">Jump to</label><select id="liveJumpTo" aria-label="Jump to competition"><option value="">Select competition…</option>${active.map(c=>`<option value="${c.id}">${liveEscape(c.label)}</option>`).join('')}</select><label for="liveExportSelect">Export image</label><select id="liveExportSelect" aria-label="Choose competitions to export"><option value="all">All active competitions</option>${active.map(c=>`<option value="${c.id}">${liveEscape(c.label)}</option>`).join('')}</select><button type="button" id="liveExportImage" class="live-export-btn">Download PNG ↓</button></div>
  <div id="liveAllSections" class="live-all-sections">${sectionHtml()}</div>
  ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
  const jump=el.querySelector('#liveJumpTo');
  jump?.addEventListener('change',()=>{const target=el.querySelector('#live-comp-'+jump.value);if(target)target.scrollIntoView({behavior:'smooth',block:'start'});});
+ el.querySelector('#liveExportImage')?.addEventListener('click',()=>exportLiveCentreImage());
  const search=el.querySelector('#liveTeamSearch');
  search?.addEventListener('input',()=>{liveTeamSearch=search.value;el.querySelector('#liveAllSections').innerHTML=sectionHtml()||'<div class="live-note">No matchups found for that team.</div>';});
+}
+async function exportLiveCentreImage(){
+ const root=document.getElementById('liveContainer');
+ const button=root?.querySelector('#liveExportImage');
+ const choice=root?.querySelector('#liveExportSelect')?.value||'all';
+ if(!root||!button)return;
+ if(typeof html2canvas!=='function'){alert('Image exporter could not load. Check your connection and try again.');return;}
+ const source=[...root.querySelectorAll('#liveAllSections > .live-comp-section')].filter(section=>choice==='all'||section.id==='live-comp-'+choice);
+ if(!source.length){alert('There are no active matchups to export for that competition.');return;}
+ const stage=document.createElement('div');
+ stage.className='live-export-stage';
+ const grid=document.createElement('div');
+ grid.className='live-all-sections';
+ stage.appendChild(grid);
+ // Clone the actual displayed match cards, including expanded List/Pitch views.
+ // No alternate export card template or extra score-card borders are introduced.
+ source.forEach(section=>{
+  const copy=section.cloneNode(true);
+  copy.querySelectorAll('.live-comp-table-link').forEach(el=>el.remove());
+  copy.querySelectorAll('.live-match').forEach((match,i)=>{
+   const original=section.querySelectorAll('.live-match')[i];
+   match.open=original.open;
+   const view=original.querySelector('.live-pitch-grid');
+   const pitch=match.querySelector('.live-pitch-grid');
+   const list=match.querySelector('.live-match-body');
+   if(pitch&&list){pitch.hidden=view?.hidden??true;list.hidden=!pitch.hidden;}
+  });
+  grid.appendChild(copy);
+ });
+ document.body.appendChild(stage);
+ const previous=button.textContent;
+ button.disabled=true;button.textContent='Exporting…';
+ try{
+  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,4000)})));
+  const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1200});
+  const link=document.createElement('a');
+  const name=choice==='all'?'all-active-competitions':choice;
+  link.download='eliza-live-match-centre-'+name+'.png';
+  link.href=canvas.toDataURL('image/png');
+  document.body.appendChild(link);link.click();link.remove();
+ }catch(error){console.error('Live match centre export failed:',error);alert('Unable to export image. Please try again.');}
+ finally{stage.remove();button.disabled=false;button.textContent=previous;}
 }
 async function loadLiveCentre(){
  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live fixtures…';
