@@ -2433,6 +2433,40 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .ownership-full-profile-btn:hover{background:#1b2d58}
 @media(max-width:600px){.ownership-team-pitch-modal{padding:7px}.ownership-team-pitch-panel{max-height:96vh}.ownership-team-pitch-scroll{padding:0 7px 8px}}
 
+
+/* Compact the team preview so the entire XI and substitutes fit together. */
+.ownership-team-pitch-modal{overflow-y:auto;align-items:center}
+.ownership-team-pitch-panel{max-height:none;overflow:visible;margin:auto 0}
+.ownership-team-pitch-scroll{overflow:visible;padding:0 12px 4px}
+.ownership-team-pitch-content .club-squad-pitch{padding:7px 7px 5px}
+.ownership-team-pitch-content .club-squad-line{margin:7px 0 9px;gap:3px}
+.ownership-team-pitch-content .club-squad-player{gap:2px}
+.ownership-team-pitch-content .club-squad-shirt{width:30px;height:30px;font-size:17px}
+.ownership-team-pitch-content .club-squad-player-name{font-size:10px;line-height:1.05;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.ownership-team-pitch-content .club-squad-player-meta{font-size:9px;line-height:1.1}
+.ownership-team-pitch-content .club-squad-bench{margin-top:4px;padding:6px 6px 3px}
+.ownership-team-pitch-content .club-squad-bench>strong{font-size:12px}
+.ownership-team-pitch-content .club-squad-bench .club-squad-line{margin:5px 0 2px}
+.ownership-team-pitch-panel .ownership-modal-header{padding:9px 13px}
+.ownership-team-pitch-panel .ownership-modal-header h3{font-size:18px}
+.ownership-team-pitch-panel .ownership-team-preview-logo{width:34px;height:34px}
+.ownership-team-pitch-footer{padding:7px 12px}
+.ownership-team-pitch-footer .ownership-full-profile-btn{padding:8px 16px}
+@media(max-width:600px){
+ .ownership-team-pitch-panel{max-height:none}
+ .ownership-team-pitch-scroll{overflow:visible;padding:0 5px 3px}
+ .ownership-team-pitch-content .club-squad-pitch{padding:5px 3px 3px}
+ .ownership-team-pitch-content .club-squad-line{margin:5px 0 7px}
+ .ownership-team-pitch-content .club-squad-shirt{width:27px;height:27px;font-size:16px}
+ .ownership-team-pitch-content .club-squad-player-name{font-size:9px}
+}
+@media(max-height:730px){
+ .ownership-team-pitch-content .club-squad-line{margin:3px 0 5px}
+ .ownership-team-pitch-content .club-squad-shirt{height:25px;width:25px;font-size:15px}
+ .ownership-team-pitch-content .club-squad-bench{padding:4px}
+ .ownership-team-pitch-panel .ownership-modal-header{padding:6px 10px}
+}
+
 </style>
 </head>
 <body>
