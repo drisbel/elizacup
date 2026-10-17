@@ -2295,6 +2295,19 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 /* Smaller C/VC pitch badges prevent clipping at the outside edges. */
 .live-pitch-grid .club-squad-cap{width:15px;height:15px;font-size:8px;top:auto;bottom:0;right:0;border-width:1px;box-shadow:0 1px 3px #0005}
 
+
+.ownership-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}
+.ownership-controls label{font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}
+.ownership-controls select{padding:8px;border:1px solid var(--line-light);border-radius:5px;background:white}
+.ownership-categories{display:flex;gap:5px;flex-wrap:wrap}
+.ownership-table-wrap{overflow-x:auto;margin-top:12px}
+.ownership-table{width:100%;border-collapse:collapse;font-size:13px}
+.ownership-table th{background:#111;color:white;text-align:left;padding:11px 9px;white-space:nowrap}
+.ownership-table td{padding:9px;border-bottom:1px solid var(--line-light)}
+.ownership-table th:nth-last-child(-n+2),.ownership-table td:nth-last-child(-n+2){text-align:right}
+.ownership-bar{display:inline-block;width:65px;height:6px;background:#e6e6e6;border-radius:4px;vertical-align:middle;margin-right:9px;overflow:hidden}
+.ownership-bar span{display:block;height:100%;background:#257b60}
+
 </style>
 </head>
 <body>
@@ -6954,7 +6967,7 @@ function renderStatsPage(){
   toggleEl.innerHTML = `
     <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
-    <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>
+    <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>\n    <button class="round-tab${statsActiveTab==='ownership'?' active':''}" data-tab="ownership">Player Ownership</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -6962,6 +6975,13 @@ function renderStatsPage(){
       renderStatsPage();
     });
   });
+
+  if(statsActiveTab === "ownership"){
+    document.getElementById('statsHeading').textContent = "Player Ownership";
+    document.getElementById('statsSubheading').textContent = "Current squad ownership and captaincy from COWZA EXPORT";
+    loadPlayerOwnershipTab();
+    return;
+  }
 
   if(statsActiveTab === "matchlog"){
     document.getElementById('statsHeading').textContent = "Match Log";
@@ -6980,6 +7000,68 @@ function renderStatsPage(){
   document.getElementById('statsHeading').textContent = "Streaks";
   document.getElementById('statsSubheading').textContent = "Active and all-time 3+ game runs, head-to-head";
   loadWinStreaksTab();
+}
+
+
+// Current snapshot statistics: squad ownership, captains, low ownership, A-League clubs.
+let ownershipTeams=[];
+let ownershipDivision='all';
+let ownershipCategory='owned';
+const OWNERSHIP_DIVISIONS=[['all','All Divisions'],['d1','Division 1'],['d2a','Division 2A'],['d2b','Division 2B'],['d3a','Division 3A'],['d3b','Division 3B'],['d3c','Division 3C']];
+function ownershipDivisionId(value){
+ const x=String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ return ({division1:'d1',div1:'d1',d1:'d1',division2a:'d2a',div2a:'d2a',d2a:'d2a',division2b:'d2b',div2b:'d2b',d2b:'d2b',division3a:'d3a',div3a:'d3a',d3a:'d3a',division3b:'d3b',div3b:'d3b',d3b:'d3b',division3c:'d3c',div3c:'d3c',d3c:'d3c'})[x]||'';
+}
+async function loadPlayerOwnershipTab(){
+ const el=document.getElementById('statsContainer');
+ el.className='';el.innerHTML='<div class="state-msg">Loading current squads…</div>';
+ try{
+  const [res,roddyRes]=await Promise.all([
+   cachedFetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(LIVE_EXPORT_SHEET)}&cachebust=${Date.now()}`),
+   cachedFetch(csvUrlFor(DIVISIONS.find(d=>d.id==='roddy')))
+  ]);
+  if(!res.ok)throw Error('COWZA EXPORT HTTP '+res.status);
+  const teams=parseLiveExport(Papa.parse(await res.text(),{skipEmptyLines:false}).data);
+  if(roddyRes.ok)parseRoddy(Papa.parse(await roddyRes.text(),{skipEmptyLines:false}).data);
+  const divisions=new Map(roddyEntries.map(e=>[liveKey(e.team),ownershipDivisionId(e.division)]));
+  ownershipTeams=teams.map(t=>({...t,division:divisions.get(liveKey(t.name))||divisions.get(liveKey(t.fantasy))||''}));
+  renderPlayerOwnershipTab();
+ }catch(err){el.className='state-msg error';el.textContent='Unable to load ownership statistics: '+err.message;}
+}
+function renderPlayerOwnershipTab(){
+ const el=document.getElementById('statsContainer');if(!el)return;
+ const teams=ownershipTeams.filter(t=>ownershipDivision==='all'||t.division===ownershipDivision);
+ const totals=new Map(),clubs=new Map();
+ for(const team of teams){
+  const seen=new Set();
+  for(const p of team.players){
+   const key=liveKey(p.name);if(!key||seen.has(key))continue;seen.add(key);
+   const item=totals.get(key)||{name:p.name,club:p.club,owned:0,captained:0};
+   item.owned++;
+   if(liveCaptainKey(p)==='C')item.captained++;
+   totals.set(key,item);
+   const clubKey=p.club||'Unknown';
+   clubs.set(clubKey,(clubs.get(clubKey)||0)+1);
+  }
+ }
+ const denom=teams.length||1;
+ const players=[...totals.values()];
+ const category=ownershipCategory;
+ const ranked=category==='captained'?players.filter(p=>p.captained).sort((a,b)=>b.captained-a.captained||b.owned-a.owned):
+ category==='differentials'?players.sort((a,b)=>a.owned-b.owned||a.name.localeCompare(b.name)):
+ players.sort((a,b)=>b.owned-a.owned||a.name.localeCompare(b.name));
+ const clubRows=[...clubs].sort((a,b)=>b[1]-a[1]);
+ const unknown=ownershipTeams.filter(t=>!t.division).length;
+ el.className='ownership-stats';
+ el.innerHTML=`<div class="ownership-controls">
+ <label>Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
+ <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['differentials','Biggest Differentials'],['clubs','A-League Clubs']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div></div>
+ <p class="sub">Current COWZA EXPORT snapshot · ${teams.length} squads${ownershipDivision==='all'&&unknown?` · ${unknown} without a matched division`:''}. Ownership includes all 15 squad players.</p>
+ ${!teams.length?'<div class="state-msg">No squads matched this division. Check division labels in Roddy.</div>':
+ category==='clubs'?`<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>A-League Club</th><th>Selections</th><th>Share of squad slots</th></tr></thead><tbody>${clubRows.map(([club,n],i)=>`<tr><td>${i+1}</td><td>${liveEscape(club)}</td><td>${n}</td><td>${(100*n/(teams.length*15)).toFixed(1)}%</td></tr>`).join('')}</tbody></table></div>`:
+ `<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>Player</th><th>Club</th><th>${category==='captained'?'Captained':'Owned'}</th><th>${category==='captained'?'Captaincy %':'Ownership %'}</th></tr></thead><tbody>${ranked.map((p,i)=>{const n=category==='captained'?p.captained:p.owned;const pct=100*n/denom;return `<tr><td>${i+1}</td><td>${liveEscape(p.name)}</td><td>${liveEscape(p.club)}</td><td>${n}</td><td><div class="ownership-bar"><span style="width:${pct}%"></span></div>${pct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table></div>`}`;
+ el.querySelector('#ownershipDivision')?.addEventListener('change',e=>{ownershipDivision=e.target.value;renderPlayerOwnershipTab()});
+ el.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{ownershipCategory=b.dataset.category;renderPlayerOwnershipTab()}));
 }
 
 async function loadWinStreaksTab(){
