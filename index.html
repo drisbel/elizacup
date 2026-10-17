@@ -2467,6 +2467,18 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
  .ownership-team-pitch-panel .ownership-modal-header{padding:6px 10px}
 }
 
+
+/* Bidirectional links between competition pages and the live centre. */
+.live-comp-heading .live-comp-title-link{color:#fff;text-decoration:none;min-width:0;line-height:1.1}
+.live-comp-heading .live-comp-title-link:hover{text-decoration:underline;text-underline-offset:3px}
+.live-comp-heading .live-comp-table-link{margin-left:auto;flex-shrink:0;border:1px solid #777;border-radius:5px;padding:6px 8px;color:#fff;text-decoration:none;font:700 10px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;white-space:nowrap}
+.live-comp-heading .live-comp-table-link:hover{background:#fff;color:#111}
+.live-comp-heading small{margin-left:0}
+.fixture-live-link{background:#141414;color:#fff;border:1px solid #141414;border-radius:6px;padding:8px 12px;font:700 12px 'Barlow',sans-serif;cursor:pointer;white-space:nowrap}
+.fixture-live-link:hover{background:#28427c;border-color:#28427c}
+.competition-live-link-row{display:flex;justify-content:flex-end;margin:0 0 12px}
+@media(max-width:530px){.live-comp-heading{gap:6px;font-size:14px}.live-comp-heading img{width:25px;height:25px}.live-comp-heading small{font-size:9px}.live-comp-heading .live-comp-table-link{font-size:9px;padding:6px 5px}.fixture-live-link{font-size:10px;padding:7px 8px}}
+
 </style>
 </head>
 <body>
@@ -2615,6 +2627,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
     <div class="section-head">
       <h2>Fixtures</h2>
       <span class="sub">All rounds</span>
+      <button type="button" class="fixture-live-link" onclick="goToLiveCompetition(currentDivision.id)">● Live Match Centre ↗</button>
       <div class="social-export-actions"><button type="button" class="social-export-download" onclick="exportDivisionImage('fixtures','social')" title="Download round PNG" aria-label="Download round PNG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg></button></div>
     </div>
     <div id="roundTabs" class="round-tabs"></div>
@@ -2632,6 +2645,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
     <div class="section-head">
       <span class="sub" id="facupUpdated"></span>
     </div>
+    <div class="competition-live-link-row"><button type="button" class="fixture-live-link" onclick="goToLiveCompetition('facup')">● View Live FA Cup Matchups ↗</button></div>
     <div id="facupViewToggle" class="round-tabs" style="margin-bottom:8px;"></div>
     <div id="facupRoundTabs" class="round-tabs"></div>
     <div id="facupContainer" class="state-msg">Loading bracket…</div>
@@ -2641,6 +2655,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
     <div class="section-head">
       <span class="sub" id="eclUpdated"></span>
     </div>
+    <div class="competition-live-link-row"><button type="button" class="fixture-live-link" onclick="goToLiveCompetition('ecl')">● View Live ECL Matchups ↗</button></div>
     <div id="eclContainer" class="state-msg">Loading group tables…</div>
   </section>
 
@@ -3201,6 +3216,19 @@ document.getElementById('searchInput').addEventListener('keydown', (e)=>{
 });
 document.addEventListener('click', closeSearchPanel);
 
+function goToLiveCompetition(id){
+ const live=DIVISIONS.find(d=>d.id==='live');
+ if(!live)return;
+ window.livePendingCompetitionJump=id;
+ goToDivision(live);
+}
+function liveApplyPendingCompetitionJump(){
+ const id=window.livePendingCompetitionJump;
+ if(!id)return;
+ window.livePendingCompetitionJump=null;
+ const target=document.getElementById('live-comp-'+id);
+ if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));
+}
 function goToDivision(div){
   currentDivision = div;
   location.hash = div.id;
@@ -3933,7 +3961,8 @@ function renderLiveCentre(){
   return `<section class="live-comp-section" id="live-comp-${c.id}">
    <h3 class="live-comp-heading">
     ${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="this.style.display='none'">`:''}
-    <span>${liveEscape(c.label)}</span>${round?`<small>${liveEscape(round)}</small>`:''}
+    <a class="live-comp-title-link" href="#${c.id}" onclick="goToDivision(DIVISIONS.find(d=>d.id==='${c.id}'));return false;" title="Open ${liveEscape(c.label)} page">${liveEscape(c.label)}</a>${round?`<small>${liveEscape(round)}</small>`:''}
+    <a class="live-comp-table-link" href="#${c.id}" onclick="goToDivision(DIVISIONS.find(d=>d.id==='${c.id}'));return false;" title="View ${liveEscape(c.label)} league page">${c.id==='facup'||c.id==='ecl'?'View Competition':'View League Table'} ↗</a>
    </h3><div class="live-match-grid">${fixtures.map(liveMatchHtml).join('')}</div></section>`;
  }).join('');
  el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
@@ -3978,7 +4007,7 @@ async function loadLiveCentre(){
  };
  try{
   const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchFixtureBlocks()]);
-  liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);renderLiveCentre();
+  liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);renderLiveCentre();liveApplyPendingCompetitionJump();
   setStatus('Live scores loaded — '+new Date().toLocaleString());
  }catch(err){console.error('Live match centre:',err);el.className='state-msg error';el.textContent='Unable to load Live Match Centre: '+err.message;setStatus('Live scores unavailable',false);}
 }
