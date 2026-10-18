@@ -2787,6 +2787,25 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .export-broadcast-fixtures .division-h2h-grid{grid-template-columns:minmax(0,1fr)}
 .export-image-stage .division-h2h-match .fixture-team.fx-win{color:#fff}
 @media(max-width:760px){.division-h2h-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Unified competition fixtures: expandable H2H, two across, Match Centre treatment */
+.competition-h2h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.competition-h2h-match{min-width:0;border:1px solid #31435a;border-radius:8px;overflow:hidden;background:#fff}
+.competition-h2h-match>summary{position:relative;list-style:none;cursor:pointer;background:#152b43}
+.competition-h2h-match>summary::-webkit-details-marker{display:none}
+.competition-h2h-match>summary::after,.division-h2h-match>summary::after{content:'+';position:absolute;right:5px;top:4px;display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#ffffff2a;color:#fff;font:bold 16px/1 Arial;pointer-events:none}
+.competition-h2h-match[open]>summary::after,.division-h2h-match[open]>summary::after{content:'−'}
+.division-h2h-match>summary{position:relative}
+.competition-h2h-match>summary .facup-card,.competition-h2h-match>summary .fixture-card{margin:0;background:#152b43;border:0;border-radius:0;min-height:68px;padding:10px 16px;color:white}
+.competition-h2h-match>summary .facup-team,.competition-h2h-match>summary .fixture-team{color:#fff!important}
+.competition-h2h-match>summary .facup-team a,.competition-h2h-match>summary .fixture-team a{color:inherit}
+.competition-h2h-match>summary .fixture-score{color:#fff!important;background:transparent;border:0;font-size:22px}
+.competition-h2h-match>summary .fixture-score span{color:#fff!important}
+.competition-h2h-match .division-h2h-detail{border-top:1px solid #d4dde5}
+.competition-h2h-match .division-h2h-unavailable{background:#fff}
+.export-image-stage .competition-h2h-match>summary::after,.export-image-stage .division-h2h-match>summary::after{display:none!important}
+.export-image-stage .competition-h2h-match .division-h2h-detail{display:none!important}
+@media(max-width:760px){.competition-h2h-grid{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -5210,6 +5229,32 @@ function divisionHistoricalH2H(f,round){
   if(!a||!b)return '<div class="division-h2h-unavailable">Historical squad data is not yet available for both teams in this gameweek.</div>';
   return `<div class="division-h2h-detail"><div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI · GW ${gw}</div><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a,true)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench')}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench')}</div></div><div class="live-match-detail live-pitch-grid" hidden><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(a)}</div></div><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(b)}</div></div></div><div class="live-view-controls"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></div>`;
 }
+function competitionH2HCard(f,round,card){
+  const fixture={home:typeof f.home==='object'?f.home.name:f.home,away:typeof f.away==='object'?f.away.name:f.away};
+  const valid=fixture.home&&fixture.away&&fixture.home!=='TBD'&&fixture.away!=='TBD'&&!f.isBye;
+  return `<details class="competition-h2h-match"><summary>${card}</summary>${valid?divisionHistoricalH2H(fixture,round):'<div class="division-h2h-unavailable">Lineups unavailable for this fixture.</div>'}</details>`;
+}
+function refreshCompetitionHistoricalH2H(){
+ document.querySelectorAll('.competition-h2h-match').forEach(el=>{
+  const gw=el.dataset.gw,home=el.dataset.home,away=el.dataset.away;
+  if(!gw||!home||!away)return;
+  const old=el.querySelector('.division-h2h-detail,.division-h2h-unavailable');
+  if(old)old.outerHTML=divisionHistoricalH2H({home,away},gw);
+ });
+}
+function hydrateCompetitionH2H(){
+ document.querySelectorAll('.competition-h2h-match').forEach(el=>{
+  if(el.dataset.gw)return;
+  const round=el.closest('[data-h2h-round]')?.dataset.h2hRound||'';
+  const gw=Number(String(round).match(/(?:GW|MD|ROUND|R)\s*(\d+)/i)?.[1]||String(round).match(/\d+/)?.[0]||0);
+  if(!gw)return;
+  const names=el.dataset.names;
+  if(!names)return;
+  const [home,away]=JSON.parse(names);
+  el.dataset.gw=gw;el.dataset.home=home;el.dataset.away=away;
+ });
+ ensureOwnershipHistory().then(refreshCompetitionHistoricalH2H);
+}
 function divisionH2HCard(f,round,card){
   return `<details class="division-h2h-match"><summary>${card}</summary>${divisionHistoricalH2H(f,round)}</details>`;
 }
@@ -5765,7 +5810,7 @@ function renderFACupRound(idx){
   const realFixtures = round.fixtures.filter(f => !f.isBye);
   const byeFixtures = round.fixtures.filter(f => f.isBye);
 
-  let html = `<div class="facup-grid">${realFixtures.map(facupFixtureCardHtml).join("")}</div>`;
+  let html = `<div class="facup-grid competition-h2h-grid" data-h2h-round="${round.name}">${realFixtures.map(f=>`<details class="competition-h2h-match" data-names='${JSON.stringify([f.home.name,f.away.name]).replace(/'/g,"&#39;")}'><summary>${facupFixtureCardHtml(f)}</summary><div class="division-h2h-unavailable">Loading historical lineups…</div></details>`).join("")}</div>`;
 
   if(byeFixtures.length > 0){
     html += `<div class="facup-byes">
@@ -5780,6 +5825,7 @@ function renderFACupRound(idx){
   }
 
   container.innerHTML = html;
+  hydrateCompetitionH2H();
 }
 
 // ---------- Eliza Champions League (group stage tables) ----------
@@ -6109,7 +6155,7 @@ function eclFixturesHtml(){
     </div>`;
   matchdays.forEach(md=>{
     const mdFixtures = eclFixtures.filter(f=>f.matchday===md);
-    html += `<div style="margin-top:16px;">
+    html += `<div style="margin-top:16px;" data-h2h-round="${md}">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--ink);margin-bottom:8px;letter-spacing:0.05em;">${md}</div>`;
     ["A","B","C"].forEach(groupLetter=>{
       const groupFixtures = mdFixtures.filter(f => (f.group||"").toUpperCase() === groupLetter);
@@ -6123,11 +6169,11 @@ function eclFixturesHtml(){
         const awayWon = played && f.awayScore > f.homeScore;
         const isDraw = played && f.homeScore === f.awayScore;
         const resultColor = (won) => !played ? "#F5F5F0" : won ? "#4ADE80" : isDraw ? "#FBBF24" : "#F87171";
-        html += `<div style="background:#1c1c1c;border:1px solid #333;border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
+        html += `<details class="competition-h2h-match" data-names='${JSON.stringify([f.home,f.away]).replace(/'/g,"&#39;")}'><summary><div class="fixture-card" style="background:#1c1c1c;border:1px solid #333;border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
           <span style="display:block;min-width:0;text-align:right;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(homeWon)};font-weight:${homeWon ? "700" : "400"};">${teamLink(f.home)}</span>
           <span style="font-weight:700;color:#ffdd00;white-space:nowrap;">${scoreText}</span>
           <span style="display:block;min-width:0;text-align:left;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(awayWon)};font-weight:${awayWon ? "700" : "400"};">${teamLink(f.away)}</span>
-        </div>`;
+        </div></summary><div class="division-h2h-unavailable">Loading historical lineups…</div></details>`;
       });
       html += `</div>`;
     });
@@ -6226,7 +6272,7 @@ function eclKnockoutHtml(){
     html += `<div style="margin-top:16px;">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--ink);margin-bottom:8px;letter-spacing:0.05em;">${round.name}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">`;
-    round.fixtures.forEach(f=>{ html += eclFixtureCardHtml(f); });
+    round.fixtures.forEach(f=>{ html += `<details class="competition-h2h-match" data-names='${JSON.stringify([f.home,f.away]).replace(/'/g,"&#39;")}'><summary>${eclFixtureCardHtml(f)}</summary><div class="division-h2h-unavailable">Loading historical lineups…</div></details>`; });
     html += `</div></div>`;
   });
   return html;
@@ -6248,6 +6294,7 @@ function renderECL(){
   container.className = "";
   container.innerHTML = eclGroups.map(eclGroupTableHtml).join("") + eclQualifiersTableHtml() + eclFixturesHtml() + eclKnockoutHtml();
   document.getElementById('eclUpdated').textContent = eclGroups.length + " groups";
+  hydrateCompetitionH2H();
 }
 
 // ---------- Hall of Fame / Honour Roll ----------
