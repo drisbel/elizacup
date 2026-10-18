@@ -2649,26 +2649,32 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 }
 
 /* Roddy export-only two-column leaderboard */
-.roddy-export-stage .re-header{background:#152b50;color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:15px}
+.roddy-export-stage .re-header{background:#152b50;color:#fff;border-radius:12px;padding:15px 20px;margin-bottom:15px;display:flex;align-items:center;justify-content:center;gap:20px;text-align:left}
+.roddy-export-stage .re-header-logo{width:72px;height:72px;max-width:72px;max-height:72px;object-fit:contain;flex:0 0 72px;display:block}
+.roddy-export-stage .re-header-text{min-width:0}
 .roddy-export-stage .re-kicker{font-size:12px;letter-spacing:2px;font-weight:700;color:#b6c9ed}
 .roddy-export-stage .re-title{font-size:30px;line-height:1.1;font-weight:900;margin:4px 0}
 .roddy-export-stage .re-subtitle{font-size:14px;color:#d8e4f7}
 .roddy-export-stage .re-section-title{font-weight:900;font-size:16px;letter-spacing:1.3px;margin:12px 0 7px;color:#173260}
 .roddy-export-stage .re-remaining-title{margin-top:18px}
 .roddy-export-stage .re-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
-.roddy-export-stage .roddy-export-table{border-collapse:collapse;table-layout:fixed;width:100%;background:white;font-size:12px;border:1px solid #dbe3f0}
+.roddy-export-stage .roddy-export-table{border-collapse:collapse;table-layout:fixed;width:100%;background:white;font-size:14px;border:1px solid #dbe3f0}
 .roddy-export-stage .roddy-export-table th{background:#e5ebf5;color:#243958;font-size:10px;letter-spacing:.3px;text-align:center;padding:7px 3px;white-space:nowrap}
 .roddy-export-stage .roddy-export-table th:nth-child(2){text-align:left;padding-left:9px}
 .roddy-export-stage .roddy-export-table td{padding:4px 3px;border-bottom:1px solid #e5eaf2;text-align:center;vertical-align:middle;height:35px;box-sizing:border-box;white-space:nowrap}
 .roddy-export-stage .roddy-export-table tbody tr:nth-child(even){background:#f6f8fc}
-.roddy-export-stage .re-team{display:flex;align-items:center;gap:7px;min-width:0;text-align:left;padding-left:5px;font-weight:750;font-size:11.5px}
-.roddy-export-stage .re-team span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roddy-export-stage .re-team{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;text-align:left;padding-left:5px;font-weight:750;font-size:13px;overflow:hidden}
+.roddy-export-stage .re-team span{display:block;flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roddy-export-stage .re-div{color:white;border-radius:4px;padding:4px 5px;font-size:10px;font-weight:800;white-space:nowrap}
-.roddy-export-stage .re-pos,.roddy-export-stage .re-rank{font-weight:800}
-.roddy-export-stage .re-score{font-weight:850;color:#174b88}
+.roddy-export-stage .re-pos,.roddy-export-stage .re-rank{font-weight:800;font-size:14px}
+.roddy-export-stage .re-score{font-weight:850;color:#174b88;font-size:14px}
+.roddy-export-stage .roddy-export-featured{width:850px;max-width:100%;margin-left:auto;margin-right:auto}
 .roddy-export-stage .roddy-export-featured td{height:40px}
-.roddy-export-stage .roddy-export-featured .re-team{font-size:13px}
-.roddy-export-stage .roddy-export-featured .re-team img{width:32px!important;height:32px!important}
+.roddy-export-stage .roddy-export-featured .re-team{font-size:15px}
+.roddy-export-stage .roddy-export-featured .re-team img{width:32px!important;height:32px!important;object-fit:contain!important;max-width:32px!important;max-height:32px!important}
+.roddy-export-stage .roddy-export-table td:nth-child(5){font-size:14px;font-weight:750}
+.roddy-export-stage .re-team img{object-fit:contain!important;max-width:29px;max-height:29px;min-width:0;min-height:0}
+.roddy-export-stage .roddy-export-featured .re-team{justify-content:flex-start}
 </style>
 </head>
 <body>
@@ -2826,7 +2832,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 
   <section id="roddySection" style="display:none;">
     <div class="section-head">
-      <span class="sub" id="roddyUpdated"></span><button type="button" class="social-export-download" onclick="exportRoddyImage()" title="Download Roddy table PNG" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;width:auto;height:auto">↓ Export PNG</button>
+      <span class="sub" id="roddyUpdated"></span><div class="social-export-actions" style="margin-left:auto"><button type="button" class="social-export-download" onclick="exportRoddyImage()" title="Download Roddy table PNG" aria-label="Download Roddy table PNG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg></button></div>
     </div>
     <div id="roddyContainer" class="state-msg">Loading leaderboard…</div>
   </section>
@@ -5335,8 +5341,8 @@ function parseRoddy(rows){
   roddyDebug = {};
 
   // Confirmed exact columns: POS=F(5), TEAM=H(7), DIVISION=Q(16), ROUND=T(19), CHIP=V(21),
-  // TOTAL=W(22), active chip-play indicators=AA:AB(26-27), RANK=AC(28), OVERALL=AE(30).
-  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27], RANK:28, OVERALL:30 };
+  // TOTAL=W(22), active chip-play indicators=AA:AB(26-27), OVERALL=AC(28).
+  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27], OVERALL:28 };
 
   // Find the header row by locating "POS" at column F, restricted to the top of the
   // sheet (first 30 rows) so we don't accidentally match the broken #REF! table further down.
@@ -5373,14 +5379,13 @@ function parseRoddy(rows){
     const chip = cell(rows[r]||[], ROD_COL.CHIP);
     const total = parseInt(cell(rows[r]||[], ROD_COL.TOTAL), 10) || 0;
     const chips = ROD_COL.CHIPS.map(c => cell(rows[r]||[], c));
-    const rank = parseInt(cell(rows[r]||[], ROD_COL.RANK), 10);
     const overall = parseInt(cell(rows[r]||[], ROD_COL.OVERALL), 10) || 0;
 
     if(!team) continue;
-    roddyEntries.push({ pos: Number.isFinite(rank) && rank > 0 ? rank : parseInt(posVal,10), team, division, round, chip, total, chips, overall });
+    roddyEntries.push({ pos: parseInt(posVal,10), team, division, round, chip, total, chips, overall });
   }
 
-  // Use the sheet’s official rank in column AC, including any ties.
+  // POS comes from column F; OVERALL comes from column AC.
   roddyEntries.sort((a,b) => a.pos - b.pos);
 }
 
@@ -5491,10 +5496,10 @@ async function exportRoddyImage(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=v=>v===null||v===undefined||String(v).trim()===''?'—':esc(v);
   const logo=e=>`<img src="logo/${encodeURIComponent(teamLogoSlug(e.team))}.png" crossorigin="anonymous" style="width:29px;height:29px;object-fit:contain;flex:none" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}'}">`;
-  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:40px"><col><col style="width:58px"><col style="width:65px"><col style="width:52px"><col style="width:64px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span>${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
+  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span>${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
   const stage=document.createElement('div');stage.className='roddy-export-stage';
   stage.style.cssText='position:fixed;left:-16000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;background:#f3f6fc;padding:22px 25px 27px;color:#16243e;font-family:Barlow,Arial,sans-serif';
-  stage.innerHTML=`<div class="re-header"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div><div class="re-section-title">TOP 10</div>${table(top,true)}<div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
+  stage.innerHTML=`<div class="re-header"><img class="re-header-logo" src="logo/roddy-logo.png" crossorigin="anonymous" alt="Roddy Rodriguez Cup logo"><div class="re-header-text"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div></div><div class="re-section-title">TOP 10</div>${table(top,true)}<div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
   document.body.appendChild(stage);
   try{
     await Promise.all(Array.from(stage.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3000)})));
