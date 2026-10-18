@@ -2895,6 +2895,57 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   color:var(--eliza-winner-text,#ffe08a)!important;font-weight:900!important;
 }
 
+
+/* Fixture-page consistency: winner score and name share one contrast-aware colour. */
+#fixtureContainer .division-h2h-match .fixture-score .fx-win,
+#fixtureContainer .fixture-card .fixture-score .fx-win,
+#sideLeagueFixtureContainer .fixture-card .fixture-score .fx-win,
+#sideLeaguesContainer .fixture-card .fixture-score .fx-win,
+#sideLeagueFixtureContainer .fixture-score .fx-win,
+#sideLeaguesContainer .fixture-score .fx-win{
+ color:var(--eliza-winner-text,#ffe08a)!important;font-weight:900!important;
+}
+.eliza-exact-fixture-export .live-match-score .eliza-export-winning-score{
+ color:var(--eliza-winner-text,#ffe08a)!important;font-weight:900!important;
+}
+/* Side-league fixture cards use the dark Match Centre scoreboard treatment.
+   Limited to fixtures; standings, tables and other white cards remain untouched. */
+#sideLeagueFixtureContainer .fixture-card,
+#sideLeaguesContainer .fixture-grid .fixture-card{
+ background:var(--side-fixture-theme,var(--pitch,#28427c))!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important;
+ border-radius:8px!important;min-height:68px!important;box-shadow:none!important;
+}
+#sideLeagueFixtureContainer .fixture-card:hover,
+#sideLeaguesContainer .fixture-grid .fixture-card:hover{
+ filter:brightness(1.12);border-color:rgba(255,255,255,.45)!important;
+}
+#sideLeagueFixtureContainer .fixture-card .fixture-team,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-team,
+#sideLeagueFixtureContainer .fixture-card .fixture-team-name a,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-team-name a{
+ color:#fff!important;
+}
+#sideLeagueFixtureContainer .fixture-card .fixture-score,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-score{
+ background:transparent!important;color:#fff!important;border:0!important;
+ font-family:'Barlow Condensed',sans-serif!important;font-size:23px!important;
+ padding:0 4px!important;
+}
+#sideLeagueFixtureContainer .fixture-card .fixture-team.fx-win .fixture-team-name,
+#sideLeagueFixtureContainer .fixture-card .fixture-team.fx-win .fixture-team-name a,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-team.fx-win .fixture-team-name,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-team.fx-win .fixture-team-name a{
+ color:var(--eliza-winner-text,#ffe08a)!important;
+}
+#sideLeagueFixtureContainer .fixture-card .fixture-score .fx-win,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-score .fx-win{
+ color:var(--eliza-winner-text,#ffe08a)!important;
+}
+#sideLeagueFixtureContainer .fixture-card .fixture-score .fx-lose,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-score .fx-lose,
+#sideLeagueFixtureContainer .fixture-card .fixture-score .fx-draw,
+#sideLeaguesContainer .fixture-grid .fixture-card .fixture-score .fx-draw{color:#fff!important;}
+
 </style>
 </head>
 <body>
@@ -14883,7 +14934,7 @@ async function elizaExportCompetitionFixtures(kind){
    if(channels){const v=channels[1],r=parseInt(v.slice(0,2),16),g=parseInt(v.slice(2,4),16),b=parseInt(v.slice(4,6),16);const lum=(.2126*r+.7152*g+.0722*b)/255;stage.style.setProperty('--eliza-winner-text',lum>.54||(r>135&&g>105&&b<135)?'#132d5a':'#ffe08a');}
    const markup=matches.map(m=>`<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="background:${escape(theme)};color:#fff">
       <div class="live-match-name live-match-left ${m.wa?'eliza-export-winning-side':''}"><span>${escape(m.a.name)}</span><img src="${escape(m.a.logo)}" alt=""></div>
-      <strong class="live-match-score"><span>${escape(m.sa)}</span><span class="live-score-dash">–</span><span>${escape(m.sb)}</span></strong>
+      <strong class="live-match-score"><span class="${m.wa?'eliza-export-winning-score':''}">${escape(m.sa)}</span><span class="live-score-dash">–</span><span class="${m.wb?'eliza-export-winning-score':''}">${escape(m.sb)}</span></strong>
       <div class="live-match-name live-match-right ${m.wb?'eliza-export-winning-side':''}"><img src="${escape(m.b.logo)}" alt=""><span>${escape(m.b.name)}</span></div>
       </div></summary></details>`).join('');
    stage.innerHTML=`<div class="live-all-sections"><section class="live-comp-section">
@@ -14992,6 +15043,34 @@ async function elizaExportCompetitionFixtures(kind){
   }
 })();
 
+
+/* Keep on-page side-league fixture colours in sync with the selected competition. */
+(function(){
+ function syncSideFixtureTheme(){
+   const root=document.getElementById('sideLeaguesContainer');
+   if(!root)return;
+   const key=currentDivision?.sideLeagueKey||sideLeagueData?.key||'';
+   const sub=key==='fpl'?sideLeagueActiveDiv:null;
+   const theme=typeof sideLeagueThemeColor==='function'?sideLeagueThemeColor(key,sub):null;
+   if(theme)root.style.setProperty('--side-fixture-theme',theme);
+   else root.style.removeProperty('--side-fixture-theme');
+ }
+ function install(){
+   const root=document.getElementById('sideLeaguesContainer');
+   if(!root)return;
+   let queued=false;
+   const observer=new MutationObserver(()=>{
+     if(queued)return;queued=true;
+     queueMicrotask(()=>{queued=false;syncSideFixtureTheme();});
+   });
+   observer.observe(root,{childList:true,subtree:true});
+   window.addEventListener('hashchange',syncSideFixtureTheme);
+   root.addEventListener('click',()=>queueMicrotask(syncSideFixtureTheme));
+   syncSideFixtureTheme();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);
+ else install();
+})();
 </script>
 </body>
 </html>
