@@ -2574,6 +2574,33 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   transform:scale(1.28)!important;transform-origin:center center!important;
 }
 
+
+/* A-League LMS: shared compact proportional logo treatment on page and export. */
+.aleague-lms-picks .lms-pick-row,
+.export-aleague-lms .aleague-lms-picks .lms-pick-row{align-items:center!important;min-height:53px!important}
+.aleague-lms-picks .lms-participant,
+.export-aleague-lms .aleague-lms-picks .lms-participant{
+ display:flex!important;align-items:center!important;align-self:stretch!important;
+ gap:8px!important;flex-wrap:wrap;line-height:1.25!important;
+}
+.aleague-lms-picks .lms-participant .table-team-logo,
+.export-aleague-lms .aleague-lms-picks .lms-participant .table-team-logo{
+ width:33px!important;height:33px!important;max-width:33px!important;flex:0 0 33px!important;
+ object-fit:contain!important;object-position:center!important;transform:none!important;
+}
+.aleague-lms-picks .aleague-lms-club-logo,
+.export-aleague-lms .aleague-lms-picks .aleague-lms-club-logo{
+ display:block!important;width:30px!important;height:30px!important;max-width:30px!important;
+ flex:0 0 30px!important;object-fit:contain!important;object-position:center!important;
+ transform:scale(1.07)!important;transform-origin:center!important;
+}
+.aleague-lms-picks .lms-pick-col,
+.export-aleague-lms .aleague-lms-picks .lms-pick-col{align-items:center!important;justify-content:center!important}
+.aleague-lms-picks .lms-pick,
+.export-aleague-lms .aleague-lms-picks .lms-pick{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-height:34px!important}
+.aleague-lms-row-hearts{display:inline-block;white-space:nowrap;font-size:13px;letter-spacing:-1px;vertical-align:middle}
+.export-aleague-lms .aleague-lms-row-hearts{font-size:14px}
+
 </style>
 </head>
 <body>
@@ -12305,6 +12332,7 @@ function renderAleagueLms(data, containerId){
   ).join("");
 
   const round = data.rounds[aleagueLmsActiveRoundIdx];
+  const lmsLivesByName = new Map(data.playerSummary.map(p => [String(p.name).trim().toLowerCase(), p]));
   const rowsHtml = round.entries.map(e => {
     const isEliminated = /^ELIMINATED/i.test(e.pick);
     const isDnp = /^DNP$/i.test(e.pick);
@@ -12320,8 +12348,10 @@ function renderAleagueLms(data, containerId){
     const logoName = resolveSideLeagueTeamName(e.name);
     const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
     const resultLabel = isDnp ? "DNP" : (e.result || "—");
+    const summary = lmsLivesByName.get(String(e.name).trim().toLowerCase());
+    const hearts = summary ? `<span class="aleague-lms-row-hearts" aria-label="${Math.max(0,Math.min(3,Number(summary.lives)||0))} lives remaining">${"❤️".repeat(Math.max(0,Math.min(3,Number(summary.lives)||0)))}${"🖤".repeat(3-Math.max(0,Math.min(3,Number(summary.lives)||0)))}</span>` : '';
     return `<div class="lms-pick-row" style="${cardStyle}">
-      <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
+      <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}${hearts}</span>
       <span class="lms-pick-col">
         <span class="lms-pick${pickClass}">${isEntered && liveALeagueLogo(e.pick) ? `<img class="aleague-lms-club-logo" src="${liveALeagueLogo(e.pick)}" alt="" onerror="this.style.display='none'">` : ''}${pickIcon}${isDnp ? "Did Not Pick" : (e.pick || "—")}</span>
         ${e.opponent && !isEliminated && !isDnp ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
@@ -12334,8 +12364,7 @@ function renderAleagueLms(data, containerId){
     aleagueLmsTipsFormHtml(data) +
     `<div class="section-head" style="margin-top:32px;margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
-    <div class="lms-pick-list aleague-lms-picks">${rowsHtml}</div>` +
-    renderAleagueLmsPlayerSummary(data);
+    <div class="lms-pick-list aleague-lms-picks">${rowsHtml}</div>`;
 
   el.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
