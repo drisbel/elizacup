@@ -2761,6 +2761,32 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 #ownershipInlineProfile .ownership-player-week-table th:nth-child(n+3),#ownershipInlineProfile .ownership-player-week-table td:nth-child(n+3){width:auto!important}
 #ownershipInlineProfile .ownership-player-week-table td small{font-size:10px;white-space:nowrap}
 @media(max-width:650px){.ownership-extra-grid .ownership-table th:nth-child(n+3),.ownership-extra-grid .ownership-table td:nth-child(n+3){width:51px}.ownership-extra-grid .ownership-table .ownership-ranked-team img{width:23px!important;height:23px!important;flex-basis:23px!important}.ownership-extra-grid .ownership-table:has(th:nth-child(5)) th:nth-child(n+4),.ownership-extra-grid .ownership-table:has(th:nth-child(5)) td:nth-child(n+4){width:45px}#ownershipInlineProfile .ownership-player-week-table th:first-child,#ownershipInlineProfile .ownership-player-week-table td:first-child{width:58px!important;min-width:58px}#ownershipInlineProfile .ownership-player-week-table td small{display:block}}
+
+/* Division fixtures share the Match Centre scoreboard, with inline historical H2H. */
+.division-h2h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.division-h2h-match{min-width:0;border:1px solid var(--line-light);border-radius:8px;background:#fff;overflow:hidden}
+.division-h2h-match>summary{list-style:none;cursor:pointer}
+.division-h2h-match>summary::-webkit-details-marker{display:none}
+.division-h2h-match .fixture-card{background:var(--pitch);color:#fff;border:0;border-radius:0;min-height:66px;padding:10px 12px;pointer-events:none}
+.division-h2h-match .fixture-team,.division-h2h-match .fixture-team.fx-win,.division-h2h-match .fixture-team.fx-lose{color:#fff;font-size:12px}
+.division-h2h-match .fixture-team-name a{color:inherit}
+.division-h2h-match .fixture-score{background:transparent;border:0;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:23px;padding:0 4px}
+.division-h2h-match .fixture-score .fx-win,.division-h2h-match .fixture-score .fx-lose,.division-h2h-match .fixture-score .fx-draw{color:#fff}
+.division-h2h-match .fixture-team-logo-wrap img{width:30px;height:30px}
+.division-h2h-match>summary:hover .fixture-card{filter:brightness(1.12)}
+.division-h2h-match[open]>summary{box-shadow:inset 0 -3px 0 rgba(255,255,255,.35)}
+.division-h2h-detail{background:#fff}
+.division-h2h-detail .live-match-body{display:grid}
+.division-h2h-unavailable{padding:16px;font-size:12px;color:#52625a}
+.division-h2h-match .live-view-controls{padding:7px}
+.export-image-stage .division-h2h-detail{display:none!important}
+.export-image-stage .division-h2h-match{border:0;background:transparent}
+.export-image-stage .division-h2h-match>summary{pointer-events:none}
+.export-image-stage .division-h2h-match .fixture-card{pointer-events:auto}
+.export-image-stage .division-h2h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.export-broadcast-fixtures .division-h2h-grid{grid-template-columns:minmax(0,1fr)}
+.export-image-stage .division-h2h-match .fixture-team.fx-win{color:#fff}
+@media(max-width:760px){.division-h2h-grid{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -5167,6 +5193,37 @@ function renderRoundTabs(){
   renderFixtures(rounds[defaultIdx]);
 }
 
+document.addEventListener('click',event=>{
+  const btn=event.target.closest('.division-h2h-match .live-view-btn');if(!btn)return;
+  const match=btn.closest('.division-h2h-match');if(!match)return;
+  const pitch=btn.dataset.view==='pitch';
+  match.querySelector('.live-match-body').hidden=pitch;
+  match.querySelector('.live-pitch-grid').hidden=!pitch;
+  match.querySelectorAll('.live-view-btn').forEach(b=>b.classList.toggle('active',b===btn));
+});
+function divisionHistoricalH2H(f,round){
+  const gw=Number(String(round).match(/\d+/)?.[0]||0);
+  if(!gw)return '<div class="division-h2h-unavailable">Archived lineups unavailable for this round.</div>';
+  const squads=ownershipWeekTeams(gw);
+  const find=name=>squads.find(t=>liveKey(t.name)===liveKey(name)||liveKey(t.fantasy)===liveKey(name));
+  const a=find(f.home),b=find(f.away);
+  if(!a||!b)return '<div class="division-h2h-unavailable">Historical squad data is not yet available for both teams in this gameweek.</div>';
+  return `<div class="division-h2h-detail"><div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI · GW ${gw}</div><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a,true)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench')}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench')}</div></div><div class="live-match-detail live-pitch-grid" hidden><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(a)}</div></div><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(b)}</div></div></div><div class="live-view-controls"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></div>`;
+}
+function divisionH2HCard(f,round,card){
+  return `<details class="division-h2h-match"><summary>${card}</summary>${divisionHistoricalH2H(f,round)}</details>`;
+}
+function refreshDivisionHistoricalH2H(){
+  const el=document.getElementById('fixtureContainer');
+  if(!el||!el.querySelector('.division-h2h-match'))return;
+  const round=document.querySelector('#roundTabs .round-tab.active')?.dataset.round;
+  const fixtures=fixturesByRound[round]||[];
+  el.querySelectorAll('.division-h2h-match').forEach((node,i)=>{
+    const f=fixtures[i];if(!f)return;
+    const old=node.querySelector('.division-h2h-detail,.division-h2h-unavailable');
+    if(old)old.outerHTML=divisionHistoricalH2H(f,round);
+  });
+}
 function renderFixtures(round){
   const el = document.getElementById('fixtureContainer');
   const fixtures = fixturesByRound[round] || [];
@@ -5201,12 +5258,13 @@ function renderFixtures(round){
     if(f.isPlayoff && (f.homeSeed || f.awaySeed)){
       return `<div class="fixture-card-wrap">
         <div class="playoff-seed-row">${f.homeSeed || "—"}<span>v</span>${f.awaySeed || "—"}</div>
-        ${card}
+        ${divisionH2HCard(f,round,card)}
       </div>`;
     }
-    return card;
+    return divisionH2HCard(f,round,card);
   }).join("");
-  el.innerHTML = banner + `<div class="fixture-grid">${cardsHtml}</div>`;
+  el.innerHTML = banner + `<div class="fixture-grid division-h2h-grid">${cardsHtml}</div>`;
+  ensureOwnershipHistory().then(refreshDivisionHistoricalH2H);
 }
 
 // Export the currently visible league table or selected round, with both layout styles.
@@ -5237,6 +5295,7 @@ async function exportDivisionImage(kind, style){
   }
   const body=document.createElement('div');body.className='export-image-body';
   const clone=source.cloneNode(true);clone.removeAttribute('id');
+  if(kind==='fixtures')clone.querySelectorAll('.division-h2h-detail,.division-h2h-unavailable').forEach(node=>node.remove());
   clone.style.cssText='display:block!important;overflow:visible!important;width:100%!important;max-width:none!important;';
   clone.querySelectorAll('.table-wrap').forEach(e=>{e.style.cssText='overflow:visible!important;width:100%!important;max-width:none!important;';});
   clone.querySelectorAll('table').forEach(e=>{e.style.cssText+=';width:100%!important;min-width:0!important;table-layout:fixed!important;';});
@@ -7644,9 +7703,26 @@ let ownershipHistoryPromise=null;
 const SOKKAH_HISTORY_SHEET='SOKKAH HISTORY';
 function ownershipGw(t){const m=String(t?.gameweek||'').match(/\d+/);return m?Number(m[0]):0;}
 function ownershipWeekList(){return [...new Set(ownershipHistoryTeams.map(ownershipGw).filter(Boolean))].sort((a,b)=>a-b);}
-function ownershipHistorical(){const by=new Map();for(const t of ownershipHistoryTeams){const gw=ownershipGw(t),name=liveKey(t.name||t.fantasy);if(gw&&name)by.set(gw+'|'+name,t);}return [...by.values()];}
-function ownershipAllWeeks(){const map=new Map();for(const t of ownershipHistorical())map.set(ownershipGw(t)+'|'+liveKey(t.name||t.fantasy),t);for(const t of ownershipTeams){const gw=ownershipGw(t),key=liveKey(t.name||t.fantasy);if(gw&&key&&!map.has(gw+'|'+key))map.set(gw+'|'+key,t);}return [...map.values()];}
-function ownershipWeekTeams(week){if(week==='current')return ownershipTeams;const currentGw=ownershipGw(ownershipTeams[0]);if(Number(week)===currentGw&&ownershipTeams.length)return ownershipTeams;return ownershipAllWeeks().filter(t=>ownershipGw(t)===Number(week));}
+// One record per Eliza team and gameweek. Completed rounds come from HISTORY;
+// the current round always uses the latest EXPORT snapshot, even if that
+// round also has live-linked rows in HISTORY. This prevents double-counting.
+function ownershipRecordKey(t){const gw=ownershipGw(t),name=liveKey(t.name||t.fantasy);return gw&&name?gw+'|'+name:'';}
+function ownershipHistorical(){const by=new Map();for(const t of ownershipHistoryTeams){const key=ownershipRecordKey(t);if(key)by.set(key,t);}return [...by.values()];}
+function ownershipCurrentGw(){return Math.max(0,...ownershipTeams.map(ownershipGw));}
+function ownershipAllWeeks(){
+ const currentGw=ownershipCurrentGw(),by=new Map();
+ // Historical rows for completed weeks, plus fallback rows for a current
+ // team missing from the export (e.g. an incomplete live feed).
+ for(const t of ownershipHistorical()){const key=ownershipRecordKey(t);if(key)by.set(key,t);}
+ for(const t of ownershipTeams){const key=ownershipRecordKey(t);if(!key)continue;
+   if(ownershipGw(t)===currentGw||!by.has(key))by.set(key,t);
+ }
+ return [...by.values()];
+}
+function ownershipWeekTeams(week){
+ if(week==='current')return ownershipAllWeeks().filter(t=>ownershipGw(t)===ownershipCurrentGw());
+ return ownershipAllWeeks().filter(t=>ownershipGw(t)===Number(week));
+}
 async function ensureOwnershipHistory(){
  if(ownershipHistoryPromise)return ownershipHistoryPromise;
  ownershipHistoryPromise=(async()=>{
