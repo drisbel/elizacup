@@ -2601,6 +2601,52 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .aleague-lms-row-hearts{display:inline-block;white-space:nowrap;font-size:13px;letter-spacing:-1px;vertical-align:middle}
 .export-aleague-lms .aleague-lms-row-hearts{font-size:14px}
 
+
+/* A-League LMS: fixed aligned columns, single-line team names and tighter rows (screen + export). */
+.aleague-lms-picks .lms-pick-row,
+.export-aleague-lms .aleague-lms-picks .lms-pick-row{
+  grid-template-columns:minmax(0, 1.65fr) 66px minmax(0, 1fr) 64px!important;
+  column-gap:9px!important;padding:5px 9px!important;min-height:42px!important;
+  align-items:center!important;
+}
+.aleague-lms-picks .lms-participant,
+.export-aleague-lms .aleague-lms-picks .lms-participant{
+  flex-wrap:nowrap!important;white-space:nowrap!important;overflow:hidden!important;
+  gap:6px!important;align-self:center!important;
+}
+.aleague-lms-picks .lms-participant > a,
+.export-aleague-lms .aleague-lms-picks .lms-participant > a{
+  min-width:0!important;white-space:nowrap!important;overflow:hidden!important;
+  text-overflow:ellipsis!important;display:block!important;
+}
+.aleague-lms-picks .lms-participant .table-team-logo,
+.export-aleague-lms .aleague-lms-picks .lms-participant .table-team-logo{
+  width:29px!important;height:29px!important;max-width:29px!important;flex:0 0 29px!important;
+}
+.aleague-lms-picks .aleague-lms-club-logo,
+.export-aleague-lms .aleague-lms-picks .aleague-lms-club-logo{
+  width:26px!important;height:26px!important;max-width:26px!important;flex:0 0 26px!important;
+}
+.aleague-lms-picks .aleague-lms-hearts-col,
+.export-aleague-lms .aleague-lms-picks .aleague-lms-hearts-col{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  white-space:nowrap!important;min-width:0!important;
+}
+.aleague-lms-picks .aleague-lms-row-hearts,
+.export-aleague-lms .aleague-lms-row-hearts{font-size:12px!important;letter-spacing:-1px!important;white-space:nowrap!important}
+.aleague-lms-picks .lms-pick,
+.export-aleague-lms .aleague-lms-picks .lms-pick{min-height:27px!important;flex-wrap:nowrap!important}
+.aleague-lms-picks .lms-result,
+.export-aleague-lms .aleague-lms-picks .lms-result{text-align:center!important;white-space:nowrap!important}
+@media(max-width:560px){
+ .aleague-lms-picks .lms-pick-row{grid-template-columns:minmax(0,1.5fr) 56px minmax(0,1fr) 44px!important;gap:4px!important;padding:5px!important}
+ .aleague-lms-picks .lms-participant{font-size:11px!important;gap:4px!important}
+ .aleague-lms-picks .lms-participant .table-team-logo{width:23px!important;height:23px!important;max-width:23px!important;flex-basis:23px!important}
+ .aleague-lms-picks .aleague-lms-row-hearts{font-size:10px!important}
+ .aleague-lms-picks .aleague-lms-club-logo{width:21px!important;height:21px!important;max-width:21px!important;flex-basis:21px!important}
+ .aleague-lms-picks .lms-pick{font-size:11px!important;gap:3px!important}
+ .aleague-lms-picks .lms-result{font-size:11px!important}
+}
 </style>
 </head>
 <body>
@@ -12351,7 +12397,8 @@ function renderAleagueLms(data, containerId){
     const summary = lmsLivesByName.get(String(e.name).trim().toLowerCase());
     const hearts = summary ? `<span class="aleague-lms-row-hearts" aria-label="${Math.max(0,Math.min(3,Number(summary.lives)||0))} lives remaining">${"❤️".repeat(Math.max(0,Math.min(3,Number(summary.lives)||0)))}${"🖤".repeat(3-Math.max(0,Math.min(3,Number(summary.lives)||0)))}</span>` : '';
     return `<div class="lms-pick-row" style="${cardStyle}">
-      <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}${hearts}</span>
+      <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
+      <span class="aleague-lms-hearts-col">${hearts}</span>
       <span class="lms-pick-col">
         <span class="lms-pick${pickClass}">${isEntered && liveALeagueLogo(e.pick) ? `<img class="aleague-lms-club-logo" src="${liveALeagueLogo(e.pick)}" alt="" onerror="this.style.display='none'">` : ''}${pickIcon}${isDnp ? "Did Not Pick" : (e.pick || "—")}</span>
         ${e.opponent && !isEliminated && !isDnp ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
