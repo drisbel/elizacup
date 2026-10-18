@@ -2806,6 +2806,48 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .export-image-stage .competition-h2h-match>summary::after,.export-image-stage .division-h2h-match>summary::after{display:none!important}
 .export-image-stage .competition-h2h-match .division-h2h-detail{display:none!important}
 @media(max-width:760px){.competition-h2h-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Competition-specific fixture palette; team names and division tags stay white. */
+#facupContainer .competition-h2h-match{border-color:#234ea2}
+#facupContainer .competition-h2h-match>summary,#facupContainer .competition-h2h-match>summary .facup-card{background:#0a2f85!important}
+#facupContainer .competition-h2h-match .facup-team-div-tag{color:#fff!important;opacity:.88}
+#facupContainer .competition-h2h-match .facup-team-name,#facupContainer .competition-h2h-match .facup-team-name a{color:#fff!important}
+/* Highlight winners only on competition pages and their exports; never Match Centre. */
+#fixtureContainer .division-h2h-match .fixture-team.fx-win,
+#facupContainer .competition-h2h-match .facup-team.fx-win,
+#eclContainer .competition-h2h-match .fixture-team.fx-win{background:rgba(255,255,255,.13)!important;border-radius:5px;font-weight:900!important}
+#facupContainer .competition-h2h-match .facup-team.fx-win{box-shadow:inset 0 -3px 0 #f8d64d}
+.export-image-stage.export-broadcast-fixtures .competition-h2h-match .fx-win,
+.export-image-stage.export-broadcast-fixtures .division-h2h-match .fx-win{font-weight:900!important}
+/* Unified broadcast fixture export styling for FA Cup and ECL. */
+.export-image-stage.export-broadcast-fixtures .facup-card,
+.export-image-stage.export-broadcast-fixtures #eclContainer .fixture-card{background:#0b1426!important;color:#fff!important;border:0!important}
+.export-image-stage.export-broadcast-fixtures .facup-team,
+.export-image-stage.export-broadcast-fixtures .facup-team a,
+.export-image-stage.export-broadcast-fixtures .facup-team-div-tag{color:#fff!important}
+.export-image-stage.export-broadcast-fixtures .facup-team.fx-win{background:#234a8b!important}
+.export-image-stage.export-broadcast-fixtures .facup-team.fx-lose{background:#14243e!important}
+
+/* Shared export-only presentation based on the Match Centre fixture header. */
+.eliza-mc-export-button{width:auto!important;min-width:130px;margin:6px 0 12px;padding:9px 14px!important;font-size:12px!important}
+.eliza-mc-export-stage{box-sizing:border-box;background:#fff;color:#13251b;padding:16px;font-family:'Barlow',Arial,sans-serif}
+.eliza-mc-export-title{font:900 22px 'Barlow Condensed',Arial,sans-serif;letter-spacing:.05em;background:#123b2d;color:#fff;padding:14px 18px}
+.eliza-mc-export-stage .eliza-mc-export-list{display:flex!important;flex-direction:column!important;gap:0!important;grid-template-columns:none!important}
+.eliza-mc-export-stage .eliza-mc-export-match{display:grid!important;grid-template-columns:minmax(0,1fr) 100px minmax(0,1fr)!important;align-items:center;gap:8px;min-height:66px;box-sizing:border-box;padding:9px 14px;background:#173e30;color:#fff;border-bottom:1px solid #ffffff33}
+.eliza-mc-export-stage .eliza-mc-export-team{display:flex;align-items:center;gap:8px;min-width:0;color:#fff!important;font-size:13px;font-weight:800;line-height:1.2}
+.eliza-mc-export-stage .eliza-mc-export-team.home{justify-content:flex-end;text-align:right;flex-direction:row}
+.eliza-mc-export-stage .eliza-mc-export-team.away{justify-content:flex-start;text-align:left;flex-direction:row-reverse}
+.eliza-mc-export-stage .eliza-mc-export-team .facup-team-name,.eliza-mc-export-stage .eliza-mc-export-team .fixture-team-name{min-width:0;color:#fff!important}
+.eliza-mc-export-stage .eliza-mc-export-team a,.eliza-mc-export-stage .facup-team-div-tag{color:#fff!important}
+.eliza-mc-export-stage .eliza-mc-export-team .facup-team-logo-wrap,.eliza-mc-export-stage .eliza-mc-export-team .fixture-team-logo-wrap{display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px}
+.eliza-mc-export-stage .eliza-mc-export-team img{width:auto!important;height:auto!important;max-width:32px!important;max-height:32px!important;object-fit:contain!important}
+.eliza-mc-export-stage .eliza-mc-export-score{text-align:center;font:900 24px 'Barlow Condensed',Arial,sans-serif;color:#fff;white-space:nowrap}
+.eliza-mc-export-stage .eliza-mc-export-score span{color:#fff!important}
+.eliza-mc-export-stage .eliza-mc-export-winner{background:rgba(255,255,255,.15);border-radius:4px;box-shadow:inset 0 -3px 0 #f6d365;padding:6px}
+.eliza-mc-export-stage .competition-h2h-match,.eliza-mc-export-stage .division-h2h-match{border:0!important}
+.eliza-mc-export-stage .competition-h2h-match>summary,.eliza-mc-export-stage .division-h2h-match>summary{list-style:none}
+
 </style>
 </head>
 <body>
@@ -5235,23 +5277,26 @@ function competitionH2HCard(f,round,card){
   return `<details class="competition-h2h-match"><summary>${card}</summary>${valid?divisionHistoricalH2H(fixture,round):'<div class="division-h2h-unavailable">Lineups unavailable for this fixture.</div>'}</details>`;
 }
 function refreshCompetitionHistoricalH2H(){
- document.querySelectorAll('.competition-h2h-match').forEach(el=>{
-  const gw=el.dataset.gw,home=el.dataset.home,away=el.dataset.away;
-  if(!gw||!home||!away)return;
+ document.querySelectorAll('.competition-h2h-match[data-home][data-away]').forEach(el=>{
+  const home=el.dataset.home,away=el.dataset.away;
+  const homeScore=el.dataset.homeScore!==undefined&&el.dataset.homeScore!==''?Number(el.dataset.homeScore):NaN;
+  const awayScore=el.dataset.awayScore!==undefined&&el.dataset.awayScore!==''?Number(el.dataset.awayScore):NaN;
+  const gw=historicalFixtureGw(home,away,homeScore,awayScore,el.dataset.round);
   const old=el.querySelector('.division-h2h-detail,.division-h2h-unavailable');
-  if(old)old.outerHTML=divisionHistoricalH2H({home,away},gw);
+  if(!old)return;
+  old.outerHTML=gw?divisionHistoricalH2H({home,away},gw):'<div class="division-h2h-unavailable">Historical squads could not be matched to this cup fixture and gameweek.</div>';
  });
 }
 function hydrateCompetitionH2H(){
  document.querySelectorAll('.competition-h2h-match').forEach(el=>{
-  if(el.dataset.gw)return;
-  const round=el.closest('[data-h2h-round]')?.dataset.h2hRound||'';
-  const gw=Number(String(round).match(/(?:GW|MD|ROUND|R)\s*(\d+)/i)?.[1]||String(round).match(/\d+/)?.[0]||0);
-  if(!gw)return;
-  const names=el.dataset.names;
-  if(!names)return;
-  const [home,away]=JSON.parse(names);
-  el.dataset.gw=gw;el.dataset.home=home;el.dataset.away=away;
+  if(el.dataset.home&&el.dataset.away)return;
+  const names=el.dataset.names;if(!names)return;
+  let pair;try{pair=JSON.parse(names)}catch(e){return}
+  const [home,away]=pair;
+  el.dataset.home=home;el.dataset.away=away;
+  el.dataset.round=el.dataset.h2hRound||el.closest('[data-h2h-round]')?.dataset.h2hRound||'';
+  const score=el.querySelector('.fixture-score');
+  if(score){const nums=(score.textContent||'').match(/\d+/g);if(nums&&nums.length===2){el.dataset.homeScore=nums[0];el.dataset.awayScore=nums[1];}}
  });
  ensureOwnershipHistory().then(refreshCompetitionHistoricalH2H);
 }
@@ -5395,7 +5440,8 @@ async function exportDivisionImage(kind, style){
   }
   // Broadcast treatment is export-only: the actual division fixture DOM is untouched.
   if(kind==='fixtures' && style==='social'){
-    outer.classList.add('export-broadcast-fixtures');
+    outer.classList.add('export-broadcast-fixtures','eliza-mc-export-stage');
+    elizaFixtureExportNormalize(clone);
     clone.querySelectorAll('.fixture-card').forEach(card=>{
       const sides=card.querySelectorAll('.fixture-team');
       const score=card.querySelector('.fixture-score');
@@ -5432,7 +5478,7 @@ async function exportDivisionImage(kind, style){
   try{
     await Promise.all(Array.from(outer.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3500);}))) ;
     if(document.fonts?.ready) await document.fonts.ready;
-    const canvas=await html2canvas(outer,{backgroundColor:style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
+    const canvas=await html2canvas(outer,{backgroundColor:kind==='fixtures'&&style==='social'?'#ffffff':style==='social'?'#101c34':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
     const link=document.createElement('a');
     const clean=v=>v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     link.download='eliza-'+clean(label)+'-'+clean(title)+'-'+style+'.png';
@@ -6169,7 +6215,7 @@ function eclFixturesHtml(){
         const awayWon = played && f.awayScore > f.homeScore;
         const isDraw = played && f.homeScore === f.awayScore;
         const resultColor = (won) => !played ? "#F5F5F0" : won ? "#4ADE80" : isDraw ? "#FBBF24" : "#F87171";
-        html += `<details class="competition-h2h-match" data-names='${JSON.stringify([f.home,f.away]).replace(/'/g,"&#39;")}'><summary><div class="fixture-card" style="background:#1c1c1c;border:1px solid #333;border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
+        html += `<details class="competition-h2h-match" data-h2h-round="${md}" data-names='${JSON.stringify([f.home,f.away]).replace(/'/g,"&#39;")}'><summary><div class="fixture-card" style="background:#1c1c1c;border:1px solid #333;border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
           <span style="display:block;min-width:0;text-align:right;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(homeWon)};font-weight:${homeWon ? "700" : "400"};">${teamLink(f.home)}</span>
           <span style="font-weight:700;color:#ffdd00;white-space:nowrap;">${scoreText}</span>
           <span style="display:block;min-width:0;text-align:left;font-size:13px;overflow-wrap:break-word;word-break:break-word;color:${resultColor(awayWon)};font-weight:${awayWon ? "700" : "400"};">${teamLink(f.away)}</span>
@@ -6272,7 +6318,7 @@ function eclKnockoutHtml(){
     html += `<div style="margin-top:16px;">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--ink);margin-bottom:8px;letter-spacing:0.05em;">${round.name}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">`;
-    round.fixtures.forEach(f=>{ html += `<details class="competition-h2h-match" data-names='${JSON.stringify([f.home,f.away]).replace(/'/g,"&#39;")}'><summary>${eclFixtureCardHtml(f)}</summary><div class="division-h2h-unavailable">Loading historical lineups…</div></details>`; });
+    round.fixtures.forEach(f=>{ html += `<details class="competition-h2h-match" data-h2h-round="${round.name}" data-names='${JSON.stringify([f.home,f.away]).replace(/'/g,"&#39;")}'><summary>${eclFixtureCardHtml(f)}</summary><div class="division-h2h-unavailable">Loading historical lineups…</div></details>`; });
     html += `</div></div>`;
   });
   return html;
@@ -14641,7 +14687,8 @@ if(installInstructionsOverlay){
     }
     const cards=content.querySelectorAll('.fixture-card');
     if(cards.length && !content.querySelector('table')){
-      stage.classList.add('export-broadcast-fixtures');
+      stage.classList.add('export-broadcast-fixtures','eliza-mc-export-stage');
+      elizaFixtureExportNormalize(content);
       cards.forEach(card=>{
         const sides=card.querySelectorAll('.fixture-team');const score=card.querySelector('.fixture-score');
         if(sides.length!==2||!score)return;
@@ -14665,13 +14712,79 @@ if(installInstructionsOverlay){
         img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3500);
       })));
       if(document.fonts?.ready)await document.fonts.ready;
-      const canvas=await html2canvas(stage,{backgroundColor:stage.classList.contains('export-broadcast-fixtures')?'#0b1426':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
+      const canvas=await html2canvas(stage,{backgroundColor:stage.classList.contains('eliza-mc-export-stage')?'#ffffff':stage.classList.contains('export-broadcast-fixtures')?'#0b1426':'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
       const clean=v=>String(v).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
       const a=document.createElement('a');a.download='eliza-'+clean(label)+'-'+clean(title)+'-social.png';
       a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
     }catch(err){console.error('Side league image export failed',err);alert('Unable to export image. Some externally hosted images may block capture.');}
     finally{stage.remove();controls.forEach(b=>b.disabled=false);}
   }
+})();
+
+
+/* Shared Match Centre-style fixture image exports. This runs on cloned cards only. */
+function elizaFixtureExportNormalize(root){
+ root.querySelectorAll('.division-h2h-detail,.division-h2h-unavailable,.live-match-detail,.division-h2h-pitch,.division-h2h-bench').forEach(n=>n.remove());
+ root.querySelectorAll('.competition-h2h-match,.division-h2h-match').forEach(d=>{d.open=false;});
+ const cards=[...root.querySelectorAll('.facup-card,.fixture-card')];
+ cards.forEach(card=>{
+  const sides=[...card.children].filter(e=>e.classList.contains('facup-team')||e.classList.contains('fixture-team'));
+  const score=card.querySelector('.fixture-score');
+  if(sides.length!==2||!score)return;
+  const head=document.createElement('div');head.className='eliza-mc-export-match';
+  sides.forEach((side,i)=>{
+   const box=document.createElement('div');box.className='eliza-mc-export-team '+(i===0?'home':'away');
+   const name=side.querySelector('.facup-team-name,.fixture-team-name');
+   const logo=side.querySelector('.facup-team-logo-wrap,.fixture-team-logo-wrap');
+   if(name)box.appendChild(name.cloneNode(true));
+   if(logo)box.appendChild(logo.cloneNode(true));
+   if(side.classList.contains('fx-win'))box.classList.add('eliza-mc-export-winner');
+   head.appendChild(box);
+  });
+  const centre=document.createElement('div');centre.className='eliza-mc-export-score';centre.innerHTML=score.innerHTML;
+  head.insertBefore(centre,head.children[1]);
+  card.replaceWith(head);
+ });
+ root.querySelectorAll('details.competition-h2h-match,details.division-h2h-match').forEach(d=>{
+  const card=d.querySelector('.eliza-mc-export-match');if(card)d.replaceWith(card);
+ });
+ root.querySelectorAll('.facup-grid,.fixture-grid,.division-h2h-grid,.competition-h2h-grid').forEach(g=>g.classList.add('eliza-mc-export-list'));
+ root.querySelectorAll('a').forEach(a=>a.removeAttribute('href'));
+}
+async function elizaExportCompetitionFixtures(kind){
+ const source=document.getElementById(kind==='cup'?'facupContainer':'eclContainer');
+ if(!source||!source.querySelector('.facup-card,.fixture-card')){alert('No fixtures available to export.');return;}
+ if(typeof html2canvas!=='function'){alert('Image exporter could not load.');return;}
+ const label=kind==='cup'?'FA Cup':'ECL';
+ const stage=document.createElement('div');stage.className='eliza-mc-export-stage';
+ stage.style.cssText='position:fixed;left:-14000px;top:0;width:650px;z-index:-1;';
+ const title=document.createElement('div');title.className='eliza-mc-export-title';title.textContent='ELIZA CUP · '+label;
+ stage.appendChild(title);
+ const content=source.cloneNode(true);content.removeAttribute('id');
+ // Only export fixture cards, not the group tables, navigation or explanatory text.
+ elizaFixtureExportNormalize(content);
+ content.querySelectorAll('table,.round-tabs,.section-head,.state-msg').forEach(n=>n.remove());
+ stage.appendChild(content);document.body.appendChild(stage);
+ try{
+  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(done=>{img.addEventListener('load',done,{once:true});img.addEventListener('error',done,{once:true});setTimeout(done,3000)})));
+  if(document.fonts?.ready)await document.fonts.ready;
+  const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:3,useCORS:true,allowTaint:false,logging:false,windowWidth:1200});
+  const a=document.createElement('a');a.download='eliza-'+kind+'-fixtures.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
+ }catch(e){console.error(e);alert('Unable to export these fixtures.');}finally{stage.remove();}
+}
+(function(){
+ function attach(kind,containerId){
+  const container=document.getElementById(containerId);if(!container)return;
+  const parent=container.parentElement;if(!parent)return;
+  const id='eliza-export-'+kind;
+  if(document.getElementById(id))return;
+  const btn=document.createElement('button');btn.id=id;btn.type='button';btn.className='social-export-download eliza-mc-export-button';
+  btn.title='Download '+(kind==='cup'?'FA Cup':'ECL')+' fixture image';btn.textContent='↓ Export Fixtures';
+  btn.addEventListener('click',()=>elizaExportCompetitionFixtures(kind));
+  parent.insertBefore(btn,container);
+ }
+ function init(){attach('cup','facupContainer');attach('ecl','eclContainer');}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 
 </script>
