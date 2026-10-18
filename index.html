@@ -2647,6 +2647,28 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
  .aleague-lms-picks .lms-pick{font-size:11px!important;gap:3px!important}
  .aleague-lms-picks .lms-result{font-size:11px!important}
 }
+
+/* Roddy export-only two-column leaderboard */
+.roddy-export-stage .re-header{background:#152b50;color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:15px}
+.roddy-export-stage .re-kicker{font-size:12px;letter-spacing:2px;font-weight:700;color:#b6c9ed}
+.roddy-export-stage .re-title{font-size:30px;line-height:1.1;font-weight:900;margin:4px 0}
+.roddy-export-stage .re-subtitle{font-size:14px;color:#d8e4f7}
+.roddy-export-stage .re-section-title{font-weight:900;font-size:16px;letter-spacing:1.3px;margin:12px 0 7px;color:#173260}
+.roddy-export-stage .re-remaining-title{margin-top:18px}
+.roddy-export-stage .re-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.roddy-export-stage .roddy-export-table{border-collapse:collapse;table-layout:fixed;width:100%;background:white;font-size:12px;border:1px solid #dbe3f0}
+.roddy-export-stage .roddy-export-table th{background:#e5ebf5;color:#243958;font-size:10px;letter-spacing:.3px;text-align:center;padding:7px 3px;white-space:nowrap}
+.roddy-export-stage .roddy-export-table th:nth-child(2){text-align:left;padding-left:9px}
+.roddy-export-stage .roddy-export-table td{padding:4px 3px;border-bottom:1px solid #e5eaf2;text-align:center;vertical-align:middle;height:35px;box-sizing:border-box;white-space:nowrap}
+.roddy-export-stage .roddy-export-table tbody tr:nth-child(even){background:#f6f8fc}
+.roddy-export-stage .re-team{display:flex;align-items:center;gap:7px;min-width:0;text-align:left;padding-left:5px;font-weight:750;font-size:11.5px}
+.roddy-export-stage .re-team span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roddy-export-stage .re-div{color:white;border-radius:4px;padding:4px 5px;font-size:10px;font-weight:800;white-space:nowrap}
+.roddy-export-stage .re-pos,.roddy-export-stage .re-rank{font-weight:800}
+.roddy-export-stage .re-score{font-weight:850;color:#174b88}
+.roddy-export-stage .roddy-export-featured td{height:40px}
+.roddy-export-stage .roddy-export-featured .re-team{font-size:13px}
+.roddy-export-stage .roddy-export-featured .re-team img{width:32px!important;height:32px!important}
 </style>
 </head>
 <body>
@@ -2804,7 +2826,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 
   <section id="roddySection" style="display:none;">
     <div class="section-head">
-      <span class="sub" id="roddyUpdated"></span>
+      <span class="sub" id="roddyUpdated"></span><button type="button" class="social-export-download" onclick="exportRoddyImage()" title="Download Roddy table PNG" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;width:auto;height:auto">↓ Export PNG</button>
     </div>
     <div id="roddyContainer" class="state-msg">Loading leaderboard…</div>
   </section>
@@ -5459,6 +5481,29 @@ function renderRoddy(){
   document.getElementById('roddyUpdated').textContent = roddyEntries.length + " entries";
 }
 
+// Roddy leaderboard graphic: top ten featured, then two equal columns for the rest.
+async function exportRoddyImage(){
+  if(typeof html2canvas!=='function'){alert('Image exporter could not load. Check your connection.');return;}
+  if(!roddyEntries.length){alert('Please wait for the Roddy leaderboard to load.');return;}
+  const ordered=[...roddyEntries].sort((a,b)=>a.pos-b.pos);
+  const top=ordered.slice(0,10),remaining=ordered.slice(10);
+  const halfway=Math.ceil(remaining.length/2);
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt=v=>v===null||v===undefined||String(v).trim()===''?'—':esc(v);
+  const logo=e=>`<img src="logo/${encodeURIComponent(teamLogoSlug(e.team))}.png" crossorigin="anonymous" style="width:29px;height:29px;object-fit:contain;flex:none" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}'}">`;
+  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:40px"><col><col style="width:58px"><col style="width:65px"><col style="width:52px"><col style="width:64px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span>${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
+  const stage=document.createElement('div');stage.className='roddy-export-stage';
+  stage.style.cssText='position:fixed;left:-16000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;background:#f3f6fc;padding:22px 25px 27px;color:#16243e;font-family:Barlow,Arial,sans-serif';
+  stage.innerHTML=`<div class="re-header"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div><div class="re-section-title">TOP 10</div>${table(top,true)}<div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
+  document.body.appendChild(stage);
+  try{
+    await Promise.all(Array.from(stage.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,3000)})));
+    if(document.fonts?.ready)await document.fonts.ready;
+    const canvas=await html2canvas(stage,{backgroundColor:'#f3f6fc',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1400});
+    const link=document.createElement('a');link.download='Eliza-Cup-Roddy-Leaderboard.png';link.href=canvas.toDataURL('image/png');document.body.appendChild(link);link.click();link.remove();
+  }catch(err){console.error('Roddy export error',err);alert('Unable to export Roddy leaderboard. Please try again.');}
+  finally{stage.remove();}
+}
 // ---------- Eliza FA Cup (knockout bracket) ----------
 let facupRounds = [];
 let facupDebug = {};
