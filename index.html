@@ -2853,8 +2853,48 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 /* Only exported competition fixtures highlight winners; live Match Centre is unchanged. */
 .eliza-exact-fixture-export .live-comp-section .live-match-summary .live-match-head:after{content:none!important}
 .eliza-exact-fixture-export .live-match-head{cursor:default!important}
-.eliza-exact-fixture-export .eliza-export-winning-side{background:rgba(255,255,255,.13);border-radius:4px}
-.eliza-exact-fixture-export .eliza-export-winning-side span{font-weight:900!important;text-decoration:underline;text-decoration-color:rgba(255,255,255,.65);text-underline-offset:3px}
+.eliza-exact-fixture-export .eliza-export-winning-side{background:transparent!important;border-radius:0}
+.eliza-exact-fixture-export .eliza-export-winning-side span{color:#ffe08a!important;font-weight:900!important;text-decoration:none!important}
+
+/* Consistent competition-page winner emphasis: text only, no stripe or shading.
+   Scope to fixture lists; do not affect the Match Centre. */
+#fixtureContainer .fixture-card .fixture-team.fx-win,
+#facupContainer .facup-card .facup-team.fx-win,
+#eclContainer .fixture-card .fixture-team.fx-win,
+#sideLeagueFixtureContainer .fixture-card .fixture-team.fx-win,
+#sideLeaguesContainer .fixture-card .fixture-team.fx-win {
+  background:transparent!important;box-shadow:none!important;border:0!important;
+  text-decoration:none!important;color:var(--eliza-winner-text,#ffe08a)!important;
+  font-weight:900!important;
+}
+#fixtureContainer .fixture-card .fixture-team.fx-win .fixture-team-name,
+#fixtureContainer .fixture-card .fixture-team.fx-win .fixture-team-name a,
+#facupContainer .facup-card .facup-team.fx-win .facup-team-name,
+#facupContainer .facup-card .facup-team.fx-win .facup-team-name a,
+#eclContainer .fixture-card .fixture-team.fx-win .fixture-team-name,
+#eclContainer .fixture-card .fixture-team.fx-win .fixture-team-name a,
+#sideLeagueFixtureContainer .fixture-card .fixture-team.fx-win .fixture-team-name,
+#sideLeagueFixtureContainer .fixture-card .fixture-team.fx-win .fixture-team-name a,
+#sideLeaguesContainer .fixture-card .fixture-team.fx-win .fixture-team-name,
+#sideLeaguesContainer .fixture-card .fixture-team.fx-win .fixture-team-name a {
+  color:var(--eliza-winner-text,#ffe08a)!important;text-decoration:none!important;
+}
+#facupContainer .facup-card .facup-team.fx-win .facup-team-div-tag {color:inherit!important;text-decoration:none!important}
+#fixtureContainer .fixture-card .fixture-score .fx-win,
+#facupContainer .facup-card .fixture-score .fx-win,
+#eclContainer .fixture-card .fixture-score .fx-win,
+#sideLeagueFixtureContainer .fixture-card .fixture-score .fx-win,
+#sideLeaguesContainer .fixture-card .fixture-score .fx-win {color:var(--eliza-winner-text,#ffe08a)!important}
+/* Export is still the exact Match Centre template, with text-only winner marking. */
+.eliza-exact-fixture-export .eliza-export-winning-side,
+.eliza-exact-fixture-export .eliza-export-winning-side span{
+  background:transparent!important;box-shadow:none!important;border:0!important;
+  text-decoration:none!important;
+}
+.eliza-exact-fixture-export .eliza-export-winning-side span{
+  color:var(--eliza-winner-text,#ffe08a)!important;font-weight:900!important;
+}
+
 </style>
 </head>
 <body>
@@ -14839,6 +14879,8 @@ async function elizaExportCompetitionFixtures(kind){
    stage.className='live-export-stage eliza-exact-fixture-export';
    stage.style.cssText='position:fixed;left:-15000px;top:0;width:640px;z-index:-1;';
    const theme=opts.color||'#28427c';
+   const channels=String(theme).match(/^#([0-9a-f]{6})$/i);
+   if(channels){const v=channels[1],r=parseInt(v.slice(0,2),16),g=parseInt(v.slice(2,4),16),b=parseInt(v.slice(4,6),16);const lum=(.2126*r+.7152*g+.0722*b)/255;stage.style.setProperty('--eliza-winner-text',lum>.54||(r>135&&g>105&&b<135)?'#132d5a':'#ffe08a');}
    const markup=matches.map(m=>`<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="background:${escape(theme)};color:#fff">
       <div class="live-match-name live-match-left ${m.wa?'eliza-export-winning-side':''}"><span>${escape(m.a.name)}</span><img src="${escape(m.a.logo)}" alt=""></div>
       <strong class="live-match-score"><span>${escape(m.sa)}</span><span class="live-score-dash">–</span><span>${escape(m.sb)}</span></strong>
@@ -14901,6 +14943,53 @@ async function elizaExportCompetitionFixtures(kind){
    const theme=typeof sideLeagueThemeColor==='function'?sideLeagueThemeColor(key,typeof sideLeagueActiveDiv!=='undefined'?sideLeagueActiveDiv:null):'#28427c';
    render(wrapper,{label,round:roundLabel(root,'Fixtures'),color:theme,logo:null});
  },true);
+})();
+
+
+/* Adapt winner text to each competition's fixture background. */
+(function(){
+  const scopes=['fixtureContainer','facupContainer','eclContainer','sideLeagueFixtureContainer','sideLeaguesContainer'];
+  function rgb(color){
+    const m=String(color||'').match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+    if(!m)return null;
+    return [+m[1],+m[2],+m[3]];
+  }
+  function accent(color){
+    const c=rgb(color);
+    if(!c)return '#ffe08a';
+    const [r,g,b]=c;
+    // Golden/yellow and pale fixtures get a dark contrasting blue; dark blue,
+    // green and purple fixtures get gold. Very bright coloured rows also get navy.
+    const lum=(.2126*r+.7152*g+.0722*b)/255;
+    return lum>.54 || (r>135&&g>105&&b<135) ? '#132d5a' : '#ffe08a';
+  }
+  function update(){
+    for(const id of scopes){
+      const root=document.getElementById(id);
+      if(!root)continue;
+      root.querySelectorAll('.fixture-card,.facup-card').forEach(card=>{
+        let node=card, bg=null;
+        for(let i=0;i<5&&node;i++,node=node.parentElement){
+          const c=getComputedStyle(node).backgroundColor;
+          const parsed=rgb(c);
+          if(parsed && c!=='rgba(0, 0, 0, 0)' && c!=='transparent'){bg=c;break;}
+        }
+        card.style.setProperty('--eliza-winner-text',accent(bg));
+      });
+    }
+  }
+  let pending=false;
+  const schedule=()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;update();});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule);
+  else schedule();
+  const mo=new MutationObserver(schedule);
+  mo.observe(document.body,{childList:true,subtree:true});
+  // Exact-style export stage uses a single competition theme, and stays independent
+  // of the original Match Centre export implementation.
+  const original=window.elizaExportCompetitionFixtures;
+  if(typeof original==='function'){
+    window.elizaExportCompetitionFixtures=function(kind){return original.apply(this,arguments);};
+  }
 })();
 
 </script>
