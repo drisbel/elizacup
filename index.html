@@ -2663,22 +2663,23 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .roddy-export-stage .roddy-export-table th:nth-child(2){text-align:left;padding-left:9px}
 .roddy-export-stage .roddy-export-table td{padding:4px 3px;border-bottom:1px solid #e5eaf2;text-align:center;vertical-align:middle;height:35px;box-sizing:border-box;white-space:nowrap}
 .roddy-export-stage .roddy-export-table tbody tr:nth-child(even){background:#f6f8fc}
-.roddy-export-stage .re-team{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;text-align:left;padding-left:5px;font-weight:750;font-size:15px;overflow:hidden}
+.roddy-export-stage .re-team{display:flex;align-items:center;gap:2px;min-width:0;max-width:100%;text-align:left;padding-left:0;font-weight:750;font-size:15px;overflow:hidden}
 .roddy-export-stage .re-team span{display:block;flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roddy-export-stage .re-div{color:white;border-radius:4px;padding:4px 5px;font-size:10px;font-weight:800;white-space:nowrap}
 .roddy-export-stage .re-pos,.roddy-export-stage .re-rank{font-weight:800;font-size:14px}
+.roddy-export-stage .re-total{font-weight:800;color:#243958;font-size:14px}
 .roddy-export-stage .re-score{font-weight:850;color:#174b88;font-size:14px}
 .roddy-export-stage .roddy-export-featured{width:650px;max-width:100%;margin-left:auto;margin-right:auto}
 .roddy-export-stage .roddy-export-featured td{height:40px}
 .roddy-export-stage .roddy-export-featured .re-team{font-size:18px}
 .roddy-export-stage .roddy-export-featured .re-logo-box{width:34px;height:34px;flex-basis:34px}.roddy-export-stage .roddy-export-featured .re-logo-box img{max-width:34px!important;max-height:34px!important}
-.roddy-export-stage .roddy-export-table td:nth-child(5){font-size:14px;font-weight:750}
+.roddy-export-stage .roddy-export-table td:nth-child(6){font-size:14px;font-weight:750}
 .roddy-export-stage .re-logo-box{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;overflow:hidden}.roddy-export-stage .re-logo-box img{display:block;width:auto!important;height:auto!important;max-width:30px!important;max-height:30px!important;object-fit:contain!important;flex:none!important;min-width:0;min-height:0}
 .roddy-export-stage .roddy-export-featured .re-team{justify-content:flex-start}
 .roddy-export-stage .re-top-block{width:650px;max-width:100%;margin:0 auto}
 .roddy-export-stage .re-top-block .re-section-title{margin-left:0}
 .roddy-export-stage .roddy-export-featured th{font-size:12px}
-.roddy-export-stage .roddy-export-featured .re-pos,.roddy-export-stage .roddy-export-featured .re-rank,.roddy-export-stage .roddy-export-featured .re-score,.roddy-export-stage .roddy-export-featured td:nth-child(5){font-size:16px}
+.roddy-export-stage .roddy-export-featured .re-pos,.roddy-export-stage .roddy-export-featured .re-rank,.roddy-export-stage .roddy-export-featured .re-score,.roddy-export-stage .roddy-export-featured td:nth-child(6),.roddy-export-stage .roddy-export-featured .re-total{font-size:16px}
 .roddy-export-stage .roddy-export-featured .re-div{font-size:11px}
 </style>
 </head>
@@ -5501,7 +5502,7 @@ async function exportRoddyImage(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=v=>v===null||v===undefined||String(v).trim()===''?'—':esc(v);
   const logo=e=>`<span class="re-logo-box"><img src="logo/${encodeURIComponent(teamLogoSlug(e.team))}.png" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}'}"></span>`;
-  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span>${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
+  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>TOTAL</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span>${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td class="re-total">${fmt(e.total)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
   const stage=document.createElement('div');stage.className='roddy-export-stage';
   stage.style.cssText='position:fixed;left:-16000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;background:#f3f6fc;padding:22px 25px 27px;color:#16243e;font-family:Barlow,Arial,sans-serif';
   stage.innerHTML=`<div class="re-header"><img class="re-header-logo" src="logo/roddy-logo.png" crossorigin="anonymous" alt="Roddy Rodriguez Cup logo"><div class="re-header-text"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div></div><div class="re-top-block"><div class="re-section-title">TOP 10</div>${table(top,true)}</div><div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
