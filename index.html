@@ -2548,6 +2548,32 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .aleague-lms-picks .lms-pick{column-gap:9px}
 .export-aleague-lms .aleague-lms-picks .lms-pick{column-gap:10px}
 
+
+/* A-League LMS exports: vertically centre labels and larger proportional crests. */
+.export-aleague-lms .lms-pick-row{align-items:center!important;min-height:66px!important}
+.export-aleague-lms .lms-participant,
+.export-aleague-lms .aleague-lms-team{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  align-self:stretch!important;gap:11px!important;line-height:1.25!important;
+}
+.export-aleague-lms .lms-participant > a,
+.export-aleague-lms .aleague-lms-team > a{align-self:center!important}
+.export-aleague-lms .lms-pick-col{display:flex!important;align-items:center!important;justify-content:center!important;align-self:stretch!important}
+.export-aleague-lms .aleague-lms-picks .lms-pick{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  gap:13px!important;min-height:48px!important;flex-wrap:nowrap!important;
+}
+.export-aleague-lms .lms-participant .table-team-logo{
+  display:block!important;width:43px!important;height:43px!important;max-width:43px!important;
+  flex:0 0 43px!important;object-fit:contain!important;object-position:center!important;
+  transform:none!important;
+}
+.export-aleague-lms .aleague-lms-club-logo{
+  display:block!important;width:49px!important;height:49px!important;
+  flex:0 0 49px!important;object-fit:contain!important;object-position:center!important;
+  transform:scale(1.28)!important;transform-origin:center center!important;
+}
+
 </style>
 </head>
 <body>
