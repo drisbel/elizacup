@@ -3940,7 +3940,23 @@ function liveEffectiveBench(p){
 }
 function liveSquadLineup(squad){
  const players=squad?.players||[];
- return {starters:players.filter(p=>!liveEffectiveBench(p)),bench:players.filter(p=>liveEffectiveBench(p))};
+ // Keep the four original bench slots in COWZA order. A substituted-on
+ // bench player exchanges places with a substituted-off starter, rather
+ // than pushing that starter to the end of the bench.
+ const originalStarters=players.filter(p=>!p.bench);
+ const originalBench=players.filter(p=>!!p.bench);
+ const outgoing=originalStarters.filter(p=>liveSubstitutionStatus(p)==='off');
+ const incoming=originalBench.filter(p=>liveSubstitutionStatus(p)==='on');
+ const starters=originalStarters.filter(p=>liveSubstitutionStatus(p)!=='off').concat(incoming);
+ const bench=originalBench.slice();
+ incoming.forEach((player,i)=>{
+  const slot=bench.indexOf(player);
+  if(slot>=0 && outgoing[i])bench[slot]=outgoing[i];
+  else if(slot>=0)bench.splice(slot,1);
+ });
+ // Retain any unpaired outgoing player without displacing an existing slot.
+ if(outgoing.length>incoming.length)bench.push(...outgoing.slice(incoming.length));
+ return {starters,bench};
 }
 function livePlayerHtml(t,other,rightSide=false,title='starters'){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
@@ -3957,14 +3973,14 @@ function livePlayerHtml(t,other,rightSide=false,title='starters'){
   const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
   return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(liveDisplayPlayerPoints(p))}</strong><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><strong>${liveEscape(liveDisplayPlayerPoints(p))}</strong>`}</div>`;
  }).join('')}`;
- // Keep unique, common and bench groups separate. Within each, sort clubs by
- // the fixture row order for this team's gameweek; preserve squad order on ties.
+ // Sort unique and common starters by fixture order. Keep bench in its original
+ // COWZA bench-slot order, with outgoing starters replacing incoming players.
  const byClub=players=>[...players].sort((a,b)=>
   liveFixtureClubRank(t.gameweek,a.club)-liveFixtureClubRank(t.gameweek,b.club));
  const {starters,bench}=liveSquadLineup(t);
  const unique=starters.filter(p=>!otherStarting.has(livePlayerIdentity(p)));
  const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p)));
- return group(title==='bench'?byClub(bench):[...byClub(unique),...byClub(common)]);
+ return group(title==='bench'?bench:[...byClub(unique),...byClub(common)]);
 }
 function liveMatchHtml(f){
  const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
