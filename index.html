@@ -2512,6 +2512,42 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-player-name .live-sub-badge{display:inline-flex;flex-shrink:0}
 .club-squad-player-name .live-sub-badge{width:13px;height:13px;font-size:9px;margin-left:3px}
 
+
+/* A-League LMS: crests beside participant and A-League pick names. */
+.aleague-lms-team{display:flex;align-items:center;gap:8px;min-width:0}
+.aleague-lms-team .table-team-logo{width:27px;height:27px;max-width:27px;flex:0 0 27px;object-fit:contain;aspect-ratio:auto}
+.aleague-lms-picks .lms-pick{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+.aleague-lms-club-logo{display:inline-block;width:24px;height:24px;object-fit:contain;aspect-ratio:auto;vertical-align:middle;flex-shrink:0}
+.aleague-lms-lives .lms-pick-row{grid-template-columns:minmax(0,1fr) 104px!important}
+.aleague-lms-lives .lms-pick-col{white-space:nowrap}
+.export-aleague-lms .export-image-body{padding:14px!important}
+.export-aleague-lms .side-export-content{max-width:100%!important;width:100%!important;box-sizing:border-box}
+.export-aleague-lms .lms-pick-list{width:100%!important;max-width:100%!important;box-sizing:border-box}
+.export-aleague-lms .lms-pick-row{box-sizing:border-box;width:100%}
+.export-aleague-lms .aleague-lms-team .table-team-logo{width:29px!important;height:29px!important;object-fit:contain!important}
+.export-aleague-lms .aleague-lms-club-logo{width:26px!important;height:26px!important;object-fit:contain!important}
+
+
+/* A-League LMS: preserve crest proportions in both live and captured views.
+   Zoom A-League artwork uniformly (never stretch an axis independently). */
+.aleague-lms-team .table-team-logo,
+.aleague-lms-picks .lms-participant .table-team-logo,
+.aleague-lms-lives .lms-participant .table-team-logo,
+.export-aleague-lms .table-team-logo{
+  object-fit:contain!important;object-position:center!important;
+  aspect-ratio:1/1;min-width:0;min-height:0;
+  transform:none!important;
+}
+.aleague-lms-club-logo,
+.export-aleague-lms .aleague-lms-club-logo{
+  object-fit:contain!important;object-position:center!important;
+  aspect-ratio:1/1;max-width:none;max-height:none;
+  transform:scale(1.16);transform-origin:center center;
+  image-rendering:auto;
+}
+.aleague-lms-picks .lms-pick{column-gap:9px}
+.export-aleague-lms .aleague-lms-picks .lms-pick{column-gap:10px}
+
 </style>
 </head>
 <body>
@@ -12218,13 +12254,12 @@ function renderAleagueLmsPlayerSummary(data){
     const eliminated = /eliminated/i.test(p.status);
     const lives = "❤️".repeat(Math.max(p.lives,0)) + "🖤".repeat(Math.max(3-p.lives,0));
     return `<div class="lms-pick-row" style="${eliminated ? 'background:#d1d5db;border-color:#6b7280;opacity:0.7;' : ''}">
-      <span class="lms-participant">${sideLeagueTeamLink(p.name)}</span>
+      <span class="lms-participant aleague-lms-team"><img src="logo/${teamLogoSlug(resolveSideLeagueTeamName(p.name))}.png" class="table-team-logo" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(resolveSideLeagueTeamName(p.name))}';}">${sideLeagueTeamLink(p.name)}</span>
       <span class="lms-pick-col" style="font-size:16px;">${lives}</span>
-      <span class="lms-result" style="color:${eliminated ? '#991b1b' : '#166534'};">${p.status}</span>
     </div>`;
   }).join("");
   return `<div class="section-head" style="margin-bottom:10px;"><h2 style="font-size:18px;">Lives Remaining</h2></div>
-    <div class="lms-pick-list" style="margin-bottom:28px;">${rows}</div>`;
+    <div class="lms-pick-list aleague-lms-lives" style="margin-bottom:28px;">${rows}</div>`;
 }
 
 function renderAleagueLms(data, containerId){
@@ -12262,7 +12297,7 @@ function renderAleagueLms(data, containerId){
     return `<div class="lms-pick-row" style="${cardStyle}">
       <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
       <span class="lms-pick-col">
-        <span class="lms-pick${pickClass}">${pickIcon}${isDnp ? "Did Not Pick" : (e.pick || "—")}</span>
+        <span class="lms-pick${pickClass}">${isEntered && liveALeagueLogo(e.pick) ? `<img class="aleague-lms-club-logo" src="${liveALeagueLogo(e.pick)}" alt="" onerror="this.style.display='none'">` : ''}${pickIcon}${isDnp ? "Did Not Pick" : (e.pick || "—")}</span>
         ${e.opponent && !isEliminated && !isDnp ? `<span class="lms-opponent">${e.opponent}</span>` : ""}
       </span>
       <span class="lms-result" style="color:${resultColor};">${resultLabel}</span>
@@ -12273,7 +12308,7 @@ function renderAleagueLms(data, containerId){
     aleagueLmsTipsFormHtml(data) +
     `<div class="section-head" style="margin-top:32px;margin-bottom:10px;"><h2 style="font-size:18px;">A-League LMS</h2></div>
     <div class="round-tabs">${tabsHtml}</div>
-    <div class="lms-pick-list">${rowsHtml}</div>` +
+    <div class="lms-pick-list aleague-lms-picks">${rowsHtml}</div>` +
     renderAleagueLmsPlayerSummary(data);
 
   el.querySelectorAll('.round-tab').forEach(btn=>{
@@ -14082,6 +14117,17 @@ if(installInstructionsOverlay){
       stage.style.width=(maxColumns<=3?'640px':maxColumns===4?'790px':'920px');
     }else if(exportTables.length && maxColumns<=8){
       stage.style.width=Math.min(1190,Math.max(820,470+maxColumns*82))+'px';
+    }
+    // A-League LMS lists are narrow cards; do not export into the generic 1190px canvas.
+    if(key==='lmsaleague'){
+      stage.classList.add('export-aleague-lms');
+      const lives=!!content.querySelector('.aleague-lms-lives');
+      const picks=!!content.querySelector('.aleague-lms-picks');
+      if(heading){
+        stage.style.width=lives?'570px':picks?'690px':'650px';
+      }else{
+        stage.style.width='720px';
+      }
     }
     const cards=content.querySelectorAll('.fixture-card');
     if(cards.length && !content.querySelector('table')){
