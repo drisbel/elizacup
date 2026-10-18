@@ -2681,6 +2681,8 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .roddy-export-stage .roddy-export-featured th{font-size:12px}
 .roddy-export-stage .roddy-export-featured .re-pos,.roddy-export-stage .roddy-export-featured .re-rank,.roddy-export-stage .roddy-export-featured .re-score,.roddy-export-stage .roddy-export-featured td:nth-child(6),.roddy-export-stage .roddy-export-featured .re-total{font-size:16px}
 .roddy-export-stage .roddy-export-featured .re-div{font-size:11px}
+/* Historical ownership additions */
+.ownership-extra-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}.ownership-extra-grid h3{margin:0 0 10px;font:700 17px Barlow,sans-serif}.ownership-extra-note{font:13px Barlow,sans-serif;margin:8px 0 14px}.ownership-profile-history{padding:10px 18px}.ownership-profile-history h4{margin:4px 0 8px}.club-history-selector{display:flex;align-items:center;gap:8px;padding:8px 0;font:700 13px Barlow,sans-serif}.club-history-selector select{max-width:180px;padding:6px}.club-transfer-history{margin-top:18px}.club-transfer-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #ccd2dc;padding:9px 4px;font:13px Barlow,sans-serif}.club-transfer-row b{min-width:50px}.transfer-in{color:#167a48}.transfer-out{color:#bb3a3a}.ownership-table img{object-fit:contain;width:auto;height:22px;max-width:28px;vertical-align:middle}@media(max-width:650px){.ownership-extra-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -7555,6 +7557,40 @@ function renderStatsPage(){
 
 // Current snapshot statistics: squad ownership, captains, low ownership, A-League clubs.
 let ownershipTeams=[];
+let ownershipHistoryTeams=[];
+let ownershipSelectedWeek='current';
+let ownershipStatsWeek='all';
+let ownershipProfileWeek='all';
+let ownershipHistoryPromise=null;
+const SOKKAH_HISTORY_SHEET='SOKKAH HISTORY';
+function ownershipGw(t){const m=String(t?.gameweek||'').match(/\d+/);return m?Number(m[0]):0;}
+function ownershipWeekList(){return [...new Set(ownershipHistoryTeams.map(ownershipGw).filter(Boolean))].sort((a,b)=>a-b);}
+function ownershipHistorical(){const by=new Map();for(const t of ownershipHistoryTeams){const gw=ownershipGw(t),name=liveKey(t.name||t.fantasy);if(gw&&name)by.set(gw+'|'+name,t);}return [...by.values()];}
+function ownershipAllWeeks(){const map=new Map();for(const t of ownershipHistorical())map.set(ownershipGw(t)+'|'+liveKey(t.name||t.fantasy),t);for(const t of ownershipTeams){const gw=ownershipGw(t),key=liveKey(t.name||t.fantasy);if(gw&&key&&!map.has(gw+'|'+key))map.set(gw+'|'+key,t);}return [...map.values()];}
+function ownershipWeekTeams(week){return week==='current'?ownershipTeams:ownershipAllWeeks().filter(t=>ownershipGw(t)===Number(week));}
+async function ensureOwnershipHistory(){
+ if(ownershipHistoryPromise)return ownershipHistoryPromise;
+ ownershipHistoryPromise=(async()=>{
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SOKKAH_HISTORY_SHEET)}&cachebust=${Date.now()}`;
+  const response=await cachedFetch(url);if(!response.ok)throw Error('SOKKAH HISTORY HTTP '+response.status);
+  const parsed=parseLiveExport(Papa.parse(await response.text(),{skipEmptyLines:false}).data);
+  ownershipHistoryTeams=parsed.map(t=>({...t,division:ownershipDivisionId(roddyEntries.find(e=>liveKey(e.team)===liveKey(t.name))?.division)}));
+  return ownershipHistoryTeams;
+ })().catch(err=>{ownershipHistoryPromise=null;console.warn('Ownership history unavailable',err);return [];});
+ return ownershipHistoryPromise;
+}
+function ownershipSelectHtml(id,value,includeCurrent=true,includeAll=false){return `<select id="${id}">${includeAll?`<option value="all"${value==='all'?' selected':''}>All gameweeks</option>`:''}${includeCurrent?`<option value="current"${value==='current'?' selected':''}>Current GW</option>`:''}${ownershipWeekList().map(w=>`<option value="${w}"${String(value)===String(w)?' selected':''}>GW ${w}</option>`).join('')}</select>`;}
+function ownershipPoints(p){const n=Number(String(p?.points??'').replace(/,/g,''));return Number.isFinite(n)?n:0;}
+function ownershipTeamHistory(name){return ownershipAllWeeks().filter(t=>liveKey(t.name)===liveKey(name)||liveKey(t.fantasy)===liveKey(name)).sort((a,b)=>ownershipGw(a)-ownershipGw(b));}
+function ownershipChange(before,after){const a=new Map((before?.players||[]).map(p=>[liveKey(p.name),p]));const b=new Map((after?.players||[]).map(p=>[liveKey(p.name),p]));return {ins:[...b].filter(([k])=>!a.has(k)).map(([,p])=>p),outs:[...a].filter(([k])=>!b.has(k)).map(([,p])=>p)};}
+function ownershipTransfersHtml(teams){const gw=Math.max(0,...teams.map(ownershipGw));teams=teams.filter(t=>ownershipGw(t)===gw);const previous=ownershipAllWeeks().filter(t=>ownershipGw(t)===gw-1);if(!gw||!previous.length)return '<p class="state-msg">Transfer comparisons become available when consecutive gameweeks are archived.</p>';
+ const old=new Map(previous.map(t=>[liveKey(t.name),t]));const ins=new Map(),outs=new Map();for(const t of teams){const prev=old.get(liveKey(t.name));if(!prev)continue;const change=ownershipChange(prev,t);for(const [arr,map] of [[change.ins,ins],[change.outs,outs]])for(const p of arr){const k=liveKey(p.name),r=map.get(k)||{name:p.name,club:p.club,n:0};r.n++;map.set(k,r);}}
+ const table=(map,title)=>`<div class="ownership-table-wrap"><h3>${title}</h3><table class="ownership-table"><thead><tr><th>Player</th><th>Club</th><th>Managers</th></tr></thead><tbody>${[...map.values()].sort((a,b)=>b.n-a.n).map(p=>`<tr><td><button type="button" class="ownership-player-link" data-owner-player="${liveEscape(liveKey(p.name))}">${liveEscape(p.name)}</button></td><td>${ownershipClubLogo(p.club)} ${liveEscape(p.club)}</td><td>${p.n}</td></tr>`).join('')||'<tr><td colspan="3">No changes</td></tr>'}</tbody></table></div>`;
+ return `<div class="ownership-extra-grid">${table(ins,'Most Transferred In')}${table(outs,'Most Transferred Out')}</div>`;}
+function ownershipTemplateHtml(teams){if(!teams.length)return '<p class="state-msg">No squads available.</p>';const map=new Map();for(const t of teams)for(const p of t.players){const k=liveKey(p.name),v=map.get(k)||{...p,n:0};v.n++;map.set(k,v);}const position=p=>String(p.position||'').toUpperCase();const group=p=>/^(GK|GKP)/.test(position(p))?'GK':/^(DEF|DF)/.test(position(p))?'DEF':/^(MID|MF)/.test(position(p))?'MID':'FWD';const quotas={GK:2,DEF:5,MID:5,FWD:3};const selected=Object.entries(quotas).flatMap(([g,n])=>[...map.values()].filter(p=>group(p)===g).sort((a,b)=>b.n-a.n).slice(0,n));return `<p class="ownership-extra-note">Most-owned 15-player squad (2 GK · 5 DEF · 5 MID · 3 FWD). No budget or club-limit constraints applied.</p><div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>Player</th><th>Club</th><th>Position</th><th>Owners</th></tr></thead><tbody>${selected.map(p=>`<tr><td>${liveEscape(p.name)}</td><td>${ownershipClubLogo(p.club)} ${liveEscape(p.club)}</td><td>${group(p)}</td><td>${p.n}</td></tr>`).join('')}</tbody></table></div>`;}
+function ownershipCaptainBenchHtml(teams){const tally=new Map();for(const t of teams){const k=liveKey(t.name);let r=tally.get(k);if(!r){r={name:t.name,division:t.division,captain:0,bench:0,gws:0};tally.set(k,r);}r.gws++;const boost=/^(BB|BENCH\s*BOOST)$/i.test(String(t.chip||'').trim());for(const p of t.players){if(liveCaptainKey(p)==='C'&&!liveEffectiveBench(p))r.captain+=ownershipPoints(p)*2;if(liveEffectiveBench(p)&&liveSubstitutionStatus(p)!=='off'&&!boost)r.bench+=ownershipPoints(p);}}
+ const rows=[...tally.values()].sort((a,b)=>b.captain-a.captain);const table=(key,title)=>`<div class="ownership-table-wrap"><h3>${title}</h3><table class="ownership-table"><thead><tr><th>#</th><th>Team</th><th>Points</th><th>Avg/GW</th></tr></thead><tbody>${[...rows].sort((a,b)=>b[key]-a[key]).map((r,i)=>`<tr><td>${i+1}</td><td><button type="button" class="ownership-player-link" data-owner-team-profile="${liveEscape(r.name)}">${liveEscape(r.name)}</button></td><td>${r[key]}</td><td>${(r[key]/r.gws).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;return `<p class="ownership-extra-note">Captain: doubled score. Bench: unused substitute points; Bench Boost weeks and subbed-on players excluded.</p><div class="ownership-extra-grid">${table('captain','Captain Points')}${table('bench','Points Left on Bench')}</div>`;}
+
 let ownershipDivision='all';
 let ownershipCategory='owned';
 let ownershipSearch='';
@@ -7581,6 +7617,7 @@ async function loadPlayerOwnershipTab(){
   if(roddyRes.ok)parseRoddy(Papa.parse(await roddyRes.text(),{skipEmptyLines:false}).data);
   const divisions=new Map(roddyEntries.map(e=>[liveKey(e.team),ownershipDivisionId(e.division)]));
   ownershipTeams=teams.map(t=>({...t,division:divisions.get(liveKey(t.name))||divisions.get(liveKey(t.fantasy))||''}));
+  await ensureOwnershipHistory();
   renderPlayerOwnershipTab();
  }catch(err){el.className='state-msg error';el.textContent='Unable to load ownership statistics: '+err.message;}
 }
@@ -7595,7 +7632,8 @@ function ownershipClubLogo(club){
 }
 function renderPlayerOwnershipTab(){
  const el=document.getElementById('statsContainer');if(!el)return;
- const teams=ownershipTeams.filter(t=>ownershipDivision==='all'||t.division===ownershipDivision);
+ const sourceTeams=['transfers','template','captainbench'].includes(ownershipCategory)?(ownershipStatsWeek==='all'?ownershipAllWeeks():ownershipWeekTeams(ownershipStatsWeek)):ownershipWeekTeams(ownershipSelectedWeek);
+ const teams=sourceTeams.filter(t=>ownershipDivision==='all'||t.division===ownershipDivision);
  const totals=new Map(),clubs=new Map();
  for(const team of teams){
   const seen=new Set();
@@ -7613,21 +7651,22 @@ function renderPlayerOwnershipTab(){
  const players=[...totals.values()];
  const category=ownershipCategory;
  const ranked=category==='captained'?players.filter(p=>p.captained).sort((a,b)=>b.captained-a.captained||b.owned-a.owned):
- category==='differentials'?players.sort((a,b)=>a.owned-b.owned||a.name.localeCompare(b.name)):
  players.sort((a,b)=>b.owned-a.owned||a.name.localeCompare(b.name));
- const clubRows=[...clubs].sort((a,b)=>b[1]-a[1]);
  const unknown=ownershipTeams.filter(t=>!t.division).length;
  el.className='ownership-stats';
  el.innerHTML=`<div class="ownership-controls">
- <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['differentials','Biggest Differentials'],['clubs','A-League Clubs'],['lookup','Who Owns This Player?']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div>
+ <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['lookup','Player Profiles'],['transfers','Transfers'],['template','Template Team'],['captainbench','Captain & Bench']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div>
  <div class="ownership-filter-row">
+ <label>Gameweek ${['transfers','template','captainbench'].includes(category)?ownershipSelectHtml('ownershipStatsWeek',ownershipStatsWeek,false,true):ownershipSelectHtml('ownershipSelectedWeek',ownershipSelectedWeek,true,false)}</label>
  <label for="ownershipDivision">Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
- ${['owned','captained','differentials'].includes(category)?`<label for="ownershipTableSearch" class="ownership-filter-search">Search players <input id="ownershipTableSearch" type="search" placeholder="Search by player name or club…" value="${liveEscape(ownershipTableSearch)}" autocomplete="off" aria-label="Search player rankings"></label>`:''}
+ ${['owned','captained'].includes(category)?`<label for="ownershipTableSearch" class="ownership-filter-search">Search players <input id="ownershipTableSearch" type="search" placeholder="Search by player name or club…" value="${liveEscape(ownershipTableSearch)}" autocomplete="off" aria-label="Search player rankings"></label>`:''}
  </div></div>
  ${category==='lookup'?`<div class="ownership-lookup"><label for="ownershipSearch">Find a player</label><input id="ownershipSearch" type="search" placeholder="Search player name…" value="${liveEscape(ownershipSearch)}" autocomplete="off"><label for="ownershipStatus">Squad position</label><select id="ownershipStatus"><option value="all"${ownershipStatus==='all'?' selected':''}>Starting XI + Bench</option><option value="starting"${ownershipStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipStatus==='bench'?' selected':''}>Bench</option></select></div><div id="ownershipLookupResults"></div>`:''}
- ${!teams.length?'<div class="state-msg">No squads matched this division. Check division labels in Roddy.</div>':
+ ${!teams.length?'<div class="state-msg">No squads matched this division or gameweek.</div>':
  category==='lookup'?``:
- category==='clubs'?`<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>A-League Club</th><th>Selections</th><th>Share of squad slots</th></tr></thead><tbody>${clubRows.map(([club,n],i)=>`<tr><td>${i+1}</td><td><span class="ownership-club-cell">${ownershipClubLogo(club)}<span class="ownership-club-full">${liveEscape(club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(club))}</span></span></td><td>${n}</td><td>${(100*n/(teams.length*15)).toFixed(1)}%</td></tr>`).join('')}</tbody></table></div>`:
+ category==='transfers'?ownershipTransfersHtml(teams):
+ category==='template'?ownershipTemplateHtml(teams):
+ category==='captainbench'?ownershipCaptainBenchHtml(teams):
  `<div class="ownership-table-wrap"><table class="ownership-table"><thead><tr><th>#</th><th>Player</th><th>Club</th><th>${category==='captained'?'Captained':'Owned'}</th><th>${category==='captained'?'Captaincy %':'Ownership %'}</th></tr></thead><tbody>${ranked.map((p,i)=>{const n=category==='captained'?p.captained:p.owned;const pct=100*n/denom;return `<tr data-ranking-search="${liveEscape((p.name+' '+p.club).toLowerCase())}"><td>${i+1}</td><td><button type="button" class="ownership-player-link" data-owner-player="${liveEscape(liveKey(p.name))}">${liveEscape(p.name)}</button></td><td><span class="ownership-club-cell">${ownershipClubLogo(p.club)}<span class="ownership-club-full">${liveEscape(p.club)}</span><span class="ownership-club-short">${liveEscape(ownershipClubShort(p.club))}</span></span></td><td>${n}</td><td><div class="ownership-bar"><span style="width:${pct}%"></span></div>${pct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table></div>`}`;
  const rankingInput=el.querySelector('#ownershipTableSearch');
  if(rankingInput){
@@ -7645,6 +7684,9 @@ function renderPlayerOwnershipTab(){
   renderOwnershipLookupResults();
  }
  el.addEventListener('click',ownershipPlayerClick,{once:false});
+ el.querySelector('#ownershipSelectedWeek')?.addEventListener('change',e=>{ownershipSelectedWeek=e.target.value;renderPlayerOwnershipTab()});
+ el.querySelector('#ownershipStatsWeek')?.addEventListener('change',e=>{ownershipStatsWeek=e.target.value;renderPlayerOwnershipTab()});
+ el.querySelectorAll('[data-owner-team-profile]').forEach(b=>b.addEventListener('click',()=>goToTeam(b.dataset.ownerTeamProfile)));
  el.querySelector('#ownershipDivision')?.addEventListener('change',e=>{ownershipDivision=e.target.value;renderPlayerOwnershipTab()});
  el.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{ownershipCategory=b.dataset.category;renderPlayerOwnershipTab()}));
 }
@@ -7655,7 +7697,7 @@ function ownershipPlayerClick(event){
  openOwnershipModal(button.dataset.ownerPlayer);
 }
 function ownershipOwners(key,division='all',status='all'){
- return ownershipTeams.filter(t=>division==='all'||t.division===division).flatMap(t=>{
+ return ownershipWeekTeams(ownershipSelectedWeek).filter(t=>division==='all'||t.division===division).flatMap(t=>{
   const p=t.players.find(p=>liveKey(p.name)===key);
   if(!p||(status==='starting'&&p.bench)||(status==='bench'&&!p.bench))return [];
   return [{team:t,player:p}];
@@ -7663,7 +7705,7 @@ function ownershipOwners(key,division='all',status='all'){
 }
 function ownershipPlayerCatalog(){
  const players=new Map();
- for(const t of ownershipTeams)for(const p of t.players){const key=liveKey(p.name);if(key&&!players.has(key))players.set(key,{key,name:p.name,club:p.club});}
+ for(const t of ownershipAllWeeks())for(const p of t.players){const key=liveKey(p.name);if(key&&!players.has(key))players.set(key,{key,name:p.name,club:p.club});}
  return [...players.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
 function renderOwnershipLookupResults(){
@@ -7732,7 +7774,13 @@ function renderOwnershipModal(){
  const player=ownershipPlayerCatalog().find(p=>p.key===ownershipSelectedPlayer);if(!player)return;
  const owners=ownershipOwners(ownershipSelectedPlayer,ownershipModalDivision,ownershipModalStatus);
  const total=ownershipOwners(ownershipSelectedPlayer,'all','all').length;
- modal.innerHTML=`<div class="ownership-modal-panel"><div class="ownership-modal-header"><div>${ownershipClubLogo(player.club)}<div><h3>${liveEscape(player.name)}</h3><small>${total} ${total===1?'team owns':'teams own'} this player</small></div></div><button type="button" class="ownership-modal-close" data-owner-close aria-label="Close">×</button></div><div class="ownership-modal-filters"><label>Division<select id="ownershipModalDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipModalDivision?' selected':''}>${label}</option>`).join('')}</select></label><label>Squad position<select id="ownershipModalStatus"><option value="all"${ownershipModalStatus==='all'?' selected':''}>All</option><option value="starting"${ownershipModalStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipModalStatus==='bench'?' selected':''}>Bench</option></select></label></div><div class="ownership-modal-count">${owners.length} matching ${owners.length===1?'team':'teams'}</div><div class="ownership-owner-list">${owners.length?owners.sort((a,b)=>a.team.division.localeCompare(b.team.division)||a.team.name.localeCompare(b.team.name)).map(({team,player:p})=>`<div class="ownership-owner-row"><span class="ownership-owner-name"><img class="ownership-owner-team-logo" src="logo/${teamLogoSlug(team.name)}.png" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}" data-team-name="${liveEscape(team.name)}"><button type="button" class="ownership-owner-team-link" data-owner-team="${liveEscape(team.name)}" title="Preview ${liveEscape(team.name)} squad">${liveEscape(team.name)}</button></span><span class="ownership-owner-division" style="background:${ownershipDivisionColor(team.division)}">${liveEscape(OWNERSHIP_DIVISIONS.find(d=>d[0]===team.division)?.[1]||'Division unknown')}</span><span class="ownership-owner-position ${p.bench?'is-bench':'is-starting'}">${p.bench?'Bench':'Starting XI'}</span>${liveCaptainKey(p)==='C'?'<span class="ownership-owner-captain">C</span>':''}</div>`).join(''):'<p class="state-msg">No owners match these filters.</p>'}</div></div>`;
+ const historyWeeks=ownershipWeekList();
+ const historyPoints=historyWeeks.map(w=>({w,n:ownershipAllWeeks().filter(t=>ownershipGw(t)===w&&t.players.some(p=>liveKey(p.name)===ownershipSelectedPlayer)).length}));
+ const max=Math.max(1,...historyPoints.map(p=>p.n));
+ const coords=historyPoints.map((p,i)=>`${historyPoints.length===1?150:20+i*280/(historyPoints.length-1)},${100-80*p.n/max}`).join(' ');
+ const historyChart=historyPoints.length?`<section class="ownership-profile-history"><h4>Ownership History</h4><svg viewBox="0 0 320 125" role="img" aria-label="Ownership by gameweek" style="width:100%;max-height:180px;overflow:visible"><line x1="20" y1="100" x2="300" y2="100" stroke="currentColor" opacity=".3"/><polyline points="${coords}" fill="none" stroke="#18a36e" stroke-width="3" stroke-linejoin="round"/>${historyPoints.map((p,i)=>{const x=historyPoints.length===1?150:20+i*280/(historyPoints.length-1),y=100-80*p.n/max;return `<circle cx="${x}" cy="${y}" r="3.5" fill="#18a36e"><title>GW ${p.w}: ${p.n} owners</title></circle><text x="${x}" y="116" text-anchor="middle" font-size="9" fill="currentColor">${p.w}</text>`}).join('')}</svg></section>`:'<p class="state-msg">Ownership history will appear once archived gameweeks are available.</p>';
+
+ modal.innerHTML=`<div class="ownership-modal-panel"><div class="ownership-modal-header"><div>${ownershipClubLogo(player.club)}<div><h3>${liveEscape(player.name)}</h3><small>${total} ${total===1?'team owns':'teams own'} this player</small></div></div><button type="button" class="ownership-modal-close" data-owner-close aria-label="Close">×</button></div><div class="ownership-modal-filters"><label>Division<select id="ownershipModalDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipModalDivision?' selected':''}>${label}</option>`).join('')}</select></label><label>Squad position<select id="ownershipModalStatus"><option value="all"${ownershipModalStatus==='all'?' selected':''}>All</option><option value="starting"${ownershipModalStatus==='starting'?' selected':''}>Starting XI</option><option value="bench"${ownershipModalStatus==='bench'?' selected':''}>Bench</option></select></label></div>${historyChart}<div class="ownership-modal-count">${owners.length} matching ${owners.length===1?'team':'teams'}</div><div class="ownership-owner-list">${owners.length?owners.sort((a,b)=>a.team.division.localeCompare(b.team.division)||a.team.name.localeCompare(b.team.name)).map(({team,player:p})=>`<div class="ownership-owner-row"><span class="ownership-owner-name"><img class="ownership-owner-team-logo" src="logo/${teamLogoSlug(team.name)}.png" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}" data-team-name="${liveEscape(team.name)}"><button type="button" class="ownership-owner-team-link" data-owner-team="${liveEscape(team.name)}" title="Preview ${liveEscape(team.name)} squad">${liveEscape(team.name)}</button></span><span class="ownership-owner-division" style="background:${ownershipDivisionColor(team.division)}">${liveEscape(OWNERSHIP_DIVISIONS.find(d=>d[0]===team.division)?.[1]||'Division unknown')}</span><span class="ownership-owner-position ${p.bench?'is-bench':'is-starting'}">${p.bench?'Bench':'Starting XI'}</span>${liveCaptainKey(p)==='C'?'<span class="ownership-owner-captain">C</span>':''}</div>`).join(''):'<p class="state-msg">No owners match these filters.</p>'}</div></div>`;
  modal.querySelector('#ownershipModalDivision')?.addEventListener('change',e=>{ownershipModalDivision=e.target.value;renderOwnershipModal()});
  modal.querySelector('#ownershipModalStatus')?.addEventListener('change',e=>{ownershipModalStatus=e.target.value;renderOwnershipModal()});
  modal.querySelector('[data-owner-close]')?.focus();
@@ -8838,6 +8886,18 @@ function clubSquadClubAbbr(club){
   const aliases={adelaide:'ADL',adelaideunited:'ADL',adl:'ADL',auckland:'AKL',aucklandfc:'AKL',akl:'AKL',brisbane:'BRI',brisbaneroar:'BRI',bri:'BRI',centralcoast:'CCM',centralcoastmariners:'CCM',ccm:'CCM',macarthur:'MAC',macarthurfc:'MAC',mac:'MAC',melbournecity:'MCY',melbournecityfc:'MCY',mcy:'MCY',melbournevictory:'MVC',melbournevictoryfc:'MVC',mvc:'MVC',newcastle:'NEW',newcastlejets:'NEW',newcastlejetsfc:'NEW',new:'NEW',perth:'PER',perthglory:'PER',per:'PER',sydney:'SYD',sydneyfc:'SYD',syd:'SYD',wellington:'WEL',wellingtonphoenix:'WEL',wel:'WEL',westernsydney:'WSW',westernsydneywanderers:'WSW',westernsydneywanderersfc:'WSW',wsw:'WSW'};
   return aliases[key]||String(club||'').trim().slice(0,3).toUpperCase()||'—';
 }
+async function populateClubOwnershipHistory(teamName,currentSquad){
+ await ensureOwnershipHistory();
+ const pitch=document.getElementById('clubHistoricalSquadSlot'),slot=document.getElementById('clubTransferHistorySlot');if(!pitch||!slot)return;
+ const records=ownershipTeamHistory(teamName),weeks=records.map(ownershipGw);
+ const current=ownershipTeams.find(t=>liveKey(t.name)===liveKey(teamName));
+ const options=`<option value="current">Current GW</option>${weeks.map(w=>`<option value="${w}">GW ${w}</option>`).join('')}`;
+ pitch.innerHTML=`<label class="club-history-selector">Squad gameweek <select id="clubSquadGwSelect">${options}</select></label><div id="clubSquadPitch">${clubSquadHtml(current||currentSquad)||'<p class="state-msg">Current squad unavailable.</p>'}</div>`;
+ pitch.querySelector('#clubSquadGwSelect').addEventListener('change',e=>{const t=e.target.value==='current'?(current||currentSquad):records.find(r=>ownershipGw(r)===Number(e.target.value));pitch.querySelector('#clubSquadPitch').innerHTML=clubSquadHtml(t)||'<p class="state-msg">Squad unavailable.</p>';});
+ slot.innerHTML=`<div class="section-head"><h2 style="font-size:18px">Transfer History</h2></div><label class="club-history-selector">Gameweek <select id="clubTransferGwSelect"><option value="all">All gameweeks</option>${weeks.map(w=>`<option value="${w}">GW ${w}</option>`).join('')}</select></label><div id="clubTransferHistoryContent"></div>`;
+ const draw=()=>{const selected=slot.querySelector('#clubTransferGwSelect').value;const rows=records.map((t,i)=>{const previous=ownershipAllWeeks().find(r=>ownershipGw(r)===ownershipGw(t)-1&&liveKey(r.name)===liveKey(teamName));return previous?{gw:ownershipGw(t),...ownershipChange(previous,t)}:null}).filter(Boolean).filter(r=>selected==='all'||String(r.gw)===selected);slot.querySelector('#clubTransferHistoryContent').innerHTML=rows.length?rows.map(r=>`<div class="club-transfer-row"><b>GW ${r.gw}</b><span class="transfer-in">IN: ${r.ins.map(p=>liveEscape(p.name)).join(', ')||'—'}</span><span class="transfer-out">OUT: ${r.outs.map(p=>liveEscape(p.name)).join(', ')||'—'}</span></div>`).join(''):'<p class="state-msg">Transfer comparisons require consecutive archived gameweeks.</p>';};
+ slot.querySelector('#clubTransferGwSelect').addEventListener('change',draw);draw();
+}
 function clubSquadHtml(squad){
   if(!squad || !squad.players || squad.players.length<11) return '';
   const {starters,bench}=liveSquadLineup(squad);
@@ -8926,10 +8986,10 @@ function renderTeamProfile(data){
     ? divisionData.fixtures.map(teamProfileFixtureRow).join("")
     : `<p style="font-family:'Barlow',sans-serif;font-size:13px;">No season fixtures available.</p>`;
   html += `<div class="club-profile-fixture-grid">
-    ${clubSquadHtml(currentSquad)}
+    <div id="clubHistoricalSquadSlot">${clubSquadHtml(currentSquad)}</div>
     <section class="club-profile-fixtures"><div class="section-head"><h2 style="font-size:18px;">Season Fixtures &amp; Results</h2></div><div class="club-profile-fixture-list">${fixturesHtml}</div></section>
   </div>`;
-  html += `<div class="club-profile-history" id="clubHistoryChartSlot"></div>`;
+  html += `<div id="clubTransferHistorySlot" class="club-transfer-history"></div><div class="club-profile-history" id="clubHistoryChartSlot"></div>`;
 
   // FA Cup status
   if(facupSummary && facupSummary.length){
@@ -8967,6 +9027,7 @@ function renderTeamProfile(data){
 
   container.innerHTML = html;
   populateClubHistoryChart(teamName, roddyEntry ? roddyEntry.division : "");
+  populateClubOwnershipHistory(teamName,currentSquad);
 
   if(teamVsTeamOpponents && teamVsTeamOpponents.length){
     const toggle = document.getElementById('tvtOpponentToggle');
