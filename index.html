@@ -608,7 +608,7 @@
   }
 
 
-  /* Club profile: live 15-player squad from COWZA EXPORT. */
+  /* Club profile: live 15-player squad from SOKKAH EXPORT. */
   .club-squad-pitch{background:repeating-linear-gradient(180deg,#187a49 0,#187a49 65px,#126e40 65px,#126e40 130px);border:3px solid #12633c;border-radius:12px;padding:18px 12px;color:#fff;position:relative;overflow:hidden;}
   .club-squad-pitch:before{content:"";position:absolute;inset:10px;border:1px solid #ffffff65;pointer-events:none;border-radius:2px;}
   .club-squad-line{position:relative;display:flex;justify-content:space-around;align-items:flex-start;gap:5px;margin:20px 0 28px;z-index:1;}
@@ -2506,7 +2506,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
  .live-export-stage .live-match-name{font-size:12px!important}
 }
 
-/* COWZA EXPORT substitution indicators in H2H lists and pitch views. */
+/* SOKKAH EXPORT substitution indicators in H2H lists and pitch views. */
 .live-sub-badge{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:4px;width:15px;height:15px;flex:none;border-radius:50%;font:900 10px/1 Arial,sans-serif;color:#fff;text-shadow:none}
 .live-sub-badge{font-family:Arial,sans-serif!important;font-size:12px!important;line-height:15px!important;text-align:center!important;padding:0!important;box-sizing:border-box!important;transform:translateY(0)}.live-sub-on{background:#188447}.live-sub-off{background:#c53b3b}
 .live-player-name .live-sub-badge{display:inline-flex;flex-shrink:0}
@@ -3802,9 +3802,9 @@ const ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKf
 const ALEAGUE_PREDICTOR_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1mlX0ZdmvWQe0Odi0fejsqNkUXp82f_PguHElT1dvcQGS6Oq4sU7ET8hf18vcSTWm9w/exec";
 
 
-// Live Match Centre v1: read the new COWZA EXPORT without assuming status values.
+// Live Match Centre v1: read the new SOKKAH EXPORT without assuming status values.
 // Fixture pairing will use Current Round, not Live Draw.
-const LIVE_EXPORT_SHEET = 'COWZA EXPORT';
+const LIVE_EXPORT_SHEET = 'SOKKAH EXPORT';
 let liveExportTeams = [];
 let liveCurrentRound = '';
 let liveFixtures = [];
@@ -3880,7 +3880,7 @@ function liveCaptainKey(p){
  const value=String(p?.captain||'').trim().toUpperCase();
  return /^(C|CAPTAIN|TRUE|1)$/.test(value)?'C':/^(VC|V|VICE|VICE CAPTAIN)$/.test(value)?'VC':value;
 }
-// Double a starting captain's displayed points, without modifying COWZA EXPORT values.
+// Double a starting captain's displayed points, without modifying SOKKAH EXPORT values.
 function liveDisplayPlayerPoints(p){
  if(liveSubstitutionStatus(p)==='off')return 'DNP';
  const raw=String(p?.points??'').trim();
@@ -3889,7 +3889,7 @@ function liveDisplayPlayerPoints(p){
  if(!Number.isFinite(numeric))return raw;
  return String(!liveEffectiveBench(p) && liveCaptainKey(p)==='C'?numeric*2:numeric);
 }
-// Substitution flags from the COWZA EXPORT player status columns.
+// Substitution flags from the SOKKAH EXPORT player status columns.
 function liveSubstitutionStatus(p){
  const status=String(p?.status||'').trim().toLowerCase().replace(/[\s-]+/g,'_');
  return status==='subbed_on'?'on':status==='subbed_off'?'off':'';
@@ -3924,11 +3924,11 @@ function liveALeagueLogo(club){
 // Snapshot of rounds 1–26; refresh this mapping if the source fixture changes.
 const LIVE_FIXTURE_MATCH_ORDER={"1":[["Sydney FC","Western Sydney Wanderers"],["Auckland FC","Melbourne City"],["Macarthur FC","Perth Glory"],["Central Coast Mariners","Newcastle Jets"],["Wellington Phoenix","Melbourne Victory"],["Adelaide United","Brisbane Roar"]],"2":[["Brisbane Roar","Perth Glory"],["Newcastle Jets","Macarthur FC"],["Western Sydney Wanderers","Auckland FC"],["Melbourne Victory","Melbourne City"],["Wellington Phoenix","Central Coast Mariners"],["Sydney FC","Adelaide United"]],"3":[["Brisbane Roar","Auckland FC"],["Newcastle Jets","Wellington Phoenix"],["Melbourne City","Sydney FC"],["Macarthur FC","Western Sydney Wanderers"],["Melbourne Victory","Central Coast Mariners"],["Perth Glory","Adelaide United"]],"4":[["Sydney FC","Central Coast Mariners"],["Auckland FC","Wellington Phoenix"],["Melbourne City","Western Sydney Wanderers"],["Perth Glory","Newcastle Jets"],["Macarthur FC","Brisbane Roar"],["Adelaide United","Melbourne Victory"]],"5":[["Western Sydney Wanderers","Adelaide United"],["Auckland FC","Melbourne Victory"],["Central Coast Mariners","Perth Glory"],["Brisbane Roar","Sydney FC"],["Wellington Phoenix","Macarthur FC"]],"6":[["Macarthur FC","Melbourne City"],["Central Coast Mariners","Auckland FC"],["Wellington Phoenix","Adelaide United"],["Western Sydney Wanderers","Perth Glory"],["Sydney FC","Melbourne Victory"]],"7":[["Adelaide United","Macarthur FC"],["Perth Glory","Melbourne City"],["Auckland FC","Sydney FC"],["Central Coast Mariners","Brisbane Roar"],["Melbourne Victory","Newcastle Jets"],["Western Sydney Wanderers","Wellington Phoenix"]],"8":[["Sydney FC","Perth Glory"],["Wellington Phoenix","Auckland FC"],["Brisbane Roar","Western Sydney Wanderers"],["Melbourne City","Melbourne Victory"],["Adelaide United","Newcastle Jets"],["Macarthur FC","Central Coast Mariners"]],"9":[["Western Sydney Wanderers","Newcastle Jets"],["Melbourne City","Auckland FC"],["Adelaide United","Central Coast Mariners"],["Sydney FC","Macarthur FC"],["Melbourne Victory","Wellington Phoenix"],["Brisbane Roar","Perth Glory"]],"10":[["Central Coast Mariners","Melbourne City"],["Auckland FC","Adelaide United"],["Western Sydney Wanderers","Macarthur FC"],["Wellington Phoenix","Newcastle Jets"],["Sydney FC","Brisbane Roar"],["Melbourne Victory","Perth Glory"]],"11":[["Central Coast Mariners","Western Sydney Wanderers"],["Perth Glory","Macarthur FC"],["Newcastle Jets","Auckland FC"],["Brisbane Roar","Melbourne Victory"],["Adelaide United","Sydney FC"],["Melbourne City","Wellington Phoenix"]],"12":[["Macarthur FC","Wellington Phoenix"],["Melbourne Victory","Auckland FC"],["Melbourne City","Brisbane Roar"],["Sydney FC","Newcastle Jets"],["Perth Glory","Central Coast Mariners"],["Adelaide United","Western Sydney Wanderers"],["Newcastle Jets","Melbourne City"]],"13":[["Western Sydney Wanderers","Melbourne City"],["Brisbane Roar","Wellington Phoenix"],["Newcastle Jets","Central Coast Mariners"],["Auckland FC","Perth Glory"],["Macarthur FC","Adelaide United"],["Melbourne Victory","Sydney FC"]],"14":[["Adelaide United","Melbourne City"],["Wellington Phoenix","Perth Glory"],["Newcastle Jets","Melbourne Victory"],["Western Sydney Wanderers","Sydney FC"],["Auckland FC","Brisbane Roar"],["Central Coast Mariners","Macarthur FC"]],"15":[["Newcastle Jets","Perth Glory"],["Wellington Phoenix","Western Sydney Wanderers"],["Macarthur FC","Auckland FC"],["Adelaide United","Melbourne Victory"],["Sydney FC","Melbourne City"],["Brisbane Roar","Central Coast Mariners"]],"16":[["Auckland FC","Wellington Phoenix"],["Newcastle Jets","Brisbane Roar"],["Melbourne City","Central Coast Mariners"],["Melbourne Victory","Western Sydney Wanderers"],["Brisbane Roar","Macarthur FC"],["Perth Glory","Sydney FC"],["Newcastle Jets","Adelaide United"]],"17":[["Newcastle Jets","Western Sydney Wanderers"],["Sydney FC","Auckland FC"],["Melbourne Victory","Macarthur FC"],["Perth Glory","Brisbane Roar"],["Central Coast Mariners","Adelaide United"],["Melbourne City","Wellington Phoenix"]],"18":[["Adelaide United","Perth Glory"],["Wellington Phoenix","Sydney FC"],["Macarthur FC","Newcastle Jets"],["Melbourne Victory","Melbourne City"],["Auckland FC","Central Coast Mariners"],["Western Sydney Wanderers","Brisbane Roar"]],"19":[["Western Sydney Wanderers","Melbourne City"],["Auckland FC","Newcastle Jets"],["Central Coast Mariners","Wellington Phoenix"],["Macarthur FC","Sydney FC"],["Brisbane Roar","Adelaide United"],["Perth Glory","Melbourne Victory"]],"20":[["Central Coast Mariners","Perth Glory"],["Wellington Phoenix","Macarthur FC"],["Western Sydney Wanderers","Auckland FC"],["Newcastle Jets","Sydney FC"],["Melbourne City","Adelaide United"],["Brisbane Roar","Melbourne Victory"]],"21":[["Adelaide United","Wellington Phoenix"],["Brisbane Roar","Melbourne City"],["Sydney FC","Western Sydney Wanderers"],["Perth Glory","Newcastle Jets"],["Auckland FC","Macarthur FC"],["Central Coast Mariners","Melbourne Victory"]],"22":[["Wellington Phoenix","Brisbane Roar"],["Melbourne City","Macarthur FC"],["Newcastle Jets","Adelaide United"],["Melbourne Victory","Sydney FC"],["Perth Glory","Auckland FC"],["Western Sydney Wanderers","Central Coast Mariners"]],"23":[["Melbourne City","Perth Glory"],["Wellington Phoenix","Newcastle Jets"],["Central Coast Mariners","Sydney FC"],["Melbourne Victory","Adelaide United"],["Auckland FC","Brisbane Roar"],["Macarthur FC","Western Sydney Wanderers"]],"24":[["Sydney FC","Auckland FC"],["Wellington Phoenix","Melbourne City"],["Adelaide United","Brisbane Roar"],["Perth Glory","Western Sydney Wanderers"],["Newcastle Jets","Central Coast Mariners"],["Macarthur FC","Melbourne Victory"]],"25":[["Brisbane Roar","Newcastle Jets"],["Perth Glory","Wellington Phoenix"],["Melbourne City","Central Coast Mariners"],["Adelaide United","Auckland FC"],["Macarthur FC","Sydney FC"],["Western Sydney Wanderers","Melbourne Victory"]],"26":[["Perth Glory","Adelaide United"],["Auckland FC","Western Sydney Wanderers"],["Melbourne City","Newcastle Jets"],["Central Coast Mariners","Macarthur FC"],["Melbourne Victory","Brisbane Roar"]]};
 function liveFixtureClubRank(gameweek,club){
- // COWZA gameweek may be numeric or text such as 'GW 1' / 'Round 1'.
+ // SOKKAH gameweek may be numeric or text such as 'GW 1' / 'Round 1'.
  const gwMatch=String(gameweek??'').match(/\d+/);
  const gw=gwMatch?String(Number(gwMatch[0])):'';
  const matches=LIVE_FIXTURE_MATCH_ORDER[gw]||[];
- // Match the COWZA club abbreviations to the full names in the fixture tab.
+ // Match the SOKKAH club abbreviations to the full names in the fixture tab.
  const clubLogo=liveALeagueLogo(club);
  const key=clubLogo||liveKey(club);
  for(let i=0;i<matches.length;i++)if(matches[i].some(team=>(liveALeagueLogo(team)||liveKey(team))===key))return i;
@@ -3940,7 +3940,7 @@ function liveEffectiveBench(p){
 }
 function liveSquadLineup(squad){
  const players=squad?.players||[];
- // Keep the four original bench slots in COWZA order. A substituted-on
+ // Keep the four original bench slots in SOKKAH order. A substituted-on
  // bench player exchanges places with a substituted-off starter, rather
  // than pushing that starter to the end of the bench.
  const originalStarters=players.filter(p=>!p.bench);
@@ -3974,7 +3974,7 @@ function livePlayerHtml(t,other,rightSide=false,title='starters'){
   return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(liveDisplayPlayerPoints(p))}</strong><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><strong>${liveEscape(liveDisplayPlayerPoints(p))}</strong>`}</div>`;
  }).join('')}`;
  // Sort unique and common starters by fixture order. Keep bench in its original
- // COWZA bench-slot order, with outgoing starters replacing incoming players.
+ // SOKKAH bench-slot order, with outgoing starters replacing incoming players.
  const byClub=players=>[...players].sort((a,b)=>
   liveFixtureClubRank(t.gameweek,a.club)-liveFixtureClubRank(t.gameweek,b.club));
  const {starters,bench}=liveSquadLineup(t);
@@ -6733,7 +6733,7 @@ async function loadTeamProfile(teamName){
   parseRoddy(roddyRows);
   const roddyEntry = roddyEntries.find(e => (e.team||"").toUpperCase() === teamName.toUpperCase()) || null;
 
-  // Reuse the same 15-player COWZA EXPORT feed as Live Match Centre.
+  // Reuse the same 15-player SOKKAH EXPORT feed as Live Match Centre.
   let currentSquad = null;
   const squadPromise = (async () => {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(LIVE_EXPORT_SHEET)}&cachebust=${Date.now()}`;
@@ -7385,7 +7385,7 @@ async function loadPlayerOwnershipTab(){
    cachedFetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(LIVE_EXPORT_SHEET)}&cachebust=${Date.now()}`),
    cachedFetch(csvUrlFor(DIVISIONS.find(d=>d.id==='roddy')))
   ]);
-  if(!res.ok)throw Error('COWZA EXPORT HTTP '+res.status);
+  if(!res.ok)throw Error('SOKKAH EXPORT HTTP '+res.status);
   const teams=parseLiveExport(Papa.parse(await res.text(),{skipEmptyLines:false}).data);
   if(roddyRes.ok)parseRoddy(Papa.parse(await roddyRes.text(),{skipEmptyLines:false}).data);
   const divisions=new Map(roddyEntries.map(e=>[liveKey(e.team),ownershipDivisionId(e.division)]));
