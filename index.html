@@ -2974,7 +2974,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-comp-section .live-match-right .live-header-progress{order:0}
 @media(max-width:420px){.live-comp-section .live-header-progress{flex-basis:22px}.live-comp-section .live-header-remaining{font-size:9px}.live-comp-section .live-match-name{gap:3px}}
 
-/* Keep captain above remaining players, overriding generic match-name span rules. */
+/* Keep captain above players played/live, overriding generic match-name span rules. */
 .live-comp-section .live-match-name > .live-header-progress,
 .live-export-stage .live-match-name > .live-header-progress{
   display:inline-flex!important;flex-direction:column!important;
@@ -2988,12 +2988,12 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-comp-section .live-match-name > .live-header-progress > .live-header-captain,
 .live-export-stage .live-match-name > .live-header-progress > .live-header-captain{
   display:flex!important;align-items:center!important;justify-content:center!important;
-  width:18px!important;height:18px!important;min-width:18px!important;
-  flex:0 0 18px!important;box-sizing:border-box!important;
+  width:15px!important;height:15px!important;min-width:15px!important;
+  flex:0 0 15px!important;box-sizing:border-box!important;
   padding:0!important;margin:0 auto!important;
-  border:2px solid currentColor!important;border-radius:50%!important;
+  border:1.5px solid currentColor!important;border-radius:50%!important;
   background:transparent!important;color:inherit!important;
-  font-size:10px!important;font-weight:800!important;line-height:1!important;
+  font-size:9px!important;font-weight:800!important;line-height:1!important;letter-spacing:0!important;text-indent:0!important;
   overflow:visible!important;-webkit-line-clamp:unset!important;
 }
 .live-comp-section .live-match-name > .live-header-progress > .live-header-captain.is-started,
@@ -4565,10 +4565,10 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
 }
 function liveHeaderProgressHtml(t){
  const xi=liveSquadLineup(t,false).starters.slice(0,11);
- const remaining=xi.filter(p=>['pending','unknown'].includes(liveMatchStatusInfo(p).kind)).length;
+ const playedCount=xi.filter(p=>['live','ft'].includes(liveMatchStatusInfo(p).kind)).length;
  const captain=(t?.players||[]).find(p=>liveCaptainKey(p)==='C'&&!p.bench)||(t?.players||[]).find(p=>liveCaptainKey(p)==='C');
  const played=captain&&['live','ft'].includes(liveMatchStatusInfo(captain).kind);
- return `<span class="live-header-progress"><span class="live-header-captain${played?' is-started':''}" title="${played?'Captain playing or played':'Captain yet to play'}">C</span><span class="live-header-remaining">${remaining}/11</span></span>`;
+ return `<span class="live-header-progress"><span class="live-header-captain${played?' is-started':''}" title="${played?'Captain playing or played':'Captain yet to play'}">C</span><span class="live-header-remaining">${playedCount}/11</span></span>`;
 }
 function liveMatchHtml(f){
  const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
@@ -14909,6 +14909,26 @@ if(installInstructionsOverlay){
       toRemove.forEach(index=>{
         header.children[index]?.remove();
         bodyRows.forEach(row=>row.children[index]?.remove());
+      });
+    });
+    // Roddy image export only: extend each team's division colour across its
+    // entire row instead of restricting it to the small division badge.
+    content.querySelectorAll('table.roddy-table tbody tr').forEach(tr=>{
+      const badge=tr.querySelector('.roddy-div-tag');
+      if(!badge)return;
+      const divisionColor=badge.style.backgroundColor||badge.style.background;
+      if(!divisionColor)return;
+      tr.style.setProperty('background-color',divisionColor,'important');
+      tr.style.setProperty('background-image','none','important');
+      Array.from(tr.cells).forEach(td=>{
+        td.style.setProperty('background-color',divisionColor,'important');
+        td.style.setProperty('background-image','none','important');
+        td.style.setProperty('color','#fff','important');
+        td.style.setProperty('border-color','rgba(255,255,255,.2)','important');
+      });
+      // Keep the existing coloured chip pills legible on their own backgrounds.
+      tr.querySelectorAll('.chip-pill').forEach(pill=>{
+        pill.style.setProperty('color','#fff','important');
       });
     });
     // Keep crests in a consistent left-hand slot; names begin after that slot.
