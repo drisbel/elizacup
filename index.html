@@ -2973,6 +2973,45 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-comp-section .live-match-left .live-header-progress{order:3}
 .live-comp-section .live-match-right .live-header-progress{order:0}
 @media(max-width:420px){.live-comp-section .live-header-progress{flex-basis:22px}.live-comp-section .live-header-remaining{font-size:9px}.live-comp-section .live-match-name{gap:3px}}
+
+/* Keep captain above remaining players, overriding generic match-name span rules. */
+.live-comp-section .live-match-name > .live-header-progress,
+.live-export-stage .live-match-name > .live-header-progress{
+  display:inline-flex!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;
+  align-self:center!important;gap:3px!important;
+  width:30px!important;min-width:30px!important;flex:0 0 30px!important;
+  order:initial!important;text-align:center!important;
+  overflow:visible!important;white-space:nowrap!important;
+  -webkit-line-clamp:unset!important;
+}
+.live-comp-section .live-match-name > .live-header-progress > .live-header-captain,
+.live-export-stage .live-match-name > .live-header-progress > .live-header-captain{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:18px!important;height:18px!important;min-width:18px!important;
+  flex:0 0 18px!important;box-sizing:border-box!important;
+  padding:0!important;margin:0 auto!important;
+  border:2px solid currentColor!important;border-radius:50%!important;
+  background:transparent!important;color:inherit!important;
+  font-size:10px!important;font-weight:800!important;line-height:1!important;
+  overflow:visible!important;-webkit-line-clamp:unset!important;
+}
+.live-comp-section .live-match-name > .live-header-progress > .live-header-captain.is-started,
+.live-export-stage .live-match-name > .live-header-progress > .live-header-captain.is-started{
+  background:#f4d252!important;border-color:#f4d252!important;color:#17251e!important;
+}
+.live-comp-section .live-match-name > .live-header-progress > .live-header-remaining,
+.live-export-stage .live-match-name > .live-header-progress > .live-header-remaining{
+  display:block!important;width:100%!important;min-width:0!important;
+  flex:0 0 auto!important;margin:0!important;padding:0!important;
+  font-size:10px!important;font-weight:400!important;line-height:1.1!important;
+  text-align:center!important;overflow:visible!important;white-space:nowrap!important;
+  -webkit-line-clamp:unset!important;
+}
+@media(max-width:420px){
+  .live-comp-section .live-match-name > .live-header-progress{width:26px!important;min-width:26px!important;flex-basis:26px!important}
+  .live-comp-section .live-match-name > .live-header-progress > .live-header-remaining{font-size:9px!important}
+}
 </style>
 </head>
 <body>
