@@ -2965,6 +2965,14 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-match-body .live-player-row strong.live-points-live,.live-formation-side .club-squad-player-points.live-points-live{background:#c79a2e;color:#151515;border-radius:4px}
 .live-match-body .live-player-row strong.live-points-pending,.live-match-body .live-player-row strong.live-points-unknown,.live-formation-side .club-squad-player-points.live-points-pending,.live-formation-side .club-squad-player-points.live-points-unknown{background:#151515;color:#fff;border-radius:4px}
 .live-match-body .live-player-row strong.live-points-dnp,.live-formation-side .club-squad-player-points.live-points-dnp{background:#b92536;color:#fff;border-radius:4px}
+
+.live-comp-section .live-header-progress{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 27px;gap:2px;line-height:1;white-space:nowrap}
+.live-comp-section .live-header-captain{width:17px;height:17px;border:1.5px solid currentColor;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:inherit;background:transparent}
+.live-comp-section .live-header-captain.is-started{background:#f4d252;border-color:#f4d252;color:#17251e}
+.live-comp-section .live-header-remaining{font:400 10px/1.1 'Barlow',sans-serif}
+.live-comp-section .live-match-left .live-header-progress{order:3}
+.live-comp-section .live-match-right .live-header-progress{order:0}
+@media(max-width:420px){.live-comp-section .live-header-progress{flex-basis:22px}.live-comp-section .live-header-remaining{font-size:9px}.live-comp-section .live-match-name{gap:3px}}
 </style>
 </head>
 <body>
@@ -4516,6 +4524,13 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
  const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p)));
  return group(title==='bench'?bench:[...byClub(unique),...byClub(common)]);
 }
+function liveHeaderProgressHtml(t){
+ const xi=liveSquadLineup(t,false).starters.slice(0,11);
+ const remaining=xi.filter(p=>['pending','unknown'].includes(liveMatchStatusInfo(p).kind)).length;
+ const captain=(t?.players||[]).find(p=>liveCaptainKey(p)==='C'&&!p.bench)||(t?.players||[]).find(p=>liveCaptainKey(p)==='C');
+ const played=captain&&['live','ft'].includes(liveMatchStatusInfo(captain).kind);
+ return `<span class="live-header-progress"><span class="live-header-captain${played?' is-started':''}" title="${played?'Captain playing or played':'Captain yet to play'}">C</span><span class="live-header-remaining">${remaining}/11</span></span>`;
+}
 function liveMatchHtml(f){
  const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
  const preRound=!liveScoresAvailable();
@@ -4525,9 +4540,9 @@ function liveMatchHtml(f){
  const theme=liveCompetitionTheme(f.comp);
  const themed=`background:${theme.background};color:${theme.foreground}`;
  return `<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="${themed}">
- <div class="live-match-name live-match-left"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'"></div>
+ <div class="live-match-name live-match-left"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'">${liveScoresAvailable()?liveHeaderProgressHtml(a):''}</div>
  ${liveScoresAvailable()?`<strong class="live-match-score"><span>${liveEscape(liveSquadHasCurrentScores(a)?(a?.score??'—'):'—')}</span><span class="live-score-dash">–</span><span>${liveEscape(liveSquadHasCurrentScores(b)?(b?.score??'—'):'—')}</span></strong>`:`<strong class="live-match-score live-match-versus" aria-label="versus">v</strong>`}
- <div class="live-match-name live-match-right"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span></div>
+ <div class="live-match-name live-match-right">${liveScoresAvailable()?liveHeaderProgressHtml(b):''}<img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span></div>
  </div></summary>${!liveScoresAvailable()?`<div class="live-predeadline-notice" role="status">PRE-DEADLINE · Teams are not live until the deadline. Lineups shown are provisional; player scores will appear once current-gameweek scoring begins.</div>`:""}<div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI</div><div class="live-match-side">${livePlayerHtml(a,b,false,'starters',preRound)}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'starters',preRound)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench',preRound)}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench',preRound)}</div></div><div class="live-match-detail live-pitch-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(a,preRound)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(b,preRound)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></details>`;
 }
 function parseLiveFixtures(blocks){
