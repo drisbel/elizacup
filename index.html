@@ -4332,16 +4332,25 @@ function liveKey(v){return String(v||'').replace(/\s*\((?:D(?:IV(?:ISION)?)?\s*)
 function liveRoundNumber(v){const m=String(v??'').match(/\d+/);return m?Number(m[0]):null;}
 // Only display scoring when SOKKAH EXPORT belongs to the round selected on Current Round.
 // The latest available squad is still shown before a new round has any live scores.
-function liveSquadHasCurrentScores(t){
- const selected=liveRoundNumber(liveCurrentRound);
- if(!t||selected===null||liveRoundNumber(t.gameweek)!==selected)return false;
- const score=Number(String(t.score??'').replace(/,/g,''));
- return (t.players||[]).some(p=>['live','ft','dnp'].includes(liveMatchStatusInfo(p).kind))||(Number.isFinite(score)&&score>0)||(t.players||[]).some(p=>{
-  const v=String(p.points??'').trim();
-  return v!==''&&Number.isFinite(Number(v))&&Number(v)!==0;
- });
+// A new round begins when its exported statuses leave the prior round's
+// all-FT/DNP state. Persist that observation for the browser session so a
+// completed round remains visible after every match reaches FT/DNP again.
+let liveRoundScoringStarted=false;
+function liveRoundStartKey(){return 'eliza-match-status-started-gw-'+liveRoundNumber(liveCurrentRound);}
+function liveUpdateRoundScoringState(){
+ const gw=liveRoundNumber(liveCurrentRound);
+ const squads=liveExportTeams.filter(t=>liveRoundNumber(t.gameweek)===gw);
+ const statuses=squads.flatMap(t=>(t.players||[]).map(liveMatchStatusInfo));
+ const observed=statuses.some(s=>s.kind==='live'||s.kind==='pending');
+ let previously=false;
+ try{previously=sessionStorage.getItem(liveRoundStartKey())==='1';}catch(e){}
+ liveRoundScoringStarted=!!(gw!==null && squads.length && (observed||previously));
+ if(observed){try{sessionStorage.setItem(liveRoundStartKey(),'1');}catch(e){}}
 }
-function liveScoresAvailable(){return liveExportTeams.some(liveSquadHasCurrentScores);}
+function liveSquadHasCurrentScores(t){
+ return !!(liveRoundScoringStarted&&t&&liveRoundNumber(t.gameweek)===liveRoundNumber(liveCurrentRound));
+}
+function liveScoresAvailable(){return liveRoundScoringStarted;}
 
 function liveFindTeam(name){const k=liveKey(name);const matches=liveExportTeams.filter(t=>liveKey(t.name)===k||liveKey(t.fantasy)===k);const selected=liveRoundNumber(liveCurrentRound);return matches.find(t=>liveRoundNumber(t.gameweek)===selected)||matches.sort((a,b)=>(liveRoundNumber(b.gameweek)||0)-(liveRoundNumber(a.gameweek)||0))[0];}
 function liveCaptainKey(p){
@@ -4460,6 +4469,7 @@ function liveMatchStatusInfo(p){
  if(/^FT$/i.test(raw))return {label:'FT',kind:'ft'};
  if(/^HT$/i.test(raw))return {label:'HT',kind:'live'};
  if(/^DNP$/i.test(raw))return {label:'DNP',kind:'dnp'};
+ if(/^BYE$/i.test(raw))return {label:'BYE',kind:'bye'};
  if(/^\d{1,3}(?:\+\d{1,2})?(?:['’′]|\s*(?:min|mins|minutes))?$/i.test(raw))
   return {label:raw,kind:'live'};
  return {label:raw,kind:'pending'};
@@ -4666,7 +4676,7 @@ async function loadLiveCentre(){
  const el=document.getElementById('liveContainer');el.className='state-msg';el.textContent='Loading live fixtures…';
  const fetchSheet=async name=>{
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&cachebust=${Date.now()}`;
-  const response=await cachedFetch(url);if(!response.ok)throw Error(name+': HTTP '+response.status);
+  const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error(name+': HTTP '+response.status);
   return Papa.parse(await response.text(),{skipEmptyLines:false}).data;
  };
  // Request each fixture block directly rather than one enormous dashboard range.
@@ -4674,7 +4684,7 @@ async function loadLiveCentre(){
  // all later sections and caused the missing cup games and partial D1 fixtures.
  const fetchGridRange=async(range,width)=>{
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Current Round')}&range=${encodeURIComponent(range)}&headers=0&cachebust=${Date.now()}`;
-  const response=await cachedFetch(url);
+  const response=await fetch(url,{cache:'no-store'});
   if(!response.ok)throw Error('Current Round '+range+': HTTP '+response.status);
   const body=await response.text();
   const start=body.indexOf('{'),end=body.lastIndexOf('}');
@@ -4695,7 +4705,7 @@ async function loadLiveCentre(){
  };
  try{
   const [teams,fixtures]=await Promise.all([fetchSheet(LIVE_EXPORT_SHEET),fetchFixtureBlocks()]);
-  liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);renderLiveCentre();liveApplyPendingCompetitionJump();
+  liveExportTeams=parseLiveExport(teams);liveFixtures=parseLiveFixtures(fixtures);liveUpdateRoundScoringState();renderLiveCentre();liveApplyPendingCompetitionJump();
   setStatus('Live scores loaded — '+new Date().toLocaleString());
  }catch(err){console.error('Live match centre:',err);el.className='state-msg error';el.textContent='Unable to load Live Match Centre: '+err.message;setStatus('Live scores unavailable',false);}
 }
