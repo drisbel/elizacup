@@ -2073,7 +2073,9 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-player-row{display:flex;align-items:center;gap:5px;min-height:35px;padding:3px 0;font-size:11px;min-width:0}
 .live-player-row.live-player-shared{opacity:.45}
 .live-player-club-logo{width:24px;height:24px;flex:0 0 24px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;border:none;border-radius:0}
-.live-player-club-logo img{width:100%;height:24px;max-width:none;flex-shrink:0;object-fit:contain}\n.live-player-club-logo{flex-direction:column;overflow:visible;height:auto;min-height:37px}\n.live-player-club-abbr{font-size:8px;font-weight:800;line-height:11px;letter-spacing:.02em;white-space:nowrap}
+.live-player-club-logo{position:relative;overflow:visible;align-self:center;flex-direction:column}
+.live-player-club-logo img{width:125%;height:125%;max-width:none;flex-shrink:0;object-fit:contain}
+.live-player-club-abbr{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);z-index:1;display:block;padding:1px 4px;border-radius:8px;background:#17243a;color:#fff;border:1px solid rgba(255,255,255,.75);font-size:8px;font-weight:800;line-height:10px;letter-spacing:.02em;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .live-player-info{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:1;min-width:0}
 .live-player-name{display:flex;align-items:center;gap:4px;min-width:0;font-weight:600}
 .live-player-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
