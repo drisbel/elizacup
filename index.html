@@ -2955,6 +2955,16 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-comp-section .live-match-score.live-match-versus{display:flex!important;align-items:center;justify-content:center;width:78px;font-size:23px;font-weight:800;text-transform:lowercase}
 .live-predeadline-notice{padding:10px 14px;background:#fff2d6;color:#573900;border-bottom:1px solid #e9cf91;font-size:12px;font-weight:700;line-height:1.5;text-align:center}
 @media(max-width:420px){.live-comp-section .live-match-score.live-match-versus{width:64px}}
+
+.live-player-meta .live-match-status{display:inline-block;margin-left:6px;font-weight:800;font-size:10px;white-space:nowrap}
+.live-match-status.live-status-live{color:#e9b83e}
+.live-match-status.live-status-ft{color:#31b56e}
+.live-match-status.live-status-dnp{color:#ed6262}
+.live-match-status.live-status-pending{color:#151515;background:#f0f1f4;padding:1px 4px;border-radius:3px}
+.live-match-body .live-player-row strong.live-points-ft,.live-formation-side .club-squad-player-points.live-points-ft{background:#16864d;color:#fff;border-radius:4px}
+.live-match-body .live-player-row strong.live-points-live,.live-formation-side .club-squad-player-points.live-points-live{background:#c79a2e;color:#151515;border-radius:4px}
+.live-match-body .live-player-row strong.live-points-pending,.live-match-body .live-player-row strong.live-points-unknown,.live-formation-side .club-squad-player-points.live-points-pending,.live-formation-side .club-squad-player-points.live-points-unknown{background:#151515;color:#fff;border-radius:4px}
+.live-match-body .live-player-row strong.live-points-dnp,.live-formation-side .club-squad-player-points.live-points-dnp{background:#b92536;color:#fff;border-radius:4px}
 </style>
 </head>
 <body>
@@ -4284,6 +4294,7 @@ function parseLiveExport(rows){
       club:liveField(row,header,`player_${i}_club`),
       points:liveField(row,header,`player_${i}_points`),
       status:liveField(row,header,`player_${i}_status`),
+      matchStatus:String(row[101+i]??'').trim(),
       bench:i>=11
     })).filter(p=>p.name);
     return {name:name||fantasy,fantasy,gameweek:liveField(row,header,'gameweek'),score:liveField(row,header,'score'),chip:liveField(row,header,'chip'),scoreStatus:liveField(row,header,'score_status'),players};
@@ -4325,7 +4336,7 @@ function liveSquadHasCurrentScores(t){
  const selected=liveRoundNumber(liveCurrentRound);
  if(!t||selected===null||liveRoundNumber(t.gameweek)!==selected)return false;
  const score=Number(String(t.score??'').replace(/,/g,''));
- return (Number.isFinite(score)&&score>0)||(t.players||[]).some(p=>{
+ return (t.players||[]).some(p=>['live','ft','dnp'].includes(liveMatchStatusInfo(p).kind))||(Number.isFinite(score)&&score>0)||(t.players||[]).some(p=>{
   const v=String(p.points??'').trim();
   return v!==''&&Number.isFinite(Number(v))&&Number(v)!==0;
  });
@@ -4338,8 +4349,14 @@ function liveCaptainKey(p){
  return /^(C|CAPTAIN|TRUE|1)$/.test(value)?'C':/^(VC|V|VICE|VICE CAPTAIN)$/.test(value)?'VC':value;
 }
 // Double a starting captain's displayed points, without modifying SOKKAH EXPORT values.
-function liveDisplayPlayerPoints(p,squad){
- if(squad?!liveSquadHasCurrentScores(squad):!liveScoresAvailable())return '—';
+function liveDisplayPlayerPoints(p,squad,historical=false){
+ // For live matchups, never show old-week points or points before the player's game starts.
+ // Archived matchups without the new match-status data retain their recorded points.
+ if(!historical && (squad?!liveSquadHasCurrentScores(squad):!liveScoresAvailable()))return '—';
+ const status=liveMatchStatusInfo(liveStatusPlayer(p,squad,historical));
+ if(status.kind==='pending')return '—';
+ if(status.kind==='unknown' && !historical)return '—';
+ if(status.kind==='dnp')return 'DNP';
  if(liveSubstitutionStatus(p)==='off')return 'DNP';
  const raw=String(p?.points??'').trim();
  if(!raw)return '—';
@@ -4435,7 +4452,35 @@ function livePlayerFixtureOpponent(gameweek,club){
  }
  return results.join(' / ')||'BYE';
 }
-function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false){
+// CX:DL are 15 match-status cells, aligned with player_0 through player_14.
+// A blank cell is treated as unknown rather than a completed match.
+function liveMatchStatusInfo(p){
+ const raw=String(p?.matchStatus||'').trim();
+ if(!raw)return {label:'',kind:'unknown'};
+ if(/^FT$/i.test(raw))return {label:'FT',kind:'ft'};
+ if(/^HT$/i.test(raw))return {label:'HT',kind:'live'};
+ if(/^DNP$/i.test(raw))return {label:'DNP',kind:'dnp'};
+ if(/^\d{1,3}(?:\+\d{1,2})?(?:['’′]|\s*(?:min|mins|minutes))?$/i.test(raw))
+  return {label:raw,kind:'live'};
+ return {label:raw,kind:'pending'};
+}
+function liveStatusPlayer(p,squad,historical){
+ if(!historical||p.matchStatus)return p;
+ const current=liveExportTeams.find(t=>liveKey(t.name)===liveKey(squad?.name)&&liveRoundNumber(t.gameweek)===liveRoundNumber(squad?.gameweek));
+ const found=current?.players?.find(q=>liveKey(q.name)===liveKey(p.name));
+ return found?.matchStatus?{...p,matchStatus:found.matchStatus}:p;
+}
+function livePlayerStatusMarkup(p,squad,historical=false){
+ // Never attach this week's match state to a prior-week provisional squad.
+ if(!historical && liveRoundNumber(squad?.gameweek)!==liveRoundNumber(liveCurrentRound))return '';
+ const info=liveMatchStatusInfo(liveStatusPlayer(p,squad,historical));
+ return info.label?`<span class="live-match-status live-status-${info.kind}">${liveEscape(info.label)}</span>`:'';
+}
+function livePlayerPointClass(p,squad,historical=false){
+ if(!historical && liveRoundNumber(squad?.gameweek)!==liveRoundNumber(liveCurrentRound))return 'live-points-pending';
+ return 'live-points-'+liveMatchStatusInfo(liveStatusPlayer(p,squad,historical)).kind;
+}
+function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,fixtureGw=liveCurrentRound,historical=false){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
  const items=t.players||[];
  // Shared starting players with identical captaincy are muted on both sides.
@@ -4447,15 +4492,15 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false)
   const subBadge=preRound?'':liveSubstitutionBadge(p);
   const shared=(preRound?!p.bench:!liveEffectiveBench(p))&&otherStarting.has(livePlayerIdentity(p));
   const crest=liveALeagueLogo(p.club);
-  const meta=liveEscape(livePlayerFixtureOpponent(liveCurrentRound,p.club));
+  const meta=liveEscape(livePlayerFixtureOpponent(fixtureGw,p.club))+livePlayerStatusMarkup(p,t,historical);
   const clubAbbr=liveEscape(liveClubThreeLetter(p.club));
   const clubIcon=`<span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="this.style.display='none'">`:''}<small class="live-player-club-abbr">${clubAbbr}</small></span>`;
-  return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(liveDisplayPlayerPoints(p,t))}</strong>${clubIcon}<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>${clubIcon}<strong>${liveEscape(liveDisplayPlayerPoints(p,t))}</strong>`}</div>`;
+  return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong class="${livePlayerPointClass(p,t,historical)}">${liveEscape(liveDisplayPlayerPoints(p,t,historical))}</strong>${clubIcon}<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>${clubIcon}<strong class="${livePlayerPointClass(p,t,historical)}">${liveEscape(liveDisplayPlayerPoints(p,t,historical))}</strong>`}</div>`;
  }).join('')}`;
  // Sort unique and common starters by fixture order. Keep bench in its original
  // SOKKAH bench-slot order, with outgoing starters replacing incoming players.
  const byClub=players=>[...players].sort((a,b)=>
-  liveFixtureClubRank(liveCurrentRound,a.club)-liveFixtureClubRank(liveCurrentRound,b.club));
+  liveFixtureClubRank(fixtureGw,a.club)-liveFixtureClubRank(fixtureGw,b.club));
  const {starters,bench}=liveSquadLineup(t,preRound);
  const unique=starters.filter(p=>!otherStarting.has(livePlayerIdentity(p)));
  const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p)));
@@ -5413,7 +5458,7 @@ function divisionHistoricalH2H(f,round){
   const find=name=>squads.find(t=>liveKey(t.name)===liveKey(name)||liveKey(t.fantasy)===liveKey(name));
   const a=find(f.home),b=find(f.away);
   if(!a||!b)return '<div class="division-h2h-unavailable">Historical squad data is not yet available for both teams in this gameweek.</div>';
-  return `<div class="division-h2h-detail"><div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI · GW ${gw}</div><div class="live-match-side">${livePlayerHtml(a,b)}</div><div class="live-match-side">${livePlayerHtml(b,a,true)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench')}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench')}</div></div><div class="live-match-detail live-pitch-grid" hidden><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(a)}</div></div><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(b)}</div></div></div><div class="live-view-controls"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></div>`;
+  return `<div class="division-h2h-detail"><div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI · GW ${gw}</div><div class="live-match-side">${livePlayerHtml(a,b,false,'starters',false,gw,true)}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'starters',false,gw,true)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench',false,gw,true)}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench',false,gw,true)}</div></div><div class="live-match-detail live-pitch-grid" hidden><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(a,false,true)}</div></div><div class="live-formation-side"><div class="live-formation-pitch-wrap">${clubSquadHtml(b,false,true)}</div></div></div><div class="live-view-controls"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></div>`;
 }
 function competitionH2HCard(f,round,card){
   const fixture={home:typeof f.home==='object'?f.home.name:f.home,away:typeof f.away==='object'?f.away.name:f.away};
@@ -9379,7 +9424,7 @@ async function populateClubOwnershipHistory(teamName,currentSquad){
  const draw=()=>{const selected=slot.querySelector('#clubTransferGwSelect').value;const rows=records.map((t,i)=>{const previous=ownershipAllWeeks().find(r=>ownershipGw(r)===ownershipGw(t)-1&&liveKey(r.name)===liveKey(teamName));return previous?{gw:ownershipGw(t),...ownershipChange(previous,t)}:null}).filter(Boolean).filter(r=>selected==='all'||String(r.gw)===selected);slot.querySelector('#clubTransferHistoryContent').innerHTML=rows.length?rows.map(r=>`<div class="club-transfer-row"><b>GW ${r.gw}</b><span class="transfer-in">IN: ${r.ins.map(p=>liveEscape(p.name)).join(', ')||'—'}</span><span class="transfer-out">OUT: ${r.outs.map(p=>liveEscape(p.name)).join(', ')||'—'}</span></div>`).join(''):'<p class="state-msg">Transfer comparisons require consecutive archived gameweeks.</p>';};
  slot.querySelector('#clubTransferGwSelect').addEventListener('change',draw);draw();
 }
-function clubSquadHtml(squad,preRound=false){
+function clubSquadHtml(squad,preRound=false,historical=false){
   if(!squad || !squad.players || squad.players.length<11) return '';
   const {starters,bench}=liveSquadLineup(squad,preRound);
   const position=p=>String(p.position||'').toUpperCase();
@@ -9391,7 +9436,7 @@ function clubSquadHtml(squad,preRound=false){
     const crest=liveALeagueLogo(p.club),cap=liveCaptainKey(p),abbr=clubSquadClubAbbr(p.club),subBadge=preRound?'':liveSubstitutionBadge(p);
     const capHtml=cap==='C'||cap==='VC'?`<span class="club-squad-cap${cap==='VC'?' vice':''}" title="${cap==='C'?'Captain':'Vice-captain'}">${cap}</span>`:'';
     const icon=crest?`<img class="club-squad-crest" src="${liveEscape(crest)}" alt="${liveEscape(p.club)}" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:'<span aria-hidden="true">⚽</span>';
-    return `<div class="club-squad-player"><div class="club-squad-crest-wrap">${icon}${capHtml}</div><div class="club-squad-club">${liveEscape(abbr)}</div><div class="club-squad-player-name">${liveEscape(p.name)}${subBadge}</div><div class="club-squad-player-points" title="Current player points">${liveEscape(liveDisplayPlayerPoints(p,squad))}</div></div>`;
+    return `<div class="club-squad-player"><div class="club-squad-crest-wrap">${icon}${capHtml}</div><div class="club-squad-club">${liveEscape(abbr)}</div><div class="club-squad-player-name">${liveEscape(p.name)}${subBadge}</div><div class="club-squad-player-points ${livePlayerPointClass(p,squad,historical)}" title="Player points">${liveEscape(liveDisplayPlayerPoints(p,squad,historical))}</div></div>`;
   };
   return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">Current Squad</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
 }
