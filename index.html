@@ -2692,6 +2692,14 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .roddy-export-stage .roddy-export-featured th{font-size:12px}
 .roddy-export-stage .roddy-export-featured .re-pos,.roddy-export-stage .roddy-export-featured .re-rank,.roddy-export-stage .roddy-export-featured .re-score,.roddy-export-stage .roddy-export-featured td:nth-child(6),.roddy-export-stage .roddy-export-featured .re-total{font-size:16px}
 .roddy-export-stage .roddy-export-featured .re-div{font-size:11px}
+/* Roddy PNG export: use division colour across every table row and cell. */
+.roddy-export-stage .roddy-export-table tbody tr{background:var(--row-div-color,transparent)!important}
+.roddy-export-stage .roddy-export-table tbody tr td{background:inherit!important;color:#fff!important;border-bottom-color:rgba(255,255,255,.22)!important}
+.roddy-export-stage .roddy-export-table tbody tr .re-score,
+.roddy-export-stage .roddy-export-table tbody tr .re-total,
+.roddy-export-stage .roddy-export-table tbody tr .re-rank,
+.roddy-export-stage .roddy-export-table tbody tr .re-pos,
+.roddy-export-stage .roddy-export-table tbody tr .re-team{color:#fff!important}
 /* Historical ownership additions */
 .ownership-extra-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}.ownership-extra-grid h3{margin:0 0 10px;font:700 17px Barlow,sans-serif}.ownership-extra-note{font:13px Barlow,sans-serif;margin:8px 0 14px}.ownership-profile-history{padding:10px 18px}.ownership-profile-history h4{margin:4px 0 8px}.club-history-selector{display:flex;align-items:center;gap:8px;padding:8px 0;font:700 13px Barlow,sans-serif}.club-history-selector select{max-width:180px;padding:6px}.club-transfer-history{margin-top:18px}.club-transfer-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #ccd2dc;padding:9px 4px;font:13px Barlow,sans-serif}.club-transfer-row b{min-width:50px}.transfer-in{color:#167a48}.transfer-out{color:#bb3a3a}.ownership-table img{object-fit:contain;width:auto;height:22px;max-width:28px;vertical-align:middle}@media(max-width:650px){.ownership-extra-grid{grid-template-columns:1fr}}
 
@@ -5985,7 +5993,7 @@ async function exportRoddyImage(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=v=>v===null||v===undefined||String(v).trim()===''?'—':esc(v);
   const logo=e=>`<span class="re-logo-box"><img src="logo/${encodeURIComponent(teamLogoSlug(e.team))}.png" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}'}"></span>`;
-  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>TOTAL</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span class="re-team-name">${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td class="re-total">${fmt(e.total)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
+  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>TOTAL</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr style="--row-div-color:${color};background:${color};color:#fff"><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span class="re-team-name">${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td class="re-total">${fmt(e.total)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
   const stage=document.createElement('div');stage.className='roddy-export-stage';
   stage.style.cssText='position:fixed;left:-16000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;background:#f3f6fc;padding:22px 25px 27px;color:#16243e;font-family:Barlow,Arial,sans-serif';
   stage.innerHTML=`<div class="re-header"><img class="re-header-logo" src="logo/roddy-logo.png" crossorigin="anonymous" alt="Roddy Rodriguez Cup logo"><div class="re-header-text"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div></div><div class="re-top-block"><div class="re-section-title">TOP 10</div>${table(top,true)}</div><div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
@@ -14909,26 +14917,6 @@ if(installInstructionsOverlay){
       toRemove.forEach(index=>{
         header.children[index]?.remove();
         bodyRows.forEach(row=>row.children[index]?.remove());
-      });
-    });
-    // Roddy image export only: extend each team's division colour across its
-    // entire row instead of restricting it to the small division badge.
-    content.querySelectorAll('table.roddy-table tbody tr').forEach(tr=>{
-      const badge=tr.querySelector('.roddy-div-tag');
-      if(!badge)return;
-      const divisionColor=badge.style.backgroundColor||badge.style.background;
-      if(!divisionColor)return;
-      tr.style.setProperty('background-color',divisionColor,'important');
-      tr.style.setProperty('background-image','none','important');
-      Array.from(tr.cells).forEach(td=>{
-        td.style.setProperty('background-color',divisionColor,'important');
-        td.style.setProperty('background-image','none','important');
-        td.style.setProperty('color','#fff','important');
-        td.style.setProperty('border-color','rgba(255,255,255,.2)','important');
-      });
-      // Keep the existing coloured chip pills legible on their own backgrounds.
-      tr.querySelectorAll('.chip-pill').forEach(pill=>{
-        pill.style.setProperty('color','#fff','important');
       });
     });
     // Keep crests in a consistent left-hand slot; names begin after that slot.
