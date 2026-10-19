@@ -2073,7 +2073,7 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-player-row{display:flex;align-items:center;gap:5px;min-height:35px;padding:3px 0;font-size:11px;min-width:0}
 .live-player-row.live-player-shared{opacity:.45}
 .live-player-club-logo{width:24px;height:24px;flex:0 0 24px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;border:none;border-radius:0}
-.live-player-club-logo img{width:125%;height:125%;max-width:none;flex-shrink:0;object-fit:contain}
+.live-player-club-logo img{width:100%;height:24px;max-width:none;flex-shrink:0;object-fit:contain}\n.live-player-club-logo{flex-direction:column;overflow:visible;height:auto;min-height:37px}\n.live-player-club-abbr{font-size:8px;font-weight:800;line-height:11px;letter-spacing:.02em;white-space:nowrap}
 .live-player-info{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:1;min-width:0}
 .live-player-name{display:flex;align-items:center;gap:4px;min-width:0;font-weight:600}
 .live-player-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -4416,6 +4416,23 @@ function liveSquadLineup(squad,preRound=false){
  if(outgoing.length>incoming.length)bench.push(...outgoing.slice(incoming.length));
  return {starters,bench};
 }
+function liveClubThreeLetter(club){
+ const slug=(liveALeagueLogo(club).match(/\/([^/]+)\.png$/)||[])[1]||'';
+ const abbreviations={'adelaide':'ADL','auckland':'AKL','brisbane':'BRI','central-coast':'CCM','macarthur':'MAC','melbourne-city':'MCY','melbourne-victory':'MVC','newcastle':'NEW','perth':'PER','sydney':'SYD','wellington':'WEL','western-sydney':'WSW'};
+ return abbreviations[slug]||String(club||'').slice(0,3).toUpperCase();
+}
+function livePlayerFixtureOpponent(gameweek,club){
+ const match=String(gameweek??'').match(/\d+/);
+ const fixtures=LIVE_FIXTURE_MATCH_ORDER[match?String(Number(match[0])):'']||[];
+ const key=liveALeagueLogo(club)||liveKey(club);
+ const results=[];
+ for(const [home,away] of fixtures){
+  const isHome=(liveALeagueLogo(home)||liveKey(home))===key;
+  const isAway=(liveALeagueLogo(away)||liveKey(away))===key;
+  if(isHome||isAway)results.push((isHome?'v ':'@ ')+liveClubThreeLetter(isHome?away:home));
+ }
+ return results.join(' / ')||'BYE';
+}
 function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false){
  if(!t)return '<div class="live-no-data">Awaiting team export</div>';
  const items=t.players||[];
@@ -4428,8 +4445,10 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false)
   const subBadge=preRound?'':liveSubstitutionBadge(p);
   const shared=(preRound?!p.bench:!liveEffectiveBench(p))&&otherStarting.has(livePlayerIdentity(p));
   const crest=liveALeagueLogo(p.club);
-  const meta=[p.club,p.position].filter(Boolean).map(liveEscape).join(' · ');
-  return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(liveDisplayPlayerPoints(p,t))}</strong><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span><span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:''}</span><strong>${liveEscape(liveDisplayPlayerPoints(p,t))}</strong>`}</div>`;
+  const meta=liveEscape(livePlayerFixtureOpponent(liveCurrentRound,p.club));
+  const clubAbbr=liveEscape(liveClubThreeLetter(p.club));
+  const clubIcon=`<span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="this.style.display='none'">`:''}<small class="live-player-club-abbr">${clubAbbr}</small></span>`;
+  return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong>${liveEscape(liveDisplayPlayerPoints(p,t))}</strong>${clubIcon}<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>${clubIcon}<strong>${liveEscape(liveDisplayPlayerPoints(p,t))}</strong>`}</div>`;
  }).join('')}`;
  // Sort unique and common starters by fixture order. Keep bench in its original
  // SOKKAH bench-slot order, with outgoing starters replacing incoming players.
