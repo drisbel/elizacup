@@ -12137,7 +12137,7 @@ function sideLeagueTableHtml(table, opts){
     ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
     : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th style="color:#000!important;">Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
@@ -12165,7 +12165,7 @@ function sideLeagueOverallTableHtml(overall){
   const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
   const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   return `<div class="table-wrap overall-table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th style="color:#000!important;">Pts</th>
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th>Pts</th>
     </tr></thead><tbody>
       ${overall.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
