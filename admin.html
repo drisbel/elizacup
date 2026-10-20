@@ -3466,39 +3466,52 @@ window.addEventListener("resize", () => {
 // Renders the title + results grid (buttons excluded) to a PNG and triggers
 // a download — for posting the final draw to socials or the News page
 // without a manual screenshot.
-function exportWheelResultsImage(){
-  const btn = $("wheelExportImageBtn");
-  const target = $("wheelResultsExportTarget");
-  if(!btn || !target || typeof html2canvas !== "function") return;
-
-  const originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Exporting…";
-
-  // Side League exports are deliberately captured at the exact 1080 × 1080 square size.
-  target.querySelectorAll("img").forEach(img => {
-    if(!img.naturalWidth || !img.naturalHeight) return;
-    img.style.objectFit = "contain";
-    img.style.objectPosition = "center";
-  });
-  html2canvas(target, { backgroundColor: "#ffffff", scale: 1, width: 1080, height: 1080, useCORS: true }).then(canvas => {
-    const titleText = $("wheelTitleInput").value.trim();
-    const slug = titleText
-      ? titleText.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "")
-      : "";
-    const link = document.createElement("a");
-    link.download = (slug || "wheel-draw-results") + ".png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }).catch(err => {
-    console.error("Wheel results export failed", err);
-    alert("Couldn't export the image: " + err.message);
-  }).finally(() => {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  });
+async function exportWheelResultsImage(){
+  const btn=$("wheelExportImageBtn");
+  if(!btn||typeof html2canvas!=="function"||!drawFixtures.length)return;
+  const oldText=btn.textContent;
+  btn.disabled=true;btn.textContent="Exporting…";
+  const stage=document.createElement("div");
+  stage.style.cssText="position:fixed;left:-20000px;top:0;width:1600px;box-sizing:border-box;padding:28px;background:#10151f;color:#fff;font-family:Barlow,Arial,sans-serif;z-index:-1";
+  const title=$("wheelTitleInput").value.trim()||"FIXTURE DRAW";
+  const clean=team=>wheelTeamIdentity(team).name;
+  const teamLogo=team=>{
+    const resolved=wheelTeamIdentity(resolveElizaTeamName(clean(team))).name;
+    return '<img src="logo/'+teamLogoSlug(resolved)+'.png" alt="" style="width:42px;height:42px;object-fit:contain;flex:none" onerror="'+teamLogoOnErrorAttr(resolved)+'">';
+  };
+  const badge=team=>{
+    const div=getTeamDivision(team)||"—";
+    const bg=WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK;
+    return '<span style="flex:none;background:'+bg+';color:#fff;border-radius:4px;padding:5px 6px;font-size:14px;font-weight:800;min-width:28px;text-align:center">'+escapeHtml(div)+'</span>';
+  };
+  const fixture=(f,i)=>'<div style="display:grid;grid-template-columns:42px minmax(0,1fr) 38px 18px 38px minmax(0,1fr) 42px;align-items:center;gap:7px;padding:12px 10px;background:#26334b;border-radius:7px;min-height:52px;box-sizing:border-box">'
+    +teamLogo(f.home)
+    +'<span style="font-size:16px;font-weight:800;text-align:right;min-width:0;overflow-wrap:anywhere;line-height:1.12">'+escapeHtml(clean(f.home))+'</span>'
+    +badge(f.home)+'<span style="text-align:center;font-size:17px;font-weight:800">v</span>'+badge(f.away)
+    +'<span style="font-size:16px;font-weight:800;text-align:left;min-width:0;overflow-wrap:anywhere;line-height:1.12">'+escapeHtml(clean(f.away))+'</span>'
+    +teamLogo(f.away)+'</div>';
+  const half=Math.ceil(drawFixtures.length/2);
+  const columns=[drawFixtures.slice(0,half),drawFixtures.slice(half)];
+  stage.innerHTML='<div style="text-align:center;margin:0 0 22px"><div style="font-size:17px;letter-spacing:2px;color:#aab9d1">ELIZA CUP 2026/27</div><h1 style="margin:7px 0;font-size:40px;line-height:1.1;text-transform:uppercase;color:#fff">'+escapeHtml(title)+'</h1><div style="font-size:16px;color:#aab9d1">'+drawFixtures.length+' FIXTURES</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">'
+    +columns.map((group,j)=>'<div style="display:flex;flex-direction:column;gap:9px">'+group.map((f,i)=>fixture(f,i+j*half)).join('')+'</div>').join('')
+    +'</div>';
+  document.body.appendChild(stage);
+  try{
+    await Promise.all([...stage.querySelectorAll("img")].map(img=>new Promise(resolve=>{
+      if(img.complete){resolve();return;}
+      img.addEventListener("load",resolve,{once:true});
+      img.addEventListener("error",resolve,{once:true});
+      setTimeout(resolve,4000);
+    })));
+    if(document.fonts?.ready)await document.fonts.ready;
+    const canvas=await html2canvas(stage,{backgroundColor:"#10151f",scale:2,width:1600,height:Math.ceil(stage.scrollHeight),useCORS:true,logging:false});
+    const link=document.createElement("a");
+    link.download=(title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"fixture-draw")+"-fixtures.png";
+    link.href=canvas.toDataURL("image/png");document.body.appendChild(link);link.click();link.remove();
+  }catch(err){console.error("Wheel export failed",err);alert("Couldn't export the image: "+err.message);}
+  finally{stage.remove();btn.disabled=false;btn.textContent=oldText;}
 }
-
 
 // Records one pick (the wheel's spin landing) — pairs it with a pending
 // team, or holds it as pending if it's the first of a pair.
@@ -3896,12 +3909,14 @@ async function loadWheelMatchupData(){
 // divisions.
 async function getWheelTeamMatchInfo(team){
   await loadWheelRoddyData();
-  const upper = (team||"").trim().toUpperCase();
-  const roddyEntry = wheelRoddyEntries.find(e => e.team.toUpperCase() === upper);
-  if(!roddyEntry || !roddyEntry.divisionShort) return null;
-  await loadWheelStandings(roddyEntry.divisionShort);
-  const standingsRow = (wheelStandingsCache[roddyEntry.divisionShort] || {})[upper];
-  const base = { divisionShort: roddyEntry.divisionShort, divisionColor: WHEEL_DIVISION_TABS[roddyEntry.divisionShort].color, roddyPos: roddyEntry.roddyPos };
+  const identity=wheelTeamIdentity(team);
+  const upper=wheelTeamIdentity(resolveElizaTeamName(identity.name)).name.toUpperCase();
+  const roddyEntry=wheelRoddyEntries.find(e=>e.team.toUpperCase()===upper);
+  const division=identity.division||roddyEntry?.divisionShort;
+  if(!division||!WHEEL_DIVISION_TABS[division])return null;
+  await loadWheelStandings(division);
+  const standingsRow=(wheelStandingsCache[division]||{})[upper];
+  const base={divisionShort:division,divisionColor:WHEEL_DIVISION_TABS[division].color,roddyPos:roddyEntry?.roddyPos||null};
   if(!standingsRow) return { ...base, divisionPos: null, pts: null, w: null, d: null, l: null };
   return { ...base, divisionPos: standingsRow.pos, pts: standingsRow.pts, w: standingsRow.w, d: standingsRow.d, l: standingsRow.l };
 }
@@ -4136,10 +4151,17 @@ const WHEEL_DIVISION_FALLBACK = "#8a8f98";
 // Reads from wheelRoddyEntries (loaded by loadWheelRoddyData, same source
 // the matchup info panel uses) rather than the 26/27 Leagues data, so wheel
 // colours and matchup info always agree on which division a team is in.
+function wheelTeamIdentity(team){
+  const raw=String(team||'').trim();
+  const suffix=raw.match(/\s*\((D1|2A|2B|3A|3B)\)\s*$/i);
+  return {name:raw.replace(/\s*\((?:D1|2A|2B|3A|3B)\)\s*$/i,'').trim(),division:suffix?suffix[1].toUpperCase():null};
+}
 function getTeamDivision(team){
-  const norm = (team||"").trim().toUpperCase();
-  const match = wheelRoddyEntries.find(e => e.team.toUpperCase() === norm);
-  return match ? match.divisionShort : null;
+  const identity=wheelTeamIdentity(team);
+  if(identity.division)return identity.division;
+  const resolved=wheelTeamIdentity(resolveElizaTeamName(identity.name)).name.toUpperCase();
+  const match=wheelRoddyEntries.find(e=>e.team.toUpperCase()===resolved);
+  return match?match.divisionShort:null;
 }
 
 // ---------- Wheel: Side League mode ----------
