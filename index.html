@@ -15436,7 +15436,7 @@ if(installInstructionsOverlay){
     }
     // Some H2H side leagues had round selectors and fixtures but no heading.
     root.querySelectorAll('#sideLeagueRoundTabs').forEach(tabs=>{
-      if(tabs.previousElementSibling?.classList.contains('side-export-fixtures-head'))return;
+      if(tabs.previousElementSibling?.classList.contains('section-head'))return;
       const head=document.createElement('div');head.className='section-head side-export-fixtures-head';
       head.style.marginTop='30px';head.innerHTML='<h2 style="font-size:18px;">Fixtures</h2>';
       tabs.parentNode.insertBefore(head,tabs);
@@ -15587,24 +15587,20 @@ if(installInstructionsOverlay){
     if(cards.length && !content.querySelector('table')){
       stage.classList.add('export-broadcast-fixtures','eliza-mc-export-stage');
       elizaFixtureExportNormalize(content);
+      // Normalisation replaces fixture cards with .eliza-mc-export-match nodes.
+      // Convert only unplayed fixture score placeholders in the export clone.
+      content.querySelectorAll('.eliza-mc-export-score').forEach(score=>{
+        const value=score.textContent.trim();
+        if(!/\d/.test(value) && (/^[\s\u2013\u2014-]+$/.test(value)||/^vs?\.?$/i.test(value))){
+          score.innerHTML='<span class="upcoming">v</span>';
+        }
+      });
       // Upcoming fixtures show a versus marker in exports, never placeholder dashes.
       content.querySelectorAll('.eliza-mc-export-score').forEach(score=>{
         const value=score.textContent.trim();
         if(!/\d/.test(value)&&(/^[\s\u2013\u2014-]+$/.test(value)||/^vs?\.?$/i.test(value)))score.innerHTML='<span class="upcoming">v</span>';
       });
-      cards.forEach(card=>{
-        const sides=card.querySelectorAll('.fixture-team');const score=card.querySelector('.fixture-score');
-        if(sides.length!==2||!score)return;
-        sides[0].classList.add('broadcast-home');sides[1].classList.add('broadcast-away');
-        const hn=sides[0].querySelector('.fixture-team-name'),hl=sides[0].querySelector('.fixture-team-logo-wrap');
-        const an=sides[1].querySelector('.fixture-team-name'),al=sides[1].querySelector('.fixture-team-logo-wrap');
-        if(hn&&hl)sides[0].insertBefore(hn,hl);
-        if(an&&al)sides[1].insertBefore(al,an);
-        const hw=sides[0].classList.contains('fx-win'),aw=sides[1].classList.contains('fx-win');
-        if(hw!==aw){sides[hw?0:1].classList.add('broadcast-winner');card.classList.add('broadcast-decided');}
-        else if(score.querySelector('.upcoming'))card.classList.add('broadcast-upcoming');
-        else card.classList.add('broadcast-draw');
-      });
+
     }
     body.appendChild(content);stage.appendChild(body);
     const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';stage.appendChild(footer);
