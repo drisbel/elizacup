@@ -15480,7 +15480,9 @@ if(installInstructionsOverlay){
     if(cleanTitle.toLocaleLowerCase()===cleanLabel.toLocaleLowerCase()) sectionTitle='';
     else if(cleanTitle.toLocaleLowerCase().startsWith(cleanLabel.toLocaleLowerCase()+' '))
       sectionTitle=cleanTitle.slice(cleanLabel.length).trim();
-    const subtitle=sectionTitle+(round&&/fixture/i.test(sectionTitle)?' · '+round:'');
+    const isFixtureExport=/fixture/i.test(sectionTitle)||!!heading?.classList.contains('side-export-fixtures-head');
+    const fixtureRound=round||root.querySelector('#sideLeagueRoundTabs .round-tab[aria-selected="true"]')?.textContent?.trim()||root.querySelector('#sideLeagueRoundTabs .round-tab[disabled]')?.textContent?.trim()||'';
+    const subtitle=sectionTitle+(isFixtureExport&&fixtureRound?' · '+fixtureRound:'');
     head.querySelector('.export-subheading').textContent=subtitle;
     if(!subtitle) head.querySelector('.export-subheading').style.display='none';
     stage.appendChild(head);
@@ -15578,6 +15580,11 @@ if(installInstructionsOverlay){
     if(cards.length && !content.querySelector('table')){
       stage.classList.add('export-broadcast-fixtures','eliza-mc-export-stage');
       elizaFixtureExportNormalize(content);
+      // Upcoming fixtures show a versus marker in exports, never placeholder dashes.
+      content.querySelectorAll('.eliza-mc-export-score').forEach(score=>{
+        const value=score.textContent.trim();
+        if(/^[\s\u2013\u2014-]*$/.test(value)||/^vs?\.?$/i.test(value))score.innerHTML='<span class="upcoming">v</span>';
+      });
       cards.forEach(card=>{
         const sides=card.querySelectorAll('.fixture-team');const score=card.querySelector('.fixture-score');
         if(sides.length!==2||!score)return;
