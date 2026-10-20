@@ -796,7 +796,7 @@
 
   table.standings thead th{
     background:var(--pitch);
-    color:var(--chalk);
+    color:var(--chalk)!important;
     font-family:'Barlow',sans-serif;
     font-weight:500;
     font-size:11px;
@@ -10514,7 +10514,7 @@ function histStatusLegendHtml(){
 function histDivisionTableHtml(division){
   if(!division || !division.teams.length) return `<p class="state-msg">No data found for this division.</p>`;
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
+      <th>Pos</th><th style="text-align:left;">Team</th><th style="color:var(--chalk)!important;">Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     </tr></thead><tbody>
       ${division.teams.map(t=>`<tr style="${histDivStatusStyle(t.status)}">
         <td>${t.pos}</td><td style="text-align:left;">${histTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
@@ -10539,7 +10539,7 @@ function histEclGroupTableHtml(group){
   return `<div style="margin-bottom:18px;">
     <h4 style="font-family:'Barlow Condensed',sans-serif;font-size:15px;margin:0 0 6px;">${group.name}</h4>
     <div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
+      <th>Pos</th><th style="text-align:left;">Team</th><th style="color:var(--chalk)!important;">Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     </tr></thead><tbody>
       ${group.teams.map(t=>`<tr style="${histEclStatusStyle(t.status)}">
         <td>${t.pos}</td><td style="text-align:left;">${histTeamLink(t.team)}</td><td class="pts">${t.pts}</td>
@@ -12137,7 +12137,7 @@ function sideLeagueTableHtml(table, opts){
     ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
     : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th style="color:var(--chalk)!important;">Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
@@ -12165,7 +12165,7 @@ function sideLeagueOverallTableHtml(overall){
   const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
   const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   return `<div class="table-wrap overall-table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th>Pts</th>
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th style="color:var(--chalk)!important;">Pts</th>
     </tr></thead><tbody>
       ${overall.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
