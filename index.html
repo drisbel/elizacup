@@ -374,6 +374,13 @@
   .lms-pick{font-size:14px;font-weight:700;color:var(--pitch);overflow-wrap:break-word;word-break:break-word;}
   .lms-pick.eliminated{font-size:12px;font-weight:600;color:var(--red);font-style:italic;}
   .lms-pick.awaiting{color:#b45309;}
+  /* A-League LMS: distinguish cards awaiting a tip with strong, readable ink. */
+  .aleague-lms-picks .aleague-lms-awaiting-tip,
+  .aleague-lms-picks .aleague-lms-awaiting-tip .lms-participant,
+  .aleague-lms-picks .aleague-lms-awaiting-tip .lms-participant a,
+  .aleague-lms-picks .aleague-lms-awaiting-tip .lms-pick,
+  .aleague-lms-picks .aleague-lms-awaiting-tip .lms-opponent,
+  .aleague-lms-picks .aleague-lms-awaiting-tip .lms-result{color:#854d0e !important;}
   .lms-pick.entered{color:#166534;}
   .lms-opponent{font-size:10.5px;color:#000;margin-top:1px;overflow-wrap:break-word;word-break:break-word;}
   .lms-opponent.lms-tiebreak{font-weight:700;}
@@ -3132,6 +3139,29 @@ html,body{max-width:100%;overflow-x:clip}
 .round-preview-stage{position:fixed;left:-20000px;top:0;z-index:-1;box-sizing:border-box;width:1600px;padding:36px 42px 28px;background:#f5f7f7;color:#132a25;font-family:Arial,Helvetica,sans-serif}
 .round-preview-stage *{box-sizing:border-box}.rp-heading{text-align:center;background:var(--rp-color);color:white;padding:23px 18px 21px;border-radius:15px;margin-bottom:17px}.rp-eyebrow{font-size:17px;font-weight:800;letter-spacing:3px;opacity:.85}.rp-title{font-family:'Barlow Condensed',Arial,sans-serif;font-size:38px;font-weight:900;letter-spacing:.3px;margin:7px 0}.rp-subtitle{font-size:17px;font-weight:700;letter-spacing:2px;opacity:.85}.rp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;align-items:start}.rp-card{border:2px solid #d7e1dc;border-top:7px solid var(--rp-color);border-radius:12px;background:white;padding:14px 15px 12px;min-width:0;overflow:hidden}.rp-match{display:grid;grid-template-columns:minmax(0,1fr) 115px minmax(0,1fr);align-items:start;gap:9px}.rp-team{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;min-width:0}.rp-team img{width:auto!important;height:auto!important;max-width:58px!important;max-height:58px!important;object-fit:contain!important;object-position:center;flex-shrink:0;aspect-ratio:auto!important}.rp-team .rp-logo-box{width:62px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.rp-team strong{font-family:'Barlow Condensed',Arial,sans-serif;font-size:19px;line-height:1.12;min-height:42px;display:flex;align-items:center;justify-content:center;overflow-wrap:break-word}.rp-team>span{font-size:16px;color:#42574e;font-weight:700}.rp-versus{text-align:center;display:flex;flex-direction:column;align-items:center;padding-top:15px;gap:4px}.rp-versus>b{font-family:'Barlow Condensed',Arial,sans-serif;font-size:22px;color:var(--rp-color)}.rp-versus strong{font-family:'Barlow Condensed',Arial,sans-serif;font-size:24px;white-space:nowrap}.rp-versus small{font-size:12px;color:#5c7066;font-weight:800}.rp-formrow{display:flex;gap:4px;justify-content:center;min-height:23px}.rp-form{font-size:13px;font-weight:900;background:#9aa4a0;color:white;min-width:24px;padding:4px 3px;border-radius:4px}.rp-W{background:#21864b}.rp-D{background:#858b95}.rp-L{background:#bb4451}.rp-last{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:12px;padding:9px 4px;border-top:1px solid #dfe7e2;font-size:14px;text-align:center}.rp-last b{font-size:12px;color:#4b6256;white-space:nowrap}.rp-last span{font-weight:700}.rp-highlight{font-family:'Barlow',sans-serif!important;line-height:1.28;text-align:center;background:#eef4ef;color:#214b36;border-radius:6px;font-size:16px;font-weight:700;padding:10px 13px;min-height:42px}.rp-active-streak{font-size:13px;text-align:center;color:#9a3d12;background:#fff0df;font-weight:900;border-radius:5px;padding:6px 8px;margin-top:6px}.rp-footer{text-align:center;margin-top:18px;color:#54695e;font-size:13px;letter-spacing:2px;font-weight:800}
 </style>
+<style>
+/* 2026-10-20: responsive controls and readable statistical tables */
+#fixturesSection>.section-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#fixturesSection>.section-head h2{margin-right:auto}
+#fixturesSection>.section-head .social-export-actions{margin:0!important;display:inline-flex;align-items:center}
+.fixture-live-under-tabs{display:flex;justify-content:flex-start;margin:9px 0 14px}
+.fixture-live-under-tabs .fixture-live-link{margin:0}
+#eliza-export-cup,#eliza-export-ecl{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:6px;line-height:1;border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;margin:6px 0 9px auto;cursor:pointer}
+.facup-calendar-note{margin-top:9px;font-size:13px;line-height:1.5;color:#111}
+.honour-winner{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;color:#111}
+.honour-year-logo{width:22px;height:22px;max-width:22px;object-fit:contain;flex-shrink:0}
+.streaks-modern .streaks-modern-table th{color:#fff;text-align:center}
+.streaks-modern .streaks-modern-table td{color:#101d17}
+.streaks-modern .streaks-modern-table .streak-next,.streaks-modern .streaks-modern-table .streak-since{font-size:12px!important;color:#182c22!important;line-height:1.3}
+.streaks-modern .streaks-modern-table .streak-count{text-align:center!important}
+.ownership-extra-grid .ownership-table th,.ownership-extra-grid .ownership-table td{color:#111}
+@media(max-width:650px){
+ #fixturesSection>.section-head{gap:5px 8px}
+ #fixturesSection>.section-head h2{flex:1 1 auto}
+ #fixturesSection>.section-head .social-export-actions{flex:0 0 auto}
+ .streaks-modern .streaks-modern-table .streak-next,.streaks-modern .streaks-modern-table .streak-since{font-size:11px!important}
+}
+</style>
 </head>
 <body>
 
@@ -3278,12 +3308,12 @@ html,body{max-width:100%;overflow-x:clip}
   <section id="fixturesSection" style="margin-top:48px;">
     <div class="section-head">
       <h2>Fixtures</h2>
-      <span class="sub">All rounds</span>
-      <button type="button" class="fixture-live-link" onclick="goToLiveCompetition(currentDivision.id)">● Live Match Centre ↗</button>
+
       <div class="social-export-actions"><button type="button" class="social-export-download" onclick="exportRoundPreview()" title="Download round preview PNG" aria-label="Download round preview PNG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6M7 17h8"/></svg></button></div>
       <div class="social-export-actions"><button type="button" class="social-export-download" onclick="exportDivisionImage('fixtures','social')" title="Download round PNG" aria-label="Download round PNG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg></button></div>
     </div>
     <div id="roundTabs" class="round-tabs"></div>
+    <div class="fixture-live-under-tabs"><button type="button" class="fixture-live-link" onclick="goToLiveCompetition(currentDivision.id)">● Live Match Centre ↗</button></div>
     <div id="fixtureContainer" class="state-msg">Loading fixtures…</div>
   </section>
 
@@ -5918,9 +5948,11 @@ function roundPreviewCard(f,rows,usedStories,index){
 async function exportRoundPreview(){
  if(currentDivision.type!=='division')return;
  if(typeof html2canvas!=='function'){alert('Image exporter is unavailable.');return;}
- const round=document.querySelector('#roundTabs .round-tab.active')?.dataset.round;
- const matches=(fixturesByRound[round]||[]).filter(f=>f.home&&f.away);
- if(!round||!matches.length){alert('Select a round containing fixtures first.');return;}
+ const upcoming=Object.entries(fixturesByRound).filter(([r,fs])=>fs.some(f=>f.home&&f.away&&f.homeScore==null&&f.awayScore==null)).sort((a,b)=>(Number(a[0])||999)-(Number(b[0])||999));
+ const next=upcoming[0];
+ const round=next?.[0];
+ const matches=(next?.[1]||[]).filter(f=>f.home&&f.away&&f.homeScore==null&&f.awayScore==null);
+ if(!round||!matches.length){alert('No upcoming unscored division fixtures were found.');return;}
  let rows=[];
  try{rows=await roundPreviewMatchLog();}catch(e){console.warn('Round preview H2H unavailable:',e);alert('Could not load the historical H2H match log. Please try again.');return;}
  const division=currentDivision,colour=division.color||'#245440';
@@ -6448,12 +6480,20 @@ function facupFixtureCardHtml(f){
   </div>`;
 }
 
+function faCupCalendarStartNote(round){
+ const title=String(round?.name||'').trim();
+ const match=calendarRounds.find(r=>String(r.faCup||'').toLowerCase().includes(title.toLowerCase())&&title);
+ const fallback=calendarRounds.find(r=>/fa cup|cup/i.test(String(r.faCup||''))&&!/^(?:-|—)$/.test(String(r.faCup||'')));
+ const scheduled=match||fallback;
+ if(!scheduled)return 'See the <a href="#calendar">Calendar</a> for the scheduled FA Cup round.';
+ return `The calendar currently lists ${liveEscape(scheduled.faCup||title)} for Round ${scheduled.round}${scheduled.date?' ('+liveEscape(scheduled.date)+')':''}. Fixtures will appear when confirmed.`;
+}
 function renderFACupRound(idx){
   const container = document.getElementById('facupContainer');
   const round = facupRounds[idx];
   if(!round || round.fixtures.length === 0){
     container.className = "state-msg";
-    container.innerHTML = "No fixtures found for this round.";
+    container.innerHTML = `No fixtures found for this round.<div class="facup-calendar-note">${faCupCalendarStartNote(round)}</div>`;
     return;
   }
   container.className = "";
@@ -9220,7 +9260,7 @@ function streakUpcomingFixture(team,opponent){
  const choices=[];
  streakDivisionUpcoming.forEach(f=>{
   if(isPair(f.home,f.away))
-   choices.push({order:Number(f.round)||0,label:f.division+' · Round '+f.round});
+   choices.push({order:Number(f.round)||999,label:(/^division 1|^eliza/i.test(f.division)?'D1':/^division 2a/i.test(f.division)?'D2A':/^division 2b/i.test(f.division)?'D2B':/^division 3a/i.test(f.division)?'D3A':/^division 3b/i.test(f.division)?'D3B':/^division 3c/i.test(f.division)?'D3C':f.division)+' · R'+f.round});
  });
  facupRounds.forEach((round,i)=>round.fixtures.forEach(f=>{
   if(!f.isBye&&f.homeScore==null&&f.awayScore==null&&isPair(f.home,f.away))choices.push({order:i,label:'FA Cup · '+round.name});
@@ -9233,7 +9273,7 @@ function streakUpcomingFixture(team,opponent){
  }));
  // The different competitions do not share a guaranteed chronological date;
  // show all known scheduled meetings rather than claiming an invented next date.
- return [...new Set(choices.sort((a,b)=>a.order-b.order).map(c=>c.label))].join(' / ')||'Not scheduled';
+ return choices.sort((a,b)=>a.order-b.order)[0]?.label||'Not scheduled';
 }
 function streakTeamCell(name){
  return `<span class="streak-team-cell"><img src="logo/${teamLogoSlug(name)}.png" alt="" loading="lazy" data-team-name="${liveEscape(name)}" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span>${teamLink(name)}</span></span>`;
@@ -9958,8 +9998,12 @@ async function populateClubOwnershipHistory(teamName,currentSquad){
  const records=ownershipTeamHistory(teamName),weeks=records.map(ownershipGw);
  const current=ownershipTeams.find(t=>liveKey(t.name)===liveKey(teamName));
  const options=`<option value="current">Current GW</option>${weeks.map(w=>`<option value="${w}">GW ${w}</option>`).join('')}`;
- pitch.innerHTML=`<label class="club-history-selector">Squad gameweek <select id="clubSquadGwSelect">${options}</select></label><div id="clubSquadPitch">${clubSquadHtml(current||currentSquad)||'<p class="state-msg">Current squad unavailable.</p>'}</div>`;
- pitch.querySelector('#clubSquadGwSelect').addEventListener('change',e=>{const t=e.target.value==='current'?(current||currentSquad):records.find(r=>ownershipGw(r)===Number(e.target.value));pitch.querySelector('#clubSquadPitch').innerHTML=clubSquadHtml(t)||'<p class="state-msg">Squad unavailable.</p>';});
+ const showPrevious=!liveScoresAvailable()&&records.length;
+ const lastScored=showPrevious?records.filter(r=>ownershipGw(r)<liveRoundNumber(liveCurrentRound)).sort((a,b)=>ownershipGw(b)-ownershipGw(a))[0]:null;
+ const initialSquad=lastScored||(current||currentSquad);
+ pitch.innerHTML=`<label class="club-history-selector">Squad gameweek <select id="clubSquadGwSelect">${options}</select></label><div id="clubSquadPitch">${clubSquadHtml(initialSquad,false,!!lastScored)||'<p class="state-msg">Current squad unavailable.</p>'}</div>`;
+ if(lastScored){const selector=pitch.querySelector('#clubSquadGwSelect');selector.value=String(ownershipGw(lastScored));}
+ pitch.querySelector('#clubSquadGwSelect').addEventListener('change',e=>{const archived=e.target.value!=='current';const t=archived?records.find(r=>ownershipGw(r)===Number(e.target.value)):(current||currentSquad);pitch.querySelector('#clubSquadPitch').innerHTML=clubSquadHtml(t,false,archived)||'<p class="state-msg">Squad unavailable.</p>';});
  slot.innerHTML=`<div class="section-head"><h2 style="font-size:18px">Transfer History</h2></div><label class="club-history-selector">Gameweek <select id="clubTransferGwSelect"><option value="all">All gameweeks</option>${weeks.map(w=>`<option value="${w}">GW ${w}</option>`).join('')}</select></label><div id="clubTransferHistoryContent"></div>`;
  const draw=()=>{const selected=slot.querySelector('#clubTransferGwSelect').value;const rows=records.map((t,i)=>{const previous=ownershipAllWeeks().find(r=>ownershipGw(r)===ownershipGw(t)-1&&liveKey(r.name)===liveKey(teamName));return previous?{gw:ownershipGw(t),...ownershipChange(previous,t)}:null}).filter(Boolean).filter(r=>selected==='all'||String(r.gw)===selected);slot.querySelector('#clubTransferHistoryContent').innerHTML=rows.length?rows.map(r=>`<div class="club-transfer-row"><b>GW ${r.gw}</b><span class="transfer-in">IN: ${r.ins.map(p=>liveEscape(p.name)).join(', ')||'—'}</span><span class="transfer-out">OUT: ${r.outs.map(p=>liveEscape(p.name)).join(', ')||'—'}</span></div>`).join(''):'<p class="state-msg">Transfer comparisons require consecutive archived gameweeks.</p>';};
  slot.querySelector('#clubTransferGwSelect').addEventListener('change',draw);draw();
@@ -12904,6 +12948,13 @@ function renderUclFantasy(data){
     </table></div>`;
 }
 
+function honourWinnerWithLogo(value){
+ const raw=String(value||'').trim();
+ // Some honours contain multiple winners or explanatory text: only attach a logo for a known exact team.
+ const team=typeof ALL_TEAM_NAMES!=='undefined'&&Array.isArray(ALL_TEAM_NAMES)?ALL_TEAM_NAMES.find(n=>liveKey(n)===liveKey(raw)):null;
+ const known=team||((typeof lookupTeamDivInfo==='function'&&lookupTeamDivInfo(raw)?.active)?raw:null);
+ return known?`<img class="honour-year-logo" src="logo/${teamLogoSlug(known)}.png" alt="" onerror="this.style.display='none'">${liveEscape(raw)}`:liveEscape(raw);
+}
 function renderHonourBoard(data){
   const el = document.getElementById('sideLeaguesContainer');
   if(!data.competitions.length){
@@ -12920,7 +12971,7 @@ function renderHonourBoard(data){
       // Sheet columns F→I run oldest→newest; walk the indices in reverse so
       // the most recent year's winner shows first.
       const yearLines = [3,2,1,0].map(idx => yearVals[idx]
-        ? `<div class="honour-year-line"><span class="honour-year">${years[idx]}</span><span class="honour-winner">${yearVals[idx]}</span></div>`
+        ? `<div class="honour-year-line"><span class="honour-year">${years[idx]}</span><span class="honour-winner">${honourWinnerWithLogo(yearVals[idx])}</span></div>`
         : ""
       ).join("");
       return `<div class="honour-subcomp">
@@ -13566,13 +13617,14 @@ function renderAleagueLms(data, containerId){
   const rowsHtml = round.entries.map(e => {
     const isEliminated = /^ELIMINATED/i.test(e.pick);
     const isDnp = /^DNP$/i.test(e.pick);
-    const isEntered = e.pick && !isEliminated && !isDnp;
+    const isAwaitingTip = /AWAITING\s+TIP/i.test(String(e.pick || ""));
+    const isEntered = e.pick && !isEliminated && !isDnp && !isAwaitingTip;
     const hasResult = e.result === "WIN" || e.result === "LOSS" || e.result === "DRAW";
-    const pickClass = isEliminated ? ' eliminated' : isDnp ? ' awaiting' : isEntered ? ' entered' : '';
-    const pickIcon = isDnp ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
+    const pickClass = isEliminated ? ' eliminated' : (isDnp || isAwaitingTip) ? ' awaiting' : isEntered ? ' entered' : '';
+    const pickIcon = (isDnp || isAwaitingTip) ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
     const isBadOutcome = e.result === "LOSS" || e.result === "DRAW" || isDnp;
     const resultColor = e.result === "WIN" ? "#166534" : isBadOutcome ? "#991b1b" : "#000";
-    const cardStyle = isEliminated ? "background:#d1d5db;border-color:#6b7280;"
+    const cardStyle = isAwaitingTip ? "background:#fff4d6;border-color:#b45309;" : isEliminated ? "background:#d1d5db;border-color:#6b7280;"
       : e.result === "WIN" ? "background:#dcfce7;border-color:#166534;"
       : (e.result === "LOSS" || e.result === "DRAW") ? "background:#fee2e2;border-color:#991b1b;" : "";
     const logoName = resolveSideLeagueTeamName(e.name);
@@ -13580,7 +13632,7 @@ function renderAleagueLms(data, containerId){
     const resultLabel = isDnp ? "DNP" : (e.result || "—");
     const summary = lmsLivesByName.get(String(e.name).trim().toLowerCase());
     const hearts = summary ? `<span class="aleague-lms-row-hearts" aria-label="${Math.max(0,Math.min(3,Number(summary.lives)||0))} lives remaining">${"❤️".repeat(Math.max(0,Math.min(3,Number(summary.lives)||0)))}${"🖤".repeat(3-Math.max(0,Math.min(3,Number(summary.lives)||0)))}</span>` : '';
-    return `<div class="lms-pick-row" style="${cardStyle}">
+    return `<div class="lms-pick-row${isAwaitingTip ? ' aleague-lms-awaiting-tip' : ''}" style="${cardStyle}">
       <span class="lms-participant"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.name)}</span>
       <span class="aleague-lms-hearts-col">${hearts}</span>
       <span class="lms-pick-col">
@@ -15544,7 +15596,7 @@ async function elizaExportCompetitionFixtures(kind){
   const id='eliza-export-'+kind;
   if(document.getElementById(id))return;
   const btn=document.createElement('button');btn.id=id;btn.type='button';btn.className='social-export-download eliza-mc-export-button';
-  btn.title='Download '+(kind==='cup'?'FA Cup':'ECL')+' fixture image';btn.textContent='↓ Export Fixtures';
+  btn.title='Download '+(kind==='cup'?'FA Cup':'ECL')+' fixture image';btn.setAttribute('aria-label',btn.title);btn.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>'; 
   btn.addEventListener('click',()=>elizaExportCompetitionFixtures(kind));
   parent.insertBefore(btn,container);
  }
