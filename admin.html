@@ -903,6 +903,28 @@
   #wheelFullscreenRight.conference-fit .wheel-conference-group .draw-fixture-logo{width:var(--conf-logo,23px)!important;height:var(--conf-logo,23px)!important;flex-shrink:0;}
   #wheelFullscreenRight.conference-fit .wheel-conference-group .num{font-size:var(--conf-number,11px);}
   @media(max-width:900px){.wheel-conference-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Shared full-screen draw overview and PNG export: two Match Centre-style columns. */
+.wheel-social-export,.wheel-fullscreen-results{font-family:'Barlow',Arial,sans-serif}
+.wheel-social-heading{text-align:center;margin:0 0 22px;color:#aab9d1;font-size:16px;letter-spacing:1.5px}
+.wheel-social-heading h1{margin:7px 0;color:#fff;font:800 40px/1.1 'Barlow Condensed',Arial,sans-serif;letter-spacing:0;text-transform:uppercase}
+.wheel-social-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;width:100%;align-items:start}
+.wheel-social-column{display:flex;flex-direction:column;gap:9px;min-width:0}
+.wheel-social-fixture{display:grid;grid-template-columns:42px minmax(0,1fr) 38px 18px 38px minmax(0,1fr) 42px;align-items:center;gap:7px;padding:12px 10px;background:#26334b;color:#fff;border-radius:7px;min-height:76px;box-sizing:border-box}
+.wheel-social-logo{display:flex;width:42px;height:42px;align-items:center;justify-content:center;min-width:42px;overflow:visible}
+.wheel-social-logo img{display:block;width:auto!important;height:auto!important;max-width:42px!important;max-height:42px!important;object-fit:contain!important;aspect-ratio:auto!important;flex:none!important}
+.wheel-social-team{font-size:16px;font-weight:800;line-height:1.12;min-width:0;overflow-wrap:anywhere;text-align:right}
+.wheel-social-v{text-align:center;font-size:17px;font-weight:800}
+.wheel-social-div{color:#fff;border-radius:4px;padding:5px 3px;font-size:14px;font-weight:800;text-align:center}
+.wheel-social-div+.wheel-social-team{text-align:left}
+#wheelFullscreenResultsView{background:#10151f!important;color:#fff!important;padding:22px!important;box-sizing:border-box}
+#wheelResultsExportTarget{width:100%!important;max-width:1600px;margin:0 auto}
+#wheelFullscreenResultsTitle{color:#fff!important;text-align:center!important;margin:0 0 20px!important}
+#wheelFullscreenResultsGrid{display:block!important;width:100%!important;max-width:none!important}
+#wheelFullscreenResultsGrid .wheel-social-fixture{min-height:clamp(48px,5.4vh,76px);padding:clamp(4px,0.8vh,12px) 8px}
+#wheelFullscreenResultsGrid .wheel-social-team{font-size:clamp(10px,1.05vw,16px)}
+#wheelFullscreenResultsGrid .wheel-social-columns{gap:12px}
+#wheelFullscreenResultsGrid .wheel-social-column{gap:clamp(3px,0.5vh,9px)}
 </style>
 </head>
 <body>
@@ -3425,25 +3447,12 @@ function showWheelResultsView(){
     titleEl.style.display = "none";
   }
 
-  const teamLogoImg = (name) => {
-    const logoName = resolveElizaTeamName(name);
-    return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
-  };
-  const grid = $("wheelFullscreenResultsGrid");
-  grid.innerHTML = drawFixtures.map((f,i) => `
-    <div class="draw-fixture-row">
-      <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
-      <span class="num">Fixture ${i+1}</span>
-      <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
-    </div>`).join("");
-
-  const layout = computeWheelResultsLayout(drawFixtures);
-  grid.style.setProperty("--wc-cols", layout.cols);
-  grid.style.setProperty("--wc-gap", layout.gap + "px");
-  grid.style.setProperty("--wc-pad", layout.pad);
-  grid.style.setProperty("--wc-font", layout.font + "px");
-  grid.style.setProperty("--wc-logo", layout.logo + "px");
-  grid.style.setProperty("--wc-maxwidth", layout.maxWidth + "px");
+  const grid=$("wheelFullscreenResultsGrid");
+  grid.innerHTML=wheelFixtureColumns(drawFixtures);
+  grid.querySelectorAll('img').forEach(img=>{
+    img.addEventListener('load',()=>wheelFitLogoImages(grid),{once:true});
+  });
+  wheelFitLogoImages(grid);
 
   $("wheelFullscreenResultsView").style.display = "flex";
   updateWheelResultsCentering();
@@ -3469,48 +3478,26 @@ window.addEventListener("resize", () => {
 async function exportWheelResultsImage(){
   const btn=$("wheelExportImageBtn");
   if(!btn||typeof html2canvas!=="function"||!drawFixtures.length)return;
-  const oldText=btn.textContent;
-  btn.disabled=true;btn.textContent="Exporting…";
+  const original=btn.textContent;btn.disabled=true;btn.textContent="Exporting…";
   const stage=document.createElement("div");
-  stage.style.cssText="position:fixed;left:-20000px;top:0;width:1600px;box-sizing:border-box;padding:28px;background:#10151f;color:#fff;font-family:Barlow,Arial,sans-serif;z-index:-1";
+  stage.className="wheel-social-export";
+  stage.style.cssText="position:fixed;left:-20000px;top:0;width:1600px;box-sizing:border-box;padding:28px;background:#10151f;color:#fff;z-index:-1";
   const title=$("wheelTitleInput").value.trim()||"FIXTURE DRAW";
-  const clean=team=>wheelTeamIdentity(team).name;
-  const teamLogo=team=>{
-    const resolved=wheelTeamIdentity(resolveElizaTeamName(clean(team))).name;
-    return '<img src="logo/'+teamLogoSlug(resolved)+'.png" alt="" style="width:42px;height:42px;object-fit:contain;flex:none" onerror="'+teamLogoOnErrorAttr(resolved)+'">';
-  };
-  const badge=team=>{
-    const div=getTeamDivision(team)||"—";
-    const bg=WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK;
-    return '<span style="flex:none;background:'+bg+';color:#fff;border-radius:4px;padding:5px 6px;font-size:14px;font-weight:800;min-width:28px;text-align:center">'+escapeHtml(div)+'</span>';
-  };
-  const fixture=(f,i)=>'<div style="display:grid;grid-template-columns:42px minmax(0,1fr) 38px 18px 38px minmax(0,1fr) 42px;align-items:center;gap:7px;padding:12px 10px;background:#26334b;border-radius:7px;min-height:52px;box-sizing:border-box">'
-    +teamLogo(f.home)
-    +'<span style="font-size:16px;font-weight:800;text-align:right;min-width:0;overflow-wrap:anywhere;line-height:1.12">'+escapeHtml(clean(f.home))+'</span>'
-    +badge(f.home)+'<span style="text-align:center;font-size:17px;font-weight:800">v</span>'+badge(f.away)
-    +'<span style="font-size:16px;font-weight:800;text-align:left;min-width:0;overflow-wrap:anywhere;line-height:1.12">'+escapeHtml(clean(f.away))+'</span>'
-    +teamLogo(f.away)+'</div>';
-  const half=Math.ceil(drawFixtures.length/2);
-  const columns=[drawFixtures.slice(0,half),drawFixtures.slice(half)];
-  stage.innerHTML='<div style="text-align:center;margin:0 0 22px"><div style="font-size:17px;letter-spacing:2px;color:#aab9d1">ELIZA CUP 2026/27</div><h1 style="margin:7px 0;font-size:40px;line-height:1.1;text-transform:uppercase;color:#fff">'+escapeHtml(title)+'</h1><div style="font-size:16px;color:#aab9d1">'+drawFixtures.length+' FIXTURES</div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">'
-    +columns.map((group,j)=>'<div style="display:flex;flex-direction:column;gap:9px">'+group.map((f,i)=>fixture(f,i+j*half)).join('')+'</div>').join('')
-    +'</div>';
+  stage.innerHTML='<div class="wheel-social-heading"><div>ELIZA CUP 2026/27</div><h1>'+escapeHtml(title)+'</h1><div>'+drawFixtures.length+' FIXTURES</div></div>'+wheelFixtureColumns(drawFixtures);
   document.body.appendChild(stage);
   try{
     await Promise.all([...stage.querySelectorAll("img")].map(img=>new Promise(resolve=>{
       if(img.complete){resolve();return;}
-      img.addEventListener("load",resolve,{once:true});
-      img.addEventListener("error",resolve,{once:true});
+      img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});
       setTimeout(resolve,4000);
     })));
     if(document.fonts?.ready)await document.fonts.ready;
+    wheelFitLogoImages(stage);
     const canvas=await html2canvas(stage,{backgroundColor:"#10151f",scale:2,width:1600,height:Math.ceil(stage.scrollHeight),useCORS:true,logging:false});
-    const link=document.createElement("a");
-    link.download=(title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"fixture-draw")+"-fixtures.png";
+    const link=document.createElement("a");link.download=(title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"fixture-draw")+"-fixtures.png";
     link.href=canvas.toDataURL("image/png");document.body.appendChild(link);link.click();link.remove();
   }catch(err){console.error("Wheel export failed",err);alert("Couldn't export the image: "+err.message);}
-  finally{stage.remove();btn.disabled=false;btn.textContent=oldText;}
+  finally{stage.remove();btn.disabled=false;btn.textContent=original;}
 }
 
 // Records one pick (the wheel's spin landing) — pairs it with a pending
@@ -3523,7 +3510,7 @@ function wheelConferenceInputTeams(id){
   return $(id).value.split("\n").map(t=>t.trim()).filter(Boolean);
 }
 function wheelConferenceTeamHtml(name, index){
-  const logoName = resolveElizaTeamName(name);
+  const logoName = wheelLogoTeamName(name);
   return `<div class="draw-fixture-row" style="margin-bottom:7px;">
     <span class="num">${index+1}</span>
     <span class="team"><img src="logo/${teamLogoSlug(logoName)}.png" class="draw-fixture-logo" alt="" onerror="${teamLogoOnErrorAttr(logoName)}">${`<span class="conference-team-name">${escapeHtml(name)}</span>`}</span>
@@ -3584,7 +3571,7 @@ function showDrawPick(boxId, nameId, name, logoImgId){
   $(nameId).textContent = name;
   if(logoImgId){
     const logoEl = $(logoImgId);
-    const logoName = resolveElizaTeamName(name);
+    const logoName = wheelLogoTeamName(name);
     logoEl.dataset.fallback = "";
     logoEl.onerror = () => {
       if(!logoEl.dataset.fallback){
@@ -3660,7 +3647,7 @@ function renderDrawShared(){
     : (drawFixtures.length ? "Draw complete." : "");
 
   const teamLogoImg = (name) => {
-    const logoName = resolveElizaTeamName(name);
+    const logoName = wheelLogoTeamName(name);
     return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
   };
   let fixturesHtml = drawFixtures.map((f,i) => `
@@ -3699,6 +3686,39 @@ function renderDrawShared(){
 // Same slug convention as the main site (logo/{slug}.png) — needed here so
 // the wheel and result boxes can show team logos consistently with the rest
 // of the site.
+function wheelLogoTeamName(name){
+  return wheelTeamIdentity(resolveElizaTeamName(wheelTeamIdentity(name).name)).name;
+}
+function wheelFixtureLogo(name){
+  const real=wheelLogoTeamName(name);
+  return '<span class="wheel-social-logo"><img src="logo/'+teamLogoSlug(real)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(real)+'"></span>';
+}
+function wheelFixtureCard(f){
+  const team=name=>'<span class="wheel-social-team">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>';
+  const badge=name=>{
+    const div=getTeamDivision(name)||'—';
+    return '<span class="wheel-social-div" style="background:'+(WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK)+'">'+escapeHtml(div)+'</span>';
+  };
+  return '<div class="wheel-social-fixture">'+wheelFixtureLogo(f.home)+team(f.home)+badge(f.home)
+    +'<span class="wheel-social-v">v</span>'+badge(f.away)+team(f.away)+wheelFixtureLogo(f.away)+'</div>';
+}
+function wheelFixtureColumns(fixtures){
+  const half=Math.ceil(fixtures.length/2);
+  return '<div class="wheel-social-columns">'+[fixtures.slice(0,half),fixtures.slice(half)]
+    .map(group=>'<div class="wheel-social-column">'+group.map(wheelFixtureCard).join('')+'</div>').join('')+'</div>';
+}
+function wheelFitLogoImages(root){
+  root.querySelectorAll('.wheel-social-logo img').forEach(img=>{
+    if(!img.complete||!img.naturalWidth||!img.naturalHeight)return;
+    const max=42,ratio=Math.min(max/img.naturalWidth,max/img.naturalHeight);
+    img.style.setProperty('width',Math.round(img.naturalWidth*ratio)+'px','important');
+    img.style.setProperty('height',Math.round(img.naturalHeight*ratio)+'px','important');
+    img.style.setProperty('max-width',max+'px','important');
+    img.style.setProperty('max-height',max+'px','important');
+    img.style.setProperty('object-fit','contain','important');
+    img.style.setProperty('aspect-ratio','auto','important');
+  });
+}
 function teamLogoSlug(name){
   return (name||"").toLowerCase().trim()
     .replace(/['\u2019.]/g, "")
