@@ -10006,17 +10006,23 @@ async function populateClubOwnershipHistory(teamName,currentSquad){
  await ensureOwnershipHistory();
  const pitch=document.getElementById('clubHistoricalSquadSlot'),slot=document.getElementById('clubTransferHistorySlot');if(!pitch||!slot)return;
  const records=ownershipTeamHistory(teamName),weeks=records.map(ownershipGw);
- const current=ownershipTeams.find(t=>liveKey(t.name)===liveKey(teamName));
- const options=`<option value="current">Current GW</option>${weeks.map(w=>`<option value="${w}">GW ${w}</option>`).join('')}`;
- const activeGw=liveRoundNumber(liveCurrentRound)||ownershipCurrentGw();
- const archivedPrior=records.filter(r=>ownershipGw(r)>0&&ownershipGw(r)<activeGw).sort((a,b)=>ownershipGw(b)-ownershipGw(a));
- const liveCurrent=liveFindTeam(teamName);
- const currentWeekHasScores=!!(liveCurrent&&ownershipGw(liveCurrent)===activeGw&&liveSquadHasCurrentScores(liveCurrent));
- const lastScored=!currentWeekHasScores?archivedPrior[0]:null;
- const initialSquad=lastScored||(current||currentSquad);
- pitch.innerHTML=`<label class="club-history-selector">Squad gameweek <select id="clubSquadGwSelect">${options}</select></label><div id="clubSquadPitch">${clubSquadHtml(initialSquad,false,!!lastScored)||'<p class="state-msg">Current squad unavailable.</p>'}</div>`;
- if(lastScored){const selector=pitch.querySelector('#clubSquadGwSelect');selector.value=String(ownershipGw(lastScored));}
- pitch.querySelector('#clubSquadGwSelect').addEventListener('change',e=>{const archived=e.target.value!=='current';const t=archived?records.find(r=>ownershipGw(r)===Number(e.target.value)):(current||currentSquad);pitch.querySelector('#clubSquadPitch').innerHTML=clubSquadHtml(t,false,archived)||'<p class="state-msg">Squad unavailable.</p>';});
+ // Club profile pitch always uses the latest archived gameweek with scores.
+ const archived=ownershipHistorical().filter(t=>
+   (liveKey(t.name)===liveKey(teamName)||liveKey(t.fantasy)===liveKey(teamName)) &&
+   ownershipGw(t)>0 &&
+   (t.players||[]).some(p=>String(p.points??'').trim()!=='' && Number.isFinite(Number(String(p.points).replace(/,/g,''))))
+ ).sort((a,b)=>ownershipGw(b)-ownershipGw(a));
+ const newest=archived[0];
+ const options=archived.map(t=>`<option value="${ownershipGw(t)}">GW ${ownershipGw(t)}</option>`).join('');
+ pitch.innerHTML=newest
+   ? `<label class="club-history-selector">Scored gameweek <select id="clubSquadGwSelect">${options}</select></label><div id="clubSquadPitch">${clubSquadHtml(newest,false,true)}</div>`
+   : '<p class="state-msg">No completed gameweek with player scores is available in SOKKAH HISTORY yet.</p>';
+ if(newest){
+   pitch.querySelector('#clubSquadGwSelect').addEventListener('change',e=>{
+     const t=archived.find(r=>ownershipGw(r)===Number(e.target.value));
+     pitch.querySelector('#clubSquadPitch').innerHTML=clubSquadHtml(t,false,true)||'<p class="state-msg">Archived squad unavailable.</p>';
+   });
+ }
  slot.innerHTML=`<div class="section-head"><h2 style="font-size:18px">Transfer History</h2></div><label class="club-history-selector">Gameweek <select id="clubTransferGwSelect"><option value="all">All gameweeks</option>${weeks.map(w=>`<option value="${w}">GW ${w}</option>`).join('')}</select></label><div id="clubTransferHistoryContent"></div>`;
  const draw=()=>{const selected=slot.querySelector('#clubTransferGwSelect').value;const rows=records.map((t,i)=>{const previous=ownershipAllWeeks().find(r=>ownershipGw(r)===ownershipGw(t)-1&&liveKey(r.name)===liveKey(teamName));return previous?{gw:ownershipGw(t),...ownershipChange(previous,t)}:null}).filter(Boolean).filter(r=>selected==='all'||String(r.gw)===selected);slot.querySelector('#clubTransferHistoryContent').innerHTML=rows.length?rows.map(r=>`<div class="club-transfer-row"><b>GW ${r.gw}</b><span class="transfer-in">IN: ${r.ins.map(p=>liveEscape(p.name)).join(', ')||'—'}</span><span class="transfer-out">OUT: ${r.outs.map(p=>liveEscape(p.name)).join(', ')||'—'}</span></div>`).join(''):'<p class="state-msg">Transfer comparisons require consecutive archived gameweeks.</p>';};
  slot.querySelector('#clubTransferGwSelect').addEventListener('change',draw);draw();
@@ -10035,7 +10041,7 @@ function clubSquadHtml(squad,preRound=false,historical=false){
     const icon=crest?`<img class="club-squad-crest" src="${liveEscape(crest)}" alt="${liveEscape(p.club)}" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=this.src.replace(/\/logo\//,'/logos/');}else{this.style.display='none';}">`:'<span aria-hidden="true">⚽</span>';
     return `<div class="club-squad-player"><div class="club-squad-crest-wrap">${icon}${capHtml}</div><div class="club-squad-club">${liveEscape(abbr)}</div><div class="club-squad-player-name">${liveEscape(p.name)}${subBadge}</div><div class="club-squad-player-points ${livePlayerPointClass(p,squad,historical)}" title="Player points">${liveEscape(liveDisplayPlayerPoints(p,squad,historical))}</div></div>`;
   };
-  return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">Current Squad</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
+  return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">${historical?'Last Scored Squad':'Current Squad'}</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
 }
 
 function renderTeamProfile(data){
