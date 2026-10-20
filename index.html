@@ -15508,6 +15508,13 @@ if(installInstructionsOverlay){
       }
       if(!content.children.length){alert('This section has no content to export yet.');return;}
     }
+    // Identify fixture exports by their cards, even when the heading is simply "FPL".
+    if(content.querySelector('.fixture-card') && !content.querySelector('table')){
+      const selectedRound=root.querySelector('#sideLeagueRoundTabs .round-tab.active')?.textContent?.trim()||'';
+      const fixtureSubtitle=[sectionTitle,selectedRound].filter(Boolean).join(' · ');
+      head.querySelector('.export-subheading').textContent=fixtureSubtitle;
+      head.querySelector('.export-subheading').style.display=fixtureSubtitle?'':'none';
+    }
     content.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
     content.querySelectorAll('a').forEach(a=>a.removeAttribute('href'));
     content.querySelectorAll('.table-wrap').forEach(e=>{e.style.setProperty('overflow','visible','important');e.style.setProperty('max-width','none','important');});
@@ -15583,7 +15590,7 @@ if(installInstructionsOverlay){
       // Upcoming fixtures show a versus marker in exports, never placeholder dashes.
       content.querySelectorAll('.eliza-mc-export-score').forEach(score=>{
         const value=score.textContent.trim();
-        if(/^[\s\u2013\u2014-]*$/.test(value)||/^vs?\.?$/i.test(value))score.innerHTML='<span class="upcoming">v</span>';
+        if(!/\d/.test(value)&&(/^[\s\u2013\u2014-]+$/.test(value)||/^vs?\.?$/i.test(value)))score.innerHTML='<span class="upcoming">v</span>';
       });
       cards.forEach(card=>{
         const sides=card.querySelectorAll('.fixture-team');const score=card.querySelector('.fixture-score');
