@@ -3160,6 +3160,18 @@ html,body{max-width:100%;overflow-x:clip}
 .ownership-player-trade-team button{overflow-wrap:anywhere;text-align:left}
 .ownership-player-trade-team small{font-size:11px;opacity:.75}
 @media(max-width:440px){.ownership-player-trade-grid{gap:6px}.ownership-player-trade-column>div{padding:4px}.ownership-player-trade-team{gap:4px}.ownership-player-trade-team .ownership-ranking-team-logo{width:26px;height:26px}.ownership-player-trade-team button{font-size:12px}.ownership-player-trade-column h5{font-size:12px;padding:8px 5px}}
+
+/* Profile content gutters match the site's inset card layout. */
+#ownershipInlineProfile .ownership-inline-panel{padding:0 18px 22px}
+#ownershipInlineProfile .ownership-modal-header{margin-left:-18px;margin-right:-18px}
+#ownershipInlineProfile .ownership-modal-filters{padding-left:0;padding-right:0}
+#ownershipInlineProfile .ownership-player-owners-heading{margin-left:0;margin-right:0}
+#ownershipInlineProfile .ownership-modal-count{border-radius:6px;margin:0 0 4px}
+#ownershipInlineProfile .ownership-owner-list{padding:6px 12px 15px}
+#ownershipInlineProfile .ownership-player-trades{margin:24px 0}
+#ownershipInlineProfile .ownership-profile-history{padding-left:0;padding-right:0}
+#ownershipInlineProfile .ownership-player-week-section{margin-left:0;margin-right:0}
+@media(max-width:600px){#ownershipInlineProfile .ownership-inline-panel{padding:0 12px 18px}#ownershipInlineProfile .ownership-modal-header{margin-left:-12px;margin-right:-12px}}
 </style>
 
 <style>
@@ -8419,9 +8431,10 @@ let statsActiveTab = "ownership"; // default statistics view
 function renderStatsPage(){
   const toggleEl = document.getElementById('statsViewToggle');
   toggleEl.innerHTML = `
+    <button class="round-tab${statsActiveTab==='ownership'?' active':''}" data-tab="ownership">Player Ownership</button>
     <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
-    <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>\n    <button class="round-tab${statsActiveTab==='ownership'?' active':''}" data-tab="ownership">Player Ownership</button>
+    <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -8627,7 +8640,7 @@ function renderPlayerOwnershipTab(){
  const unknown=ownershipTeams.filter(t=>!t.division).length;
  el.className='ownership-stats';
  el.innerHTML=`<div class="ownership-controls">
- <div class="ownership-categories">${[['owned','Most Owned'],['captained','Most Captained'],['lookup','Player Profiles'],['transfers','Transfers'],['template','Template Team'],['captainbench','Captain & Bench'],['records','Fun Stats & Records']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div>
+ <div class="ownership-categories">${[['owned','Most Owned'],['lookup','Player Profiles'],['captained','Most Captained'],['transfers','Transfers'],['template','Template Team'],['captainbench','Captain & Bench'],['records','Fun Stats & Records']].map(([id,label])=>`<button type="button" class="round-tab${id===category?' active':''}" data-category="${id}">${label}</button>`).join('')}</div>
  <div class="ownership-filter-row">
  <label>Gameweek ${['transfers','template','captainbench','records'].includes(category)?ownershipSelectHtml('ownershipStatsWeek',ownershipStatsWeek,false,true):ownershipSelectHtml('ownershipSelectedWeek',ownershipSelectedWeek,true,false)}</label>
  <label for="ownershipDivision">Division <select id="ownershipDivision">${OWNERSHIP_DIVISIONS.map(([id,label])=>`<option value="${id}"${id===ownershipDivision?' selected':''}>${label}</option>`).join('')}</select></label>
@@ -8669,8 +8682,15 @@ function renderPlayerOwnershipTab(){
 function ownershipPlayerClick(event){
  const button=event.target.closest('[data-owner-player]');
  if(!button)return;
- if(ownershipCategory==='lookup'){ownershipSelectedPlayer=button.dataset.ownerPlayer;ownershipModalDivision=ownershipDivision;ownershipModalStatus=ownershipStatus;renderOwnershipLookupResults();renderOwnershipInlineProfile();}
- else openOwnershipModal(button.dataset.ownerPlayer);
+ const key=button.dataset.ownerPlayer;
+ const player=ownershipPlayerCatalog().find(p=>p.key===key);
+ ownershipCategory='lookup';
+ ownershipSelectedPlayer=key;
+ ownershipModalDivision=ownershipDivision;
+ ownershipModalStatus='all';
+ ownershipSearch=player?.name||'';
+ renderPlayerOwnershipTab();
+ document.getElementById('ownershipInlineProfile')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function ownershipOwners(key,division='all',status='all'){
  return ownershipWeekTeams(ownershipSelectedWeek).filter(t=>division==='all'||t.division===division).flatMap(t=>{
@@ -8802,7 +8822,7 @@ function ownershipPlayerTradeHtml(key){
   return '<div class="ownership-player-trade-team">'+ownershipTeamLogo(team.name)+'<span><button type="button" class="ownership-player-link" data-owner-team="'+liveEscape(team.name)+'">'+liveEscape(team.name)+'</button><small>'+liveEscape(OWNERSHIP_DIVISIONS.find(d=>d[0]===div)?.[1]||'Division unknown')+'</small></span></div>';
  };
  const column=(title,arr,kind)=>'<section class="ownership-player-trade-column '+kind+'"><h5>'+title+' <span>'+arr.length+'</span></h5><div>'+(arr.length?arr.sort((a,b)=>a.name.localeCompare(b.name)).map(card).join(''):'<p class="state-msg">No recorded transfers</p>')+'</div></section>';
- return '<section class="ownership-player-trades"><div class="ownership-player-trades-head"><h4>Player Transfers</h4><label>Gameweek <select id="ownershipPlayerTradeWeek">'+options+'</select></label></div><p class="ownership-player-history-note">Comparing GW '+(gw-1)+' with GW '+gw+'. Only teams with squads in both weeks are counted.</p><div class="ownership-player-trade-grid">'+column('Transferred In',ins,'in')+column('Transferred Out',outs,'out')+'</div></section>';
+ return '<section class="ownership-player-trades"><div class="ownership-player-trades-head"><h4>Player Transfers</h4><label>Gameweek <select id="ownershipPlayerTradeWeek">'+options+'</select></label></div><div class="ownership-player-trade-grid">'+column('Transferred In',ins,'in')+column('Transferred Out',outs,'out')+'</div></section>';
 }
 
 function renderOwnershipModal(target=null,inline=false){
