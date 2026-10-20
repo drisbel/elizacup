@@ -15587,20 +15587,14 @@ if(installInstructionsOverlay){
     if(cards.length && !content.querySelector('table')){
       stage.classList.add('export-broadcast-fixtures','eliza-mc-export-stage');
       elizaFixtureExportNormalize(content);
-      // Normalisation replaces fixture cards with .eliza-mc-export-match nodes.
-      // Convert only unplayed fixture score placeholders in the export clone.
+      // The live cards explicitly mark future matches with .upcoming.
+      // Keep that semantic marker when creating the export instead of guessing
+      // from score text (which can be affected by export styling).
       content.querySelectorAll('.eliza-mc-export-score').forEach(score=>{
-        const value=score.textContent.trim();
-        if(!/\d/.test(value) && (/^[\s\u2013\u2014-]+$/.test(value)||/^vs?\.?$/i.test(value))){
-          score.innerHTML='<span class="upcoming">v</span>';
+        if(score.querySelector('.upcoming') || !/\\d/.test(score.textContent)){
+          score.textContent='v';
         }
       });
-      // Upcoming fixtures show a versus marker in exports, never placeholder dashes.
-      content.querySelectorAll('.eliza-mc-export-score').forEach(score=>{
-        const value=score.textContent.trim();
-        if(!/\d/.test(value)&&(/^[\s\u2013\u2014-]+$/.test(value)||/^vs?\.?$/i.test(value)))score.innerHTML='<span class="upcoming">v</span>';
-      });
-
     }
     body.appendChild(content);stage.appendChild(body);
     const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';stage.appendChild(footer);
