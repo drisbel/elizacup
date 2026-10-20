@@ -5783,6 +5783,7 @@ function roundPreviewLastMeeting(h,home,away){
  if(g.hs===g.as)return `${comp} ${year} ${homeName} ${g.hs}–${g.as} ${awayName}`;
  return g.hs>g.as?`${comp} ${year} ${homeName} ${g.hs}–${g.as} ${awayName}`:`${comp} ${year} ${awayName} ${g.as}–${g.hs} ${homeName}`;
 }
+/* Round Preview export revision: 2026-10-20 — GitHub deployment verification marker. */
 function roundPreviewStoryCandidates(f,a,b,h){
  const home=f.home,away=f.away,ideas=[];
  const add=(priority,category,...lines)=>{for(const line of lines)ideas.push({priority,category,text:line});};
