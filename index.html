@@ -3040,6 +3040,47 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   .live-comp-section .live-match-name > .live-header-progress{width:26px!important;min-width:26px!important;flex-basis:26px!important}
   .live-comp-section .live-match-name > .live-header-progress > .live-header-remaining{font-size:9px!important}
 }
+
+/* Roddy: total is the primary metric in both leaderboard and PNG exports. */
+.roddy-table tbody td.roddy-total-focus{font-size:18px;font-weight:900;letter-spacing:.1px}
+.roddy-export-stage .roddy-export-table tbody td.re-total{font-size:20px!important;font-weight:950!important;letter-spacing:.15px}
+.roddy-export-stage .roddy-export-featured tbody td.re-total{font-size:23px!important;font-weight:950!important}
+
+/* Streaks: ownership-style table with mobile-first no-scroll core columns. */
+.streaks-modern{min-width:0;width:100%}
+.streaks-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 20px}
+.streaks-toolbar p{margin:0;font-size:13px;color:#555}
+.streak-inactive-toggle{display:inline-flex;gap:8px;align-items:center;font-size:13px;font-weight:700;cursor:pointer}
+.streak-inactive-toggle input{accent-color:#236f51;width:17px;height:17px}
+.streak-section-heading{margin:22px 0 8px}.streak-section-heading h2{font-size:17px}
+.streak-table-wrap{width:100%;min-width:0;overflow-x:visible}
+.streaks-modern-table{table-layout:fixed;width:100%;min-width:0}
+.streaks-modern-table .streak-col-team,.streaks-modern-table .streak-col-opp{width:28%}
+.streaks-modern-table .streak-col-count{width:11%}.streaks-modern-table .streak-col-since{width:17%}.streaks-modern-table .streak-col-next{width:16%}
+.streaks-modern-table th{font-size:12px;padding:10px 7px;white-space:normal}
+.streaks-modern-table td{font-size:12px;padding:9px 7px;overflow-wrap:anywhere;vertical-align:middle}
+.streaks-modern-table th:nth-child(n),.streaks-modern-table td:nth-child(n){text-align:left;width:auto}
+.streaks-modern-table .streak-count{text-align:center!important;font-weight:800;font-size:18px}
+.streak-team-cell{display:flex;align-items:center;gap:7px;min-width:0}
+.streak-team-cell img{width:30px;height:30px;object-fit:contain;flex-shrink:0}
+.streak-team-cell>span{min-width:0;overflow-wrap:anywhere;line-height:1.2}
+.streaks-modern-table .streak-since,.streaks-modern-table .streak-next{font-size:11px;color:#555}
+.streaks-modern-table .streak-row{cursor:pointer}
+.streaks-modern-table .streak-row:hover{background:#eef4f0}
+.streaks-modern-table .streak-row[aria-expanded="true"]{background:#e7f0e9}
+.streaks-modern-table .streak-detail-row td{padding:12px;background:#f7f9f7}
+.streaks-modern-table .streak-detail-row .table-wrap{max-width:100%!important;overflow-x:auto}
+@media(max-width:600px){
+ .streaks-modern-table .streak-col-team,.streaks-modern-table .streak-col-opp{width:28%}
+ .streaks-modern-table .streak-col-count{width:12%}.streaks-modern-table .streak-col-since{width:17%}.streaks-modern-table .streak-col-next{width:15%}
+ .streaks-modern-table th{font-size:9px;padding:8px 2px}
+ .streaks-modern-table td{font-size:10px;padding:7px 2px}
+ .streak-team-cell{flex-direction:column;align-items:center;gap:3px;text-align:center}
+ .streak-team-cell img{width:25px;height:25px}
+ .streaks-modern-table .streak-count{font-size:15px}
+ .streaks-modern-table .streak-since,.streaks-modern-table .streak-next{font-size:9px}
+ .streaks-modern-table .record-new-badge{display:block;font-size:8px}
+}
 </style>
 </head>
 <body>
@@ -5972,7 +6013,7 @@ function renderRoddy(){
   }
   el.className = "";
   let html = `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
-    <th>Pos</th><th>Team</th><th>Division</th><th>Round</th><th>Chip</th><th>Total</th>
+    <th>Pos</th><th>Team</th><th>Division</th><th>Total</th><th>Chip</th><th>Round</th>
     <th>TC Chip</th><th>BB Chip</th><th>Overall</th>
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
@@ -5981,9 +6022,9 @@ function renderRoddy(){
       <td>${e.pos}</td>
       <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${sideLeagueTeamLink(e.team)}</td>
       <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
-      <td>${e.round || "—"}</td>
+      <td class="pts roddy-total-focus">${e.total}</td>
       <td>${e.chip || "—"}</td>
-      <td class="pts">${e.total}</td>
+      <td>${e.round || "—"}</td>
       ${e.chips.map((c,i) => {
         const chipName = ["TC","BB"][i];
         const chipType = ["tc","bb"][i];
@@ -6013,7 +6054,7 @@ async function exportRoddyImage(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=v=>v===null||v===undefined||String(v).trim()===''?'—':esc(v);
   const logo=e=>`<span class="re-logo-box"><img src="logo/${encodeURIComponent(teamLogoSlug(e.team))}.png" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}'}"></span>`;
-  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>ROUND</th><th>TOTAL</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr style="--row-div-color:${color};background:${color};color:#fff"><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span class="re-team-name">${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-score">${fmt(e.round)}</td><td class="re-total">${fmt(e.total)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
+  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>TOTAL</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr style="--row-div-color:${color};background:${color};color:#fff"><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span class="re-team-name">${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-total">${fmt(e.total)}</td><td class="re-score">${fmt(e.round)}</td><td>${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
   const stage=document.createElement('div');stage.className='roddy-export-stage';
   stage.style.cssText='position:fixed;left:-16000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;background:#f3f6fc;padding:22px 25px 27px;color:#16243e;font-family:Barlow,Arial,sans-serif';
   stage.innerHTML=`<div class="re-header"><img class="re-header-logo" src="logo/roddy-logo.png" crossorigin="anonymous" alt="Roddy Rodriguez Cup logo"><div class="re-header-text"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div></div><div class="re-top-block"><div class="re-section-title">TOP 10</div>${table(top,true)}</div><div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
@@ -8428,8 +8469,47 @@ async function loadWinStreaksTab(){
     const csvText = await res.text();
     const rows = Papa.parse(csvText, {skipEmptyLines:false}).data;
 
+    // Include all Division 1/2/3 fixtures as well as FA Cup and ECL.
+    // Each division has its own fixture sheet and parseFixtures relies on
+    // currentDivision/knownTeams; parse sequentially and restore page state.
+    streakDivisionUpcoming=[];
+    const priorDivision=currentDivision;
+    const priorFixtures=fixturesByRound;
+    const priorStandings=standings;
+    const priorKnownTeams=knownTeams;
+    try{
+      for(const div of DIVISIONS.filter(d=>['eliza','d2a','d2b','d3a','d3b','d3c'].includes(d.id))){
+        try{
+          const response=await cachedFetch(csvUrlFor(div));
+          if(!response.ok)continue;
+          const divisionRows=Papa.parse(await response.text(),{skipEmptyLines:false}).data;
+          currentDivision=div;
+          parseStandings(divisionRows);
+          parseFixtures(divisionRows);
+          Object.entries(fixturesByRound).forEach(([round,fixtures])=>{
+            fixtures.forEach(f=>{
+              if(f.home&&f.away&&f.homeScore==null&&f.awayScore==null)
+                streakDivisionUpcoming.push({home:f.home,away:f.away,round,division:div.name||div.label||div.id});
+            });
+          });
+        }catch(error){console.warn('Streak division fixture lookup:',div.id,error);}
+      }
+    }finally{
+      currentDivision=priorDivision;
+      fixturesByRound=priorFixtures;
+      standings=priorStandings;
+      knownTeams=priorKnownTeams;
+    }
+    // Read the current FA Cup and ECL fixture schedules for the Next meeting column.
+    // A schedule fetch failure should not prevent the streak tables loading.
+    await Promise.allSettled([['facup',parseFACup],['ecl',rows=>{parseECL(rows);parseECLFixtures(rows);parseECLKnockout(rows);}]].map(async ([id,parser])=>{
+      const div=DIVISIONS.find(d=>d.id===id);
+      const response=await cachedFetch(csvUrlFor(div));
+      if(!response.ok)throw Error(id+' fixtures HTTP '+response.status);
+      parser(Papa.parse(await response.text(),{skipEmptyLines:false}).data);
+    }));
     const latestRoundByComp = getLatestRoundByComp(matchLogRowsCache);
-    const activeStreaks = findWinStreaks(rows, matchLogRowsCache, latestRoundByComp);
+    const activeStreaks = streakCurrentWins(matchLogRowsCache, latestRoundByComp);
     const allTimeStreaks = findAllTimeStreaks(rows, matchLogRowsCache, latestRoundByComp);
     const losingStreaks = findLosingStreaks(matchLogRowsCache, latestRoundByComp);
     renderWinStreaks(activeStreaks, allTimeStreaks, losingStreaks.active, losingStreaks.allTime);
@@ -8817,76 +8897,104 @@ async function loadRecordsTab(){
 }
 
 
-function streakSectionHtml(title, subtitle, streaks, groupId, noun){
-  const divPill = (short, color) => `<span class="roddy-div-tag" style="background:${color};">${short}</span>`;
-  const TIER_COLORS = ['#000000', '#bc3532', '#6aa84f', '#8B6914', '#0a2f85'];
-  const heading = `<div class="section-head" style="margin-top:22px;"><h2 style="font-size:16px;">${title}</h2><span class="sub">${subtitle}</span></div>`;
-
-  if(!streaks.length){
-    return heading + `<p class="sub">None found. Check the Debug panel below.</p>`;
+// Current streaks are rebuilt from the MATCH LOG, not the longest-ever
+// streak start/end IDs (which can point to a much older run).
+let streakIncludeInactive = false;
+function streakCurrentWins(matchLogRows,latestRoundByComp){
+ const pairs=new Map();
+ matchLogRows.forEach(r=>{
+  const a=cell(r,MATCH_LOG_COL.TEAM1).trim(),b=cell(r,MATCH_LOG_COL.TEAM2).trim();
+  if(!a||!b)return;
+  for(const [team,opp] of [[a,b],[b,a]]){
+   const k=team.toUpperCase()+'||'+opp.toUpperCase();
+   if(!pairs.has(k))pairs.set(k,{team,opp,rows:[]});
+   pairs.get(k).rows.push(r);
   }
-
-  let rowsHtml = "";
-  let lastStreak = null;
-  let tierIndex = -1;
-  streaks.forEach((s,i)=>{
-    if(s.streak !== lastStreak){
-      tierIndex++;
-      const tierColor = TIER_COLORS[tierIndex % TIER_COLORS.length];
-      rowsHtml += `<tr class="streak-tier-row"><td colspan="2" style="background:${hexToRgba(tierColor,0.14)};color:${tierColor};border-top:2px solid ${tierColor};">${s.streak} game ${noun} streaks</td></tr>`;
-      lastStreak = s.streak;
-    }
-    const activeBadge = s.stillActive ? ` <span style="font-size:10px;font-weight:700;color:var(--turf);text-transform:uppercase;">current</span>` : "";
-    const newBadge = s.isNew ? `<span class="record-new-badge">NEW</span>` : "";
-    rowsHtml += `<tr class="streak-row${(!s.team1Active || !s.team2Active) ? " inactive" : ""}" data-group="${groupId}" data-idx="${i}" style="cursor:pointer;">
-        <td style="text-align:left;white-space:nowrap;">${divPill(s.team1DivShort, s.team1DivColor)} ${teamLink(s.team1)}</td>
-        <td style="text-align:left;white-space:nowrap;">${divPill(s.team2DivShort, s.team2DivColor)} ${teamLink(s.team2)}${activeBadge}${newBadge}</td>
-      </tr>
-      <tr class="streak-detail-row" data-detail-group="${groupId}" data-detail-for="${i}" style="display:none;"><td colspan="2"></td></tr>`;
-  });
-
-  return heading + `<div class="table-wrap" style="max-width:680px;"><table class="standings compact h2h-record-table streaks-table"><thead><tr>
-      <th style="text-align:left;width:50%;">Team</th><th style="text-align:left;width:50%;">Opponent</th>
-    </tr></thead><tbody>
-      ${rowsHtml}
-    </tbody></table></div>`;
+ });
+ const result=[];
+ for(const p of pairs.values()){
+  const rows=p.rows, selected=[];let count=0,previous=null;
+  for(let i=rows.length-1;i>=0;i--){
+   const r=rows[i],winner=cell(r,MATCH_LOG_COL.WINNER).toUpperCase();
+   if(winner!==p.team.toUpperCase())break;
+   const isFirst=cell(r,MATCH_LOG_COL.TEAM1).toUpperCase()===p.team.toUpperCase();
+   const entry={comp:cell(r,MATCH_LOG_COL.COMP),year:cell(r,MATCH_LOG_COL.SEASON),round:cell(r,MATCH_LOG_COL.ROUND),result:'WIN',for:cell(r,isFirst?MATCH_LOG_COL.TEAM1_SCORE:MATCH_LOG_COL.TEAM2_SCORE),against:cell(r,isFirst?MATCH_LOG_COL.TEAM2_SCORE:MATCH_LOG_COL.TEAM1_SCORE)};
+   // Two competitions sometimes record the same physical matchup.
+   const duplicate=previous&&previous.year===entry.year&&previous.round===entry.round&&previous.for===entry.for&&previous.against===entry.against;
+   if(duplicate){entry.doubleUp=true;previous.doubleUp=true;}else count++;
+   selected.unshift(entry);previous=entry;
+  }
+  if(count<3)continue;
+  const a=lookupTeamDivInfo(p.team),b=lookupTeamDivInfo(p.opp);
+  const last=selected[selected.length-1];
+  result.push({team1:a.display,team2:b.display,team1Active:a.active,team2Active:b.active,team1DivShort:a.divShort,team1DivColor:a.divColor,team2DivShort:b.divShort,team2DivColor:b.divColor,streak:count,matches:selected,stillActive:true,isNew:isLatestRoundMatch(last.comp,last.year,last.round,latestRoundByComp)});
+ }
+ return result.sort((a,b)=>b.streak-a.streak||a.team1.localeCompare(b.team1));
 }
-
-function wireStreakSectionClicks(container, streaks, groupId){
-  container.querySelectorAll(`.streak-row[data-group="${groupId}"]`).forEach(tr=>{
-    tr.addEventListener('click', (e)=>{
-      // Ignore clicks on the team-link anchors themselves — let those navigate normally.
-      if(e.target.closest('a')) return;
-      const idx = tr.dataset.idx;
-      const detailRow = container.querySelector(`.streak-detail-row[data-detail-group="${groupId}"][data-detail-for="${idx}"]`);
-      const isOpen = detailRow.style.display !== "none";
-      // Close any other open detail row in THIS section first — the other
-      // section's expanded row (if any) is left alone.
-      container.querySelectorAll(`.streak-detail-row[data-detail-group="${groupId}"]`).forEach(row=>{ row.style.display = "none"; row.firstElementChild.innerHTML = ""; });
-      if(!isOpen){
-        const s = streaks[idx];
-        detailRow.firstElementChild.innerHTML = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin:10px 0 8px;">
-            ${teamLink(s.team1)} <span style="color:#000;font-weight:400;">v</span> ${teamLink(s.team2)}
-          </div>` + tvtMatchesTableHtml(s.matches);
-        detailRow.style.display = "";
-      }
-    });
-  });
+let streakDivisionUpcoming=[];
+function streakUpcomingFixture(team,opponent){
+ const same=(a,b)=>liveKey(parseTeamDiv(String(a?.name||a||'')).name)===liveKey(parseTeamDiv(String(b?.name||b||'')).name);
+ const isPair=(a,b)=>(same(a,team)&&same(b,opponent))||(same(b,team)&&same(a,opponent));
+ const choices=[];
+ streakDivisionUpcoming.forEach(f=>{
+  if(isPair(f.home,f.away))
+   choices.push({order:Number(f.round)||0,label:f.division+' · Round '+f.round});
+ });
+ facupRounds.forEach((round,i)=>round.fixtures.forEach(f=>{
+  if(!f.isBye&&f.homeScore==null&&f.awayScore==null&&isPair(f.home,f.away))choices.push({order:i,label:'FA Cup · '+round.name});
+ }));
+ eclFixtures.forEach(f=>{
+  if(f.homeScore==null&&f.awayScore==null&&isPair(f.home,f.away))choices.push({order:100+Number(String(f.matchday).replace(/\D/g,'')),label:'ECL · '+f.matchday});
+ });
+ eclKnockoutRounds.forEach((round,i)=>round.fixtures.forEach(f=>{
+  if(f.homeScore==null&&f.awayScore==null&&isPair(f.home,f.away))choices.push({order:200+i,label:'ECL · '+round.name});
+ }));
+ // The different competitions do not share a guaranteed chronological date;
+ // show all known scheduled meetings rather than claiming an invented next date.
+ return [...new Set(choices.sort((a,b)=>a.order-b.order).map(c=>c.label))].join(' / ')||'Not scheduled';
 }
-
-function renderWinStreaks(activeStreaks, allTimeStreaks, activeLosingStreaks, allTimeLosingStreaks){
-  const el = document.getElementById('statsContainer');
-  el.className = "";
-  el.innerHTML = `<p class="sub" style="margin:-4px 0 12px;">Click a row to see the full head-to-head match history.</p>`
-    + streakSectionHtml("Active Win Streaks", "Currently ongoing 3+ game runs", activeStreaks, "active", "win")
-    + streakSectionHtml("Active Losing Streaks", "Currently ongoing 3+ game losing runs", activeLosingStreaks, "losing", "losing")
-    + streakSectionHtml("All-Time Longest Win Streaks", "The longest run either team has ever had against this opponent — active or since ended", allTimeStreaks, "alltime", "win")
-    + streakSectionHtml("All-Time Longest Losing Streaks", "The worst run either team has ever had against this opponent — active or since ended", allTimeLosingStreaks, "alltimelosing", "losing");
-
-  wireStreakSectionClicks(el, activeStreaks, "active");
-  wireStreakSectionClicks(el, activeLosingStreaks, "losing");
-  wireStreakSectionClicks(el, allTimeStreaks, "alltime");
-  wireStreakSectionClicks(el, allTimeLosingStreaks, "alltimelosing");
+function streakTeamCell(name){
+ return `<span class="streak-team-cell"><img src="logo/${teamLogoSlug(name)}.png" alt="" loading="lazy" data-team-name="${liveEscape(name)}" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span>${teamLink(name)}</span></span>`;
+}
+function streakSectionHtml(title,subtitle,streaks,groupId){
+ const shown=streaks.filter(s=>streakIncludeInactive||(s.team1Active&&s.team2Active));
+ const head=`<div class="section-head streak-section-heading"><h2>${title}</h2><span class="sub">${subtitle}</span></div>`;
+ const rows=shown.map((s,i)=>{
+  const first=s.matches[0]||{};
+  const since=[first.comp,first.round,first.year].filter(Boolean).join(' · ')||'—';
+  return `<tr class="streak-row" data-group="${groupId}" data-idx="${i}" tabindex="0" aria-expanded="false" title="Show the games in this streak">
+   <td>${streakTeamCell(s.team1)}</td><td>${streakTeamCell(s.team2)}</td>
+   <td class="streak-count">${s.streak}${s.isNew?'<span class="record-new-badge">NEW</span>':''}</td>
+   <td class="streak-since">${liveEscape(since)}</td><td class="streak-next">${liveEscape(streakUpcomingFixture(s.team1,s.team2))}</td></tr>
+   <tr class="streak-detail-row" data-detail-group="${groupId}" data-detail-for="${i}" style="display:none"><td colspan="5"></td></tr>`;
+ }).join('');
+ return head+`<div class="streak-table-wrap"><table class="ownership-table streaks-modern-table"><colgroup><col class="streak-col-team"><col class="streak-col-opp"><col class="streak-col-count"><col class="streak-col-since"><col class="streak-col-next"></colgroup><thead><tr><th>Team</th><th>Opponent</th><th>Streak</th><th>Since</th><th>Next meeting</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No streaks found for the selected teams.</td></tr>'}</tbody></table></div>`;
+}
+function wireStreakSectionClicks(container,streaks,groupId){
+ const shown=streaks.filter(s=>streakIncludeInactive||(s.team1Active&&s.team2Active));
+ container.querySelectorAll(`.streak-row[data-group="${groupId}"]`).forEach(tr=>{
+  const toggle=e=>{
+   if(e.type==='keydown'&&!['Enter',' '].includes(e.key))return;
+   if(e.target.closest?.('a'))return;
+   if(e.type==='keydown')e.preventDefault();
+   const idx=Number(tr.dataset.idx),detail=container.querySelector(`.streak-detail-row[data-detail-group="${groupId}"][data-detail-for="${idx}"]`),wasOpen=detail.style.display!=='none';
+   container.querySelectorAll(`.streak-detail-row[data-detail-group="${groupId}"]`).forEach(row=>{row.style.display='none';row.firstElementChild.innerHTML='';});
+   container.querySelectorAll(`.streak-row[data-group="${groupId}"]`).forEach(row=>row.setAttribute('aria-expanded','false'));
+   if(!wasOpen){const s=shown[idx];detail.firstElementChild.innerHTML=`<strong>${liveEscape(s.team1)} v ${liveEscape(s.team2)}</strong>`+tvtMatchesTableHtml(s.matches);detail.style.display='';tr.setAttribute('aria-expanded','true');}
+  };
+  tr.addEventListener('click',toggle);tr.addEventListener('keydown',toggle);
+ });
+}
+let streakRenderData=null;
+function renderWinStreaks(activeStreaks,allTimeStreaks,activeLosingStreaks,allTimeLosingStreaks){
+ streakRenderData={activeStreaks,allTimeStreaks,allTimeLosingStreaks};
+ const el=document.getElementById('statsContainer');el.className='streaks-modern';
+ el.innerHTML=`<div class="streaks-toolbar"><p>Tap any matchup to view the games in that streak.</p><label class="streak-inactive-toggle"><input type="checkbox" id="streakIncludeInactive" ${streakIncludeInactive?'checked':''}> Include inactive teams</label></div>`
+ +streakSectionHtml('Active Win Streaks','Current consecutive wins against the same opponent',activeStreaks,'active')
+ +streakSectionHtml('All-Time Longest Win Streaks','Longest consecutive winning runs on record',allTimeStreaks,'alltime')
+ +streakSectionHtml('All-Time Longest Losing Streaks','Longest consecutive losing runs on record',allTimeLosingStreaks,'alltimelosing');
+ wireStreakSectionClicks(el,activeStreaks,'active');wireStreakSectionClicks(el,allTimeStreaks,'alltime');wireStreakSectionClicks(el,allTimeLosingStreaks,'alltimelosing');
+ el.querySelector('#streakIncludeInactive').addEventListener('change',e=>{streakIncludeInactive=e.target.checked;renderWinStreaks(...[streakRenderData.activeStreaks,streakRenderData.allTimeStreaks,[],streakRenderData.allTimeLosingStreaks]);});
 }
 
 let teamVsTeamDebug = {};
@@ -11552,7 +11660,7 @@ function sideLeagueTableHtml(table, opts){
     ? `<th>Form${formLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formLabels[0]||'?'}–${formLabels[formLabels.length-1]||'?'}</span>` : ""}</th>`
     : "";
   return `<div class="table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th style="color:#000!important;">Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>${formHeaderHtml}<th>Next</th>${opts.bracketByPosition ? `<th>Status</th>` : ""}
     </tr></thead><tbody>
       ${table.teams.map(t=>{
         const logoName = resolveSideLeagueTeamName(t.team);
@@ -11566,7 +11674,7 @@ function sideLeagueTableHtml(table, opts){
             }).join("")}</span></td>`
           : "";
         return `<tr style="${rowStyle}">
-        <td${nblKeyColStyle}>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts"${nblKeyColStyle}>${t.pts}</td>
+        <td${nblKeyColStyle}>${t.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(t.team)}</td><td class="pts" style="color:#000!important;">${t.pts}</td>
         <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.for}</td><td>${t.aga}</td><td>${t.dif}</td>
         ${formCellHtml}<td class="next-opp">${t.next || "—"}</td>${opts.bracketByPosition ? `<td>${bracketPositionStatus(t.pos) || "—"}</td>` : ""}
       </tr>`;
@@ -11580,13 +11688,13 @@ function sideLeagueOverallTableHtml(overall){
   const nblBlackKeyCols = currentDivision && currentDivision.sideLeagueKey === "nbl";
   const nblKeyColStyle = nblBlackKeyCols ? ' style="color:#000;"' : '';
   return `<div class="table-wrap overall-table-wrap"><table class="standings compact"><thead><tr>
-      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th${nblKeyColStyle}>Pts</th>
+      <th${nblKeyColStyle}>Pos</th><th style="text-align:left;">Team</th><th style="color:#000!important;">Pts</th>
     </tr></thead><tbody>
       ${overall.entries.map(e=>{
         const logoName = resolveSideLeagueTeamName(e.team);
         const logoOnError = `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(logoName)}';}`;
         return `<tr>
-        <td${nblKeyColStyle}>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts"${nblKeyColStyle}>${e.pts}</td>
+        <td${nblKeyColStyle}>${e.pos}</td><td style="text-align:left;"><img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="table-team-logo" onerror="${logoOnError}">${sideLeagueTeamLink(e.team)}</td><td class="pts" style="color:#000!important;">${e.pts}</td>
       </tr>`;
       }).join("")}
     </tbody></table></div>`;
