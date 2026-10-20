@@ -14152,6 +14152,10 @@ function renderLmsCup(data, containerId){
 .alp-collapsible summary{cursor:pointer;padding:13px 15px;font-weight:700;font-size:14px;list-style:none}.alp-collapsible summary::-webkit-details-marker{display:none}.alp-collapsible summary:after{content:"＋";float:right}.alp-collapsible[open] summary:after{content:"−"}
 .alp-actual-ladder,.alp-admin-box{padding:0 15px 15px}.alp-admin-row{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-light);font-size:13px}.alp-admin-row select,.alp-admin-actions input{font:inherit;border:1px solid var(--line-light);border-radius:5px;padding:7px;background:#fff}.alp-admin-actions{display:flex;gap:8px;margin-top:12px}.alp-admin-actions input{flex:1;min-width:0}.alp-check-summary{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0 12px;font-size:13px}
 @media(max-width:700px){.alp-season-grid{grid-template-columns:1fr}.alp-admin-actions{flex-direction:column}}
+
+/* Export-only: centre and reduce the unplayed fixture marker. */
+.eliza-exact-fixture-export .live-comp-section .live-match-score.live-match-versus{display:flex!important;align-items:center!important;justify-content:center!important;width:78px;font-size:18px!important;line-height:1!important}
+.eliza-exact-fixture-export .live-match-score.live-match-versus .upcoming{display:block;font-size:18px!important;line-height:1!important}
 </style>
 <script>
 
@@ -15756,7 +15760,7 @@ async function elizaExportCompetitionFixtures(kind){
    if(channels){const v=channels[1],r=parseInt(v.slice(0,2),16),g=parseInt(v.slice(2,4),16),b=parseInt(v.slice(4,6),16);const lum=(.2126*r+.7152*g+.0722*b)/255;stage.style.setProperty('--eliza-winner-text',lum>.54||(r>135&&g>105&&b<135)?'#132d5a':'#ffe08a');}
    const markup=matches.map(m=>`<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="background:${escape(theme)};color:#fff">
       <div class="live-match-name live-match-left ${m.wa?'eliza-export-winning-side':''}"><span>${escape(m.a.name)}</span><img src="${escape(m.a.logo)}" alt=""></div>
-      <strong class="live-match-score">${m.upcoming?'<span class="upcoming">v</span>':`<span class="${m.wa?'eliza-export-winning-score':''}">${escape(m.sa)}</span><span class="live-score-dash">–</span><span class="${m.wb?'eliza-export-winning-score':''}">${escape(m.sb)}</span>`}</strong>
+      <strong class="live-match-score${m.upcoming?' live-match-versus':''}">${m.upcoming?'<span class="upcoming">v</span>':`<span class="${m.wa?'eliza-export-winning-score':''}">${escape(m.sa)}</span><span class="live-score-dash">–</span><span class="${m.wb?'eliza-export-winning-score':''}">${escape(m.sb)}</span>`}</strong>
       <div class="live-match-name live-match-right ${m.wb?'eliza-export-winning-side':''}"><img src="${escape(m.b.logo)}" alt=""><span>${escape(m.b.name)}</span></div>
       </div></summary></details>`).join('');
    stage.innerHTML=`<div class="live-all-sections"><section class="live-comp-section">
@@ -15828,7 +15832,8 @@ async function elizaExportCompetitionFixtures(kind){
    const label=SIDE_LEAGUES?.find(x=>x.key===key)?.label||currentDivision?.label||'Side League';
    const theme=typeof sideLeagueThemeColor==='function'?sideLeagueThemeColor(key,typeof sideLeagueActiveDiv!=='undefined'?sideLeagueActiveDiv:null):'#28427c';
    const selectedRound=root.querySelector('#sideLeagueRoundTabs .round-tab.active')?.textContent?.trim();
-   render(wrapper,{label,round:selectedRound||roundLabel(root,'Fixtures'),color:theme,logo:null});
+   const category=key==='fpl' ? ({premier:'Premier League',championship:'Championship',cup:'FPL Cup'}[sideLeagueActiveDiv]||'') : '';
+   render(wrapper,{label:category?label+' · '+category:label,round:selectedRound||roundLabel(root,'Fixtures'),color:theme,logo:null});
  },true);
 })();
 
