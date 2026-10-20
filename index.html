@@ -3081,6 +3081,26 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
  .streaks-modern-table .streak-since,.streaks-modern-table .streak-next{font-size:9px}
  .streaks-modern-table .record-new-badge{display:block;font-size:8px}
 }
+
+/* Compact, no-wrap streak history. Scroll horizontally only when absolutely necessary. */
+.streaks-modern .streak-detail-row>td{padding:7px 9px!important}
+.streaks-modern .streak-detail-title{display:block;font-size:12px;line-height:1.2;margin:0 0 5px;white-space:nowrap}
+.streaks-modern .streak-games-scroll{display:block;width:max-content;max-width:100%;overflow-x:auto;overflow-y:hidden}
+.streaks-modern .streak-games-table{width:max-content!important;min-width:0!important;max-width:none!important;table-layout:auto!important;border-collapse:collapse;margin:0!important;font-family:'Barlow',sans-serif}
+.streaks-modern .streak-games-table th,.streaks-modern .streak-games-table td{padding:3px 7px!important;font-size:11px!important;line-height:1.2!important;white-space:nowrap!important;overflow-wrap:normal!important;text-align:center}
+.streaks-modern .streak-games-table th:first-child,.streaks-modern .streak-games-table td:first-child{text-align:left}
+.streaks-modern .streak-game-comp{white-space:nowrap!important}
+.streaks-modern .streak-game-comp img{display:inline-block!important;width:16px!important;height:16px!important;object-fit:contain!important;vertical-align:middle;margin-right:5px}
+.streaks-modern .streak-games-table .form-pill{min-width:17px!important;height:17px!important;font-size:10px!important;padding:1px 3px!important}
+
+.streak-new-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 0;padding:13px 16px;background:#153b30;color:white;border-radius:9px}
+.streak-new-heading h2{font-size:20px;margin:0 0 3px}.streak-new-heading span{font-size:12px;opacity:.85}
+.streak-new-export{border:1px solid #f4d252;background:#f4d252;color:#17251e;padding:9px 15px;border-radius:7px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap}
+.streak-new-export-stage .streak-export-brand{font-size:12px;letter-spacing:.18em;color:#236f51;font-weight:800}
+.streak-new-export-stage .streaks-modern-table{table-layout:auto}
+.streak-new-export-stage .streaks-modern-table th,.streak-new-export-stage .streaks-modern-table td{font-size:15px;padding:13px 10px;overflow-wrap:normal;white-space:nowrap}
+.streak-new-export-stage .streak-team-cell>span{white-space:nowrap;overflow-wrap:normal}
+.streak-new-export-stage .streak-team-cell img{width:36px;height:36px}
 </style>
 </head>
 <body>
@@ -8478,7 +8498,7 @@ async function loadWinStreaksTab(){
     const priorStandings=standings;
     const priorKnownTeams=knownTeams;
     try{
-      for(const div of DIVISIONS.filter(d=>['eliza','d2a','d2b','d3a','d3b','d3c'].includes(d.id))){
+      for(const div of DIVISIONS.filter(d=>['d1','d2a','d2b','d3a','d3b'].includes(d.id))){
         try{
           const response=await cachedFetch(csvUrlFor(div));
           if(!response.ok)continue;
@@ -8970,6 +8990,25 @@ function streakSectionHtml(title,subtitle,streaks,groupId){
  }).join('');
  return head+`<div class="streak-table-wrap"><table class="ownership-table streaks-modern-table"><colgroup><col class="streak-col-team"><col class="streak-col-opp"><col class="streak-col-count"><col class="streak-col-since"><col class="streak-col-next"></colgroup><thead><tr><th>Team</th><th>Opponent</th><th>Streak</th><th>Since</th><th>Next meeting</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No streaks found for the selected teams.</td></tr>'}</tbody></table></div>`;
 }
+function streakCompetitionLogo(comp){
+ const c=String(comp||'').toUpperCase();
+ if(/ECL|CHAMPIONS/.test(c))return 'logo/ecl-logo.png';
+ if(/FA\s*CUP|FA CUP|\bFAC\b/.test(c))return 'logo/fa-cup-logo.png';
+ if(/RODDY/.test(c))return 'logo/roddy-logo.png';
+ if(/DIV(?:ISION)?\s*3|\bD3[ABC]?\b|\b3[ABC]\b/.test(c))return 'logo/division-3-logo.png';
+ if(/DIV(?:ISION)?\s*2|\bD2[AB]?\b|\b2[AB]\b/.test(c))return 'logo/division-2-logo.png';
+ return 'logo/division-1-logo.png';
+}
+function streakMatchesTableHtml(matches){
+ const rows=matches.map(m=>{
+  const result=String(m.result||'').toUpperCase();
+  const cls=result==='WIN'?'form-w':result==='LOSS'?'form-l':result==='DRAW'?'form-d':'form-blank';
+  const short=result==='WIN'?'W':result==='LOSS'?'L':result==='DRAW'?'D':'—';
+  const comp=String(m.comp||'—');
+  return `<tr><td class="streak-game-comp"><img src="${streakCompetitionLogo(comp)}" alt="" loading="lazy"><span>${liveEscape(comp)}</span></td><td>${liveEscape(m.year||'—')}</td><td>${liveEscape(m.round||'—')}</td><td><span class="form-pill ${cls}">${short}</span></td><td>${liveEscape(m.for??'—')}${m.doubleUp?'†':''}</td><td>${liveEscape(m.against??'—')}${m.doubleUp?'†':''}</td></tr>`;
+ }).join('');
+ return `<div class="streak-games-scroll"><table class="streak-games-table"><thead><tr><th>Comp</th><th>Year</th><th>Round</th><th>Result</th><th>For</th><th>Aga</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
 function wireStreakSectionClicks(container,streaks,groupId){
  const shown=streaks.filter(s=>streakIncludeInactive||(s.team1Active&&s.team2Active));
  container.querySelectorAll(`.streak-row[data-group="${groupId}"]`).forEach(tr=>{
@@ -8980,19 +9019,45 @@ function wireStreakSectionClicks(container,streaks,groupId){
    const idx=Number(tr.dataset.idx),detail=container.querySelector(`.streak-detail-row[data-detail-group="${groupId}"][data-detail-for="${idx}"]`),wasOpen=detail.style.display!=='none';
    container.querySelectorAll(`.streak-detail-row[data-detail-group="${groupId}"]`).forEach(row=>{row.style.display='none';row.firstElementChild.innerHTML='';});
    container.querySelectorAll(`.streak-row[data-group="${groupId}"]`).forEach(row=>row.setAttribute('aria-expanded','false'));
-   if(!wasOpen){const s=shown[idx];detail.firstElementChild.innerHTML=`<strong>${liveEscape(s.team1)} v ${liveEscape(s.team2)}</strong>`+tvtMatchesTableHtml(s.matches);detail.style.display='';tr.setAttribute('aria-expanded','true');}
+   if(!wasOpen){const s=shown[idx];detail.firstElementChild.innerHTML=`<strong class="streak-detail-title">${liveEscape(s.team1)} v ${liveEscape(s.team2)}</strong>`+streakMatchesTableHtml(s.matches);detail.style.display='';tr.setAttribute('aria-expanded','true');}
   };
   tr.addEventListener('click',toggle);tr.addEventListener('keydown',toggle);
  });
+}
+async function exportNewStreaksPng(){
+ const visible=(streakRenderData?.activeStreaks||[]).filter(s=>s.isNew&&(streakIncludeInactive||(s.team1Active&&s.team2Active)));
+ if(!visible.length){alert('There are no new streaks to export with the current filter.');return;}
+ if(typeof html2canvas!=='function'){alert('The PNG exporter is unavailable. Please try again after refreshing.');return;}
+ const stage=document.createElement('div');
+ stage.className='streaks-modern streak-new-export-stage';
+ stage.style.cssText='position:fixed;left:-20000px;top:0;width:1150px;padding:32px;background:#ffffff;color:#17251e;z-index:-1;box-sizing:border-box';
+ stage.innerHTML='<div class="streak-export-brand">ELIZA CUP</div><h1 style="font-size:31px;margin:2px 0 4px">NEW STREAKS</h1><p style="margin:0 0 16px;color:#666;font-size:14px">Latest recorded round · Active winning streaks</p>';
+ const table=streakSectionHtml('','',visible,'export');
+ const temp=document.createElement('div');temp.innerHTML=table;
+ const wrap=temp.querySelector('.streak-table-wrap');
+ wrap.querySelectorAll('.streak-detail-row').forEach(row=>row.remove());
+ wrap.querySelectorAll('a').forEach(a=>{const span=document.createElement('span');span.textContent=a.textContent;a.replaceWith(span);});
+ stage.appendChild(wrap);
+ document.body.appendChild(stage);
+ try{
+  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,3500)})));
+  const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1200});
+  const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='eliza-cup-new-streaks.png';document.body.appendChild(a);a.click();a.remove();
+ }catch(err){console.error('New streaks PNG export failed',err);alert('Could not export the new streaks PNG.');}
+ finally{stage.remove();}
 }
 let streakRenderData=null;
 function renderWinStreaks(activeStreaks,allTimeStreaks,activeLosingStreaks,allTimeLosingStreaks){
  streakRenderData={activeStreaks,allTimeStreaks,allTimeLosingStreaks};
  const el=document.getElementById('statsContainer');el.className='streaks-modern';
  el.innerHTML=`<div class="streaks-toolbar"><p>Tap any matchup to view the games in that streak.</p><label class="streak-inactive-toggle"><input type="checkbox" id="streakIncludeInactive" ${streakIncludeInactive?'checked':''}> Include inactive teams</label></div>`
+ +`<div class="streak-new-heading"><div><h2>New Streaks</h2><span>Streaks extended in the latest recorded round</span></div><button type="button" id="streakNewExport" class="streak-new-export">Export PNG</button></div>`
+ +streakSectionHtml('New Streaks','Recently extended current winning streaks',activeStreaks.filter(s=>s.isNew),'new')
  +streakSectionHtml('Active Win Streaks','Current consecutive wins against the same opponent',activeStreaks,'active')
  +streakSectionHtml('All-Time Longest Win Streaks','Longest consecutive winning runs on record',allTimeStreaks,'alltime')
  +streakSectionHtml('All-Time Longest Losing Streaks','Longest consecutive losing runs on record',allTimeLosingStreaks,'alltimelosing');
+ wireStreakSectionClicks(el,activeStreaks.filter(s=>s.isNew),'new');
+ el.querySelector('#streakNewExport').addEventListener('click',exportNewStreaksPng);
  wireStreakSectionClicks(el,activeStreaks,'active');wireStreakSectionClicks(el,allTimeStreaks,'alltime');wireStreakSectionClicks(el,allTimeLosingStreaks,'alltimelosing');
  el.querySelector('#streakIncludeInactive').addEventListener('change',e=>{streakIncludeInactive=e.target.checked;renderWinStreaks(...[streakRenderData.activeStreaks,streakRenderData.allTimeStreaks,[],streakRenderData.allTimeLosingStreaks]);});
 }
