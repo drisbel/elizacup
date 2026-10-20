@@ -12519,6 +12519,11 @@ async function loadFplCupData(){
   fplCupPromise = cachedFetch(fplCupCsvUrlFor()).then(r => r.text()).then(text => {
     const rows = Papa.parse(text, {skipEmptyLines:false}).data;
     const table = parseFplTable(rows, FPL_CUP_TITLE_TEXT);
+    // FPL Cup's NEXT opponent is in column W (zero-based index 22), unlike the shared FPL layout.
+    if(table.teams?.length){
+      const firstDataRow = table.debug.headerRow;
+      table.teams.forEach((team,i)=>{ team.next = cell(rows[firstDataRow+i]||[],22); });
+    }
     const fx = parseFplFixtures(rows, 33, v => AFL_ROUND_RE.test(v)); // AH, same base/round-test as NRL
     fplCupData = { table, fx };
     return fplCupData;
