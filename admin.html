@@ -3980,7 +3980,7 @@ function wheelDivisionFullLabel(divShort){
 function wheelMatchupTeamBlockHtml(team, info){
   return `
     <div class="wheel-matchup-team">
-      <img src="logo/${teamLogoSlug(team)}.png" alt="" onerror="${teamLogoOnErrorAttr(team)}">
+      <img src="logo/${teamLogoSlug(wheelLogoTeamName(team))}.png" alt="" onerror="${teamLogoOnErrorAttr(wheelLogoTeamName(team))}">
       <div class="wm-name">${escapeHtml(team)}</div>
       ${info ? `
       <div class="wm-division-text" style="color:${info.divisionColor||"#8a8f98"};">${escapeHtml(wheelDivisionFullLabel(info.divisionShort))}</div>
