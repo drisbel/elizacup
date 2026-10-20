@@ -3147,7 +3147,7 @@ html,body{max-width:100%;overflow-x:clip}
 .rr-head{background:#173b30;color:white;border-radius:12px;padding:22px;text-align:center;margin-bottom:16px}
 .rr-head h2{font-family:'Barlow Condensed',sans-serif;font-size:42px;margin:0}.rr-head p{margin:4px 0;font-size:17px;color:#e5c57a}
 .rr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rr-fixture{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;background:white;border:1px solid #dbe4dd;border-radius:9px;padding:14px;font-weight:700;font-size:17px}.rr-fixture .rr-score{font-size:25px;font-weight:900;white-space:nowrap}.rr-team{display:flex;align-items:center;gap:8px;min-width:0}.rr-team.right{justify-content:flex-end;text-align:right}.rr-team img{width:34px;height:34px;object-fit:contain;flex-shrink:0}.rr-awards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.rr-award{background:#e5eee8;border-radius:9px;padding:14px;min-height:92px}.rr-award b{display:block;color:#256146;font-size:14px}.rr-award strong{display:block;font-size:19px;margin-top:8px}.rr-award span{display:block;font-size:14px;margin-top:4px}
-.power-rankings-panel{margin-top:24px}.power-rankings-panel .power-intro{font-size:13px;color:#283e35;margin:5px 0 12px}.power-table-wrap{overflow-x:auto;max-width:100%}.power-table{width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:14px}.power-table th{background:#183d30;color:#fff;text-align:center;padding:11px 7px}.power-table td{border-bottom:1px solid #dce6df;padding:10px 7px;text-align:center;color:#152e23}.power-table .power-name{text-align:left;font-weight:700}.power-table .power-name img{width:30px;height:30px;object-fit:contain;vertical-align:middle;margin-right:8px}.power-bar{display:inline-block;background:#e5eee8;border-radius:4px;min-width:55px;padding:4px;font-weight:800}
+.rr-editorial{background:#fff;border-radius:12px;padding:30px 36px;margin-bottom:20px;border:1px solid #dce6df}.rr-editorial h3{font:900 34px 'Barlow Condensed',sans-serif;color:#183e30;margin:0 0 16px}.rr-editorial p{font:500 21px/1.5 'Barlow',sans-serif;color:#1c3028;margin:0 0 14px}.rr-editorial p:last-child{margin-bottom:0}.rr-kicker{font:800 16px 'Barlow',sans-serif;color:#e5c57a;letter-spacing:2px}.rr-results-label{font:800 19px 'Barlow Condensed',sans-serif;color:#204b38;margin:0 0 10px}.rr-fixture{grid-template-columns:1fr auto 1fr}.rr-fixture span:last-child{text-align:right}
 </style>
 
 <style>
@@ -3317,7 +3317,7 @@ html,body{max-width:100%;overflow-x:clip}
       <div class="social-export-actions"><button type="button" class="social-export-download" onclick="exportDivisionImage('table','social')" title="Download league table PNG" aria-label="Download league table PNG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg></button></div>
     </div>
     <div id="tableContainer" class="state-msg">Loading standings…</div>
-    <div class="legend" id="tableLegend"></div><div id="powerRankingsSlot"></div>
+    <div class="legend" id="tableLegend"></div>
   </section>
 
   <section id="fixturesSection" style="margin-top:48px;">
@@ -5592,7 +5592,7 @@ function render(){
 }
 
 function renderTable(){
- setTimeout(renderDivisionOnePowerRankings,0);
+
   const el = document.getElementById('tableContainer');
   if(standings.length === 0){
     el.className = "state-msg error";
@@ -15823,27 +15823,43 @@ async function elizaExportCompetitionFixtures(kind){
  else install();
 })();
 
-// Division 1 power rankings: recent form, per-match scoring, opposition and consistency.
-function renderDivisionOnePowerRankings(){
- const slot=document.getElementById('powerRankingsSlot');if(!slot)return;
- if(currentDivision?.id!=='d1'){slot.innerHTML='';return;}
- const entries=standings.map(s=>{
-  const played=s.w+s.d+s.l;
-  const form=roundPreviewFormLetters(s).slice(-5);
-  const formPoints=form.split('').reduce((n,x)=>n+(x==='W'?3:x==='D'?1:0),0);
-  const formRate=form.length?formPoints/(form.length*3):0;
-  const avg=played?s.for/played:0;
-  const consistency=played?Math.max(0,1-Math.abs(s.diff)/(Math.max(1,s.for+s.aga))):.5;
-  return {...s,played,form,formRate,avg,consistency};
- });
- const min=Math.min(...entries.map(s=>s.avg)),max=Math.max(...entries.map(s=>s.avg));
- const rank=entries.map(s=>{
-  const scoreRate=max>min?(s.avg-min)/(max-min):.5;
-  const strength=s.played?Math.min(1,Math.max(0,s.aga/s.played/100)):.5;
-  const power=Math.round(100*(.40*s.formRate+.30*scoreRate+.15*strength+.15*s.consistency));
-  return {...s,power};
- }).sort((a,b)=>b.power-a.power||b.avg-a.avg);
- slot.innerHTML=`<section class="power-rankings-panel"><div class="section-head"><h2>Power Rankings · Division 1</h2><span class="sub">Based on current form and scoring</span></div><p class="power-intro">40% last-five form · 30% average fantasy score · 15% opposition scoring · 15% scoring consistency. Provisional in the opening rounds; ratings compare Division 1 teams only.</p><div class="power-table-wrap"><table class="power-table"><thead><tr><th>Rank</th><th>Club</th><th>Form</th><th>Avg score</th><th>Power</th></tr></thead><tbody>${rank.map((s,i)=>`<tr><td><b>${i+1}</b></td><td class="power-name"><img src="logo/${teamLogoSlug(s.team)}.png" onerror="this.style.display='none'" alt="">${liveEscape(s.team)}</td><td>${s.form||'—'}</td><td>${s.played?s.avg.toFixed(1):'—'}</td><td><span class="power-bar">${s.power}/100</span></td></tr>`).join('')}</tbody></table></div></section>`;
+function roundReviewNarrative(fixtures,round){
+ const ordered=[...fixtures].map(f=>({...f,margin:Math.abs(f.homeScore-f.awayScore),winner:f.homeScore>f.awayScore?f.home:f.away,loser:f.homeScore>f.awayScore?f.away:f.home,high:Math.max(f.homeScore,f.awayScore)}));
+ const decisive=ordered.filter(f=>f.margin>0);
+ const close=[...decisive].sort((a,b)=>a.margin-b.margin)[0];
+ const huge=[...decisive].sort((a,b)=>b.margin-a.margin)[0];
+ const high=[...ordered].sort((a,b)=>b.high-a.high)[0];
+ const draws=ordered.filter(f=>f.margin===0);
+ const selected=[];
+ const use=(f)=>{if(!f||selected.includes(f))return false;selected.push(f);return true;};
+ const lines=[];
+ const headlines=[];
+ if(huge&&huge.margin>=20&&use(huge)){
+   headlines.push(`${huge.winner} brought the fireworks`);
+   lines.push(`${huge.winner} clearly didn't get the memo about keeping things competitive, putting ${huge.loser} away by ${huge.margin} points. The losing side might want to avoid checking the group chat for a while.`);
+ }
+ if(close&&use(close)){
+   const margin=close.margin;
+   lines.push(`${close.winner} scraped past ${close.loser} by ${margin} ${margin===1?'point':'points'}. That's less a comfortable win and more a very stressful way to spend a weekend.`);
+   if(!headlines.length)headlines.push(`${close.winner} survive a nervous finish`);
+ }
+ if(high&&use(high)){
+   const topTeam=high.homeScore>=high.awayScore?high.home:high.away;
+   lines.push(`${topTeam} posted ${high.high} points, the highest individual team score of the round. Plenty of ammunition for some well-earned bragging rights.`);
+   if(!headlines.length)headlines.push(`${topTeam} set the scoring pace`);
+ }
+ if(draws.length){
+   const f=draws[0];
+   lines.push(`${f.home} and ${f.away} couldn't be separated, finishing ${f.homeScore}–${f.awayScore}. Neither side gets the last laugh, which probably won't stop either from trying.`);
+   if(!headlines.length)headlines.push('Honours even as the points are shared');
+ }
+ for(const f of ordered){
+   if(lines.length>=4)break;
+   if(!use(f)||!f.margin)continue;
+   lines.push(`${f.winner} got the job done against ${f.loser}, winning ${Math.max(f.homeScore,f.awayScore)}–${Math.min(f.homeScore,f.awayScore)}. Three points on the table; whether it was pretty is another matter.`);
+ }
+ if(!headlines.length)headlines.push(`Round ${round} delivers its share of drama`);
+ return {headline:headlines[0],paragraphs:lines.slice(0,4)};
 }
 async function exportRoundReview(){
  if(currentDivision?.type!=='division')return;
@@ -15852,31 +15868,18 @@ async function exportRoundReview(){
  const selected=rounds.find(([r,fs])=>fs.filter(f=>f.home&&f.away&&!f.isBye).every(f=>f.homeScore!=null&&f.awayScore!=null));
  if(!selected){alert('No fully completed division round is available to review yet.');return;}
  const [round,all]=selected,fixtures=all.filter(f=>f.home&&f.away&&!f.isBye&&f.homeScore!=null&&f.awayScore!=null);
- const scored=fixtures.map(f=>({...f,margin:Math.abs(f.homeScore-f.awayScore),high:Math.max(f.homeScore,f.awayScore)}));
- const top=[...scored].sort((a,b)=>b.high-a.high)[0];
- const close=[...scored].filter(f=>f.margin>0).sort((a,b)=>a.margin-b.margin)[0];
- const biggest=[...scored].sort((a,b)=>b.margin-a.margin)[0];
- const draws=scored.filter(f=>f.margin===0);
- const name=f=>f.homeScore>=f.awayScore?f.home:f.away;
- const opponent=f=>f.homeScore>=f.awayScore?f.away:f.home;
- const awards=[
-  ['TOP SCORER',top?name(top):'—',top?`${top.high} fantasy points`:'—'],
-  ['CLOSEST RESULT',close?`${close.home} v ${close.away}`:'—',close?`${close.margin}-point margin`:'No decisive results'],
-  ['BIGGEST WIN',biggest&&biggest.margin?name(biggest):'—',biggest&&biggest.margin?`Beat ${opponent(biggest)} by ${biggest.margin}`:'No decisive results'],
-  ['DRAWS',String(draws.length),draws.length?draws.map(f=>`${f.home} v ${f.away}`).join(' · '):'No draws this round']
- ];
  const esc=roundPreviewEscape;
- const team=(n,right=false)=>`<span class="rr-team${right?' right':''}">${!right?`<img src="logo/${teamLogoSlug(n)}.png" alt="">`:''}<span>${esc(n)}</span>${right?`<img src="logo/${teamLogoSlug(n)}.png" alt="">`:''}</span>`;
+ const review=roundReviewNarrative(fixtures,round);
  const stage=document.createElement('div');stage.className='round-review-stage';
- stage.innerHTML=`<div class="rr-head"><h2>${esc(currentDivision.name||currentDivision.label||'Division')} · ROUND ${esc(round)}</h2><p>ROUND REVIEW · ELIZA CUP 2026/27</p></div><div class="rr-grid">${fixtures.map(f=>`<div class="rr-fixture">${team(f.home)}<span class="rr-score">${f.homeScore}–${f.awayScore}</span>${team(f.away,true)}</div>`).join('')}</div><div class="rr-awards">${awards.map(a=>`<div class="rr-award"><b>${esc(a[0])}</b><strong>${esc(a[1])}</strong><span>${esc(a[2])}</span></div>`).join('')}</div>`;
+ stage.innerHTML=`<div class="rr-head"><div class="rr-kicker">ELIZA CUP · 2026/27</div><h2>${esc(currentDivision.name||currentDivision.label||'Division')} · ROUND ${esc(round)}</h2><p>THE ROUND REVIEW</p></div><div class="rr-editorial"><h3>${esc(review.headline)}</h3>${review.paragraphs.map(p=>`<p>${esc(p)}</p>`).join('')}</div><div class="rr-results-label">THE SCOREBOARD</div><div class="rr-grid">${fixtures.map(f=>`<div class="rr-fixture"><span>${esc(f.home)}</span><b class="rr-score">${f.homeScore}–${f.awayScore}</b><span>${esc(f.away)}</span></div>`).join('')}</div>`;
  document.body.appendChild(stage);
  try{
-  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(done=>{img.onload=done;img.onerror=done;setTimeout(done,2500)})));
   if(document.fonts?.ready)await document.fonts.ready;
   const canvas=await html2canvas(stage,{backgroundColor:'#f6f8f7',scale:2,useCORS:true,logging:false,windowWidth:1500});
   const a=document.createElement('a');a.download=`${currentDivision.id}-round-${round}-review.png`;a.href=canvas.toDataURL('image/png');a.click();
  }catch(e){console.error('Round review:',e);alert('Could not generate the round review PNG.');}finally{stage.remove();}
 }
+
 </script>
 </body>
 </html>
