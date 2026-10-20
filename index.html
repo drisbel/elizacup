@@ -15730,7 +15730,8 @@ async function elizaExportCompetitionFixtures(kind){
    const numeric=v=>Number(String(v).replace(/,/g,''));
    const n1=numeric(nums[0]),n2=numeric(nums[1]);
    const valid=nums.length>=2&&Number.isFinite(n1)&&Number.isFinite(n2);
-   return {a,b,sa:nums[0]||'—',sb:nums[1]||'—',wa:valid&&n1>n2,wb:valid&&n2>n1};
+   const upcoming=!!score.querySelector('.upcoming') || !valid;
+   return {a,b,sa:valid?nums[0]:'',sb:valid?nums[1]:'',upcoming,wa:valid&&n1>n2,wb:valid&&n2>n1};
  }
  function gather(root){
    let cards=[...root.querySelectorAll('.facup-card,.fixture-card')];
@@ -15755,7 +15756,7 @@ async function elizaExportCompetitionFixtures(kind){
    if(channels){const v=channels[1],r=parseInt(v.slice(0,2),16),g=parseInt(v.slice(2,4),16),b=parseInt(v.slice(4,6),16);const lum=(.2126*r+.7152*g+.0722*b)/255;stage.style.setProperty('--eliza-winner-text',lum>.54||(r>135&&g>105&&b<135)?'#132d5a':'#ffe08a');}
    const markup=matches.map(m=>`<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="background:${escape(theme)};color:#fff">
       <div class="live-match-name live-match-left ${m.wa?'eliza-export-winning-side':''}"><span>${escape(m.a.name)}</span><img src="${escape(m.a.logo)}" alt=""></div>
-      <strong class="live-match-score"><span class="${m.wa?'eliza-export-winning-score':''}">${escape(m.sa)}</span><span class="live-score-dash">–</span><span class="${m.wb?'eliza-export-winning-score':''}">${escape(m.sb)}</span></strong>
+      <strong class="live-match-score">${m.upcoming?'<span class="upcoming">v</span>':`<span class="${m.wa?'eliza-export-winning-score':''}">${escape(m.sa)}</span><span class="live-score-dash">–</span><span class="${m.wb?'eliza-export-winning-score':''}">${escape(m.sb)}</span>`}</strong>
       <div class="live-match-name live-match-right ${m.wb?'eliza-export-winning-side':''}"><img src="${escape(m.b.logo)}" alt=""><span>${escape(m.b.name)}</span></div>
       </div></summary></details>`).join('');
    stage.innerHTML=`<div class="live-all-sections"><section class="live-comp-section">
@@ -15826,7 +15827,8 @@ async function elizaExportCompetitionFixtures(kind){
    const key=currentDivision?.sideLeagueKey||sideLeagueData?.key||'';
    const label=SIDE_LEAGUES?.find(x=>x.key===key)?.label||currentDivision?.label||'Side League';
    const theme=typeof sideLeagueThemeColor==='function'?sideLeagueThemeColor(key,typeof sideLeagueActiveDiv!=='undefined'?sideLeagueActiveDiv:null):'#28427c';
-   render(wrapper,{label,round:roundLabel(root,'Fixtures'),color:theme,logo:null});
+   const selectedRound=root.querySelector('#sideLeagueRoundTabs .round-tab.active')?.textContent?.trim();
+   render(wrapper,{label,round:selectedRound||roundLabel(root,'Fixtures'),color:theme,logo:null});
  },true);
 })();
 
