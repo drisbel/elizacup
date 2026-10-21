@@ -1491,6 +1491,11 @@
         </div>
 
         <div class="checkbox-row">
+          <input type="checkbox" id="wheelShowPreviousNames">
+          <label for="wheelShowPreviousNames">Display previous names <span class="hint" style="display:inline;">(show former names or “1st Eliza season” beneath teams when drawn)</span></label>
+        </div>
+
+        <div class="checkbox-row">
           <input type="checkbox" id="wheelSideLeagueMode">
           <label for="wheelSideLeagueMode">Side League mode <span class="hint" style="display:inline;">(team names below are side-league team names, not Eliza Cup team names)</span></label>
         </div>
@@ -1527,7 +1532,10 @@
             <div class="kicker">Just drawn</div>
             <div class="pick-body">
               <img id="drawWheelPickLogo" alt="" style="display:none;">
-              <div class="name" id="drawWheelPickName"></div>
+              <div style="min-width:0;text-align:center;">
+                <div class="name" id="drawWheelPickName"></div>
+                <div id="drawWheelPickNote" style="display:none;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;line-height:1.35;margin-top:5px;opacity:.85;white-space:normal;"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -3566,9 +3574,25 @@ function drawRecordPick(picked){
 // visible. display:none is the CSS default for these boxes, so this always
 // sets an explicit visible value (never an empty string, which would just
 // fall back to the CSS default of none rather than showing anything).
+const wheelPreviousNames = new Map([["THE DRONE POLICE","ZOUMA KICKS TIM PAYNE"],["FULLY SCICLUNA","THE D GENREAU"],["JUAN EL MAGICO FC","TSATAS DIP"],["RICKY DIACO FC","ROYAL KC UNITED FC"],["RIO'S RHINOS","HEILAN COOS"],["GOT WOUD?","DOG GOES WOOF, PAYNE GOES MEOW"],["PAW PATROL UNITED","LIMSIM UNITED"],["TBCFC","THE MALTESE KNIGHTS"],["SYDNEY OLEEE","LOLLEY POP MAN"],["THE BEAU-CHAMPS","CAG'S INVESTORS"]]);
+const wheelFirstSeasonTeams = new Set(["E/MELB SUCCULENT CHINESE MEAL","PAIN IN DIAS","QUINTASENTIAL FC","SABITEURS","CONCEICAO","DADDY VALKANIS & SONS","DRUMMOYNE TERRIERS","GARNCELONA","KRANSKY FC","RUBY FC"]);
+function wheelDrawNameNote(name){
+  if(!$("wheelShowPreviousNames")?.checked) return "";
+  const key=String(name||"").replace(/\\s*\\((?:D?1|D?2A|D?2B|D?3A|D?3B)\\)\\s*$/i,"").trim().toUpperCase();
+  const previous=wheelPreviousNames.get(key);
+  return previous ? "(formerly "+previous+")" : wheelFirstSeasonTeams.has(key) ? "1st Eliza season" : "";
+}
 function showDrawPick(boxId, nameId, name, logoImgId){
   const box = $(boxId);
   $(nameId).textContent = name;
+  if(boxId==="drawWheelPick"){
+    const noteEl=$("drawWheelPickNote");
+    if(noteEl){
+      const note=wheelDrawNameNote(name);
+      noteEl.textContent=note;
+      noteEl.style.display=note?"block":"none";
+    }
+  }
   if(logoImgId){
     const logoEl = $(logoImgId);
     const logoName = wheelLogoTeamName(name);
