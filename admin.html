@@ -3595,7 +3595,7 @@ async function loadWheelBilbbet(){
   const res=await fetch(wheelCsvUrl(WHEEL_MAIN_SHEET_ID,WHEEL_BILBBET_GID));
   if(!res.ok)throw Error("Bilbbet HTTP "+res.status);
   const raw=await res.text();
-  const rows=typeof parseCSV==="function"?parseCSV(raw):typeof parseCsv==="function"?parseCsv(raw):null;
+  const rows=Papa.parse(raw,{skipEmptyLines:false}).data;
   if(!rows||rows.length<65)throw Error("Bilbbet CSV unavailable");
   const next={rows:{},odds:{}},names=rows[0].slice(4).map(x=>String(x||"").trim().toUpperCase());
   for(const row of rows.slice(1,67)){
@@ -3616,7 +3616,7 @@ function wheelRenderPickStats(name){
  const info=wheelBilbbetInfo(name),cup=wheelBilbbetCup(name);
  if(!info&&!cup){el.style.display="none";el.textContent="";return;}
  const vals=info?.last||[];
- const parts=[["Last division",vals[0]],["Roddy",vals[1]],["FA Cup",vals[2]],["Bilbbet cup odds",cup?cup+":1":""]];
+ const parts=[["Last division",vals[0]],["Roddy",vals[1]],["FA Cup",vals[2]],["Bilbbet cup odds",cup?cup:""]];
  el.innerHTML=parts.filter(x=>x[1]).map(([k,v])=>'<div class="wheel-bilbbet-stat"><small>'+escapeHtml(k)+'</small><strong>'+escapeHtml(String(v))+'</strong></div>').join("");
  el.style.display=el.innerHTML?"grid":"none";
 }
