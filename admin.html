@@ -3510,7 +3510,19 @@ function showWheelResultsView(){
   wheelFitLogoImages(grid);
 
   $("wheelFullscreenResultsView").style.display = "flex";
-  updateWheelResultsCentering();
+  requestAnimationFrame(fitWheelResultsAllFixtures);
+}
+
+function fitWheelResultsAllFixtures(){
+ const view=$("wheelFullscreenResultsView"),grid=$("wheelFullscreenResultsGrid");if(!view||!grid||view.style.display==="none")return;
+ grid.style.transform="";grid.style.width="100%";grid.style.marginBottom="0";
+ const title=$("wheelFullscreenResultsTitle"),buttons=$("wheelFullscreenResultsActions");
+ const reserved=(title&&title.style.display!=="none"?title.getBoundingClientRect().height+22:0)+(buttons?buttons.getBoundingClientRect().height+25:75)+55;
+ const available=Math.max(120,view.clientHeight-reserved);
+ const actual=grid.getBoundingClientRect().height;
+ const scale=Math.min(1,available/Math.max(1,actual));
+ if(scale<1){grid.style.transformOrigin="top center";grid.style.transform=`scale(${scale})`;grid.style.marginBottom=(-(actual*(1-scale)))+"px";}
+ updateWheelResultsCentering();
 }
 
 function hideWheelResultsView(){
@@ -3524,7 +3536,7 @@ function hideWheelResultsView(){
 // showing (e.g. a browser window get resized, or a phone rotates), same
 // adaptive intent as the initial sizing.
 window.addEventListener("resize", () => {
-  if(wheelFullscreenResultsActive) updateWheelResultsCentering();
+  if(wheelFullscreenResultsActive) fitWheelResultsAllFixtures();
 });
 
 // Renders the title + results grid (buttons excluded) to a PNG and triggers
