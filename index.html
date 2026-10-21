@@ -3185,6 +3185,41 @@ html,body{max-width:100%;overflow-x:clip}
 #ownershipInlineProfile .ownership-modal-filters label{min-width:0}
 #ownershipInlineProfile .ownership-modal-filters select{width:100%;min-width:0}
 @media(max-width:600px){#ownershipInlineProfile .ownership-modal-filters{gap:6px}#ownershipInlineProfile .ownership-modal-filters label{font-size:10px}#ownershipInlineProfile .ownership-modal-filters select{font-size:12px;padding:7px 3px}}
+
+/* Team-profile records: independent six-column tables must not inherit the
+   standings' sticky Team column (column 3), left alignment or fixed 44px cells.
+   Keep the competition label left; centre every numeric/result column under its header. */
+table.standings.compact.h2h-record-table{
+  width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;
+}
+table.standings.compact.h2h-record-table thead th,
+table.standings.compact.h2h-record-table tbody td{
+  box-sizing:border-box;position:static!important;left:auto!important;right:auto!important;
+  text-align:center!important;vertical-align:middle!important;
+  width:auto!important;min-width:0!important;max-width:none!important;
+  padding-left:3px;padding-right:3px;
+  font-variant-numeric:tabular-nums;
+}
+table.standings.compact.h2h-record-table thead th:first-child,
+table.standings.compact.h2h-record-table tbody td:first-child{
+  width:37%!important;text-align:left!important;padding-left:10px;padding-right:5px;
+  white-space:normal;overflow-wrap:break-word;
+}
+table.standings.compact.h2h-record-table:not(.h2h-matches-table) thead th:nth-child(n+2),
+table.standings.compact.h2h-record-table:not(.h2h-matches-table) tbody td:nth-child(n+2){
+  width:12.6%!important;
+}
+table.standings.compact.h2h-matches-table thead th:first-child,
+table.standings.compact.h2h-matches-table tbody td:first-child{width:24%!important}
+table.standings.compact.h2h-matches-table thead th:nth-child(2),
+table.standings.compact.h2h-matches-table tbody td:nth-child(2){width:14%!important}
+table.standings.compact.h2h-matches-table thead th:nth-child(3),
+table.standings.compact.h2h-matches-table tbody td:nth-child(3){width:14%!important}
+table.standings.compact.h2h-matches-table thead th:nth-child(4),
+table.standings.compact.h2h-matches-table tbody td:nth-child(4){width:16%!important}
+table.standings.compact.h2h-matches-table thead th:nth-child(n+5),
+table.standings.compact.h2h-matches-table tbody td:nth-child(n+5){width:16%!important}
+table.standings.compact.h2h-record-table .form-pill{margin-left:auto;margin-right:auto}
 </style>
 
 <style>
@@ -9651,7 +9686,7 @@ function tvtMatchesTableHtml(matches){
   if(!matches.length){
     return `<p style="font-family:'Barlow',sans-serif;font-size:13px;color:#000;">These two teams haven't played each other yet.</p>`;
   }
-  let html = `<div class="table-wrap" style="max-width:460px;"><table class="standings compact h2h-record-table"><thead><tr>
+  let html = `<div class="table-wrap" style="max-width:460px;"><table class="standings compact h2h-record-table h2h-matches-table"><thead><tr>
       <th style="text-align:left;">Comp</th><th>Year</th><th>Round</th><th>Result</th><th>For</th><th>Aga</th>
     </tr></thead><tbody>
       ${matches.map(tvtMatchRowHtml).join("")}
