@@ -3578,7 +3578,7 @@ const wheelPreviousNames = new Map([["THE DRONE POLICE","ZOUMA KICKS TIM PAYNE"]
 const wheelFirstSeasonTeams = new Set(["E/MELB SUCCULENT CHINESE MEAL","PAIN IN DIAS","QUINTASENTIAL FC","SABITEURS","CONCEICAO","DADDY VALKANIS & SONS","DRUMMOYNE TERRIERS","GARNCELONA","KRANSKY FC","RUBY FC","GALUCTASARY","SK STURM MELBOURNE","SHAQNADO 2: RETURN OF THE SHAQ","SILVO'S SQUAD"]);
 function wheelDrawNameNote(name){
   if(!$("wheelShowPreviousNames")?.checked) return "";
-  const key=String(name||"").replace(/\\s*\\((?:D?1|D?2A|D?2B|D?3A|D?3B)\\)\\s*$/i,"").trim().toUpperCase();
+  const key=String(name||"").replace(/\s*\((?:D?1|D?2A|D?2B|D?3A|D?3B)\)\s*$/i,"").trim().toUpperCase();
   const previous=wheelPreviousNames.get(key);
   return previous ? "(formerly "+previous+")" : wheelFirstSeasonTeams.has(key) ? "1st Eliza season" : "";
 }
