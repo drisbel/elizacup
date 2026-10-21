@@ -452,6 +452,16 @@
   }
 
 
+  /* Matchup alignment: override earlier flex rules with fixed, shared rows. */
+  .wheel-matchup-teams{align-items:stretch;}
+  .wheel-matchup-teams>.wheel-matchup-team{display:grid;grid-template-rows:64px 58px 26px 58px 46px;align-content:start;justify-items:center;min-width:0;}
+  .wheel-matchup-teams>.wheel-matchup-team>img{grid-row:1;align-self:start;margin:0;}
+  .wheel-matchup-teams>.wheel-matchup-team>.wm-name{grid-row:2;display:flex;align-items:center;justify-content:center;min-height:0;margin:0;line-height:1.1;overflow-wrap:anywhere;}
+  .wheel-matchup-teams>.wheel-matchup-team>.wm-division-text{grid-row:3;margin:0;align-self:center;}
+  .wheel-matchup-teams>.wheel-matchup-team>.wm-pos-cards{grid-row:4;align-self:center;width:100%;margin:0;}
+  .wheel-matchup-teams>.wheel-matchup-team>.wheel-bilbbet-h2h-value{grid-row:5;align-self:center;margin:0;}
+  .wheel-matchup-teams>.wheel-matchup-vs.wheel-bilbbet-h2h-center{align-self:stretch;justify-content:flex-end;padding-bottom:5px;}
+
   /* ---------- 26/27 Main League Instagram exports ---------- */
   .ig-export-card{
     width:1080px;height:1350px;box-sizing:border-box;flex-shrink:0;
