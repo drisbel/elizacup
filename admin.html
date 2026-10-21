@@ -452,6 +452,15 @@
   }
 
 
+  /* Pick popup: centred proportional logo and equal-height 25/26 cards. */
+  #drawWheelPick .pick-body{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  #drawWheelPick .pick-body>img{display:block;width:auto;height:auto;max-width:90px;max-height:90px;object-fit:contain;margin:0 auto;flex-shrink:0;}
+  #drawWheelPick .pick-body>div{width:100%;min-width:0;text-align:center;}
+  #drawWheelPick .pick-body .name{white-space:normal;overflow-wrap:anywhere;overflow:visible;}
+  #drawWheelPick .wheel-bilbbet-season-row{align-items:stretch;}
+  #drawWheelPick .wheel-bilbbet-stat{min-height:68px;justify-content:flex-start;padding:6px 5px;}
+  #drawWheelPick .wheel-bilbbet-stat small{min-height:16px;line-height:16px;}
+  #drawWheelPick .wheel-bilbbet-stat strong{font-size:16px;line-height:1.1;display:flex;align-items:center;justify-content:center;flex:1;}
   /* Matchup alignment: override earlier flex rules with fixed, shared rows. */
   .wheel-matchup-teams{align-items:stretch;}
   .wheel-matchup-teams>.wheel-matchup-team{display:grid;grid-template-rows:64px 58px 26px 58px 46px;align-content:start;justify-items:center;min-width:0;}
@@ -942,6 +951,10 @@
 .wheel-social-heading h1{margin:7px 0;color:#fff;font:800 40px/1.1 'Barlow Condensed',Arial,sans-serif;letter-spacing:0;text-transform:uppercase}
 .wheel-social-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;width:100%;align-items:start}
 .wheel-social-column{display:flex;flex-direction:column;gap:9px;min-width:0}
+.wheel-social-fixture-wrap{min-width:0;border-radius:7px;overflow:hidden;background:#26334b}
+.wheel-social-fixture-wrap .wheel-social-fixture{border-radius:7px 7px 0 0}
+.wheel-social-odds{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:5px 12px 8px;color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:17px;font-weight:800}
+.wheel-social-odds span:first-child{text-align:right}.wheel-social-odds span:last-child{text-align:left}.wheel-social-odds small{font-family:Barlow,sans-serif;font-size:9px;font-weight:700;letter-spacing:.06em;opacity:.75}
 .wheel-social-fixture{display:grid;grid-template-columns:42px minmax(0,1fr) 38px 18px 38px minmax(0,1fr) 42px;align-items:center;gap:7px;padding:12px 10px;background:#26334b;color:#fff;border-radius:7px;min-height:76px;box-sizing:border-box}
 .wheel-social-logo{display:flex;width:42px;height:42px;align-items:center;justify-content:center;min-width:42px;overflow:visible}
 .wheel-social-logo img{display:block;width:auto!important;height:auto!important;max-width:42px!important;max-height:42px!important;object-fit:contain!important;aspect-ratio:auto!important;flex:none!important}
@@ -3805,8 +3818,10 @@ function wheelFixtureCard(f){
     const div=getTeamDivision(name)||'—';
     return '<span class="wheel-social-div" style="background:'+(WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK)+'">'+escapeHtml(div)+'</span>';
   };
-  return '<div class="wheel-social-fixture">'+wheelFixtureLogo(f.home)+team(f.home)+badge(f.home)
-    +'<span class="wheel-social-v">v</span>'+badge(f.away)+team(f.away)+wheelFixtureLogo(f.away)+'</div>';
+  const odds=wheelBilbbetH2H(f.home,f.away);
+  const oddsHtml=(odds.a||odds.b)?'<div class="wheel-social-odds"><span>'+escapeHtml(odds.a||"—")+'</span><small>BILBBET H2H ODDS</small><span>'+escapeHtml(odds.b||"—")+'</span></div>':"";
+  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+wheelFixtureLogo(f.home)+team(f.home)+badge(f.home)
+    +'<span class="wheel-social-v">v</span>'+badge(f.away)+team(f.away)+wheelFixtureLogo(f.away)+'</div>'+oddsHtml+'</div>';
 }
 function wheelFixtureColumns(fixtures){
   const half=Math.ceil(fixtures.length/2);
