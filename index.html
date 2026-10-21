@@ -3161,6 +3161,13 @@ html,body{max-width:100%;overflow-x:clip}
 .ownership-player-trade-team small{font-size:11px;opacity:.75}
 @media(max-width:440px){.ownership-player-trade-grid{gap:6px}.ownership-player-trade-column>div{padding:4px}.ownership-player-trade-team{gap:4px}.ownership-player-trade-team .ownership-ranking-team-logo{width:26px;height:26px}.ownership-player-trade-team button{font-size:12px}.ownership-player-trade-column h5{font-size:12px;padding:8px 5px}}
 
+/* Player Ownership transfer lists: keep the crest and team name together on the left, single-line names. */
+.ownership-player-trade-team{justify-content:flex-start;text-align:left}
+.ownership-player-trade-team>span{flex:1 1 auto;min-width:0;align-items:flex-start;text-align:left}
+.ownership-player-trade-team .ownership-ranking-team-logo{width:auto!important;height:auto!important;max-width:34px!important;max-height:34px!important;object-fit:contain!important;flex:0 0 auto}
+.ownership-player-trade-team .ownership-player-link{display:block;max-width:100%;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal!important;word-break:normal;text-align:left!important}
+.ownership-player-trade-team small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+@media(max-width:440px){.ownership-player-trade-team .ownership-ranking-team-logo{max-width:26px!important;max-height:26px!important}}
 /* Profile content gutters match the site's inset card layout. */
 #ownershipInlineProfile .ownership-inline-panel{padding:0 18px 22px}
 #ownershipInlineProfile .ownership-modal-header{margin-left:-18px;margin-right:-18px}
