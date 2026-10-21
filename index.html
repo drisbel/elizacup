@@ -3239,6 +3239,35 @@ table.match-log-table tbody td.ml-teams{text-align:left;}
 table.standings.compact.h2h-record-table tbody td{color:#111;}
 table.standings.compact.h2h-record-table tbody td .form-pill{color:#fff;}
 
+
+/* Consistent ordinary statistics tables; specialised fixture/league layouts untouched. */
+table.standings.compact.calendar-table thead th,
+table.standings.compact.calendar-table tbody td,
+table.standings.compact.history-table thead th,
+table.standings.compact.history-table tbody td{
+ text-align:center!important;vertical-align:middle!important;
+ position:static!important;left:auto!important;right:auto!important;
+ font-variant-numeric:tabular-nums;
+}
+table.standings.compact.calendar-table tbody td,
+table.standings.compact.history-table tbody td{color:#111!important}
+table.standings.compact.calendar-table thead th,
+table.standings.compact.history-table thead th{color:#fff!important}
+table.standings.compact.calendar-table thead th[style*="color:"]{color:inherit}
+table.standings.compact.calendar-table tbody td:nth-child(3){font-weight:inherit}
+table.standings.compact.history-table thead th:nth-child(2),
+table.standings.compact.history-table tbody td:nth-child(2){text-align:left!important}
+.ownership-stats table.ownership-table:not(.ownership-player-week-table) thead th,
+.ownership-stats table.ownership-table:not(.ownership-player-week-table) tbody td{
+ text-align:center!important;vertical-align:middle!important;
+ font-variant-numeric:tabular-nums;
+}
+.ownership-stats table.ownership-table:not(.ownership-player-week-table) thead th{color:#fff!important}
+.ownership-stats table.ownership-table:not(.ownership-player-week-table) tbody td{color:#111}
+.ownership-stats table.ownership-table:not(.ownership-player-week-table) thead th:nth-child(2),
+.ownership-stats table.ownership-table:not(.ownership-player-week-table) tbody td:nth-child(2){text-align:left!important}
+.ownership-stats table.ownership-table .ownership-club-cell,
+.ownership-stats table.ownership-table .ownership-ranked-team{justify-content:flex-start;text-align:left}
 </style>
 
 <style>
