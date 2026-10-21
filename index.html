@@ -5888,7 +5888,14 @@ function roundPreviewStoryCandidates(f,a,b,h){
  const playedA=a?(Number(a.w)+Number(a.d)+Number(a.l)):0;
  const playedB=b?(Number(b.w)+Number(b.d)+Number(b.l)):0;
  const establishedSeason=Math.min(playedA,playedB)>=5;
- const add=(priority,category,...lines)=>{for(const line of lines)ideas.push({priority,category,text:line});};
+ const add=(priority,category,...lines)=>{for(const line of lines){
+  const key=line.toLowerCase()
+   .replaceAll(home.toLowerCase(),'{team}').replaceAll(away.toLowerCase(),'{team}')
+   .replace(/\b\d+(?:[.,]\d+)?\b/g,'{number}')
+   .replace(/\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\b/g,'{number}')
+   .replace(/\s+/g,' ').trim();
+  ideas.push({priority,category,text:line,key});
+ }};
  const leader=h.runTeam==='home'?home:away,challenger=h.runTeam==='home'?away:home;
  if(h.run>=3)add(91,'h2h-streak',
   `${leader} have taken the last ${h.run} meetings. ${challenger} have had enough time to plot a response — can they finally deliver one?`,
@@ -5986,12 +5993,13 @@ function roundPreviewPickStory(f,a,b,h,used,index){
  const ordered=ideas.map(idea=>({
   ...idea,rank:idea.priority-(usedCategories.has(idea.category)?14:0)+Math.random()*17
  })).sort((x,y)=>y.rank-x.rank);
- let chosen=ordered.find(x=>!used.texts.has(x.text));
- // Never repeat a line within a preview, even if every candidate has been used.
+ let chosen=ordered.find(x=>!used.keys.has(x.key));
+ // Reject reused wording templates, even when team names or score margins differ.
  if(!chosen){
   const fallback=`${f.home} v ${f.away}: another chapter awaits, and neither manager has read the ending.`;
-  chosen={text:fallback,category:'unique-matchup'};
+  chosen={text:fallback,key:'unique-matchup-'+index,category:'unique-matchup'};
  }
+ used.keys.add(chosen.key);
  used.texts.add(chosen.text);
  usedCategories.add(chosen.category);
  return chosen;
@@ -6019,7 +6027,7 @@ async function exportRoundPreview(){
  try{rows=await roundPreviewMatchLog();}catch(e){console.warn('Round preview H2H unavailable:',e);alert('Could not load the historical H2H match log. Please try again.');return;}
  const division=currentDivision,colour=division.color||'#245440';
  const stage=document.createElement('div');stage.className='round-preview-stage';stage.style.setProperty('--rp-color',colour);
- const usedStories={texts:new Set(),categories:new Set()};
+ const usedStories={texts:new Set(),keys:new Set(),categories:new Set()};
  stage.innerHTML=`<div class="rp-heading"><div class="rp-eyebrow">ELIZA CUP · 2026/27</div><div class="rp-title">${roundPreviewEscape(division.name||division.label||division.pill||'DIVISION')} · ROUND ${roundPreviewEscape(round)}</div><div class="rp-subtitle">ROUND PREVIEW · ${matches.length} MATCHUPS</div></div><div class="rp-grid">${matches.map((f,i)=>roundPreviewCard(f,rows,usedStories,i)).join('')}</div>`;
  document.body.appendChild(stage);
  try{
