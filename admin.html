@@ -13,7 +13,13 @@
   .wheel-bilbbet-stat{display:flex;flex-direction:column;align-items:center;padding:5px 7px;border-radius:6px;background:rgba(255,255,255,.85);color:#18212e;min-width:0;}
   .wheel-bilbbet-stat small{font-size:10px;font-weight:700;text-transform:uppercase;}
   .wheel-bilbbet-stat strong{font-size:13px;overflow-wrap:anywhere;}
-  .wheel-bilbbet-fixture-odds{flex-shrink:0;margin-left:8px;padding:4px 6px;border-radius:5px;background:#e9f4e9;color:#185d2c;font-weight:800;font-size:12px;white-space:nowrap;}
+  .wheel-bilbbet-fixture-odds{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;margin-left:8px;padding:5px 8px;border-radius:5px;background:#e9f4e9;color:#185d2c;white-space:nowrap;}
+  .wheel-bilbbet-fixture-odds small{font-size:9px;font-weight:700;letter-spacing:.035em;}
+  .wheel-bilbbet-fixture-odds strong{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;}
+  #drawWheelPick .wheel-bilbbet-stats{width:min(340px,100%);margin-left:auto;margin-right:auto;}
+  #drawWheelPick .pick-body>div{min-width:0;max-width:100%;}
+  #drawWheelPick .wheel-bilbbet-stat strong{white-space:normal;}
+
 
   :root{
     --pitch:#000000;
@@ -3622,7 +3628,7 @@ function wheelRenderPickStats(name){
 }
 function wheelBilbbetFixtureHtml(a,b){
  const odds=wheelBilbbetH2H(a,b);if(!odds.a&&!odds.b)return "";
- return '<span class="wheel-bilbbet-fixture-odds" title="Bilbbet head-to-head odds">'+escapeHtml(odds.a||"—")+' / '+escapeHtml(odds.b||"—")+'</span>';
+ return '<span class="wheel-bilbbet-fixture-odds" title="Bilbbet head-to-head odds: '+escapeHtml(a)+' / '+escapeHtml(b)+'"><small>BILBBET ODDS</small><strong>'+escapeHtml(odds.a||"—")+' / '+escapeHtml(odds.b||"—")+'</strong></span>';
 }
 const wheelPreviousNames = new Map([["THE DRONE POLICE","ZOUMA KICKS TIM PAYNE"],["FULLY SCICLUNA","THE D GENREAU"],["JUAN EL MAGICO FC","TSATAS DIP"],["RICKY DIACO FC","ROYAL KC UNITED FC"],["RIO'S RHINOS","HEILAN COOS"],["GOT WOUD?","DOG GOES WOOF, PAYNE GOES MEOW"],["PAW PATROL UNITED","LIMSIM UNITED"],["TBCFC","THE MALTESE KNIGHTS"],["SYDNEY OLEEE","LOLLEY POP MAN"],["THE BEAU-CHAMPS","CAG'S INVESTORS"]]);
 const wheelFirstSeasonTeams = new Set(["E/MELB SUCCULENT CHINESE MEAL","PAIN IN DIAS","QUINTASENTIAL FC","SABITEURS","CONCEICAO","DADDY VALKANIS & SONS","DRUMMOYNE TERRIERS","GARNCELONA","KRANSKY FC","RUBY FC","GALUCTASARY","SK STURM MELBOURNE","SHAQNADO 2: RETURN OF THE SHAQ","SILVO'S SQUAD"]);
