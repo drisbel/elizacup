@@ -3220,6 +3220,25 @@ table.standings.compact.h2h-matches-table tbody td:nth-child(4){width:16%!import
 table.standings.compact.h2h-matches-table thead th:nth-child(n+5),
 table.standings.compact.h2h-matches-table tbody td:nth-child(n+5){width:16%!important}
 table.standings.compact.h2h-record-table .form-pill{margin-left:auto;margin-right:auto}
+
+/* Ordinary statistical/result tables: consistent ink and column alignment.
+   Intentionally exclude league ladders, fixtures, matchup layouts, calendars,
+   trophies, histories and other specialist tables. */
+table.standings.compact.h2h-record-table tbody td,
+table.match-log-table tbody td,
+table.ownership-extra-grid-placeholder tbody td{color:#111;}
+table.match-log-table thead th,
+table.match-log-table tbody td{vertical-align:middle;text-align:center;}
+table.match-log-table thead th.ml-teams,
+table.match-log-table tbody td.ml-teams{text-align:left;}
+.ownership-extra-grid .ownership-table tbody td{color:#111;}
+.ownership-extra-grid .ownership-table th:not(:nth-child(2)),
+.ownership-extra-grid .ownership-table td:not(:nth-child(2)){text-align:center;vertical-align:middle;}
+.ownership-extra-grid .ownership-table th:nth-child(2),
+.ownership-extra-grid .ownership-table td:nth-child(2){text-align:left;vertical-align:middle;}
+table.standings.compact.h2h-record-table tbody td{color:#111;}
+table.standings.compact.h2h-record-table tbody td .form-pill{color:#fff;}
+
 </style>
 
 <style>
