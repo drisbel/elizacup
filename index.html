@@ -456,6 +456,10 @@
   .facup-bracket-side.won{font-weight:700;color:var(--ink);}
   .facup-bracket-side.selected{background:rgba(255,221,0,0.35);color:var(--ink);}
   .facup-bracket-name{overflow-wrap:break-word;word-break:break-word;}
+  /* Fixed-height bracket cards prevent long names from overlapping adjacent matches. */
+  .facup-bracket-match{height:76px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
+  .facup-bracket-side{min-height:29px;align-items:center;padding:2px 4px;min-width:0;}
+  .facup-bracket-name{min-width:0;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.12;}
   .facup-bracket-pill{
     display:inline-block;color:#fff;font-size:9px;font-weight:700;
     padding:1px 5px;border-radius:8px;margin-right:5px;vertical-align:middle;
@@ -15362,38 +15366,36 @@ function renderFACup(){
 // between consecutive rounds (a team appearing in round N+1 must have come
 // from whichever round-N match it appeared in) — this is what makes the
 // connector lines below possible without needing you to maintain slot numbers.
-const FACUP_CARD_W = 172;
+const FACUP_CARD_W = 190;
 const FACUP_COL_GAP = 46;
-const FACUP_MATCH_H = 54;
-const FACUP_MATCH_GAP0 = 22; // vertical gap between round-1 matches
+const FACUP_MATCH_H = 76;
+const FACUP_MATCH_GAP0 = 22;
 
 function computeFacupBracketLayoutByName(rounds){
-  const layout = [];
-  rounds.forEach((round, ri) => {
-    const roundLayout = round.fixtures.map(f => ({ fixture: f }));
-    if(ri === 0){
-      const spacing = FACUP_MATCH_H + FACUP_MATCH_GAP0;
-      roundLayout.forEach((m,i) => {
-        m.top = i * spacing;
-        m.center = m.top + FACUP_MATCH_H / 2;
-      });
+  const layout=[];
+  rounds.forEach((round,ri)=>{
+    const current=round.fixtures.map(f=>({fixture:f}));
+    const spacing=FACUP_MATCH_H+FACUP_MATCH_GAP0;
+    if(!ri){
+      current.forEach((m,i)=>{m.top=i*spacing;m.center=m.top+FACUP_MATCH_H/2;});
     }else{
-      const prev = layout[ri - 1];
-      roundLayout.forEach((m,i) => {
-        const names = [m.fixture.home.name, m.fixture.away.name].filter(Boolean).map(n=>n.toUpperCase());
-        const feeders = prev.filter(pm => {
-          const pNames = [pm.fixture.home.name, pm.fixture.away.name].filter(Boolean).map(n=>n.toUpperCase());
-          return pNames.some(n => names.includes(n));
-        });
-        const center = feeders.length
-          ? feeders.reduce((sum,f)=>sum+f.center, 0) / feeders.length
-          : i * (FACUP_MATCH_H + FACUP_MATCH_GAP0); // fallback if no name match found
-        m.center = center;
-        m.top = center - FACUP_MATCH_H / 2;
-        m.feeders = feeders;
+      const prev=layout[ri-1];
+      const normalize=n=>String(n||'').trim().toUpperCase();
+      const proposals=current.map((m,i)=>{
+        const names=[m.fixture.home.name,m.fixture.away.name].map(normalize).filter(Boolean);
+        const feeders=prev.filter(p=>[p.fixture.home.name,p.fixture.away.name].map(normalize).some(n=>names.includes(n)));
+        m.feeders=feeders;
+        const center=feeders.length?feeders.reduce((sum,p)=>sum+p.center,0)/feeders.length:
+          (prev[Math.min(prev.length-1,2*i)]?.center??(i*spacing+FACUP_MATCH_H/2));
+        return center;
       });
+      // Preserve match order and reserve at least one full card plus a gap.
+      // Name-based feeder positions alone can collapse multiple cards together.
+      const minimum=FACUP_MATCH_H+14;
+      for(let i=1;i<proposals.length;i++)proposals[i]=Math.max(proposals[i],proposals[i-1]+minimum);
+      current.forEach((m,i)=>{m.center=proposals[i];m.top=m.center-FACUP_MATCH_H/2;});
     }
-    layout.push(roundLayout);
+    layout.push(current);
   });
   return layout;
 }
