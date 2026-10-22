@@ -1009,18 +1009,20 @@
 .wheel-social-odds-brand small{font-size:8px;line-height:1;white-space:nowrap}
 #wheelFullscreenResultsGrid .wheel-social-odds{padding-left:37px;padding-right:37px}
 
-/* Complete draw and PNG export: odds beneath team names, not in a separate strip. */
-.wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 30px 28px minmax(0,1fr) 32px;column-gap:6px}
-#wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 30px 28px minmax(0,1fr) 32px;column-gap:6px}
-.wheel-social-side{display:flex;flex-direction:column;min-width:0;gap:2px}
-.wheel-social-side-home{align-items:flex-end;text-align:right}
-.wheel-social-side-away{align-items:flex-start;text-align:left}
-.wheel-social-side .wheel-social-team{max-width:100%;text-align:inherit!important}
-.wheel-social-side-odds{font:800 18px/1 'Barlow Condensed',Arial,sans-serif;color:#fff}
-#wheelFullscreenResultsGrid .wheel-social-side-odds{font-size:16px}
-.wheel-social-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0}
-.wheel-social-brand{height:17px;display:flex;align-items:center;justify-content:center}
-.wheel-social-brand img{display:block;max-width:27px;max-height:17px;width:auto;height:auto;object-fit:contain}
+/* Restore the original complete-draw fixture layout. */
+.wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
+#wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
+
+/* Drawn fixture list on the right: odds under each team, centre Bilbbet logo. */
+#drawFixtureList .draw-fixture-row{position:relative}
+#drawFixtureList .draw-fixture-row>.team{min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:3px}
+#drawFixtureList .draw-fixture-row>.team.away{align-items:stretch}
+#drawFixtureList .wheel-fixture-team-content{display:flex;align-items:center;gap:8px;min-width:0;width:100%}
+#drawFixtureList .team.away .wheel-fixture-team-content{justify-content:flex-end}
+#drawFixtureList .wheel-fixture-name{min-width:0}
+#drawFixtureList .wheel-fixture-odds-value{font:800 14px/1.1 'Barlow Condensed',Arial,sans-serif;color:#185d2c;text-align:center;align-self:stretch}
+#drawFixtureList .wheel-fixture-odds-center-logo{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);max-width:25px;max-height:17px;width:auto;height:auto;object-fit:contain}
+#drawFixtureList .draw-fixture-row:has(.wheel-fixture-odds-center-logo){padding-bottom:17px}
 </style>
 </head>
 <body>
@@ -3732,7 +3734,7 @@ function wheelRenderPickStats(name){
 }
 function wheelBilbbetFixtureHtml(a,b){
  const odds=wheelBilbbetH2H(a,b);if(!odds.a&&!odds.b)return "";
- return '<span class="wheel-bilbbet-fixture-odds" title="Bilbbet head-to-head odds: '+escapeHtml(a)+' / '+escapeHtml(b)+'"><small>BILBBET ODDS</small><strong>'+escapeHtml(odds.a||"—")+' / '+escapeHtml(odds.b||"—")+'</strong></span>';
+ return '<div class="wheel-fixture-odds-under"><span>'+escapeHtml(odds.a||"—")+'</span><img src="logo/bilbbet.png" alt="Bilbbet"><span>'+escapeHtml(odds.b||"—")+'</span></div>';
 }
 const wheelPreviousNames = new Map([["THE DRONE POLICE","ZOUMA KICKS TIM PAYNE"],["FULLY SCICLUNA","THE D GENREAU"],["JUAN EL MAGICO FC","TSATAS DIP"],["RICKY DIACO FC","ROYAL KC UNITED FC"],["RIO'S RHINOS","HEILAN COOS"],["GOT WOUD?","DOG GOES WOOF, PAYNE GOES MEOW"],["PAW PATROL UNITED","LIMSIM UNITED"],["TBCFC","THE MALTESE KNIGHTS"],["SYDNEY OLEEE","LOLLEY POP MAN"],["THE BEAU-CHAMPS","CAG'S INVESTORS"]]);
 const wheelFirstSeasonTeams = new Set(["E/MELB SUCCULENT CHINESE MEAL","PAIN IN DIAS","QUINTASENTIAL FC","SABITEURS","CONCEICAO","DADDY VALKANIS & SONS","DRUMMOYNE TERRIERS","GARNCELONA","KRANSKY FC","RUBY FC","GALUCTASARY","SK STURM MELBOURNE","SHAQNADO 2: RETURN OF THE SHAQ","SILVO'S SQUAD"]);
@@ -3837,10 +3839,10 @@ function renderDrawShared(){
   };
   let fixturesHtml = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
-      <span class="team">${teamLogoImg(f.home)}${escapeHtml(f.home)}</span>
+      <span class="team"><span class="wheel-fixture-team-content">${teamLogoImg(f.home)}<span class="wheel-fixture-name">${escapeHtml(f.home)}</span></span>${wheelBilbbetFixtureHtml(f.home,f.away)?'<span class="wheel-fixture-odds-value">'+escapeHtml(wheelBilbbetH2H(f.home,f.away).a||"—")+"</span>":""}</span>
       <span class="num">Fixture ${i+1}</span>
-      <span class="team away">${escapeHtml(f.away)}${teamLogoImg(f.away)}</span>
-      ${wheelBilbbetFixtureHtml(f.home,f.away)}
+      <span class="team away"><span class="wheel-fixture-team-content"><span class="wheel-fixture-name">${escapeHtml(f.away)}</span>${teamLogoImg(f.away)}</span>${wheelBilbbetFixtureHtml(f.home,f.away)?'<span class="wheel-fixture-odds-value">'+escapeHtml(wheelBilbbetH2H(f.home,f.away).b||"—")+"</span>":""}</span>
+      ${wheelBilbbetFixtureHtml(f.home,f.away)?'<img class="wheel-fixture-odds-center-logo" src="logo/bilbbet.png" alt="Bilbbet">':""}
     </div>`).join("");
 
   // A team's been drawn but is still waiting on its opponent — show it as
@@ -3880,15 +3882,15 @@ function wheelFixtureLogo(name){
   return '<span class="wheel-social-logo"><img src="logo/'+teamLogoSlug(real)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(real)+'"></span>';
 }
 function wheelFixtureCard(f){
+  const team=name=>'<span class="wheel-social-team" title="'+escapeHtml(wheelTeamIdentity(name).name)+'">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>';
   const badge=name=>{
     const div=getTeamDivision(name)||'—';
     return '<span class="wheel-social-div" style="background:'+(WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK)+'">'+escapeHtml(div)+'</span>';
   };
   const odds=wheelBilbbetH2H(f.home,f.away);
-  const side=(name,price,which)=>'<div class="wheel-social-side wheel-social-side-'+which+'"><span class="wheel-social-team" title="'+escapeHtml(wheelTeamIdentity(name).name)+'">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>'+(odds.a||odds.b?'<span class="wheel-social-side-odds">'+escapeHtml(price||'—')+'</span>':'')+'</div>';
-  const brand=(odds.a||odds.b)?'<div class="wheel-social-brand"><img src="logo/bilbbet.png" alt="Bilbbet"></div>':'<div class="wheel-social-brand"></div>';
-  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+badge(f.home)+side(f.home,odds.a,'home')+wheelFixtureLogo(f.home)
-    +'<div class="wheel-social-center"><span class="wheel-social-v">v</span>'+brand+'</div>'+wheelFixtureLogo(f.away)+side(f.away,odds.b,'away')+badge(f.away)+'</div></div>';
+  const oddsHtml=(odds.a||odds.b)?'<div class="wheel-social-odds"><span>'+escapeHtml(odds.a||"—")+'</span><span class="wheel-social-odds-brand"><img src="logo/bilbbet.png" alt=""><small>H2H ODDS</small></span><span>'+escapeHtml(odds.b||"—")+'</span></div>':"";
+  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+badge(f.home)+team(f.home)+wheelFixtureLogo(f.home)
+    +'<span class="wheel-social-v">v</span>'+wheelFixtureLogo(f.away)+team(f.away)+badge(f.away)+'</div>'+oddsHtml+'</div>';
 }
 function wheelFixtureColumns(fixtures,cols=2){
   const size=Math.ceil(fixtures.length/cols);
