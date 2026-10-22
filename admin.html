@@ -4050,23 +4050,27 @@ async function loadWheelStandings(divShort){
       const res = await fetch(wheelCsvUrl(WHEEL_MAIN_SHEET_ID, tab.gid));
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const rows = Papa.parse(await res.text(), { skipEmptyLines: false }).data;
-      const tableEnd = WHEEL_STANDINGS_DATA_START + tab.teams - 1;
-      const standings = [];
-      for(let r=WHEEL_STANDINGS_DATA_START; r<=tableEnd && r<rows.length; r++){
-        const team = wheelCell(rows[r], WHEEL_STANDINGS_COL.TEAM);
-        if(!team) continue;
+      // Sheet row 6 is the header; teams begin on row 7 (zero-based index 6).
+      const firstTeamRow=WHEEL_STANDINGS_DATA_START+1;
+      const tableEnd=firstTeamRow+tab.teams;
+      const standings=[];
+      for(let r=firstTeamRow;r<tableEnd && r<rows.length;r++){
+        const team=wheelCell(rows[r],WHEEL_STANDINGS_COL.TEAM);
+        if(!team)continue;
         standings.push({
           team,
-          pts: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.PTS),10) || 0,
-          w: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.W),10) || 0,
-          d: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.D),10) || 0,
-          l: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.L),10) || 0
+          pos:parseInt(wheelCell(rows[r],1),10)||null,
+          pts:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.PTS),10)||0,
+          w:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.W),10)||0,
+          d:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.D),10)||0,
+          l:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.L),10)||0
         });
       }
       const started=standings.some(t=>t.w+t.d+t.l>0);
-      standings.sort((a,b) => b.pts - a.pts);
-      const index = {};
-      standings.forEach((s,i) => { index[wheelTeamIdentity(s.team).name.toUpperCase()] = { pos:started?i+1:null, pts:s.pts, w:s.w, d:s.d, l:s.l }; });
+      const index={};
+      standings.forEach(t=>{
+        index[wheelTeamIdentity(t.team).name.toUpperCase()]={pos:started?t.pos:null,pts:t.pts,w:t.w,d:t.d,l:t.l};
+      });
       wheelStandingsCache[divShort] = index;
     }catch(err){
       console.error(`Failed to load ${divShort} standings for wheel matchup info:`, err);
