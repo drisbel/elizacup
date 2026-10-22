@@ -983,6 +983,11 @@
 #wheelFullscreenResultsGrid .wheel-social-team{font-size:clamp(13px,1.15vw,19px)}
 #wheelFullscreenResultsGrid .wheel-social-column{gap:5px}
 #wheelFullscreenResultsGrid .wheel-social-columns{gap:8px}
+
+/* Stream results: three wider columns for readable team names. */
+#wheelFullscreenResultsGrid .wheel-social-team{font-size:clamp(12px,0.95vw,16px)}
+#wheelFullscreenResultsGrid .wheel-social-odds{font-size:18px}
+#wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;gap:4px}
 </style>
 </head>
 <body>
@@ -3519,7 +3524,7 @@ function showWheelResultsView(){
   }
 
   const grid=$("wheelFullscreenResultsGrid");
-  const cols=drawFixtures.length>=24?4:drawFixtures.length>=12?3:drawFixtures.length>=4?2:1;
+  const cols=drawFixtures.length>=12?3:drawFixtures.length>=4?2:1;
   grid.innerHTML=wheelFixtureColumns(drawFixtures,cols);
   grid.querySelectorAll('img').forEach(img=>{
     img.addEventListener('load',()=>wheelFitLogoImages(grid),{once:true});
