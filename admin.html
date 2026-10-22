@@ -993,6 +993,13 @@
 .wheel-social-fixture .wheel-social-team{text-align:right;direction:ltr;}
 .wheel-social-fixture .wheel-social-team:nth-of-type(6){text-align:left;}
 .wheel-social-fixture .wheel-social-team:nth-child(6){text-align:left;}
+
+/* Apply inward team alignment to both live draw and exported fixture cards. */
+.wheel-social-fixture>.wheel-social-team:nth-child(2){text-align:right;}
+.wheel-social-fixture>.wheel-social-team:nth-child(6){text-align:left;}
+/* Extra breathing room between the central V and both team logos. */
+.wheel-social-fixture{column-gap:9px;}
+#wheelFullscreenResultsGrid .wheel-social-fixture{column-gap:9px;}
 </style>
 </head>
 <body>
