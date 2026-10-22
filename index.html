@@ -3950,6 +3950,30 @@ function getSearchablePages(){
   return pages;
 }
 
+let playerSearchCatalog=[],playerSearchFetchPromise=null;
+function ensurePlayerSearchData(){
+ if(playerSearchCatalog.length)return Promise.resolve(playerSearchCatalog);
+ if(playerSearchFetchPromise)return playerSearchFetchPromise;
+ playerSearchFetchPromise=cachedFetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(LIVE_EXPORT_SHEET))
+ .then(r=>r.text()).then(csv=>{
+  const map=new Map();
+  for(const t of parseLiveExport(Papa.parse(csv,{skipEmptyLines:false}).data))for(const p of t.players){
+   const key=liveKey(p.name);if(key&&!map.has(key))map.set(key,{key,name:p.name,club:p.club});
+  }
+  playerSearchCatalog=[...map.values()];return playerSearchCatalog;
+ }).catch(e=>{console.warn('Player search',e);return []}).finally(()=>playerSearchFetchPromise=null);
+ return playerSearchFetchPromise;
+}
+function openPlayerSearchProfile(key){
+ closeSearchPanel();
+ ownershipCategory='lookup';ownershipSelectedPlayer=key;ownershipSearch=playerSearchCatalog.find(p=>p.key===key)?.name||'';
+ ownershipDivision='all';ownershipModalDivision='all';ownershipModalStatus='all';ownershipSelectedWeek='current';
+ statsActiveTab='ownership';goToDivision(DIVISIONS.find(d=>d.id==='stats'));
+}
+document.getElementById('searchResults').addEventListener('click',e=>{
+ const el=e.target.closest('[data-search-player]');if(!el)return;
+ e.preventDefault();e.stopPropagation();openPlayerSearchProfile(el.dataset.searchPlayer);
+});
 let teamSearchFetchPromise = null;
 async function ensureTeamSearchData(){
   if(roddyEntries.length > 0) return roddyEntries;
@@ -3974,7 +3998,7 @@ function renderSearchResults(query){
   const resultsEl = document.getElementById('searchResults');
   const q = query.trim().toUpperCase();
   if(!q){
-    resultsEl.innerHTML = `<div class="search-hint">Start typing a team or page name…</div>`;
+    resultsEl.innerHTML = `<div class="search-hint">Start typing a team, player or page name…</div>`;
     return;
   }
 
@@ -4006,6 +4030,11 @@ function renderSearchResults(query){
     }).join("");
   }
 
+  const players=playerSearchCatalog.filter(p=>p.name.toUpperCase().includes(q)).slice(0,10);
+  if(players.length)html+='<div class="search-group-label">A-League Players</div>'+players.map(p=>{
+   const src=liveALeagueLogo(p.club);
+   return '<a href="#stats" class="search-result-item" data-search-player="'+liveEscape(p.key)+'"><span class="search-result-icon">'+(src?'<img src="'+liveEscape(src)+'" alt="">':'')+'</span><span class="search-result-label">'+liveEscape(p.name)+'</span><span class="search-result-tag">'+liveEscape(p.club||'A-League')+'</span></a>';
+  }).join('');
   resultsEl.innerHTML = html || `<div class="search-hint">No matches for "${query}".</div>`;
 }
 
@@ -4014,6 +4043,7 @@ function openSearchPanel(){
   const input = document.getElementById('searchInput');
   input.value = "";
   renderSearchResults("");
+  ensurePlayerSearchData().then(()=>{if(document.getElementById("searchPanel").classList.contains("open"))renderSearchResults(input.value);});
   ensureTeamSearchData().then(()=>{
     // Only refresh if the panel's still open and the person hasn't typed yet —
     // avoids clobbering an in-progress search once the fetch resolves.
@@ -8749,6 +8779,7 @@ async function loadPlayerOwnershipTab(){
   ownershipTeams=teams.map(t=>({...t,division:divisions.get(liveKey(t.name))||divisions.get(liveKey(t.fantasy))||''}));
   await ensureOwnershipHistory();
   renderPlayerOwnershipTab();
+  if(ownershipCategory==="lookup"&&ownershipSelectedPlayer)requestAnimationFrame(()=>document.getElementById("ownershipInlineProfile")?.scrollIntoView({block:"start"}));
  }catch(err){el.className='state-msg error';el.textContent='Unable to load ownership statistics: '+err.message;}
 }
 function ownershipClubShort(club){
