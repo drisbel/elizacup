@@ -15397,6 +15397,36 @@ function computeFacupBracketLayoutByName(rounds){
     }
     layout.push(current);
   });
+  // Align qualifying/playoff matches beside the later-round fixtures they feed.
+  // Earlier rounds may contain fewer matches, so top-alignment makes their
+  // connector lines run unnecessarily far down the bracket.
+  for(let ri=layout.length-2;ri>=0;ri--){
+    const current=layout[ri],next=layout[ri+1];
+    if(!current.length||!next.length)continue;
+    const targets=current.map((match,i)=>{
+      const destinations=next.filter(n=>(n.feeders||[]).includes(match));
+      return {match,i,target:destinations.length?
+        destinations.reduce((sum,n)=>sum+n.center,0)/destinations.length:
+        match.center,linked:destinations.length>0};
+    });
+    if(!targets.some(t=>t.linked))continue;
+    // Preserve original order in the round and keep cards separate even
+    // when two playoff fixtures feed into the same Round-of-64 match.
+    const gap=FACUP_MATCH_H+14;
+    const centers=targets.map(t=>t.target);
+    for(let i=1;i<centers.length;i++)centers[i]=Math.max(centers[i],centers[i-1]+gap);
+    // Move the whole group towards its destinations, rather than pinning
+    // the first card to the top and pushing every subsequent card down.
+    const offsets=centers.map((v,i)=>v-targets[i].target);
+    const shift=Math.max(0,...offsets);
+    if(shift)for(let i=0;i<centers.length;i++)centers[i]-=shift;
+    const minCenter=FACUP_MATCH_H/2;
+    if(centers[0]<minCenter){
+      const delta=minCenter-centers[0];
+      for(let i=0;i<centers.length;i++)centers[i]+=delta;
+    }
+    current.forEach((m,i)=>{m.center=centers[i];m.top=centers[i]-FACUP_MATCH_H/2;});
+  }
   return layout;
 }
 
