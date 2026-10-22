@@ -15860,35 +15860,53 @@ async function elizaExportCompetitionFixtures(kind){
  if(!source||!source.querySelector('.facup-card,.fixture-card')){alert('No fixtures available to export.');return;}
  if(typeof html2canvas!=='function'){alert('Image exporter could not load.');return;}
  const label=kind==='cup'?'FA Cup':'ECL';
- const stage=document.createElement('div');stage.className='eliza-mc-export-stage';
- stage.style.cssText='position:fixed;left:-14000px;top:0;width:650px;z-index:-1;';
- const title=document.createElement('div');title.className='eliza-mc-export-title';title.textContent='ELIZA CUP · '+label;
- stage.appendChild(title);
  const content=source.cloneNode(true);content.removeAttribute('id');
- // Only export fixture cards, not the group tables, navigation or explanatory text.
  elizaFixtureExportNormalize(content);
  content.querySelectorAll('table,.round-tabs,.section-head,.state-msg').forEach(n=>n.remove());
- stage.appendChild(content);document.body.appendChild(stage);
- try{
-  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(done=>{img.addEventListener('load',done,{once:true});img.addEventListener('error',done,{once:true});setTimeout(done,3000)})));
-  if(document.fonts?.ready)await document.fonts.ready;
-  if(document.fonts){await Promise.all([document.fonts.load('700 16px Barlow'),document.fonts.load('700 19px Barlow Condensed')]);await document.fonts.ready;}
-  // Use the actual intrinsic image ratio, overriding any site-wide logo sizing rules.
-  for(const img of stage.querySelectorAll('.rp-logo-box img')){
-   if(img.naturalWidth&&img.naturalHeight){
-    const scale=Math.min(58/img.naturalWidth,58/img.naturalHeight,1);
-    img.style.setProperty('width',Math.round(img.naturalWidth*scale)+'px','important');
-    img.style.setProperty('height',Math.round(img.naturalHeight*scale)+'px','important');
-    img.style.setProperty('max-width','58px','important');
-    img.style.setProperty('max-height','58px','important');
-    img.style.setProperty('aspect-ratio','auto','important');
-    img.style.setProperty('object-fit','contain','important');
+ const fixtures=[...content.querySelectorAll('.eliza-mc-export-match')];
+ // Split only FA Cup rounds with more than 16 matches. Odd totals put
+ // one additional match in the first image (e.g. 17 => 9 + 8).
+ const split=kind==='cup'&&fixtures.length>16;
+ const partSizes=split?[Math.ceil(fixtures.length/2),Math.floor(fixtures.length/2)]:[fixtures.length];
+ let offset=0;
+ for(let part=0;part<partSizes.length;part++){
+  const stage=document.createElement('div');stage.className='eliza-mc-export-stage';
+  stage.style.cssText='position:fixed;left:-14000px;top:0;width:650px;z-index:-1;';
+  const title=document.createElement('div');title.className='eliza-mc-export-title';
+  title.textContent='ELIZA CUP · '+label+(split?' · PART '+(part+1)+' OF 2':'');
+  stage.appendChild(title);
+  const section=content.cloneNode(true);
+  const matches=[...section.querySelectorAll('.eliza-mc-export-match')];
+  matches.forEach((match,i)=>{if(i<offset||i>=offset+partSizes[part])match.remove();});
+  section.querySelectorAll('.eliza-mc-export-list').forEach(group=>{
+   if(!group.querySelector('.eliza-mc-export-match'))group.remove();
+  });
+  stage.appendChild(section);document.body.appendChild(stage);
+  try{
+   await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(done=>{img.addEventListener('load',done,{once:true});img.addEventListener('error',done,{once:true});setTimeout(done,3000)})));
+   if(document.fonts?.ready)await document.fonts.ready;
+   if(document.fonts){await Promise.all([document.fonts.load('700 16px Barlow'),document.fonts.load('700 19px Barlow Condensed')]);await document.fonts.ready;}
+   for(const img of stage.querySelectorAll('.rp-logo-box img')){
+    if(img.naturalWidth&&img.naturalHeight){
+     const scale=Math.min(58/img.naturalWidth,58/img.naturalHeight,1);
+     img.style.setProperty('width',Math.round(img.naturalWidth*scale)+'px','important');
+     img.style.setProperty('height',Math.round(img.naturalHeight*scale)+'px','important');
+     img.style.setProperty('max-width','58px','important');
+     img.style.setProperty('max-height','58px','important');
+     img.style.setProperty('aspect-ratio','auto','important');
+     img.style.setProperty('object-fit','contain','important');
+    }
    }
-  }
-  const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:3,useCORS:true,allowTaint:false,logging:false,windowWidth:1200});
-  const a=document.createElement('a');a.download='eliza-'+kind+'-fixtures.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
- }catch(e){console.error(e);alert('Unable to export these fixtures.');}finally{stage.remove();}
+   const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:3,useCORS:true,allowTaint:false,logging:false,windowWidth:1200});
+   const a=document.createElement('a');
+   a.download='eliza-'+kind+'-fixtures'+(split?'-part-'+(part+1):'')+'.png';
+   a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
+  }catch(e){console.error(e);alert('Unable to export '+label+(split?' part '+(part+1):'')+'.');break;}
+  finally{stage.remove();}
+  offset+=partSizes[part];
+ }
 }
+
 (function(){
  function attach(kind,containerId){
   const container=document.getElementById(containerId);if(!container)return;
