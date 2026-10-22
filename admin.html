@@ -1008,6 +1008,19 @@
 .wheel-social-odds-brand img{display:block;max-width:28px;max-height:22px;width:auto;height:auto;object-fit:contain}
 .wheel-social-odds-brand small{font-size:8px;line-height:1;white-space:nowrap}
 #wheelFullscreenResultsGrid .wheel-social-odds{padding-left:37px;padding-right:37px}
+
+/* Complete draw and PNG export: odds beneath team names, not in a separate strip. */
+.wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 30px 28px minmax(0,1fr) 32px;column-gap:6px}
+#wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 30px 28px minmax(0,1fr) 32px;column-gap:6px}
+.wheel-social-side{display:flex;flex-direction:column;min-width:0;gap:2px}
+.wheel-social-side-home{align-items:flex-end;text-align:right}
+.wheel-social-side-away{align-items:flex-start;text-align:left}
+.wheel-social-side .wheel-social-team{max-width:100%;text-align:inherit!important}
+.wheel-social-side-odds{font:800 18px/1 'Barlow Condensed',Arial,sans-serif;color:#fff}
+#wheelFullscreenResultsGrid .wheel-social-side-odds{font-size:16px}
+.wheel-social-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0}
+.wheel-social-brand{height:17px;display:flex;align-items:center;justify-content:center}
+.wheel-social-brand img{display:block;max-width:27px;max-height:17px;width:auto;height:auto;object-fit:contain}
 </style>
 </head>
 <body>
@@ -3867,15 +3880,15 @@ function wheelFixtureLogo(name){
   return '<span class="wheel-social-logo"><img src="logo/'+teamLogoSlug(real)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(real)+'"></span>';
 }
 function wheelFixtureCard(f){
-  const team=name=>'<span class="wheel-social-team" title="'+escapeHtml(wheelTeamIdentity(name).name)+'">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>';
   const badge=name=>{
     const div=getTeamDivision(name)||'—';
     return '<span class="wheel-social-div" style="background:'+(WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK)+'">'+escapeHtml(div)+'</span>';
   };
   const odds=wheelBilbbetH2H(f.home,f.away);
-  const oddsHtml=(odds.a||odds.b)?'<div class="wheel-social-odds"><span>'+escapeHtml(odds.a||"—")+'</span><span class="wheel-social-odds-brand"><img src="logo/bilbbet.png" alt=""><small>H2H ODDS</small></span><span>'+escapeHtml(odds.b||"—")+'</span></div>':"";
-  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+badge(f.home)+team(f.home)+wheelFixtureLogo(f.home)
-    +'<span class="wheel-social-v">v</span>'+wheelFixtureLogo(f.away)+team(f.away)+badge(f.away)+'</div>'+oddsHtml+'</div>';
+  const side=(name,price,which)=>'<div class="wheel-social-side wheel-social-side-'+which+'"><span class="wheel-social-team" title="'+escapeHtml(wheelTeamIdentity(name).name)+'">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>'+(odds.a||odds.b?'<span class="wheel-social-side-odds">'+escapeHtml(price||'—')+'</span>':'')+'</div>';
+  const brand=(odds.a||odds.b)?'<div class="wheel-social-brand"><img src="logo/bilbbet.png" alt="Bilbbet"></div>':'<div class="wheel-social-brand"></div>';
+  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+badge(f.home)+side(f.home,odds.a,'home')+wheelFixtureLogo(f.home)
+    +'<div class="wheel-social-center"><span class="wheel-social-v">v</span>'+brand+'</div>'+wheelFixtureLogo(f.away)+side(f.away,odds.b,'away')+badge(f.away)+'</div></div>';
 }
 function wheelFixtureColumns(fixtures,cols=2){
   const size=Math.ceil(fixtures.length/cols);
@@ -4115,7 +4128,7 @@ async function getWheelTeamMatchInfo(team){
   const division=identity.division||roddyEntry?.divisionShort;
   if(!division||!WHEEL_DIVISION_TABS[division])return null;
   await loadWheelStandings(division);
-  const standingsRow=(wheelStandingsCache[division]||{})[upper] || (wheelStandingsCache[division]||{})[wheelTeamIdentity(identity.name).name.toUpperCase()];
+  const standingsRow=(wheelStandingsCache[division]||{})[wheelTeamIdentity(identity.name).name.toUpperCase()] || (wheelStandingsCache[division]||{})[upper];
   const base={divisionShort:division,divisionColor:WHEEL_DIVISION_TABS[division].color,roddyPos:roddyEntry?.roddyPos||null};
   if(!standingsRow) return { ...base, divisionPos: null, pts: null, w: null, d: null, l: null };
   return { ...base, divisionPos: standingsRow.pos, pts: standingsRow.pts, w: standingsRow.w, d: standingsRow.d, l: standingsRow.l };
