@@ -945,7 +945,7 @@
   #wheelFullscreenRight.conference-fit .wheel-conference-group .num{font-size:var(--conf-number,11px);}
   @media(max-width:900px){.wheel-conference-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
-/* Shared full-screen draw overview and PNG export: two Match Centre-style columns. */
+/* Shared full-screen draw overview and PNG export. */
 .wheel-social-export,.wheel-fullscreen-results{font-family:'Barlow',Arial,sans-serif}
 .wheel-social-heading{text-align:center;margin:0 0 22px;color:#aab9d1;font-size:16px;letter-spacing:1.5px}
 .wheel-social-heading h1{margin:7px 0;color:#fff;font:800 40px/1.1 'Barlow Condensed',Arial,sans-serif;letter-spacing:0;text-transform:uppercase}
@@ -970,6 +970,19 @@
 #wheelFullscreenResultsGrid .wheel-social-team{font-size:clamp(10px,1.05vw,16px)}
 #wheelFullscreenResultsGrid .wheel-social-columns{gap:12px}
 #wheelFullscreenResultsGrid .wheel-social-column{gap:clamp(3px,0.5vh,9px)}
+
+/* Stream overview: compact cards, legible labels and unclipped names. */
+.wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 30px 12px 30px minmax(0,1fr) 32px;min-height:43px;padding:5px 7px;gap:5px}
+.wheel-social-logo{width:30px;height:30px;min-width:30px}
+.wheel-social-logo img{max-width:30px!important;max-height:30px!important}
+.wheel-social-team{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;min-width:0}
+.wheel-social-div{font-size:12px;padding:4px 2px}
+.wheel-social-odds{font-size:21px;padding:0 8px 5px;gap:7px;line-height:1.05}
+.wheel-social-odds small{font-size:9px}
+#wheelFullscreenResultsGrid .wheel-social-fixture{min-height:43px;padding:5px 6px}
+#wheelFullscreenResultsGrid .wheel-social-team{font-size:clamp(13px,1.15vw,19px)}
+#wheelFullscreenResultsGrid .wheel-social-column{gap:5px}
+#wheelFullscreenResultsGrid .wheel-social-columns{gap:8px}
 </style>
 </head>
 <body>
@@ -1557,6 +1570,7 @@
 
         <div class="form-actions" style="margin-top:18px;margin-bottom:6px;">
           <button class="btn btn-primary" id="drawStartBtn">⛶ Start Draw (Full Screen)</button>
+           <button class="btn btn-ghost" id="drawResumeBtn" type="button" style="display:none;">⛶ Resume Draw</button>
           <button class="btn btn-ghost" id="drawResetBtn">Reset</button>
         </div>
         <div class="hint" id="drawPotCount"></div>
@@ -3323,6 +3337,7 @@ function drawStart(){
   drawPot = shuffleArray(teams);
   drawWheelDisplayPot = drawPot.slice();
   drawFixtures = [];
+  $("drawResumeBtn").style.display = "inline-block";
   wheelConferenceAllocations = { "3A": preassignedA.slice(), "3B": preassignedB.slice() };
   $("drawSpinBtn").disabled = false;
 
@@ -3352,6 +3367,7 @@ function drawReset(){
   drawWheelDisplayPot = [];
   drawPending = null;
   drawFixtures = [];
+  $("drawResumeBtn").style.display = "none";
   wheelConferenceAllocations = { "3A": [], "3B": [] };
   drawSpinning = false;
   $("drawSpinBtn").disabled = true;
@@ -3503,7 +3519,8 @@ function showWheelResultsView(){
   }
 
   const grid=$("wheelFullscreenResultsGrid");
-  grid.innerHTML=wheelFixtureColumns(drawFixtures);
+  const cols=drawFixtures.length>=24?4:drawFixtures.length>=12?3:drawFixtures.length>=4?2:1;
+  grid.innerHTML=wheelFixtureColumns(drawFixtures,cols);
   grid.querySelectorAll('img').forEach(img=>{
     img.addEventListener('load',()=>wheelFitLogoImages(grid),{once:true});
   });
@@ -3825,20 +3842,20 @@ function wheelFixtureLogo(name){
   return '<span class="wheel-social-logo"><img src="logo/'+teamLogoSlug(real)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(real)+'"></span>';
 }
 function wheelFixtureCard(f){
-  const team=name=>'<span class="wheel-social-team">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>';
+  const team=name=>'<span class="wheel-social-team" title="'+escapeHtml(wheelTeamIdentity(name).name)+'">'+escapeHtml(wheelTeamIdentity(name).name)+'</span>';
   const badge=name=>{
     const div=getTeamDivision(name)||'—';
     return '<span class="wheel-social-div" style="background:'+(WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK)+'">'+escapeHtml(div)+'</span>';
   };
   const odds=wheelBilbbetH2H(f.home,f.away);
   const oddsHtml=(odds.a||odds.b)?'<div class="wheel-social-odds"><span>'+escapeHtml(odds.a||"—")+'</span><small>BILBBET H2H ODDS</small><span>'+escapeHtml(odds.b||"—")+'</span></div>':"";
-  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+wheelFixtureLogo(f.home)+team(f.home)+badge(f.home)
-    +'<span class="wheel-social-v">v</span>'+badge(f.away)+team(f.away)+wheelFixtureLogo(f.away)+'</div>'+oddsHtml+'</div>';
+  return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+badge(f.home)+team(f.home)+wheelFixtureLogo(f.home)
+    +'<span class="wheel-social-v">v</span>'+wheelFixtureLogo(f.away)+team(f.away)+badge(f.away)+'</div>'+oddsHtml+'</div>';
 }
-function wheelFixtureColumns(fixtures){
-  const half=Math.ceil(fixtures.length/2);
-  return '<div class="wheel-social-columns">'+[fixtures.slice(0,half),fixtures.slice(half)]
-    .map(group=>'<div class="wheel-social-column">'+group.map(wheelFixtureCard).join('')+'</div>').join('')+'</div>';
+function wheelFixtureColumns(fixtures,cols=2){
+  const size=Math.ceil(fixtures.length/cols);
+  const groups=Array.from({length:cols},(_,i)=>fixtures.slice(i*size,(i+1)*size));
+  return '<div class="wheel-social-columns" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+groups.map(group=>'<div class="wheel-social-column">'+group.map(wheelFixtureCard).join('')+'</div>').join('')+'</div>';
 }
 function wheelFitLogoImages(root){
   root.querySelectorAll('.wheel-social-logo img').forEach(img=>{
@@ -5023,6 +5040,7 @@ $("saveRulebookBtn").addEventListener("click", saveRulebookSection);
 $("cancelRulebookEditBtn").addEventListener("click", cancelEditRulebook);
 $("savePvBtn").addEventListener("click", savePageVisibility);
 $("drawStartBtn").addEventListener("click", drawStart);
+$("drawResumeBtn").addEventListener("click", () => {if(drawSpinning)return; enterWheelFullscreen();});
 $("wheelDrawType").addEventListener("change", updateWheelDrawType);
 $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
