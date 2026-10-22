@@ -1000,6 +1000,14 @@
 /* Extra breathing room between the central V and both team logos. */
 .wheel-social-fixture{column-gap:9px;}
 #wheelFullscreenResultsGrid .wheel-social-fixture{column-gap:9px;}
+
+/* Team odds directly beneath each side; centred Bilbbet branding. */
+.wheel-social-odds{grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);padding:0 46px 5px;gap:6px;min-height:24px}
+.wheel-social-odds>span:first-child{text-align:right}.wheel-social-odds>span:last-child{text-align:left}
+.wheel-social-odds-brand{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.wheel-social-odds-brand img{display:block;max-width:28px;max-height:22px;width:auto;height:auto;object-fit:contain}
+.wheel-social-odds-brand small{font-size:8px;line-height:1;white-space:nowrap}
+#wheelFullscreenResultsGrid .wheel-social-odds{padding-left:37px;padding-right:37px}
 </style>
 </head>
 <body>
@@ -3865,7 +3873,7 @@ function wheelFixtureCard(f){
     return '<span class="wheel-social-div" style="background:'+(WHEEL_DIVISION_COLORS[div]||WHEEL_DIVISION_FALLBACK)+'">'+escapeHtml(div)+'</span>';
   };
   const odds=wheelBilbbetH2H(f.home,f.away);
-  const oddsHtml=(odds.a||odds.b)?'<div class="wheel-social-odds"><span>'+escapeHtml(odds.a||"—")+'</span><small>BILBBET H2H ODDS</small><span>'+escapeHtml(odds.b||"—")+'</span></div>':"";
+  const oddsHtml=(odds.a||odds.b)?'<div class="wheel-social-odds"><span>'+escapeHtml(odds.a||"—")+'</span><span class="wheel-social-odds-brand"><img src="logo/bilbbet.png" alt=""><small>H2H ODDS</small></span><span>'+escapeHtml(odds.b||"—")+'</span></div>':"";
   return '<div class="wheel-social-fixture-wrap"><div class="wheel-social-fixture">'+badge(f.home)+team(f.home)+wheelFixtureLogo(f.home)
     +'<span class="wheel-social-v">v</span>'+wheelFixtureLogo(f.away)+team(f.away)+badge(f.away)+'</div>'+oddsHtml+'</div>';
 }
@@ -4055,9 +4063,10 @@ async function loadWheelStandings(divShort){
           l: parseInt(wheelCell(rows[r], WHEEL_STANDINGS_COL.L),10) || 0
         });
       }
+      const started=standings.some(t=>t.w+t.d+t.l>0);
       standings.sort((a,b) => b.pts - a.pts);
       const index = {};
-      standings.forEach((s,i) => { index[s.team.toUpperCase()] = { pos:i+1, pts:s.pts, w:s.w, d:s.d, l:s.l }; });
+      standings.forEach((s,i) => { index[wheelTeamIdentity(s.team).name.toUpperCase()] = { pos:started?i+1:null, pts:s.pts, w:s.w, d:s.d, l:s.l }; });
       wheelStandingsCache[divShort] = index;
     }catch(err){
       console.error(`Failed to load ${divShort} standings for wheel matchup info:`, err);
@@ -4102,7 +4111,7 @@ async function getWheelTeamMatchInfo(team){
   const division=identity.division||roddyEntry?.divisionShort;
   if(!division||!WHEEL_DIVISION_TABS[division])return null;
   await loadWheelStandings(division);
-  const standingsRow=(wheelStandingsCache[division]||{})[upper];
+  const standingsRow=(wheelStandingsCache[division]||{})[upper] || (wheelStandingsCache[division]||{})[wheelTeamIdentity(identity.name).name.toUpperCase()];
   const base={divisionShort:division,divisionColor:WHEEL_DIVISION_TABS[division].color,roddyPos:roddyEntry?.roddyPos||null};
   if(!standingsRow) return { ...base, divisionPos: null, pts: null, w: null, d: null, l: null };
   return { ...base, divisionPos: standingsRow.pos, pts: standingsRow.pts, w: standingsRow.w, d: standingsRow.d, l: standingsRow.l };
