@@ -1013,16 +1013,6 @@
 .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 #wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 
-/* Drawn fixture list on the right: odds under each team, centre Bilbbet logo. */
-#drawFixtureList .draw-fixture-row{position:relative}
-#drawFixtureList .draw-fixture-row>.team{min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:3px}
-#drawFixtureList .draw-fixture-row>.team.away{align-items:stretch}
-#drawFixtureList .wheel-fixture-team-content{display:flex;align-items:center;gap:8px;min-width:0;width:100%}
-#drawFixtureList .team.away .wheel-fixture-team-content{justify-content:flex-end}
-#drawFixtureList .wheel-fixture-name{min-width:0}
-#drawFixtureList .wheel-fixture-odds-value{font:800 14px/1.1 'Barlow Condensed',Arial,sans-serif;color:#185d2c;text-align:center;align-self:stretch}
-#drawFixtureList .wheel-fixture-odds-center-logo{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);max-width:25px;max-height:17px;width:auto;height:auto;object-fit:contain}
-#drawFixtureList .draw-fixture-row:has(.wheel-fixture-odds-center-logo){padding-bottom:17px}
 </style>
 </head>
 <body>
@@ -3837,12 +3827,12 @@ function renderDrawShared(){
     const logoName = wheelLogoTeamName(name);
     return `<img src="logo/${teamLogoSlug(logoName)}.png" alt="" class="draw-fixture-logo" onerror="${teamLogoOnErrorAttr(logoName)}">`;
   };
+  const divNameStyle=name=>"color:"+(WHEEL_DIVISION_COLORS[getTeamDivision(name)]||WHEEL_DIVISION_FALLBACK)+";";
   let fixturesHtml = drawFixtures.map((f,i) => `
     <div class="draw-fixture-row">
-      <span class="team"><span class="wheel-fixture-team-content">${teamLogoImg(f.home)}<span class="wheel-fixture-name">${escapeHtml(f.home)}</span></span>${wheelBilbbetFixtureHtml(f.home,f.away)?'<span class="wheel-fixture-odds-value">'+escapeHtml(wheelBilbbetH2H(f.home,f.away).a||"—")+"</span>":""}</span>
+      <span class="team">${teamLogoImg(f.home)}<span style="${divNameStyle(f.home)}">${escapeHtml(f.home)}</span></span>
       <span class="num">Fixture ${i+1}</span>
-      <span class="team away"><span class="wheel-fixture-team-content"><span class="wheel-fixture-name">${escapeHtml(f.away)}</span>${teamLogoImg(f.away)}</span>${wheelBilbbetFixtureHtml(f.home,f.away)?'<span class="wheel-fixture-odds-value">'+escapeHtml(wheelBilbbetH2H(f.home,f.away).b||"—")+"</span>":""}</span>
-      ${wheelBilbbetFixtureHtml(f.home,f.away)?'<img class="wheel-fixture-odds-center-logo" src="logo/bilbbet.png" alt="Bilbbet">':""}
+      <span class="team away"><span style="${divNameStyle(f.away)}">${escapeHtml(f.away)}</span>${teamLogoImg(f.away)}</span>
     </div>`).join("");
 
   // A team's been drawn but is still waiting on its opponent — show it as
@@ -3851,7 +3841,7 @@ function renderDrawShared(){
   if(drawPending !== null){
     fixturesHtml += `
       <div class="draw-fixture-row draw-fixture-row-pending">
-        <span class="team">${teamLogoImg(drawPending)}${escapeHtml(drawPending)}</span>
+        <span class="team">${teamLogoImg(drawPending)}<span style="${divNameStyle(drawPending)}">${escapeHtml(drawPending)}</span></span>
         <span class="num">Fixture ${drawFixtures.length+1}</span>
         <span class="team away draw-fixture-pending-slot">Awaiting opponent…</span>
       </div>`;
@@ -4176,7 +4166,7 @@ function wheelMatchupTeamBlockHtml(team, info, opponent){
   return `
     <div class="wheel-matchup-team">
       <img src="logo/${teamLogoSlug(wheelLogoTeamName(team))}.png" alt="" onerror="${teamLogoOnErrorAttr(wheelLogoTeamName(team))}">
-      <div class="wm-name">${escapeHtml(team)}</div>
+      <div class="wm-name" style="color:${WHEEL_DIVISION_COLORS[info?.divisionShort||getTeamDivision(team)]||WHEEL_DIVISION_FALLBACK};">${escapeHtml(team)}</div>
       ${info ? `
       <div class="wm-division-text" style="color:${info.divisionColor||"#8a8f98"};">${escapeHtml(wheelDivisionFullLabel(info.divisionShort))}</div>
       <div class="wm-pos-cards">
