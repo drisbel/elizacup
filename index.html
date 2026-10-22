@@ -3280,11 +3280,6 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 <style>
 .round-preview-stage{position:fixed;left:-20000px;top:0;z-index:-1;box-sizing:border-box;width:1600px;padding:36px 42px 28px;background:#f5f7f7;color:#132a25;font-family:Arial,Helvetica,sans-serif}
 .round-preview-stage *{box-sizing:border-box}.rp-heading{text-align:center;background:var(--rp-color);color:white;padding:23px 18px 21px;border-radius:15px;margin-bottom:17px}.rp-eyebrow{font-size:17px;font-weight:800;letter-spacing:3px;opacity:.85}.rp-title{font-family:'Barlow Condensed',Arial,sans-serif;font-size:38px;font-weight:900;letter-spacing:.3px;margin:7px 0}.rp-subtitle{font-size:17px;font-weight:700;letter-spacing:2px;opacity:.85}.rp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;align-items:start}.rp-card{border:2px solid #d7e1dc;border-top:7px solid var(--rp-color);border-radius:12px;background:white;padding:14px 15px 12px;min-width:0;overflow:hidden}.rp-match{display:grid;grid-template-columns:minmax(0,1fr) 115px minmax(0,1fr);align-items:start;gap:9px}.rp-team{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;min-width:0}.rp-team img{width:auto!important;height:auto!important;max-width:58px!important;max-height:58px!important;object-fit:contain!important;object-position:center;flex-shrink:0;aspect-ratio:auto!important}.rp-team .rp-logo-box{width:62px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.rp-team strong{font-family:'Barlow Condensed',Arial,sans-serif;font-size:19px;line-height:1.12;min-height:42px;display:flex;align-items:center;justify-content:center;overflow-wrap:break-word}.rp-team>span{font-size:16px;color:#42574e;font-weight:700}.rp-versus{text-align:center;display:flex;flex-direction:column;align-items:center;padding-top:15px;gap:4px}.rp-versus>b{font-family:'Barlow Condensed',Arial,sans-serif;font-size:22px;color:var(--rp-color)}.rp-versus strong{font-family:'Barlow Condensed',Arial,sans-serif;font-size:24px;white-space:nowrap}.rp-versus small{font-size:12px;color:#5c7066;font-weight:800}.rp-formrow{display:flex;gap:4px;justify-content:center;min-height:23px}.rp-form{font-size:13px;font-weight:900;background:#9aa4a0;color:white;min-width:24px;padding:4px 3px;border-radius:4px}.rp-W{background:#21864b}.rp-D{background:#858b95}.rp-L{background:#bb4451}.rp-last{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:12px;padding:9px 4px;border-top:1px solid #dfe7e2;font-size:14px;text-align:center}.rp-last b{font-size:12px;color:#4b6256;white-space:nowrap}.rp-last span{font-weight:700}.rp-highlight{font-family:'Barlow',sans-serif!important;line-height:1.28;text-align:center;background:#eef4ef;color:#214b36;border-radius:6px;font-size:16px;font-weight:700;padding:10px 13px;min-height:42px}.rp-active-streak{font-size:13px;text-align:center;color:#9a3d12;background:#fff0df;font-weight:900;border-radius:5px;padding:6px 8px;margin-top:6px}
-.rp-bilbbet{display:grid;grid-template-columns:minmax(0,1fr) 145px minmax(0,1fr);align-items:center;gap:12px;margin:5px 0 10px;text-align:center;min-height:62px}
-.rp-bilbbet>strong{font-family:'Barlow Condensed',sans-serif;font-size:29px;font-weight:800;color:#132a25}
-.rp-bilbbet-brand{display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:center}
-.rp-bilbbet-brand img{max-width:65px;max-height:38px;width:auto;height:auto;object-fit:contain}
-.rp-bilbbet-brand small{font-size:10px;font-weight:800;letter-spacing:.03em;color:#52685e}
 .rp-footer{text-align:center;margin-top:18px;color:#54695e;font-size:13px;letter-spacing:2px;font-weight:800}
 </style>
 <style>
@@ -6158,10 +6153,8 @@ function roundPreviewCard(f,rows,usedStories,index){
  const team=(v,s)=>`<div class="rp-team"><div class="rp-logo-box"><img src="logo/${teamLogoSlug(v)}.png" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}" data-team-name="${name(v)}"></div><strong>${name(v)}</strong><span>${s?(roundPreviewOrdinal(s.pos)+' · '+s.pts+' pts'):'—'}</span><div class="rp-formrow">${roundPreviewForm(s)}</div></div>`;
  const last=roundPreviewLastMeeting(h,f.home,f.away);
  const story=roundPreviewPickStory(f,a,b,h,usedStories,index);
- const odds=roundPreviewBilbbetPair(f.home,f.away);
- const bilbbet=(odds.home||odds.away)?`<div class="rp-bilbbet"><strong>${roundPreviewEscape(odds.home||'—')}</strong><div class="rp-bilbbet-brand"><img src="logo/bilbbet.png" alt="" crossorigin="anonymous"><small>BILBBET H2H ODDS</small></div><strong>${roundPreviewEscape(odds.away||'—')}</strong></div>`:'';
  const active=h.run>=3?`<div class="rp-active-streak">🔥 ${name(h.runTeam==='home'?f.home:f.away)} · ${h.run} H2H wins in a row</div>`:'';
- return `<div class="rp-card"><div class="rp-match">${team(f.home,a)}<div class="rp-versus"><b>VS</b><small>H2H</small><strong>${h.hw}–${h.draw}–${h.aw}</strong><small>W · D · W</small></div>${team(f.away,b)}</div>${bilbbet}<div class="rp-last"><b>LAST MEETING</b><span>${last}</span></div>${active}<div class="rp-highlight">${name(story.text)}</div></div>`;
+ return `<div class="rp-card"><div class="rp-match">${team(f.home,a)}<div class="rp-versus"><b>VS</b><small>H2H</small><strong>${h.hw}–${h.draw}–${h.aw}</strong><small>W · D · W</small></div>${team(f.away,b)}</div><div class="rp-last"><b>LAST MEETING</b><span>${last}</span></div>${active}<div class="rp-highlight">${name(story.text)}</div></div>`;
 }
 async function exportRoundPreview(){
  if(currentDivision.type!=='division')return;
@@ -6172,7 +6165,6 @@ async function exportRoundPreview(){
  const matches=(next?.[1]||[]).filter(f=>f.home&&f.away&&f.homeScore==null&&f.awayScore==null);
  if(!round||!matches.length){alert('No upcoming unscored division fixtures were found.');return;}
  let rows=[];
- await roundPreviewLoadBilbbet();
  try{rows=await roundPreviewMatchLog();}catch(e){console.warn('Round preview H2H unavailable:',e);alert('Could not load the historical H2H match log. Please try again.');return;}
  const division=currentDivision,colour=division.color||'#245440';
  const stage=document.createElement('div');stage.className='round-preview-stage';stage.style.setProperty('--rp-color',colour);
