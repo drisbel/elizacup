@@ -15969,7 +15969,7 @@ async function elizaExportCompetitionFixtures(kind){
  }
  async function render(root,opts){
    if(typeof html2canvas!=='function'){alert('Image exporter could not load.');return;}
-   const matches=gather(root);
+   const matches=opts.matches||gather(root);
    if(!matches.length){alert('No fixture results available to export.');return;}
    const stage=document.createElement('div');
    stage.className='live-export-stage eliza-exact-fixture-export';
@@ -16017,7 +16017,7 @@ async function elizaExportCompetitionFixtures(kind){
    }
   }
   const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1200});
-     const a=document.createElement('a');a.download='eliza-'+String(opts.label+'-'+opts.round).toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-fixtures.png';
+     const a=document.createElement('a');a.download='eliza-'+String(opts.label+'-'+opts.round).toLowerCase().replace(/[^a-z0-9]+/g,'-')+(opts.part?'-part-'+opts.part:'')+'-fixtures.png';
      a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
    }catch(e){console.error('Match Centre format fixture export failed',e);alert('Unable to export fixtures.');}
    finally{stage.remove();}
@@ -16030,10 +16030,20 @@ async function elizaExportCompetitionFixtures(kind){
    const id=currentDivision?.id||'d1';
    return render(source,{label:id==='d1'?'Division 1':currentDivision?.label||'Division',round:roundLabel(source,'Fixtures'),color:currentDivision?.color||liveCompetitionTheme(id).background,logo:logoMap[id]});
  };
- elizaExportCompetitionFixtures=function(kind){
+ elizaExportCompetitionFixtures=async function(kind){
    const id=kind==='cup'?'facup':'ecl',root=document.getElementById(kind==='cup'?'facupContainer':'eclContainer');
    if(!root)return;
-   return render(root,{label:kind==='cup'?'FA Cup':'ECL',round:roundLabel(root,'Fixtures'),color:liveCompetitionTheme(id).background,logo:logoMap[id]});
+   const opts={label:kind==='cup'?'FA Cup':'ECL',round:roundLabel(root,'Fixtures'),color:liveCompetitionTheme(id).background,logo:logoMap[id]};
+   const matches=gather(root);
+   if(kind==='cup'&&matches.length>16){
+     // This is the active fixture exporter (the older exporter above is overridden).
+     // Split the current round evenly, preserving the exact existing image style.
+     const midpoint=Math.ceil(matches.length/2);
+     await render(root,{...opts,matches:matches.slice(0,midpoint),part:1});
+     await render(root,{...opts,matches:matches.slice(midpoint),part:2});
+     return;
+   }
+   return render(root,opts);
  };
  // Side-league fixture export buttons are bound inside a closure; capture only fixture exports.
  document.addEventListener('click',e=>{
