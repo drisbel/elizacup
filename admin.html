@@ -988,6 +988,11 @@
 #wheelFullscreenResultsGrid .wheel-social-team{font-size:clamp(12px,0.95vw,16px)}
 #wheelFullscreenResultsGrid .wheel-social-odds{font-size:18px}
 #wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;gap:4px}
+
+/* Align team names towards the centre of each fixture. */
+.wheel-social-fixture .wheel-social-team{text-align:right;direction:ltr;}
+.wheel-social-fixture .wheel-social-team:nth-of-type(6){text-align:left;}
+.wheel-social-fixture .wheel-social-team:nth-child(6){text-align:left;}
 </style>
 </head>
 <body>
