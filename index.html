@@ -4881,7 +4881,10 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
   const subBadge=preRound?'':liveSubstitutionBadge(p);
   const shared=(preRound?!p.bench:!liveEffectiveBench(p))&&otherStarting.has(livePlayerIdentity(p));
   const crest=liveALeagueLogo(p.club);
-  const meta=liveEscape(livePlayerFixtureOpponent(fixtureGw,p.club))+livePlayerStatusMarkup(p,t,historical);
+  const opponent=liveEscape(livePlayerFixtureOpponent(fixtureGw,p.club));
+   const status=livePlayerStatusMarkup(p,t,historical);
+   // Keep the opponent nearest the club logo on both mirrored sides.
+   const meta=rightSide?opponent+status:status+opponent;
   const clubAbbr=liveEscape(liveClubThreeLetter(p.club));
   const clubIcon=`<span class="live-player-club-logo" aria-hidden="true">${crest?`<img src="${crest}" alt="" loading="lazy" onerror="this.style.display='none'">`:''}<small class="live-player-club-abbr">${clubAbbr}</small></span>`;
   return `<div class="live-player-row${rightSide?' live-player-row-right':''}${shared?' live-player-shared':''}"${shared?' title="Common starting player with matching captain status"':''}>${rightSide?`<strong class="${livePlayerPointClass(p,t,historical)}">${liveEscape(liveDisplayPlayerPoints(p,t,historical))}</strong>${clubIcon}<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>`:`<span class="live-player-info"><span class="live-player-name"><span title="${liveEscape(p.name)}">${liveEscape(p.name)}</span>${badge}${subBadge}</span><span class="live-player-meta">${meta||'&nbsp;'}</span></span>${clubIcon}<strong class="${livePlayerPointClass(p,t,historical)}">${liveEscape(liveDisplayPlayerPoints(p,t,historical))}</strong>`}</div>`;
