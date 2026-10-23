@@ -4995,13 +4995,14 @@ async function exportLiveCentreImage(){
  if(typeof html2canvas!=='function'){alert('Image exporter could not load. Check your connection and try again.');return;}
  const source=[...root.querySelectorAll('#liveAllSections > .live-comp-section')].filter(section=>choice==='all'||section.id==='live-comp-'+choice);
  if(!source.length){alert('There are no active matchups to export for that competition.');return;}
+ const jobs=source.flatMap(section=>{const count=section.querySelectorAll('.live-match-grid > .live-match').length;const parts=section.id==='live-comp-facup'&&count>16?2:1;return Array.from({length:parts},(_,part)=>({section,part,parts,count}));});
  const previous=button.textContent;
  button.disabled=true;
  let completed=0;
  try{
   // Export each competition separately, preserving the exact displayed cards.
-  for(const section of source){
-   button.textContent=source.length>1?`Exporting ${completed+1}/${source.length}…`:'Exporting…';
+  for(const {section,part,parts,count} of jobs){
+   button.textContent=jobs.length>1?`Exporting ${completed+1}/${jobs.length}…`:'Exporting…';
    const stage=document.createElement('div');
    stage.className='live-export-stage';
    // Match the width of the actual competition on screen, without any surrounding whitespace.
@@ -5022,6 +5023,12 @@ async function exportLiveCentreImage(){
     const list=match.querySelector('.live-match-body');
     if(pitch&&list){pitch.hidden=view?.hidden??true;list.hidden=!pitch.hidden;}
    });
+   if(parts>1){
+    const cutoff=Math.ceil(count/2);
+    copy.querySelectorAll('.live-match-grid > .live-match').forEach((match,i)=>{if(part===0?i>=cutoff:i<cutoff)match.remove();});
+    const heading=copy.querySelector('.live-comp-heading');
+    if(heading){const suffix=document.createElement('small');suffix.textContent=` · Part ${part+1} of ${parts}`;heading.appendChild(suffix);}
+   }
    grid.appendChild(copy);
    document.body.appendChild(stage);
    try{
@@ -5067,13 +5074,13 @@ async function exportLiveCentreImage(){
   const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:3,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:Math.max(1200,stage.offsetWidth)});
     const link=document.createElement('a');
     const name=section.id.replace(/^live-comp-/,'');
-    link.download='eliza-live-match-centre-'+name+'.png';
+    link.download='eliza-live-match-centre-'+name+(parts>1?'-part-'+(part+1):'')+'.png';
     link.href=canvas.toDataURL('image/png');
     document.body.appendChild(link);link.click();link.remove();
     completed++;
    }finally{stage.remove();}
   }
- }catch(error){console.error('Live match centre export failed:',error);alert(`Exported ${completed} of ${source.length} competitions. Please try again for the remaining images.`);}
+ }catch(error){console.error('Live match centre export failed:',error);alert(`Exported ${completed} of ${jobs.length} images. Please try again for the remaining images.`);}
  finally{button.disabled=false;button.textContent=previous;}
 }
 async function loadLiveCentre(){
