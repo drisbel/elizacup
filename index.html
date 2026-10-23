@@ -8747,6 +8747,7 @@ function ownershipRecordsHtml(teams){
   }
  }
  const transferImpact=[];
+ const weeklyImpact=[];
  for(const [key,records] of byTeam){
   let totalGain=0,transfers=0,rounds=0;
   for(let i=1;i<records.length;i++){
@@ -8758,7 +8759,9 @@ function ownershipRecordsHtml(teams){
    const inPoints=change.ins.map(p=>ownershipFullWeekPoints(p.name,gw));
    const outPoints=change.outs.map(p=>ownershipFullWeekPoints(p.name,gw));
    if([...inPoints,...outPoints].some(v=>v===null))continue;
-   totalGain+=inPoints.reduce((a,b)=>a+b,0)-outPoints.reduce((a,b)=>a+b,0);
+   const gain=inPoints.reduce((a,b)=>a+b,0)-outPoints.reduce((a,b)=>a+b,0);
+   totalGain+=gain;
+   weeklyImpact.push({team:after.name,gw,points:gain,transfers:change.ins.length});
    transfers+=change.ins.length;rounds++;
   }
   if(rounds)transferImpact.push({team:records[records.length-1].name,points:totalGain,transfers,rounds});
@@ -8768,7 +8771,9 @@ function ownershipRecordsHtml(teams){
  const teamCell=name=>`<span class="ownership-ranked-team">${ownershipTeamLogo(name)}<button type="button" class="ownership-player-link" data-owner-team-profile="${liveEscape(name)}">${liveEscape(name)}</button></span>`;
  const playerCell=r=>`<span class="ownership-ranked-team">${ownershipClubLogo(r.club)}<span>${liveEscape(r.player)}</span></span>`;
  const section=(title,rows)=>`<div class="ownership-table-wrap"><h3>${title}</h3><table class="ownership-table"><thead><tr><th>#</th><th>Manager</th><th>Player</th><th>GW</th><th>Points</th></tr></thead><tbody>${rows.sort((a,b)=>b.points-a.points).slice(0,10).map((r,i)=>`<tr><td>${i+1}</td><td>${teamCell(r.team)}</td><td>${playerCell(r)}</td><td><button type="button" class="ownership-player-link" data-ownership-squad="${liveEscape(r.team)}" data-ownership-gw="${r.gw}" title="View GW ${r.gw} squad">GW ${r.gw}</button></td><td>${r.points}</td></tr>`).join('')||'<tr><td colspan="5">More archived weeks needed.</td></tr>'}</tbody></table></div>`;
- return `<p class="ownership-extra-note">Top 10 records from archived squads. Transfer regrets use the player’s points in the immediately following gameweek, where available. Select a gameweek to view the squad.</p><div class="ownership-extra-grid">${impactHtml}${section('Transfer Regrets',regrets)}${section('Best Differential Picks',differentials)}</div>`;
+ const weeklyRows=[...weeklyImpact].sort((a,b)=>b.points-a.points||b.gw-a.gw||a.team.localeCompare(b.team));
+ const weeklyHtml='<div class="ownership-table-wrap"><h3>Transfer Impact — Weekly</h3><p class="ownership-extra-note">Each team’s transfer impact in the gameweek the changes took effect. Only complete recorded scores count.</p><table class="ownership-table"><thead><tr><th>#</th><th>Team</th><th>GW</th><th>Transfers In</th><th>Net Points</th></tr></thead><tbody>'+weeklyRows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="ownership-ranked-team">'+ownershipTeamLogo(r.team)+'<button type="button" class="ownership-player-link" data-owner-team-profile="'+liveEscape(r.team)+'">'+liveEscape(r.team)+'</button></span></td><td><button type="button" class="ownership-player-link" data-ownership-squad="'+liveEscape(r.team)+'" data-ownership-gw="'+r.gw+'">GW '+r.gw+'</button></td><td>'+r.transfers+'</td><td><strong>'+(r.points>0?'+':'')+r.points+'</strong></td></tr>').join('')+'</tbody></table></div>';
+ return `<div class="ownership-extra-grid">${impactHtml}${weeklyHtml}${section('Transfer Regrets',regrets)}${section('Best Differential Picks',differentials)}</div>`;
 }
 function openOwnershipHistoricalSquad(name,gw){
  const team=ownershipAllWeeks().find(t=>liveKey(t.name)===liveKey(name)&&ownershipGw(t)===Number(gw));if(!team)return;
