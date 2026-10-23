@@ -4707,7 +4707,7 @@ function liveCompetitionTheme(id){
  const rgb=hex.length===3?hex.split('').map(c=>parseInt(c+c,16)): [0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
  const linear=rgb.map(v=>{const x=v/255;return x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4)});
  const luminance=.2126*linear[0]+.7152*linear[1]+.0722*linear[2];
- return {background,foreground:luminance>.179?'#000000':'#ffffff'};
+ return {background,foreground:id==='d3a'?'#ffffff':(luminance>.179?'#000000':'#ffffff')};
 }
 function liveKey(v){return String(v||'').replace(/\s*\((?:D(?:IV(?:ISION)?)?\s*)?[123](?:[ABC])?\)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function liveRoundNumber(v){const m=String(v??'').match(/\d+/);return m?Number(m[0]):null;}
