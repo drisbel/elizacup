@@ -3290,35 +3290,35 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .ownership-stats table.ownership-table .ownership-ranked-team{justify-content:flex-start;text-align:left}
 
 
-/* Compact five-column gameweek transfers on narrow screens. */
+/* Gameweek transfers: shared responsive five-column layout. */
+.ownership-gameweek-transfers{min-width:0;width:100%}
+.ownership-gameweek-transfers .ownership-table{width:100%;table-layout:fixed}
+.ownership-gameweek-transfers th,.ownership-gameweek-transfers td{vertical-align:middle;box-sizing:border-box;min-width:0}
+.ownership-gameweek-transfers th:nth-child(1){width:24%}
+.ownership-gameweek-transfers th:nth-child(2){width:8%}
+.ownership-gameweek-transfers th:nth-child(3),.ownership-gameweek-transfers th:nth-child(4){width:27%}
+.ownership-gameweek-transfers th:nth-child(5){width:14%;white-space:normal}
+.ownership-gameweek-transfers .ownership-ranked-team{display:flex;align-items:center;gap:5px;min-width:0;max-width:100%}
+.ownership-gameweek-transfers .ownership-player-link{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ownership-gameweek-transfers .ownership-transfer-player-line{display:flex;align-items:baseline;min-width:0;max-width:100%;white-space:nowrap;line-height:1.6}
+.ownership-gameweek-transfers .ownership-transfer-player-name{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ownership-gameweek-transfers .ownership-transfer-player-score{flex:none;white-space:nowrap;margin-left:4px}
+.ownership-gameweek-transfers td:nth-child(5){text-align:center;font-weight:700}
 @media(max-width:650px){
- .ownership-gameweek-transfers{width:100%;overflow:hidden}
+ .ownership-gameweek-transfers{width:100%;max-width:100%;overflow:hidden}
  .ownership-gameweek-transfers .ownership-table{width:100%;min-width:0;table-layout:fixed;font-size:11px}
- .ownership-gameweek-transfers th,.ownership-gameweek-transfers td{padding:7px 3px;min-width:0!important;overflow:hidden;box-sizing:border-box}
- .ownership-gameweek-transfers th:nth-child(1){width:25%}
- .ownership-gameweek-transfers th:nth-child(2){width:8%}
- .ownership-gameweek-transfers th:nth-child(3),.ownership-gameweek-transfers th:nth-child(4){width:25%}
- .ownership-gameweek-transfers th:nth-child(5){width:17%;white-space:normal}
- .ownership-gameweek-transfers .ownership-ranked-team{display:flex;align-items:center;gap:3px;min-width:0;width:100%}
- .ownership-gameweek-transfers .ownership-ranking-team-logo{width:19px;max-width:19px;height:19px;flex:none}
- .ownership-gameweek-transfers .ownership-player-link{font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
- .ownership-gameweek-transfers td:nth-child(1) .ownership-player-link{max-width:calc(100% - 23px)}
+ .ownership-gameweek-transfers th,.ownership-gameweek-transfers td{padding:7px 2px;min-width:0!important;overflow:hidden}
+ .ownership-gameweek-transfers th:nth-child(1){width:23%}
+ .ownership-gameweek-transfers th:nth-child(2){width:7%}
+ .ownership-gameweek-transfers th:nth-child(3),.ownership-gameweek-transfers th:nth-child(4){width:27%}
+ .ownership-gameweek-transfers th:nth-child(5){width:16%;font-size:10px;white-space:normal}
+ .ownership-gameweek-transfers .ownership-ranked-team{gap:3px;width:100%}
+ .ownership-gameweek-transfers .ownership-ranking-team-logo{width:17px;max-width:17px;height:17px;flex:none}
+ .ownership-gameweek-transfers .ownership-player-link{font-size:11px;min-width:0;display:inline-block;vertical-align:middle}
+ .ownership-gameweek-transfers td:nth-child(1) .ownership-player-link{max-width:calc(100% - 20px)}
  .ownership-gameweek-transfers td:nth-child(2){text-align:center}
- .ownership-gameweek-transfers .ownership-transfer-player-line{display:flex;white-space:nowrap;min-width:0;max-width:100%;line-height:1.65;align-items:baseline;justify-content:flex-start}
- .ownership-gameweek-transfers .ownership-transfer-player-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:0 1 auto}
- .ownership-gameweek-transfers .ownership-transfer-player-score{white-space:nowrap;flex:none}
- .ownership-gameweek-transfers td:nth-child(5){text-align:center;font-weight:700}
+ .ownership-gameweek-transfers .ownership-transfer-player-score{margin-left:4px}
 }
-/* Gameweek transfer rankings: identical column order, room for player names. */
-.ownership-gameweek-transfers{min-width:0}
-.ownership-gameweek-transfers .ownership-table{width:100%;table-layout:auto}
-.ownership-gameweek-transfers th,.ownership-gameweek-transfers td{vertical-align:middle}
-.ownership-gameweek-transfers th:nth-child(3),.ownership-gameweek-transfers th:nth-child(4){white-space:nowrap}
-.ownership-gameweek-transfers td:nth-child(3),.ownership-gameweek-transfers td:nth-child(4){min-width:125px}
-.ownership-transfer-player-line{white-space:nowrap;display:block;line-height:1.6}
-.ownership-gameweek-transfers .ownership-ranked-team{min-width:0}
-.ownership-gameweek-transfers .ownership-player-link{max-width:100%}
-.ownership-gameweek-transfers .ownership-table-wrap{overflow-x:auto}
 </style>
 
 <style>
