@@ -4767,7 +4767,19 @@ function liveSubstitutionBadge(p){
  if(!status)return '';
  return `<span class="live-sub-badge live-sub-${status}" title="${status==='on'?'Subbed on':'Subbed off'}" aria-label="${status==='on'?'Subbed on':'Subbed off'}">${status==='on'?'↑':'↓'}</span>`;
 }
-function livePlayerIdentity(p){return liveKey(p?.name||'')+'|'+liveCaptainKey(p);}
+function liveCaptainHasScored(squad){
+ const captain=liveSquadLineup(squad,false).starters.find(p=>liveCaptainKey(p)==='C');
+ if(!captain)return false;
+ const status=liveMatchStatusInfo(captain).kind;
+ return ['live','ft'].includes(status)&&String(captain.points??'').trim()!==''&&Number.isFinite(Number(String(captain.points).replace(/,/g,'')));
+}
+function livePlayerIdentity(p,squad){
+ // Once the starting captain has scored, the vice-captain cannot be activated.
+ // Treat that VC as an ordinary player for common/unique comparisons.
+ const captaincy=liveCaptainKey(p);
+ const effective= captaincy==='VC'&&liveCaptainHasScored(squad)?'':captaincy;
+ return liveKey(p?.name||'')+'|'+effective;
+}
 // A-League crests stored alongside the Eliza Cup team crests.
 function liveALeagueLogo(club){
  const key=String(club||'').trim().toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'');
@@ -4879,12 +4891,12 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
  const items=t.players||[];
  // Shared starting players with identical captaincy are muted on both sides.
  // Different captaincy is a meaningful differential, even for the same player.
- const otherStarting=new Set(liveSquadLineup(other,preRound).starters.map(livePlayerIdentity));
+ const otherStarting=new Set(liveSquadLineup(other,preRound).starters.map(p=>livePlayerIdentity(p,other)));
  const group=(players)=>`${players.map(p=>{
   const cap=String(p.captain||'').trim();
   const badge=cap?`<b class="live-captain${liveCaptainKey(p)==='VC'?' vice':''}" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
   const subBadge=preRound?'':liveSubstitutionBadge(p);
-  const shared=(preRound?!p.bench:!liveEffectiveBench(p))&&otherStarting.has(livePlayerIdentity(p));
+  const shared=(preRound?!p.bench:!liveEffectiveBench(p))&&otherStarting.has(livePlayerIdentity(p,t));
   const crest=liveALeagueLogo(p.club);
   const opponent=liveEscape(livePlayerFixtureOpponent(fixtureGw,p.club));
    const status=livePlayerStatusMarkup(p,t,historical);
@@ -4899,8 +4911,8 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
  const byClub=players=>[...players].sort((a,b)=>
   liveFixtureClubRank(fixtureGw,a.club)-liveFixtureClubRank(fixtureGw,b.club));
  const {starters,bench}=liveSquadLineup(t,preRound);
- const unique=starters.filter(p=>!otherStarting.has(livePlayerIdentity(p)));
- const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p)));
+ const unique=starters.filter(p=>!otherStarting.has(livePlayerIdentity(p,t)));
+ const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p,t)));
  return group(title==='bench'?bench:[...byClub(unique),...byClub(common)]);
 }
 function liveHeaderProgressHtml(t){
@@ -4915,8 +4927,8 @@ function liveMatchDecided(a,b){
  if(!liveScoresAvailable()||!liveSquadHasCurrentScores(a)||!liveSquadHasCurrentScores(b))return false;
  const left=liveSquadLineup(a,false).starters,right=liveSquadLineup(b,false).starters;
  if(!left.length||!right.length)return false;
- const leftIds=new Set(left.map(livePlayerIdentity)),rightIds=new Set(right.map(livePlayerIdentity));
- const unique=[...left.filter(p=>!rightIds.has(livePlayerIdentity(p))),...right.filter(p=>!leftIds.has(livePlayerIdentity(p)))];
+ const leftIds=new Set(left.map(p=>livePlayerIdentity(p,a))),rightIds=new Set(right.map(p=>livePlayerIdentity(p,b)));
+ const unique=[...left.filter(p=>!rightIds.has(livePlayerIdentity(p,a))),...right.filter(p=>!leftIds.has(livePlayerIdentity(p,b)))];
  return unique.every(p=>['ft','dnp','bye'].includes(liveMatchStatusInfo(p).kind)||liveSubstitutionStatus(p)==='off');
 }
 function liveMatchHtml(f){
