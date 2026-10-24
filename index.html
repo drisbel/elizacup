@@ -2059,6 +2059,9 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   .live-players .live-bench td{opacity:.65}
   .live-note{padding:14px 16px;border:1px solid var(--line-light);background:#fff;border-radius:7px;margin-bottom:15px;font-size:13px;line-height:1.5}
 
+/* Decided matchup: gold scores with the winner underlined. */
+.live-comp-section .live-match-score.live-match-decided{color:#ffdd00!important}
+.live-comp-section .live-match-score.live-match-decided .live-match-winner{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
 /* Compact two-column Live Match Centre, inspired by FPL matchup cards. */
 .live-match-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .live-comp-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:12px;scrollbar-width:thin}
@@ -4907,6 +4910,15 @@ function liveHeaderProgressHtml(t){
  const played=captain&&['live','ft'].includes(liveMatchStatusInfo(captain).kind);
  return `<span class="live-header-progress"><span class="live-header-captain${played?' is-started':''}" title="${played?'Captain playing or played':'Captain yet to play'}">C</span><span class="live-header-remaining">${playedCount}/11</span></span>`;
 }
+// Only final statuses qualify: a live or unknown unique player keeps the match open.
+function liveMatchDecided(a,b){
+ if(!liveScoresAvailable()||!liveSquadHasCurrentScores(a)||!liveSquadHasCurrentScores(b))return false;
+ const left=liveSquadLineup(a,false).starters,right=liveSquadLineup(b,false).starters;
+ if(!left.length||!right.length)return false;
+ const leftIds=new Set(left.map(livePlayerIdentity)),rightIds=new Set(right.map(livePlayerIdentity));
+ const unique=[...left.filter(p=>!rightIds.has(livePlayerIdentity(p))),...right.filter(p=>!leftIds.has(livePlayerIdentity(p)))];
+ return unique.every(p=>['ft','dnp','bye'].includes(liveMatchStatusInfo(p).kind)||liveSubstitutionStatus(p)==='off');
+}
 function liveMatchHtml(f){
  const a=liveFindTeam(f.a),b=liveFindTeam(f.b);
  const preRound=!liveScoresAvailable();
@@ -4915,9 +4927,12 @@ function liveMatchHtml(f){
  const round=liveRoundLabels[f.comp]||'';
  const theme=liveCompetitionTheme(f.comp);
  const themed=`background:${theme.background};color:${theme.foreground}`;
+ const decided=liveMatchDecided(a,b);
+ const scoreA=Number(a?.score),scoreB=Number(b?.score);
+ const winner=decided&&Number.isFinite(scoreA)&&Number.isFinite(scoreB)?(scoreA>scoreB?'left':scoreB>scoreA?'right':'draw'):'';
  return `<details class="live-match"><summary class="live-match-summary"><div class="live-match-head" style="${themed}">
  <div class="live-match-name live-match-left"><span title="${liveEscape(f.a)}">${liveEscape(f.a)}</span><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.visibility='hidden'">${liveScoresAvailable()?liveHeaderProgressHtml(a):''}</div>
- ${liveScoresAvailable()?`<strong class="live-match-score"><span>${liveEscape(liveSquadHasCurrentScores(a)?(a?.score??'—'):'—')}</span><span class="live-score-dash">–</span><span>${liveEscape(liveSquadHasCurrentScores(b)?(b?.score??'—'):'—')}</span></strong>`:`<strong class="live-match-score live-match-versus" aria-label="versus">v</strong>`}
+ ${liveScoresAvailable()?`<strong class="live-match-score${decided?' live-match-decided':''}" ${decided?'title="Match decided: no unique players remaining"':''}><span class="${winner==='left'?'live-match-winner':''}">${liveEscape(liveSquadHasCurrentScores(a)?(a?.score??'—'):'—')}</span><span class="live-score-dash">–</span><span class="${winner==='right'?'live-match-winner':''}">${liveEscape(liveSquadHasCurrentScores(b)?(b?.score??'—'):'—')}</span></strong>`:`<strong class="live-match-score live-match-versus" aria-label="versus">v</strong>`}
  <div class="live-match-name live-match-right">${liveScoresAvailable()?liveHeaderProgressHtml(b):''}<img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.visibility='hidden'"><span title="${liveEscape(f.b)}">${liveEscape(f.b)}</span></div>
  </div></summary>${!liveScoresAvailable()?`<div class="live-predeadline-notice" role="status">PRE-DEADLINE · Teams are not live until the deadline. Lineups shown are provisional; player scores will appear once current-gameweek scoring begins.</div>`:""}<div class="live-match-detail live-match-body"><div class="live-lineup-label live-lineup-wide">Starting XI</div><div class="live-match-side">${livePlayerHtml(a,b,false,'starters',preRound)}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'starters',preRound)}</div><div class="live-lineup-label live-lineup-wide">Bench</div><div class="live-match-side">${livePlayerHtml(a,b,false,'bench',preRound)}</div><div class="live-match-side">${livePlayerHtml(b,a,true,'bench',preRound)}</div></div><div class="live-match-detail live-pitch-grid" style="--live-theme:${theme.background}" hidden><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.a))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.a)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(a,preRound)||'<div class="live-no-data">Awaiting team export</div>'}</div></div><div class="live-formation-side"><div class="live-formation-side-title"><img src="${liveEscape(logo(f.b))}" alt="" onerror="this.style.display='none'"><span>${liveEscape(f.b)}</span></div><div class="live-formation-pitch-wrap">${clubSquadHtml(b,preRound)||'<div class="live-no-data">Awaiting team export</div>'}</div></div></div><div class="live-view-controls" role="group" aria-label="Matchup view"><span class="live-view-caption">DISPLAY</span><button type="button" class="live-view-btn active" data-view="list">List</button><button type="button" class="live-view-btn" data-view="pitch">Pitch</button></div></details>`;
 }
