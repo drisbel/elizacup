@@ -5106,7 +5106,7 @@ async function loadLiveCentre(){
    const cell=row.c?.[i];return cell?String(cell.f??cell.v??'').trim():'';
   }));
  };
- const ranges={d1:['D8:P14',13],d2a:['D17:P22',13],d2b:['D25:P30',13],d3a:['D33:P39',13],d3b:['D42:P48',13],facup:['Y10:AH38',10],ecl:['Y42:AH47',10]};
+ const ranges={d1:['D8:P14',13],d2a:['D17:P22',13],d2b:['D25:P30',13],d3a:['D33:P39',13],d3b:['D42:P48',13],facup:['Y10:AH41',10],ecl:['Y42:AH47',10]};
  const fetchFixtureBlocks=async()=>{
   const entries=await Promise.all(Object.entries(ranges).map(async([key,[range,width]])=>[key,await fetchGridRange(range,width)]));
   const [round,roundLabels]=await Promise.all([fetchGridRange('X5:X5',1),fetchGridRange('AR7:AS15',2)]);
