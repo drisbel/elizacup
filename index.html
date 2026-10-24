@@ -13965,14 +13965,36 @@ function renderAleagueLms(data, containerId){
 
   const round = data.rounds[aleagueLmsActiveRoundIdx];
   const lmsLivesByName = new Map(data.playerSummary.map(p => [String(p.name).trim().toLowerCase(), p]));
-  const rowsHtml = round.entries.map(e => {
+  // Highest remaining lives first; within each lives group, follow the round's fixture order.
+  const fixtureOrder = new Map();
+  (round.fixtures || []).forEach((f,i) => {
+    [f.home,f.away].forEach(team => {
+      const key = normalizeLmsText(team);
+      if(key && !fixtureOrder.has(key)) fixtureOrder.set(key,i);
+    });
+  });
+  const orderedEntries = [...round.entries].sort((a,b) => {
+    const lives = e => {
+      const summary = lmsLivesByName.get(String(e.name).trim().toLowerCase());
+      return summary ? Math.max(0,Number(summary.lives)||0) : 0;
+    };
+    const lifeDiff = lives(b)-lives(a);
+    if(lifeDiff) return lifeDiff;
+    const fixtureIndex = e => {
+      const pick = normalizeLmsText(e.pick);
+      const opponent = normalizeLmsText(e.opponent);
+      return fixtureOrder.get(pick) ?? fixtureOrder.get(opponent) ?? Number.MAX_SAFE_INTEGER;
+    };
+    return fixtureIndex(a)-fixtureIndex(b);
+  });
+  const rowsHtml = orderedEntries.map(e => {
     const isEliminated = /^ELIMINATED/i.test(e.pick);
     const isDnp = /^DNP$/i.test(e.pick);
     const isAwaitingTip = /AWAITING\s+TIP/i.test(String(e.pick || ""));
     const isEntered = e.pick && !isEliminated && !isDnp && !isAwaitingTip;
     const hasResult = e.result === "WIN" || e.result === "LOSS" || e.result === "DRAW";
     const pickClass = isEliminated ? ' eliminated' : (isDnp || isAwaitingTip) ? ' awaiting' : isEntered ? ' entered' : '';
-    const pickIcon = (isDnp || isAwaitingTip) ? '⚠ ' : (isEntered && !hasResult) ? '✓ ' : '';
+    const pickIcon = (isDnp || isAwaitingTip) ? '⚠ ' : '';
     const isBadOutcome = e.result === "LOSS" || e.result === "DRAW" || isDnp;
     const resultColor = e.result === "WIN" ? "#166534" : isBadOutcome ? "#991b1b" : "#000";
     const cardStyle = isAwaitingTip ? "background:#fff4d6;border-color:#b45309;" : isEliminated ? "background:#d1d5db;border-color:#6b7280;"
