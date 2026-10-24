@@ -4771,7 +4771,7 @@ function liveCaptainHasScored(squad){
  const captain=liveSquadLineup(squad,false).starters.find(p=>liveCaptainKey(p)==='C');
  if(!captain)return false;
  const status=liveMatchStatusInfo(captain).kind;
- return ['live','ft'].includes(status)&&String(captain.points??'').trim()!==''&&Number.isFinite(Number(String(captain.points).replace(/,/g,'')));
+ return ['live','ft'].includes(status)&&String(captain.points??'').trim()!==''&&Number.isFinite(Number(String(captain.points).replace(/,/g,'')))&&Number(String(captain.points).replace(/,/g,''))>0;
 }
 function livePlayerIdentity(p,squad){
  // Once the starting captain has scored, the vice-captain cannot be activated.
