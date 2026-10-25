@@ -3374,6 +3374,14 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .my-team-fixture{min-width:0}
 .my-team-competition{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 5px}
 .my-team-fixture .live-match{width:100%}
+/* My Team scoreboard: two fixtures per row on desktop; keep competition headings and match cards unchanged. */
+@media(min-width:901px){
+ .my-team-scores .live-all-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+ .my-team-scores .live-comp-section{min-width:0}
+ .my-team-scores .live-comp-section .live-match-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+ .my-team-scores .live-comp-section .live-match-grid:has(> .live-match:only-child){grid-template-columns:minmax(0,1fr)}
+ .my-team-scores .live-comp-section .live-match{min-width:0}
+}
 @media(max-width:600px){.my-team-scores .live-all-sections{grid-template-columns:minmax(0,1fr)}}
 
 /* Division PNG exports only: larger text, existing colours and layouts retained. */
