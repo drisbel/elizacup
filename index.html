@@ -15542,7 +15542,7 @@ async function exportFACupQualified(idx){
  const titleLogo=document.createElement('img');
  titleLogo.src='logo/fa-cup-logo.png';
  titleLogo.alt='FA Cup';
- titleLogo.style.cssText='width:58px;height:58px;object-fit:contain;flex:0 0 58px;';
+ titleLogo.style.cssText='display:block;width:auto;height:auto;max-width:58px;max-height:58px;object-fit:contain;flex:none;';
  title.style.cssText+='display:flex;align-items:center;justify-content:center;gap:18px;';
  title.appendChild(titleLogo);
  const titleText=document.createElement('span');titleText.textContent='ELIZA FA CUP · '+round.name+' · QUALIFIED TEAMS';title.appendChild(titleText);
@@ -15553,7 +15553,7 @@ async function exportFACupQualified(idx){
   const head=document.createElement('div');head.style.cssText='text-align:center;font-size:23px;font-weight:900;padding:12px 3px;border-bottom:2px solid rgba(255,255,255,.5);';head.textContent=group.label+' ('+group.teams.length+')';col.appendChild(head);
   for(const team of group.teams){
    const line=document.createElement('div');line.style.cssText='display:flex;align-items:center;gap:7px;min-height:48px;padding:5px 6px;';
-   const img=document.createElement('img');img.src='logo/'+teamLogoSlug(team.name)+'.png';img.style.cssText='width:35px;height:35px;object-fit:contain;flex:0 0 35px;';img.onerror=()=>{if(!img.dataset.fallback){img.dataset.fallback='1';img.src=teamPlaceholderLogoDataUri(team.name);}};line.appendChild(img);
+   const img=document.createElement('img');img.src='logo/'+teamLogoSlug(team.name)+'.png';img.style.cssText='display:block;width:auto;height:auto;max-width:35px;max-height:35px;object-fit:contain;flex:none;';img.onerror=()=>{if(!img.dataset.fallback){img.dataset.fallback='1';img.src=teamPlaceholderLogoDataUri(team.name);}};const logoBox=document.createElement('div');logoBox.style.cssText='width:35px;height:35px;flex:0 0 35px;display:flex;align-items:center;justify-content:center;min-width:0;';logoBox.appendChild(img);line.appendChild(logoBox);
    const name=document.createElement('span');name.textContent=team.name;name.style.cssText='font-size:17px;line-height:1.12;font-weight:600;overflow-wrap:anywhere;';line.appendChild(name);col.appendChild(line);
   }
   cols.appendChild(col);
