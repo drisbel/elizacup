@@ -6577,7 +6577,7 @@ async function exportDivisionImage(kind, style){
     outer.style.setProperty('padding','0','important');
     outer.style.setProperty('border','0','important');
     outer.style.setProperty('box-shadow','none','important');
-    outer.style.width=style==='social'?'1820px':'1750px';
+    outer.style.width=style==='social'?'1940px':'1870px';
     body.style.setProperty('padding','0','important');
     body.style.setProperty('border','0','important');
     body.style.setProperty('border-radius','0','important');
@@ -6594,18 +6594,18 @@ async function exportDivisionImage(kind, style){
       table.style.setProperty('box-shadow','none','important');
       table.style.setProperty('border-collapse','collapse','important');
       table.querySelectorAll('tr').forEach(tr=>Array.from(tr.children).forEach((cell,i)=>{
-        const widths=[65,82,490,85,78,78,78,95,95,100,150,300];
+        const widths=[72,92,520,95,85,85,85,105,105,110,150,300];
         cell.style.setProperty('width',widths[i]+'px','important');
         cell.style.setProperty('min-width',widths[i]+'px','important');
         cell.style.setProperty('max-width',widths[i]+'px','important');
-        cell.style.setProperty('font-size',cell.tagName==='TH'?'20px':'23px','important');
+        cell.style.setProperty('font-size',cell.tagName==='TH'?'22px':(i===10||i===11?'23px':'27px'),'important');
         cell.style.setProperty('white-space','nowrap','important');
         cell.style.setProperty('overflow','visible','important');
         cell.style.setProperty('border-left','0','important');
         cell.style.setProperty('border-right','0','important');
       }));
       table.querySelectorAll('tbody td:nth-child(3) a,tbody td:nth-child(3) .team-link,tbody td.next-opp a').forEach(el=>{
-        el.style.setProperty('font-size','23px','important');
+        el.style.setProperty('font-size','27px','important');
         el.style.setProperty('white-space','nowrap','important');
         el.style.setProperty('max-width','none','important');
         el.style.setProperty('overflow','visible','important');
@@ -6618,6 +6618,7 @@ async function exportDivisionImage(kind, style){
         el.style.setProperty('max-height','none','important');
         el.style.setProperty('max-width','none','important');
       });
+      table.querySelectorAll('tbody td:not(:nth-child(11)):not(:nth-child(12)) span,tbody td:not(:nth-child(11)):not(:nth-child(12)) strong').forEach(el=>{if(!el.closest('.form-pill,.form-row,.export-team-crest-slot'))el.style.setProperty('font-size','27px','important');});
       table.querySelectorAll('.form-pill,.form-row span').forEach(el=>{
         el.style.setProperty('font-size','9px','important');
         el.style.setProperty('line-height','1','important');
