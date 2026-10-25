@@ -15542,8 +15542,9 @@ async function exportFACupQualified(idx){
    const img=document.createElement('img');img.src='logo/'+teamLogoSlug(team.name)+'.png';img.style.cssText='width:35px;height:35px;object-fit:contain;flex:0 0 35px;';img.onerror=()=>{if(!img.dataset.fallback){img.dataset.fallback='1';img.src=teamPlaceholderLogoDataUri(team.name);}};line.appendChild(img);
    const name=document.createElement('span');name.textContent=team.name;name.style.cssText='font-size:17px;line-height:1.12;font-weight:600;overflow-wrap:anywhere;';line.appendChild(name);col.appendChild(line);
   }
-  stage.appendChild(col);
+  cols.appendChild(col);
  }
+ stage.appendChild(cols);
  document.body.appendChild(stage);
  try{
   await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,2500);})));
