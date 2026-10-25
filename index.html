@@ -15499,6 +15499,59 @@ function renderHome(){
 let facupViewMode = "rounds";
 let facupBracketSelectedTeam = null;
 
+// Qualified entrants image for each FA Cup round after the opening round.
+function facupQualifiedTeams(idx){
+ const current=facupRounds[idx],previous=facupRounds[idx-1];if(!current||!previous)return [];
+ const valid=t=>t&&t.name&&!/^(?:TBD|BYE|TBC|UNKNOWN|WINNER(?: OF)?(?: MATCH)?\\s*\\d*)$/i.test(t.name.trim());
+ const winners=[];
+ for(const f of previous.fixtures){
+  let t=null;
+  if(f.isBye)t=f.byeSide==='home'?f.away:f.home;
+  else if(f.homeScore!==null&&f.awayScore!==null&&f.homeScore!==f.awayScore)t=f.homeScore>f.awayScore?f.home:f.away;
+  if(valid(t))winners.push(t);
+ }
+ const currentNames=new Map();
+ for(const f of current.fixtures)for(const t of [f.home,f.away])if(valid(t))currentNames.set(liveKey(t.name),t);
+ const qualified=new Map();
+ // Current-round entrants are authoritative; previous-round winners provide
+ // confirmation while avoiding premature qualification of undecided fixtures.
+ for(const t of winners){const key=liveKey(t.name);qualified.set(key,currentNames.get(key)||t);}
+ for(const [key,t] of currentNames)qualified.set(key,t);
+ return [...qualified.values()];
+}
+async function exportFACupQualified(idx){
+ const round=facupRounds[idx];if(!round||idx<1)return;
+ if(typeof html2canvas!=='function'){alert('Image exporter is unavailable. Please try again.');return;}
+ const teams=facupQualifiedTeams(idx);if(!teams.length){alert('No qualified teams are available for this round yet.');return;}
+ const divs=[['D1','ELIZA CUP','#20447e'],['2A','DIVISION 2A','#d32329'],['2B','DIVISION 2B','#ad0b0d'],['3A','DIVISION 3A','#4baa32'],['3B','DIVISION 3B','#245600']];
+ const norm=d=>String(d||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^DIVISION/,'').replace(/^DIV/,'').replace(/^D(?=[123])/,'');
+ const groups=divs.map(([id,label,color])=>({id,label,color,teams:teams.filter(t=>norm(t.division)===norm(id)).sort((a,b)=>a.name.localeCompare(b.name))}));
+ const unknown=teams.filter(t=>!divs.some(([id])=>norm(t.division)===norm(id)));
+ if(unknown.length)groups.push({id:'other',label:'OTHER',color:'#475569',teams:unknown});
+ const stage=document.createElement('div');stage.className='facup-qualified-export';
+ stage.style.cssText='position:fixed;left:-15000px;top:0;width:1400px;background:#080a10;color:#fff;padding:12px;box-sizing:border-box;z-index:-1;font-family:Barlow,Arial,sans-serif;';
+ const title=document.createElement('div');title.style.cssText='background:#0a3286;border:3px solid #f8d200;text-align:center;padding:18px 12px;font-size:35px;font-weight:900;text-transform:uppercase;';
+ title.textContent='ELIZA FA CUP · '+round.name+' · QUALIFIED TEAMS';
+ stage.appendChild(title);
+ const cols=document.createElement('div');cols.style.cssText='display:grid;grid-template-columns:repeat('+groups.length+',minmax(0,1fr));align-items:start;gap:3px;background:#f8d200;padding:0 3px 3px;';
+ for(const group of groups){
+  const col=document.createElement('div');col.style.cssText='background:'+group.color+';min-width:0;min-height:80px;';
+  const head=document.createElement('div');head.style.cssText='text-align:center;font-size:23px;font-weight:900;padding:12px 3px;border-bottom:2px solid rgba(255,255,255,.5);';head.textContent=group.label+' ('+group.teams.length+')';col.appendChild(head);
+  for(const team of group.teams){
+   const line=document.createElement('div');line.style.cssText='display:flex;align-items:center;gap:7px;min-height:48px;padding:5px 6px;';
+   const img=document.createElement('img');img.src='logo/'+teamLogoSlug(team.name)+'.png';img.style.cssText='width:35px;height:35px;object-fit:contain;flex:0 0 35px;';img.onerror=()=>{if(!img.dataset.fallback){img.dataset.fallback='1';img.src=teamPlaceholderLogoDataUri(team.name);}};line.appendChild(img);
+   const name=document.createElement('span');name.textContent=team.name;name.style.cssText='font-size:17px;line-height:1.12;font-weight:600;overflow-wrap:anywhere;';line.appendChild(name);col.appendChild(line);
+  }
+  stage.appendChild(col);
+ }
+ document.body.appendChild(stage);
+ try{
+  await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,2500);})));
+  if(document.fonts?.ready)await document.fonts.ready;
+  const canvas=await html2canvas(stage,{backgroundColor:'#080a10',scale:2,useCORS:true,allowTaint:false,logging:false,windowWidth:1400});
+  const a=document.createElement('a');a.download='eliza-fa-cup-'+round.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-qualified.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
+ }catch(err){console.error('FA Cup qualified teams export failed',err);alert('Unable to export qualified teams.');}finally{stage.remove();}
+}
 function renderFACup(){
   const tabsEl = document.getElementById('facupRoundTabs');
   const toggleEl = document.getElementById('facupViewToggle');
@@ -15550,6 +15603,15 @@ function renderFACup(){
     });
   });
   tabsEl.firstChild.classList.add('active');
+  // Compact export control follows the selected round without affecting fixture exports.
+  const exportBtn=document.createElement('button');exportBtn.type='button';exportBtn.className='side-export-button';
+  exportBtn.style.cssText='font-size:11px;padding:5px 9px;margin-left:5px;align-self:center;';
+  exportBtn.textContent='↓ Qualified PNG';exportBtn.title='Export qualified teams grouped by division';
+  const updateExport=()=>{const idx=Number(tabsEl.querySelector('.round-tab.active')?.dataset.idx)||0;exportBtn.hidden=idx===0;exportBtn.disabled=idx===0;};
+  exportBtn.addEventListener('click',()=>exportFACupQualified(Number(tabsEl.querySelector('.round-tab.active')?.dataset.idx)||0));
+  tabsEl.appendChild(exportBtn);
+  tabsEl.querySelectorAll('.round-tab').forEach(btn=>btn.addEventListener('click',updateExport));
+  updateExport();
   renderFACupRound(0);
 }
 
