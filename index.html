@@ -92,6 +92,23 @@
      kind of positioning context as .top-inner. */
   .top-nav-bar-inner .header-icon-actions{position:static;margin-left:auto;flex-shrink:0;}
 
+  /* Keep desktop navigation clear of the extra My Team action.
+     Links may scroll at constrained widths; the three action icons stay visible. */
+  @media (min-width:901px) and (max-width:1500px){
+    .top-nav-bar-inner{padding-left:16px;padding-right:16px;gap:12px;}
+    .top-nav-bar-brand{gap:7px;font-size:19px;}
+    .top-nav-bar-brand img{height:27px;}
+    .top-nav-bar-links{gap:0;overflow-x:auto;overflow-y:visible;scrollbar-width:none;overscroll-behavior-x:contain;}
+    .top-nav-bar-links::-webkit-scrollbar{display:none;}
+    .top-nav-bar-links .div-tab{padding:9px 8px;font-size:12.5px;}
+    .top-nav-bar-inner .header-icon-actions{gap:5px;}
+  }
+  @media (min-width:901px) and (max-width:1100px){
+    .top-nav-bar-inner{gap:9px;padding-left:10px;padding-right:10px;}
+    .top-nav-bar-brand{font-size:17px;}
+    .top-nav-bar-links .div-tab{padding:9px 6px;font-size:12px;}
+  }
+
   /* ---------- Header removal (all screen sizes) ---------- */
   /* The big gradient hero header is fully retired everywhere — the sticky
      top nav bar (desktop) / mobile top bar (mobile) plus each page's own
