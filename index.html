@@ -15532,9 +15532,15 @@ async function exportFACupQualified(idx){
  const stage=document.createElement('div');stage.className='facup-qualified-export';
  stage.style.cssText='position:fixed;left:-15000px;top:0;width:1400px;background:#080a10;color:#fff;padding:12px;box-sizing:border-box;z-index:-1;font-family:Barlow,Arial,sans-serif;';
  const title=document.createElement('div');title.style.cssText='background:#0a3286;border:3px solid #f8d200;text-align:center;padding:18px 12px;font-size:35px;font-weight:900;text-transform:uppercase;';
- title.textContent='ELIZA FA CUP · '+round.name+' · QUALIFIED TEAMS';
+ const titleLogo=document.createElement('img');
+ titleLogo.src='logo/fa-cup-logo.png';
+ titleLogo.alt='FA Cup';
+ titleLogo.style.cssText='width:58px;height:58px;object-fit:contain;flex:0 0 58px;';
+ title.style.cssText+='display:flex;align-items:center;justify-content:center;gap:18px;';
+ title.appendChild(titleLogo);
+ const titleText=document.createElement('span');titleText.textContent='ELIZA FA CUP · '+round.name+' · QUALIFIED TEAMS';title.appendChild(titleText);
  stage.appendChild(title);
- const cols=document.createElement('div');cols.style.cssText='display:grid;grid-template-columns:repeat('+groups.length+',minmax(0,1fr));align-items:start;gap:3px;background:#f8d200;padding:0 3px 3px;';
+ const cols=document.createElement('div');cols.style.cssText='display:grid;grid-template-columns:repeat('+groups.length+',minmax(0,1fr));align-items:start;gap:3px;background:#080a10;padding:0 3px 3px;';
  for(const group of groups){
   const col=document.createElement('div');col.style.cssText='background:'+group.color+';min-width:0;min-height:80px;';
   const head=document.createElement('div');head.style.cssText='text-align:center;font-size:23px;font-weight:900;padding:12px 3px;border-bottom:2px solid rgba(255,255,255,.5);';head.textContent=group.label+' ('+group.teams.length+')';col.appendChild(head);
@@ -15606,8 +15612,8 @@ function renderFACup(){
   const exportBtn=document.createElement('button');
   exportBtn.type='button';
   exportBtn.className='social-export-download facup-qualified-download';
-  exportBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;';
-  exportBtn.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>';
+  exportBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:54px;padding:5px 8px;white-space:nowrap;gap:4px;';
+  exportBtn.textContent='QUAL';
   exportBtn.title='Download qualified teams PNG for selected round';
   exportBtn.setAttribute('aria-label','Download qualified teams PNG for selected round');
   const updateExport=()=>{
