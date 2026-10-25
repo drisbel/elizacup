@@ -15605,10 +15605,11 @@ function renderFACup(){
   tabsEl.innerHTML=facupRounds.map((r,i)=>`<button type="button" class="round-tab${i===selectedIndex?' active':''}" data-idx="${i}">${r.name}</button>`).join("");
   const exportBtn=document.createElement('button');
   exportBtn.type='button';
-  exportBtn.className='side-export-button facup-qualified-download';
-  exportBtn.style.cssText='font-size:11px;padding:5px 9px;margin-left:8px;display:inline-flex;align-items:center;white-space:nowrap;';
-  exportBtn.textContent='↓ Qualified Teams PNG';
-  exportBtn.title='Download the qualified teams for the selected FA Cup round';
+  exportBtn.className='social-export-download facup-qualified-download';
+  exportBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;';
+  exportBtn.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>';
+  exportBtn.title='Download qualified teams PNG for selected round';
+  exportBtn.setAttribute('aria-label','Download qualified teams PNG for selected round');
   const updateExport=()=>{
     const idx=facupSelectedRoundIndex;
     exportBtn.hidden=idx===0;
@@ -15618,7 +15619,7 @@ function renderFACup(){
   exportBtn.addEventListener('click',()=>exportFACupQualified(facupSelectedRoundIndex));
   // Keep the download control beside the Rounds/Bracket switch, not hidden
   // at the far end of the horizontally scrolling round tabs.
-  toggleEl.appendChild(exportBtn);
+  document.getElementById('facupHeadingExport')?.appendChild(exportBtn);
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click',()=>{
       facupSelectedRoundIndex=Number(btn.dataset.idx);
