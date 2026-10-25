@@ -4756,8 +4756,13 @@ function liveUpdateRoundScoringState(){
  const observed=statuses.some(s=>s.kind==='live'||s.kind==='pending');
  let previously=false;
  try{previously=sessionStorage.getItem(liveRoundStartKey())==='1';}catch(e){}
- liveRoundScoringStarted=!!(gw!==null && squads.length && (observed||previously));
- if(observed){try{sessionStorage.setItem(liveRoundStartKey(),'1');}catch(e){}}
+ // Completed rounds contain final FT/DNP/BYE player statuses and valid scores.
+// Those are sufficient evidence that the round started, even in a new browser
+// session. Do not treat an all-final round as a pre-round state.
+ const completed=statuses.length>0&&statuses.every(x=>['ft','dnp','bye'].includes(x.kind))&&statuses.some(x=>x.kind==='ft');
+ const hasPublishedScore=squads.some(t=>String(t.score??'').trim()!==''&&Number.isFinite(Number(t.score)));
+ liveRoundScoringStarted=!!(gw!==null && squads.length && (observed||previously||(completed&&hasPublishedScore)));
+ if(observed||(completed&&hasPublishedScore)){try{sessionStorage.setItem(liveRoundStartKey(),'1');}catch(e){}}
 }
 function liveSquadHasCurrentScores(t){
  return !!(liveRoundScoringStarted&&t&&liveRoundNumber(t.gameweek)===liveRoundNumber(liveCurrentRound));
