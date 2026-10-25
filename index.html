@@ -5255,6 +5255,15 @@ async function exportLiveCentreImage(){
     const heading=copy.querySelector('.live-comp-heading');
     if(heading){const suffix=document.createElement('small');suffix.textContent=` · Part ${part+1} of ${parts}`;heading.appendChild(suffix);}
    }
+   // Match the on-site score underline in html2canvas exports. CSS text-decoration
+   // is rendered too thin and too close to the glyphs by the canvas renderer.
+   copy.querySelectorAll('.live-match-score .live-match-winner, .live-match-score .live-match-protected').forEach(score=>{
+    score.style.setProperty('text-decoration','none','important');
+    score.style.setProperty('border-bottom','2px solid currentColor','important');
+    score.style.setProperty('padding-bottom','3px','important');
+    score.style.setProperty('display','inline-block','important');
+    score.style.setProperty('line-height','1','important');
+   });
    grid.appendChild(copy);
    document.body.appendChild(stage);
    try{
