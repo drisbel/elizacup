@@ -919,7 +919,8 @@
   table.roddy-table td.roddy-team{
     white-space:normal; word-break:break-word; text-align:left; font-weight:600; min-width:170px;
   }
-  table.roddy-table th:nth-child(2){text-align:left;}
+  table.roddy-table th:nth-child(3){text-align:left;}
+  table.roddy-table th.league-change-col,table.roddy-table td.league-change-col{width:44px;min-width:44px;max-width:44px;text-align:center;padding-left:2px;padding-right:2px;}
   .roddy-div-tag{
     display:inline-block; color:#fff; font-size:10px; font-weight:600;
     padding:3px 7px; border-radius:10px; white-space:nowrap;
@@ -2686,7 +2687,11 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .roddy-export-stage .re-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
 .roddy-export-stage .roddy-export-table{border-collapse:collapse;table-layout:fixed;width:100%;background:white;font-size:14px;border:1px solid #dbe3f0}
 .roddy-export-stage .roddy-export-table th{background:#e5ebf5;color:#243958;font-size:10px;letter-spacing:.3px;text-align:center;padding:7px 3px;white-space:nowrap}
-.roddy-export-stage .roddy-export-table th:nth-child(2){text-align:left;padding-left:9px}
+.roddy-export-stage .roddy-export-table th:nth-child(3){text-align:left;padding-left:9px}
+.roddy-export-stage .roddy-export-table .re-change{padding:3px 1px}
+.roddy-export-stage .roddy-export-table .re-change .league-change{display:inline-flex;align-items:center;justify-content:center;gap:2px}
+.roddy-export-stage .roddy-export-table .re-change .league-change-value{font-size:11px;color:#fff}
+.roddy-export-stage .roddy-export-table .re-change .league-change-missing{color:#fff}
 .roddy-export-stage .roddy-export-table td{padding:4px 3px;border-bottom:1px solid #e5eaf2;text-align:center;vertical-align:middle;height:35px;box-sizing:border-box;white-space:nowrap}
 .roddy-export-stage .roddy-export-table tbody tr:nth-child(even){background:#f6f8fc}
 .roddy-export-stage .re-team{display:flex;align-items:center;gap:2px;min-width:0;max-width:100%;text-align:left;padding-left:0;font-weight:750;font-size:15px;overflow:hidden}
@@ -3880,7 +3885,9 @@ function parseDivisionPositionChanges(rows){
   divisionPositionChanges = changes;
 }
 function divisionPositionChangeHtml(team){
-  const movement = divisionPositionChanges.get(positionChangeTeamKey(team));
+  return positionMovementHtml(divisionPositionChanges.get(positionChangeTeamKey(team)));
+}
+function positionMovementHtml(movement){
   if(movement === undefined) return `<span class="league-change-missing" title="Change unavailable">—</span>`;
   const direction = movement > 0 ? "up" : movement < 0 ? "down" : "same";
   const symbol = movement > 0
@@ -6505,7 +6512,7 @@ function parseRoddy(rows){
 
   // Confirmed exact columns: POS=F(5), TEAM=H(7), DIVISION=Q(16), ROUND=T(19), CHIP=V(21),
   // TOTAL=W(22), active chip-play indicators=AA:AB(26-27), OVERALL=AC(28).
-  const ROD_COL = { POS:5, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27], OVERALL:28 };
+  const ROD_COL = { POS:5, CHANGE:4, TEAM:7, DIVISION:16, ROUND:19, CHIP:21, TOTAL:22, CHIPS:[26,27], OVERALL:28 };
 
   // Find the header row by locating "POS" at column F, restricted to the top of the
   // sheet (first 30 rows) so we don't accidentally match the broken #REF! table further down.
@@ -6534,6 +6541,8 @@ function parseRoddy(rows){
 
   for(let r=dataStart; r<rows.length; r++){
     const posVal = cell(rows[r]||[], ROD_COL.POS);
+    const movementRaw=cell(rows[r]||[], ROD_COL.CHANGE).replace(/,/g,'').replace(/^\+/,'');
+    const movement=/^-?\d+(?:\.\d+)?$/.test(movementRaw)?Number(movementRaw):undefined;
     if(!/^\d+$/.test(posVal)) break; // stop once the sequential position list ends
 
     const team = cell(rows[r]||[], teamCol);
@@ -6545,7 +6554,7 @@ function parseRoddy(rows){
     const overall = parseInt(cell(rows[r]||[], ROD_COL.OVERALL), 10) || 0;
 
     if(!team) continue;
-    roddyEntries.push({ pos: parseInt(posVal,10), team, division, round, chip, total, chips, overall });
+    roddyEntries.push({ pos: parseInt(posVal,10), movement, team, division, round, chip, total, chips, overall });
   }
 
   // POS comes from column F; OVERALL comes from column AC.
@@ -6618,13 +6627,14 @@ function renderRoddy(){
   }
   el.className = "";
   let html = `<div class="table-wrap"><table class="standings compact roddy-table"><thead><tr>
-    <th>Pos</th><th>Team</th><th>Division</th><th>Total</th><th>Chip</th><th>Round</th>
+    <th>Pos</th><th class="league-change-col">Chg</th><th>Team</th><th>Division</th><th>Total</th><th>Chip</th><th>Round</th>
     <th>TC Chip</th><th>BB Chip</th><th>Overall</th>
   </tr></thead><tbody>`;
   roddyEntries.forEach(e=>{
     const divColor = getDivisionColorByLabel(e.division);
     html += `<tr style="background:${hexToSolidTint(divColor,0.13)};border-left:4px solid ${divColor};">
       <td>${e.pos}</td>
+      <td class="league-change-col">${positionMovementHtml(e.movement)}</td>
       <td class="roddy-team"><img src="logo/${teamLogoSlug(e.team)}.png" alt="" class="table-team-logo" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}';}">${sideLeagueTeamLink(e.team)}</td>
       <td><span class="roddy-div-tag" style="background:${divColor};">${getDivisionShortLabel(e.division)}</span></td>
       <td class="pts roddy-total-focus">${e.total}</td>
@@ -6661,7 +6671,7 @@ async function exportRoddyImage(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=v=>v===null||v===undefined||String(v).trim()===''?'—':esc(v);
   const logo=e=>`<span class="re-logo-box"><img src="logo/${encodeURIComponent(teamLogoSlug(e.team))}.png" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(e.team)}'}"></span>`;
-  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>TEAM</th><th>DIV</th><th>TOTAL</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr style="--row-div-color:${color};background:${color};color:#fff"><td class="re-pos">${e.pos}</td><td><div class="re-team">${logo(e)}<span class="re-team-name">${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-total">${fmt(e.total)}</td><td class="re-score">${highestRoundScore!==null&&String(e.round??"").trim()!==""&&Number(e.round)===highestRoundScore?`<span class="re-best-round">${fmt(e.round)}</span>`:fmt(e.round)}</td><td class="re-chip">${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
+  const table=(items,featured)=>`<table class="roddy-export-table ${featured?'roddy-export-featured':''}"><colgroup><col style="width:37px"><col style="width:45px"><col><col style="width:52px"><col style="width:61px"><col style="width:56px"><col style="width:48px"><col style="width:62px"></colgroup><thead><tr><th>POS</th><th>CHG</th><th>TEAM</th><th>DIV</th><th>TOTAL</th><th>ROUND</th><th>CHIP</th><th>OVERALL</th></tr></thead><tbody>${items.map(e=>{const color=getDivisionColorByLabel(e.division);return `<tr style="--row-div-color:${color};background:${color};color:#fff"><td class="re-pos">${e.pos}</td><td class="re-change">${positionMovementHtml(e.movement)}</td><td><div class="re-team">${logo(e)}<span class="re-team-name">${esc(e.team)}</span></div></td><td><span class="re-div" style="background:${color}">${esc(getDivisionShortLabel(e.division))}</span></td><td class="re-total">${fmt(e.total)}</td><td class="re-score">${highestRoundScore!==null&&String(e.round??"").trim()!==""&&Number(e.round)===highestRoundScore?`<span class="re-best-round">${fmt(e.round)}</span>`:fmt(e.round)}</td><td class="re-chip">${fmt(e.chip)}</td><td class="re-rank">${fmt(e.overall)}</td></tr>`}).join('')}</tbody></table>`;
   const stage=document.createElement('div');stage.className='roddy-export-stage';
   stage.style.cssText='position:fixed;left:-16000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;background:#f3f6fc;padding:22px 25px 27px;color:#16243e;font-family:Barlow,Arial,sans-serif';
   stage.innerHTML=`<div class="re-header"><img class="re-header-logo" src="logo/roddy-logo.png" crossorigin="anonymous" alt="Roddy Rodriguez Cup logo"><div class="re-header-text"><div class="re-kicker">ELIZA CUP · 2026/27</div><div class="re-title">RODDY RODRIGUEZ CUP</div><div class="re-subtitle">Leaderboard · ${ordered.length} teams</div></div></div><div class="re-top-block"><div class="re-section-title">TOP 10</div>${table(top,true)}</div><div class="re-section-title re-remaining-title">REMAINING TEAMS</div><div class="re-columns"><div>${table(remaining.slice(0,halfway),false)}</div><div>${table(remaining.slice(halfway),false)}</div></div>`;
