@@ -3387,11 +3387,11 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 }
 @media(max-width:600px){.my-team-scores .live-all-sections{grid-template-columns:minmax(0,1fr)}}
 
-/* My Team: keep each competition header full width and place its fixtures in two desktop columns. */
+/* My Team: competition cards use the same two-column layout as the main Live Match Centre. */
 @media(min-width:901px){
- .my-team-scores .live-all-sections{display:block!important}
- .my-team-scores .live-comp-section{width:100%;margin-bottom:12px}
- .my-team-scores .live-comp-section .live-match-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0 12px!important}
+ .my-team-scores .live-all-sections{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;align-items:start}
+ .my-team-scores .live-comp-section{width:auto;min-width:0;margin-bottom:0}
+ .my-team-scores .live-comp-section .live-match-grid{display:block!important}
  .my-team-scores .live-comp-section .live-match{width:100%;min-width:0}
 }
 /* Division PNG exports only: larger text, existing colours and layouts retained. */
