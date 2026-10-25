@@ -734,6 +734,8 @@
   }
 
 
+  /* Division standings: remove the outer blue outline only. */
+  .division-standings-wrap{border:0;}
   /* Table */
   .table-wrap{overflow-x:auto;overflow-y:visible;border:1px solid var(--line-light);border-radius:4px;}
   table.standings{width:100%;border-collapse:collapse;min-width:640px;}
@@ -5943,7 +5945,7 @@ function renderTable(){
   }
   el.className = "";
   renderLegend();
-  let html = `<div class="table-wrap"><table class="standings compact league-standings"><thead><tr>
+  let html = `<div class="table-wrap division-standings-wrap"><table class="standings compact league-standings"><thead><tr>
     <th>Pos</th><th class="league-change-col">CHG</th><th>Team</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Aga</th><th>Diff</th>
     <th>Form${formRoundLabels.some(v=>v) ? `<br><span style="font-weight:400;text-transform:none;opacity:0.7;">R${formRoundLabels[0]||'?'}–${formRoundLabels[formRoundLabels.length-1]||'?'}</span>` : ""}</th>
     <th>Next</th>
