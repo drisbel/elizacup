@@ -3353,6 +3353,14 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .export-social.export-broadcast-fixtures .fixture-team-name{font-size:21px!important}
 .export-social.export-broadcast-fixtures .fixture-score{font-size:25px!important}
 
+/* Wider NEXT column on division table PNGs for long opponent names. */
+.export-image-stage.export-large-division-text .league-standings th:nth-child(12),
+.export-image-stage.export-large-division-text .league-standings td:nth-child(12){width:255px!important;min-width:255px!important}
+.export-image-stage.export-large-division-text .league-standings td.next-opp{white-space:normal!important;overflow-wrap:normal!important}
+ 
+/* Division standings on the website: improve numeric value readability without changing exports or other tables. */
+#tableContainer .league-standings tbody td:not(:nth-child(3)){font-size:15px}
+@media(max-width:650px){#tableContainer .league-standings tbody td:not(:nth-child(3)){font-size:13px}}
 /* Larger division standings export text only. */
 .export-image-stage.export-large-division-text .league-standings th{font-size:17px!important}
 .export-image-stage.export-large-division-text .league-standings tbody td{font-size:19px!important}
@@ -6421,7 +6429,7 @@ async function exportDivisionImage(kind, style){
       cell.style.setProperty('overflow','visible','important');
       cell.style.setProperty('text-overflow','clip','important');
       cell.style.setProperty('white-space',i===2?'normal':'normal','important');
-      cell.style.setProperty('width',i===2?'245px':i===10?'135px':i===11?'175px':i===1?'65px':i===0?'48px':'auto','important');
+      cell.style.setProperty('width',i===2?'245px':i===10?'135px':i===11?'255px':i===1?'65px':i===0?'48px':'auto','important');
       cell.style.setProperty('min-width','0','important');
       cell.style.setProperty('max-width','none','important');
     });
@@ -6488,7 +6496,7 @@ async function exportDivisionImage(kind, style){
     });
   }
   clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');});
-  if(kind==='table' && style==='social'){outer.style.width='1300px';outer.classList.add('export-large-division-text');}
+  if(kind==='table' && style==='social'){outer.style.width='1420px';outer.classList.add('export-large-division-text');}
   body.appendChild(clone);outer.appendChild(body);
   if(style==='social'){
     const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';outer.appendChild(footer);
