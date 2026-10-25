@@ -5180,7 +5180,7 @@ function myTeamScoresHtml(active){
  const sections=groups.map(c=>`<section class="live-comp-section"><h3 class="live-comp-heading">${logos[c.id]?`<img src="${logos[c.id]}" alt="" onerror="this.style.display='none'">`:''}<a class="live-comp-title-link" href="#${c.id}" onclick="goToDivision(DIVISIONS.find(d=>d.id==='${c.id}'));return false;" title="Open ${liveEscape(c.label)} page">${liveEscape(c.label)}</a>${liveRoundLabels[c.id]?`<small>${liveEscape(liveRoundLabels[c.id])}</small>`:''}<a class="live-comp-table-link" href="#${c.id}" onclick="goToDivision(DIVISIONS.find(d=>d.id==='${c.id}'));return false;" title="View ${liveEscape(c.label)} league page">${c.id==='facup'||c.id==='ecl'?'View Competition':'View League Table'} ↗</a></h3><div class="live-match-grid">${c.fixtures.map(liveMatchHtml).join('')}</div></section>`).join('');
  return '<section class="my-team-scores"><div class="my-team-scores-heading"><h3>YOUR SCORES</h3></div>'+
  (!myTeamName?'<div class="my-team-prompt">Select your team to see all your current fixtures and scores across competitions. <button type="button" data-my-team-picker>Select My Team</button></div>':
- sections||'<div class="my-team-prompt">No current fixtures found for '+liveEscape(myTeamName)+'.</div>')+'</section>';
+ sections?'<div class="live-all-sections">'+sections+'</div>':'<div class="my-team-prompt">No current fixtures found for '+liveEscape(myTeamName)+'.</div>')+'</section>';
 }
 document.addEventListener('click',e=>{if(e.target.closest('#myTeamToggle,[data-my-team-picker]'))myTeamOpenPicker();});
 document.addEventListener('DOMContentLoaded',myTeamRefreshButton);
