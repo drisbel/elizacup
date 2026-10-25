@@ -15498,6 +15498,7 @@ function renderHome(){
 
 let facupViewMode = "rounds";
 let facupBracketSelectedTeam = null;
+let facupSelectedRoundIndex = null;
 
 // Qualified entrants image for each FA Cup round after the opening round.
 function facupQualifiedTeams(idx){
@@ -15595,25 +15596,39 @@ function renderFACup(){
   }
 
   tabsEl.style.display = "";
-  tabsEl.innerHTML = facupRounds.map((r,i)=>`<button class="round-tab" data-idx="${i}">${r.name}</button>`).join("");
+  const lastScoredIndex=facupRounds.reduce((last,round,i)=>
+    round.fixtures.some(f=>f.homeScore!==null&&f.awayScore!==null)?i:last,-1);
+  const defaultIndex=lastScoredIndex>=0?lastScoredIndex:0;
+  const selectedIndex=Number.isInteger(facupSelectedRoundIndex)&&facupSelectedRoundIndex>=0&&facupSelectedRoundIndex<facupRounds.length
+    ?facupSelectedRoundIndex:defaultIndex;
+  facupSelectedRoundIndex=selectedIndex;
+  tabsEl.innerHTML=facupRounds.map((r,i)=>`<button type="button" class="round-tab${i===selectedIndex?' active':''}" data-idx="${i}">${r.name}</button>`).join("");
+  const exportBtn=document.createElement('button');
+  exportBtn.type='button';
+  exportBtn.className='side-export-button facup-qualified-download';
+  exportBtn.style.cssText='font-size:11px;padding:5px 9px;margin-left:8px;display:inline-flex;align-items:center;white-space:nowrap;';
+  exportBtn.textContent='↓ Qualified Teams PNG';
+  exportBtn.title='Download the qualified teams for the selected FA Cup round';
+  const updateExport=()=>{
+    const idx=facupSelectedRoundIndex;
+    exportBtn.hidden=idx===0;
+    exportBtn.style.display=idx===0?'none':'inline-flex';
+    exportBtn.disabled=idx===0;
+  };
+  exportBtn.addEventListener('click',()=>exportFACupQualified(facupSelectedRoundIndex));
+  // Keep the download control beside the Rounds/Bracket switch, not hidden
+  // at the far end of the horizontally scrolling round tabs.
+  toggleEl.appendChild(exportBtn);
   tabsEl.querySelectorAll('.round-tab').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      renderFACupRound(btn.dataset.idx);
+    btn.addEventListener('click',()=>{
+      facupSelectedRoundIndex=Number(btn.dataset.idx);
+      tabsEl.querySelectorAll('.round-tab').forEach(b=>b.classList.toggle('active',b===btn));
+      updateExport();
+      renderFACupRound(facupSelectedRoundIndex);
     });
   });
-  tabsEl.firstChild.classList.add('active');
-  // Compact export control follows the selected round without affecting fixture exports.
-  const exportBtn=document.createElement('button');exportBtn.type='button';exportBtn.className='side-export-button';
-  exportBtn.style.cssText='font-size:11px;padding:5px 9px;margin-left:5px;align-self:center;';
-  exportBtn.textContent='↓ Qualified PNG';exportBtn.title='Export qualified teams grouped by division';
-  const updateExport=()=>{const idx=Number(tabsEl.querySelector('.round-tab.active')?.dataset.idx)||0;exportBtn.hidden=idx===0;exportBtn.disabled=idx===0;};
-  exportBtn.addEventListener('click',()=>exportFACupQualified(Number(tabsEl.querySelector('.round-tab.active')?.dataset.idx)||0));
-  tabsEl.appendChild(exportBtn);
-  tabsEl.querySelectorAll('.round-tab').forEach(btn=>btn.addEventListener('click',updateExport));
   updateExport();
-  renderFACupRound(0);
+  renderFACupRound(selectedIndex);
 }
 
 // Full tournament bracket view, built purely from the existing round-by-round
