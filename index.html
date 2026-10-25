@@ -3338,6 +3338,18 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .my-team-competition{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 5px}
 .my-team-fixture .live-match{width:100%}
 @media(max-width:600px){.my-team-scores .live-all-sections{grid-template-columns:minmax(0,1fr)}}
+
+/* Division PNG exports only: larger text, existing colours and layouts retained. */
+.export-social:not(.export-sideleague) .league-standings tbody td{font-size:18px!important}
+.export-social:not(.export-sideleague) .league-standings tbody td:nth-child(3),
+.export-social:not(.export-sideleague) .league-standings tbody td:nth-child(3) a,
+.export-social:not(.export-sideleague) .league-standings tbody td:nth-child(3) .team-link,
+.export-social:not(.export-sideleague) .league-standings tbody td.next-opp,
+.export-social:not(.export-sideleague) .league-standings tbody td.next-opp a{font-size:18px!important}
+.export-social:not(.export-sideleague) .league-standings th{font-size:16px!important}
+.export-social.export-broadcast-fixtures .fixture-team{font-size:21px!important}
+.export-social.export-broadcast-fixtures .fixture-team-name{font-size:21px!important}
+.export-social.export-broadcast-fixtures .fixture-score{font-size:25px!important}
 </style>
 
 <style>
@@ -6364,7 +6376,7 @@ async function exportDivisionImage(kind, style){
   const title=kind==='table'?'League Table':round;
   const outer=document.createElement('div');
   outer.className='export-image-stage '+(style==='social'?'export-social':'export-exact');
-  outer.style.cssText='position:fixed;left:-12000px;top:0;width:1190px;box-sizing:border-box;z-index:-1;';
+  outer.style.cssText='position:fixed;left:-12000px;top:0;width:'+(style==='social'?'1300':'1190')+'px;box-sizing:border-box;z-index:-1;';
   outer.style.setProperty('--export-division-color',currentDivision.color || '#172d52');
   // Muted division tint for losing teams and all unplayed fixtures; the original
   // division colour remains reserved for winners.
