@@ -6516,7 +6516,7 @@ async function exportDivisionImage(kind, style){
     });
   }
   clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');});
-  if(kind==='table' && style==='social'){outer.style.width='1420px';outer.classList.add('export-large-division-text');}
+  if(kind==='table'){outer.classList.add('export-large-division-text');outer.style.width=style==='social'?'1420px':'1320px';}
   body.appendChild(clone);outer.appendChild(body);
   if(style==='social'){
     const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';outer.appendChild(footer);
