@@ -3387,6 +3387,13 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 }
 @media(max-width:600px){.my-team-scores .live-all-sections{grid-template-columns:minmax(0,1fr)}}
 
+/* My Team: keep each competition header full width and place its fixtures in two desktop columns. */
+@media(min-width:901px){
+ .my-team-scores .live-all-sections{display:block!important}
+ .my-team-scores .live-comp-section{width:100%;margin-bottom:12px}
+ .my-team-scores .live-comp-section .live-match-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0 12px!important}
+ .my-team-scores .live-comp-section .live-match{width:100%;min-width:0}
+}
 /* Division PNG exports only: larger text, existing colours and layouts retained. */
 .export-social:not(.export-sideleague) .league-standings tbody td{font-size:18px!important}
 .export-social:not(.export-sideleague) .league-standings tbody td:nth-child(3),
