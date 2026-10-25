@@ -100,6 +100,9 @@
     .top-nav-bar-brand img{height:27px;}
     .top-nav-bar-links{gap:0;overflow-x:auto;overflow-y:visible;scrollbar-width:none;overscroll-behavior-x:contain;}
     .top-nav-bar-links::-webkit-scrollbar{display:none;}
+    /* An open dropdown must escape the horizontally scrollable nav container. */
+    .top-nav-bar-links:has(.div-nav-dropdown.open){overflow:visible;}
+    .top-nav-bar-links:has(.div-nav-dropdown.open) .div-nav-group:has(.div-nav-dropdown.open){z-index:60;}
     .top-nav-bar-links .div-tab{padding:9px 8px;font-size:12.5px;}
     .top-nav-bar-inner .header-icon-actions{gap:5px;}
   }
