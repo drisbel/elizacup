@@ -3161,7 +3161,14 @@ html,body{max-width:100%;overflow-x:clip}
 #fixturesSection>.section-head .fixture-live-link,#facupSection>.section-head .fixture-live-link{margin-left:auto;white-space:nowrap}
 #fixturesSection>.section-head .social-export-actions,#facupHeadingExport{margin-left:0!important}
 #fixturesSection>.section-head .fixture-export-actions{display:flex;gap:5px}
-#facupHeadingExport{display:flex;align-items:center}
+#facupHeadingExport{display:flex;align-items:center;gap:8px;margin-left:0!important;flex:none}
+#facupSection>.section-head.facup-fixtures-heading{display:flex;align-items:center;flex-wrap:nowrap;gap:12px}
+#facupSection>.section-head.facup-fixtures-heading h2{flex:none;margin-right:auto}
+#facupSection>.section-head.facup-fixtures-heading #facupUpdated{display:none}
+#facupSection>.section-head.facup-fixtures-heading .fixture-live-link{margin-left:0;flex:none;white-space:nowrap}
+#facupHeadingExport .social-export-download{display:inline-flex;align-items:center;justify-content:center;width:40px;min-width:40px;height:40px;padding:0;background:transparent;color:inherit;border:1px solid currentColor;border-radius:9px;box-shadow:none;font-size:11px;font-weight:800}
+#facupHeadingExport .facup-qualified-download{width:48px;min-width:48px;padding:0 4px}
+@media(max-width:680px){#facupSection>.section-head.facup-fixtures-heading{gap:6px}#facupSection>.section-head.facup-fixtures-heading h2{font-size:clamp(17px,5vw,27px);margin-right:auto}#facupSection>.section-head.facup-fixtures-heading .fixture-live-link{font-size:clamp(9px,2.2vw,12px);padding:8px 7px}#facupHeadingExport{gap:5px}#facupHeadingExport .social-export-download{width:34px;min-width:34px;height:34px}#facupHeadingExport .facup-qualified-download{width:42px;min-width:42px}}
 @media(max-width:680px){#fixturesSection>.section-head .fixture-live-link,#facupSection>.section-head .fixture-live-link{margin-left:auto;font-size:11px}#fixturesSection>.section-head .social-export-actions{margin-left:0!important}#facupSection>.section-head h2,#fixturesSection>.section-head h2{margin-right:auto}}
 
 .ownership-player-owners-heading{font-size:18px;margin:20px 0 9px}
@@ -15612,7 +15619,7 @@ function renderFACup(){
   const exportBtn=document.createElement('button');
   exportBtn.type='button';
   exportBtn.className='social-export-download facup-qualified-download';
-  exportBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:54px;padding:5px 8px;white-space:nowrap;gap:4px;';
+  exportBtn.style.cssText='';
   exportBtn.textContent='QUAL';
   exportBtn.title='Download qualified teams PNG for selected round';
   exportBtn.setAttribute('aria-label','Download qualified teams PNG for selected round');
