@@ -3318,6 +3318,26 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .ownership-transfer-detail-player span{min-width:0;overflow-wrap:anywhere}
 .ownership-transfer-detail-player strong{flex:none}
 @media(max-width:650px){.ownership-gameweek-transfers .ownership-table{font-size:13px}.ownership-gameweek-transfers .ownership-table th,.ownership-gameweek-transfers .ownership-table td{padding:9px 6px}.ownership-gameweek-transfers .ownership-ranking-team-logo{width:25px;max-width:25px;height:25px}.ownership-gameweek-transfers .ownership-player-link{font-size:13px}}
+
+/* My Team: reuse the site's dark header and Live Match Centre cards. */
+.my-team-toggle{display:flex;align-items:center;justify-content:center;overflow:hidden}
+.my-team-toggle img{width:27px;height:27px;max-width:100%;object-fit:contain}
+.my-team-panel{max-width:470px;width:calc(100% - 28px)}
+.my-team-search{width:100%;box-sizing:border-box;padding:12px;border:1px solid #c9c5b7;border-radius:9px;font:inherit}
+.my-team-options{max-height:55vh;overflow-y:auto;margin:12px 0;display:grid;gap:5px}
+.my-team-option{display:flex;align-items:center;gap:12px;padding:9px 12px;background:transparent;color:inherit;border:1px solid #ddd5c3;border-radius:9px;text-align:left;font:inherit;cursor:pointer}
+.my-team-option img{width:32px;height:32px;object-fit:contain;flex:none}
+.my-team-clear{background:transparent;border:0;text-decoration:underline;cursor:pointer;padding:8px}
+.my-team-scores{margin:0 0 25px}
+.my-team-scores-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:2px solid currentColor;margin-bottom:12px}
+.my-team-scores-heading h3{font-size:clamp(20px,3vw,29px);margin:0 0 8px}
+.my-team-scores-heading button,.my-team-prompt button{cursor:pointer;font:inherit;font-weight:700;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;padding:8px 12px}
+.my-team-prompt{padding:18px;border:1px solid #d7cfba;border-radius:12px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.my-team-scores .live-all-sections{display:grid;gap:12px}
+.my-team-fixture{min-width:0}
+.my-team-competition{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 5px}
+.my-team-fixture .live-match{width:100%}
+@media(max-width:600px){.my-team-scores .live-all-sections{grid-template-columns:minmax(0,1fr)}}
 </style>
 
 <style>
@@ -3437,6 +3457,7 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
           <div id="searchResults" class="search-results"></div>
         </div>
       </div>
+      <button class="icon-btn my-team-toggle" id="myTeamToggle" type="button" aria-label="Select My Team" title="My Team">♜</button>
       <button class="icon-btn refresh-btn" id="refreshBtn" type="button" aria-label="Refresh">↻</button>
     </div>
     <div class="wordmark-row">
@@ -5038,6 +5059,46 @@ function liveInstallViewToggle(){
   if(pitch)pitch.hidden=!formation;
  });
 }
+// Stage 1: device-local My Team selection and personal Live Match Centre fixtures.
+const MY_TEAM_STORAGE_KEY='eliza-cup-my-team-v1';
+let myTeamName='';
+try{myTeamName=localStorage.getItem(MY_TEAM_STORAGE_KEY)||'';}catch(e){}
+function myTeamLogo(name){return '<img src="logo/'+teamLogoSlug(name)+'.png" alt="" data-team-name="'+liveEscape(name)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}">';}
+function myTeamRefreshButton(){
+ const btn=document.getElementById('myTeamToggle');if(!btn)return;
+ btn.innerHTML=myTeamName?myTeamLogo(myTeamName):'<span aria-hidden="true">♜</span>';
+ btn.title=myTeamName?'My Team: '+myTeamName+' (change team)':'Select My Team';
+ btn.setAttribute('aria-label',btn.title);
+}
+function myTeamSet(name){
+ myTeamName=name||'';
+ try{if(myTeamName)localStorage.setItem(MY_TEAM_STORAGE_KEY,myTeamName);else localStorage.removeItem(MY_TEAM_STORAGE_KEY);}catch(e){}
+ myTeamRefreshButton();document.getElementById('myTeamModal')?.remove();
+ if(document.getElementById('liveContainer')&&liveFixtures.length)renderLiveCentre();
+}
+async function myTeamOpenPicker(){
+ document.getElementById('myTeamModal')?.remove();
+ const modal=document.createElement('div');modal.id='myTeamModal';modal.className='ownership-modal';
+ modal.innerHTML='<div class="ownership-modal-panel my-team-panel" role="dialog" aria-modal="true" aria-label="Choose your team"><div class="ownership-modal-header"><h3>Choose My Team</h3><button type="button" class="ownership-modal-close" data-my-close aria-label="Close">×</button></div><input type="search" class="my-team-search" placeholder="Search for your team…" aria-label="Search teams"><div class="my-team-options">Loading teams…</div><button type="button" class="my-team-clear">Clear selection</button></div>';
+ document.body.appendChild(modal);modal.hidden=false;
+ modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-my-close]'))modal.remove();const btn=e.target.closest('[data-my-team]');if(btn)myTeamSet(btn.dataset.myTeam);if(e.target.closest('.my-team-clear'))myTeamSet('');});
+ const input=modal.querySelector('.my-team-search'),list=modal.querySelector('.my-team-options');
+ const names=new Map();const add=n=>{if(n&&String(n).trim())names.set(liveKey(n),String(n).trim());};
+ liveExportTeams.forEach(t=>add(t.name));liveFixtures.forEach(f=>{add(f.a);add(f.b);});
+ try{(await ensureTeamSearchData()).forEach(t=>add(t.team));}catch(e){console.warn('My Team list',e);}
+ const all=[...names.values()].sort((a,b)=>a.localeCompare(b));
+ const render=()=>{const q=liveKey(input.value);list.innerHTML=all.filter(n=>!q||liveKey(n).includes(q)).map(n=>'<button type="button" class="my-team-option" data-my-team="'+liveEscape(n)+'">'+myTeamLogo(n)+'<span>'+liveEscape(n)+'</span></button>').join('')||'<p>No matching teams found.</p>';};
+ input.addEventListener('input',render);render();input.focus();
+}
+function myTeamScoresHtml(active){
+ const fixtures=liveFixtures.filter(f=>active.some(c=>c.id===f.comp)&&(liveKey(f.a)===liveKey(myTeamName)||liveKey(f.b)===liveKey(myTeamName)));
+ return '<section class="my-team-scores"><div class="my-team-scores-heading"><h3>YOUR SCORES</h3>'+(myTeamName?'<button type="button" data-my-team-picker>Change team</button>':'')+'</div>'+
+ (!myTeamName?'<div class="my-team-prompt">Select your team to see all your current fixtures and scores across competitions. <button type="button" data-my-team-picker>Select My Team</button></div>':
+ fixtures.length?'<div class="live-all-sections">'+fixtures.map(f=>'<div class="my-team-fixture"><div class="my-team-competition">'+liveEscape(LIVE_COMPETITIONS.find(c=>c.id===f.comp)?.label||f.comp)+' · '+liveEscape(liveRoundLabels[f.comp]||'')+'</div>'+liveMatchHtml(f)+'</div>').join('')+'</div>':
+ '<div class="my-team-prompt">No current fixtures found for '+liveEscape(myTeamName)+'.</div>')+'</section>';
+}
+document.addEventListener('click',e=>{if(e.target.closest('#myTeamToggle,[data-my-team-picker]'))myTeamOpenPicker();});
+document.addEventListener('DOMContentLoaded',myTeamRefreshButton);
 function renderLiveCentre(){
  const el=document.getElementById('liveContainer');if(!el)return;liveInstallViewToggle();el.className='';
  const weeks=[...new Set(liveExportTeams.map(t=>t.gameweek).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
@@ -5057,7 +5118,7 @@ function renderLiveCentre(){
     <a class="live-comp-table-link" href="#${c.id}" onclick="goToDivision(DIVISIONS.find(d=>d.id==='${c.id}'));return false;" title="View ${liveEscape(c.label)} league page">${c.id==='facup'||c.id==='ecl'?'View Competition':'View League Table'} ↗</a>
    </h3><div class="live-match-grid">${fixtures.map(liveMatchHtml).join('')}</div></section>`;
  }).join('');
- el.innerHTML=`<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
+ el.innerHTML=`${myTeamScoresHtml(active)}<div class="live-controls"><span class="live-current-gw">Gameweek ${liveEscape(week)}</span><input id="liveTeamSearch" type="search" placeholder="Search your team across all competitions…" aria-label="Search team matchups" value="${liveEscape(liveTeamSearch)}" autocomplete="off"></div>
  <div class="live-jump-row"><label for="liveJumpTo">Jump to</label><select id="liveJumpTo" aria-label="Jump to competition"><option value="">Select competition…</option>${active.map(c=>`<option value="${c.id}">${liveEscape(c.label)}</option>`).join('')}</select><label for="liveExportSelect">Export image</label><select id="liveExportSelect" aria-label="Choose competitions to export"><option value="all">All active competitions</option>${active.map(c=>`<option value="${c.id}">${liveEscape(c.label)}</option>`).join('')}</select><button type="button" id="liveExportImage" class="live-export-btn">Download PNG ↓</button></div>
  <div id="liveAllSections" class="live-all-sections">${sectionHtml()}</div>
  ${(!active.some(c=>c.id==='facup'))?`<details class="live-fixture-debug" style="margin-top:12px;font-size:12px"><summary>FA Cup fixture diagnostics</summary><div style="padding:8px;overflow-wrap:anywhere">${liveEscape(liveFixtureDiagnostics)}</div></details>`:''}`;
