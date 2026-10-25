@@ -6619,6 +6619,12 @@ async function exportDivisionImage(kind, style){
         el.style.setProperty('max-width','none','important');
       });
       table.querySelectorAll('tbody td:not(:nth-child(11)):not(:nth-child(12)) span,tbody td:not(:nth-child(11)):not(:nth-child(12)) strong').forEach(el=>{if(!el.closest('.form-pill,.form-row,.export-team-crest-slot'))el.style.setProperty('font-size','27px','important');});
+      // Remove the remaining coloured bottom edge from the table PNG only.
+      table.style.setProperty('border-bottom','0','important');
+      table.querySelectorAll('tbody tr:last-child,tbody tr:last-child > td').forEach(el=>{
+        el.style.setProperty('border-bottom','0','important');
+        el.style.setProperty('box-shadow','none','important');
+      });
       table.querySelectorAll('.form-pill,.form-row span').forEach(el=>{
         el.style.setProperty('font-size','9px','important');
         el.style.setProperty('line-height','1','important');
