@@ -3350,6 +3350,15 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .export-social.export-broadcast-fixtures .fixture-team{font-size:21px!important}
 .export-social.export-broadcast-fixtures .fixture-team-name{font-size:21px!important}
 .export-social.export-broadcast-fixtures .fixture-score{font-size:25px!important}
+
+/* Larger division standings export text only. */
+.export-image-stage.export-large-division-text .league-standings th{font-size:17px!important}
+.export-image-stage.export-large-division-text .league-standings tbody td{font-size:19px!important}
+.export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3),
+.export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3) a,
+.export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3) .team-link{font-size:19px!important}
+.export-image-stage.export-large-division-text .league-standings td.next-opp,
+.export-image-stage.export-large-division-text .league-standings td.next-opp a{font-size:18px!important}
 </style>
 
 <style>
@@ -6477,6 +6486,7 @@ async function exportDivisionImage(kind, style){
     });
   }
   clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');});
+  if(kind==='table' && style==='social'){outer.style.width='1300px';outer.classList.add('export-large-division-text');}
   body.appendChild(clone);outer.appendChild(body);
   if(style==='social'){
     const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';outer.appendChild(footer);
