@@ -6641,8 +6641,20 @@ async function exportDivisionImage(kind, style){
     });
   }
   body.appendChild(clone);outer.appendChild(body);
-  if(style==='social'){
+  if(style==='social' && kind!=='table'){
     const footer=document.createElement('div');footer.className='export-image-footer';footer.textContent='ELIZA CUP 2026/27';outer.appendChild(footer);
+  }
+  // League-table exports finish flush with the last standings row: no footer or lower frame.
+  if(kind==='table'){
+    outer.style.setProperty('padding-bottom','0','important');
+    outer.style.setProperty('margin-bottom','0','important');
+    body.style.setProperty('padding-bottom','0','important');
+    body.style.setProperty('margin-bottom','0','important');
+    clone.style.setProperty('margin-bottom','0','important');
+    clone.querySelectorAll('.table-wrap,table.league-standings').forEach(el=>{
+      el.style.setProperty('margin-bottom','0','important');
+      el.style.setProperty('padding-bottom','0','important');
+    });
   }
   document.body.appendChild(outer);
   const buttons=document.querySelectorAll('.social-export-actions button');buttons.forEach(b=>b.disabled=true);
