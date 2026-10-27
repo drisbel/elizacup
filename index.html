@@ -954,6 +954,7 @@
     table.roddy-table th:nth-child(1), table.roddy-table td:nth-child(1){padding-left:8px; padding-right:3px;}
   }
   td.next-opp{font-size:11.5px;color:#5a6a63;white-space:nowrap;}
+  #tableContainer table.league-standings td.next-opp,#tableContainer table.league-standings td.next-opp a{font-size:11px!important;}
   td.form-cell{white-space:nowrap;}
 
   /* Team vs Team (Head-to-Head vs Opponent) custom dropdown — a native <select> can't
@@ -6615,13 +6616,18 @@ async function exportDivisionImage(kind, style){
       w.style.setProperty('box-shadow','none','important');
       w.style.setProperty('border-radius','0','important');
     });
+    // Size only the NEXT column to its longest opponent name; leave every other column unchanged.
+    const nextMeasure=document.createElement('canvas').getContext('2d');
+    nextMeasure.font="23px Barlow, sans-serif";
+    const nextExportWidth=Math.max(300,Math.ceil(Math.max(0,...Array.from(clone.querySelectorAll('table.league-standings tbody td.next-opp')).map(td=>nextMeasure.measureText(td.textContent.trim()).width))+36));
+    outer.style.width=(style==='social'?1940:1870)+(nextExportWidth-300)+'px';
     clone.querySelectorAll('table.league-standings').forEach(table=>{
       table.style.setProperty('table-layout','fixed','important');
       table.style.setProperty('border','0','important');
       table.style.setProperty('box-shadow','none','important');
       table.style.setProperty('border-collapse','collapse','important');
       table.querySelectorAll('tr').forEach(tr=>Array.from(tr.children).forEach((cell,i)=>{
-        const widths=[72,92,520,95,85,85,85,105,105,110,150,300];
+        const widths=[72,92,520,95,85,85,85,105,105,110,150,nextExportWidth];
         cell.style.setProperty('width',widths[i]+'px','important');
         cell.style.setProperty('min-width',widths[i]+'px','important');
         cell.style.setProperty('max-width',widths[i]+'px','important');
@@ -6631,7 +6637,7 @@ async function exportDivisionImage(kind, style){
         cell.style.setProperty('border-left','0','important');
         cell.style.setProperty('border-right','0','important');
       }));
-      table.querySelectorAll('tbody td:nth-child(3) a,tbody td:nth-child(3) .team-link,tbody td.next-opp a').forEach(el=>{
+      table.querySelectorAll('tbody td:nth-child(3) a,tbody td:nth-child(3) .team-link').forEach(el=>{
         el.style.setProperty('font-size','30px','important');
         el.style.setProperty('white-space','nowrap','important');
         el.style.setProperty('max-width','none','important');
@@ -6639,6 +6645,7 @@ async function exportDivisionImage(kind, style){
         el.style.setProperty('display','inline','important');
         el.style.setProperty('-webkit-line-clamp','unset','important');
       });
+      table.querySelectorAll('tbody td.next-opp,tbody td.next-opp a').forEach(el=>{el.style.setProperty('font-size','23px','important');el.style.setProperty('white-space','nowrap','important');el.style.setProperty('overflow','visible','important');el.style.setProperty('max-width','none','important');});
       table.querySelectorAll('.export-team-name-slot,.export-team-cell-layout').forEach(el=>{
         el.style.setProperty('white-space','nowrap','important');
         el.style.setProperty('overflow','visible','important');
