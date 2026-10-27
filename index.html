@@ -1968,6 +1968,14 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
   #tableContainer .league-standings tbody td:nth-child(3) a{font-size:14px!important}
 }
 
+/* Larger export table text, excluding FORM and NEXT; preserve compact form indicators. */
+.export-image-stage.export-large-division-text .league-standings th:not(:nth-child(11)):not(:nth-child(12)),
+.export-image-stage.export-large-division-text .league-standings tbody td:not(:nth-child(11)):not(:nth-child(12)),
+.export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3) a,
+.export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3) .team-link{font-size:25px!important}
+.export-image-stage.export-large-division-text .league-standings .form-pill,
+.export-image-stage.export-large-division-text .league-standings .form-row span{font-size:12px!important}
+
 /* Fixture social export only: dark broadcast, one horizontal match per row. */
 .export-social.export-broadcast-fixtures{background:#0b1426!important}
 .export-broadcast-fixtures .export-image-body{background:#0b1426!important;padding:20px 0 8px!important}
@@ -6509,18 +6517,19 @@ async function exportDivisionImage(kind, style){
   // without changing the actual page or any fixture export styling.
   if(kind==='table'){
     clone.querySelectorAll('table.league-standings th,table.league-standings td').forEach(cell=>{
-      cell.style.setProperty('font-size','21px','important');
+      const col=Array.from(cell.parentElement.children).indexOf(cell)+1;
+      if(col!==11 && col!==12) cell.style.setProperty('font-size','25px','important');
       cell.style.setProperty('line-height','1.3','important');
       cell.style.setProperty('padding-top','12px','important');
       cell.style.setProperty('padding-bottom','12px','important');
     });
     // Some numerical values are wrapped in spans/strong elements with their own font rules.
     // Apply the export-only size to those as well so all five divisions are consistent.
-    clone.querySelectorAll('table.league-standings tbody td:not(:nth-child(3)) span,table.league-standings tbody td:not(:nth-child(3)) strong').forEach(node=>{
-      node.style.setProperty('font-size','21px','important');
+    clone.querySelectorAll('table.league-standings tbody td:not(:nth-child(3)):not(:nth-child(11)):not(:nth-child(12)) span,table.league-standings tbody td:not(:nth-child(3)):not(:nth-child(11)):not(:nth-child(12)) strong').forEach(node=>{
+      if(!node.closest('.form-row,.form-pill')) node.style.setProperty('font-size','25px','important');
     });
     clone.querySelectorAll('table.league-standings .team-link,table.league-standings .export-team-name-slot a').forEach(node=>{
-      node.style.setProperty('font-size','21px','important');
+      node.style.setProperty('font-size','25px','important');
       node.style.setProperty('line-height','1.3','important');
     });
   }
