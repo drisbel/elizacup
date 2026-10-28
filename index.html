@@ -10510,6 +10510,13 @@ function jarvisDaysSinceLastDivOneWin(){
   const today = Date.UTC(part('year'),part('month')-1,part('day'));
   return Math.max(0,Math.floor((today-Date.UTC(2025,1,1))/86400000)).toLocaleString('en-AU');
 }
+function stairwayDaysWithoutRoddy(){
+  // Count calendar days in Melbourne to avoid daylight-saving differences.
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Australia/Melbourne',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const part=key=>Number(parts.find(p=>p.type===key)?.value||0);
+  const today=Date.UTC(part('year'),part('month')-1,part('day'));
+  return Math.max(0,Math.floor((today-Date.UTC(2015,9,8))/86400000)).toLocaleString('en-AU');
+}
 function teamTrophiesHtml(trophies, trophyNote){
   const noteHtml = trophyNote
     ? `<div style="font-family:'Barlow',sans-serif;font-size:12px;color:#000;margin-top:10px;">${trophyNote}</div>`
@@ -10933,6 +10940,14 @@ function renderTeamProfile(data){
       <span class="spooners-days-number">${jarvisDaysSinceLastDivOneWin()}</span>
       <div><div class="spooners-days-label">Days since Last Div 1 win</div>
       <div class="spooners-days-since">Since Saturday, 1 February 2025</div></div>
+    </div>`;
+  }
+
+  if(liveKey(teamName) === liveKey('Stairway To Evans')){
+    html += `<div class="spooners-days-counter" role="status" aria-label="Days played without a Roddy">
+      <span class="spooners-days-number">${stairwayDaysWithoutRoddy()}</span>
+      <div><div class="spooners-days-label">Days played without a Roddy</div>
+      <div class="spooners-days-since">Since Thursday, 8 October 2015</div></div>
     </div>`;
   }
 
