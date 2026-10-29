@@ -10276,6 +10276,7 @@ function matchLogCsvUrlFor(){
 function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
   teamVsTeamDebug = { rowsScanned: 0, opponentsFound: 0, matchLogRowCount: Math.max(0, matchLogRows.length - 1) };
   const upperTeam = (teamName || "").trim().toUpperCase();
+  const normalizeName = name => String(name||"").trim().replace(/\s+/g," ").toUpperCase();
   const opponents = [];
 
   for(let r=1; r<opponentRows.length; r++){ // row 0 is the header row
@@ -10291,10 +10292,10 @@ function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
     const matches = [];
     for(let m=1; m<matchLogRows.length; m++){
       const mrow = matchLogRows[m] || [];
-      const mt1 = cell(mrow, MATCH_LOG_COL.TEAM1).toUpperCase();
-      const mt2 = cell(mrow, MATCH_LOG_COL.TEAM2).toUpperCase();
-      const teamIsTeam1 = mt1 === upperTeam && mt2 === upperOpp;
-      const teamIsTeam2 = mt2 === upperTeam && mt1 === upperOpp;
+      const mt1 = normalizeName(cell(mrow, MATCH_LOG_COL.TEAM1));
+      const mt2 = normalizeName(cell(mrow, MATCH_LOG_COL.TEAM2));
+      const teamIsTeam1 = mt1 === normalizeName(upperTeam) && mt2 === normalizeName(upperOpp);
+      const teamIsTeam2 = mt2 === normalizeName(upperTeam) && mt1 === normalizeName(upperOpp);
       if(!teamIsTeam1 && !teamIsTeam2) continue;
 
       const winner = cell(mrow, MATCH_LOG_COL.WINNER).toUpperCase();
@@ -10339,6 +10340,24 @@ function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
     const divShort = active ? getDivisionShortLabel(roddyMatch.division) : "N/A";
     const divColor = active ? getDivisionColorByLabel(roddyMatch.division) : "#000";
 
+    // Match Log is chronological; determine the current consecutive run from
+    // its most recent results. A draw breaks both winning and losing streaks.
+    let streak = "";
+    if(matches.length){
+      const latestResult=matches[matches.length-1].result;
+      if(latestResult==="WIN" || latestResult==="LOSS"){
+        let count=0;
+        for(let i=matches.length-1;i>=0;i--){
+          if(matches[i].result!==latestResult)break;
+          // Entries from different competitions can describe one real match.
+          if(i<matches.length-1 && matches[i].doubleUp && matches[i+1].doubleUp &&
+             matches[i].year===matches[i+1].year &&
+             matches[i].for===matches[i+1].for && matches[i].against===matches[i+1].against)continue;
+          count++;
+        }
+        if(count>=2)streak=count+(latestResult==="WIN"?"-match winning streak":"-match losing streak");
+      }
+    }
     opponents.push({
       key: upperOpp,
       display,
@@ -10349,6 +10368,7 @@ function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
       w: cell(row, H2H_OPP_COL.W),
       l: cell(row, H2H_OPP_COL.L),
       d: cell(row, H2H_OPP_COL.D),
+      streak,
       matches
     });
   }
@@ -10411,7 +10431,7 @@ function tvtMatchesTableHtml(matches){
 
 function tvtResultHtml(opp){
   const streakBadge = opp.streak
-    ? `<span style="display:inline-block;background:#ffdd00;color:#111;font-family:'Barlow',sans-serif;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:3px 8px;border-radius:10px;">🔥 ${opp.streak}</span>`
+    ? `<span style="display:inline-block;background:#ffdd00;color:#111;font-family:'Barlow',sans-serif;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:3px 8px;border-radius:10px;">${opp.streak}</span>`
     : "";
   let html = `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:14px;">
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -10419,7 +10439,14 @@ function tvtResultHtml(opp){
       </div>
       ${streakBadge}
     </div>`;
-  html += tvtMatchesTableHtml(opp.matches);
+  if(!opp.matches.length && Number(opp.p)>0){
+    html += '<p style="font-family:\'Barlow\',sans-serif;font-size:13px;color:#000;">'+
+      'The summary records '+opp.p+' meeting'+(Number(opp.p)===1?'':'s')+
+      ', but the individual match details could not be matched in the Match Log. '+
+      'The record above comes from the head-to-head summary.</p>';
+  }else{
+    html += tvtMatchesTableHtml(opp.matches);
+  }
   return html;
 }
 
