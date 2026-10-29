@@ -10499,7 +10499,19 @@ function shortenFACupRound(name){
 }
 
 function teamProfileFixtureRow(f){
-  return resultPillRow("R" + f.round, f.opponent, f.isHome, f.homeScore, f.awayScore, f.played, true);
+  const own=f.isHome?f.homeScore:f.awayScore;
+  const against=f.isHome?f.awayScore:f.homeScore;
+  const result=f.played?(own>against?"W":own<against?"L":"D"):"";
+  const cls=result==="W"?"form-w":result==="L"?"form-l":result==="D"?"form-d":"form-blank";
+  const scoreText=f.played?`${own} – ${against}`:"vs";
+  const logo=f.opponent?`<img src="logo/${teamLogoSlug(f.opponent)}.png" alt="" loading="lazy" style="width:26px;height:26px;object-fit:contain;object-position:center;display:block;" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(f.opponent)}';}" />`:"";
+  return `<div style="display:grid;grid-template-columns:38px 22px 26px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line-light);">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#000;">R${f.round}</span>
+    ${result?`<span class="form-pill ${cls}">${result}</span>`:`<span></span>`}
+    <span style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;">${logo}</span>
+    <span style="font-size:13.5px;min-width:0;">${f.opponent?"vs "+teamLink(f.opponent):"Bye"}</span>
+    <span style="font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;white-space:nowrap;">${scoreText}</span>
+  </div>`;
 }
 
 function ordinal(n){
