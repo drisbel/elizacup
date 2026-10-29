@@ -6309,7 +6309,7 @@ function roundPreviewCurrentRun(s,letter){
  return run;
 }
 function roundPreviewLastMeeting(h,home,away){
- if(!h.last)return '<span class="rp-first-meeting"><span>FIRST</span><span>RECORDED</span><span>MEETING</span></span>';
+ if(!h.last)return '<span class="rp-first-meeting">FIRST&nbsp; RECORDED&nbsp; MEETING</span>';
  const g=h.last,comp=roundPreviewEscape(g.comp||'MATCH'),year=roundPreviewEscape(g.season||'');
  const homeName=roundPreviewEscape(home),awayName=roundPreviewEscape(away);
  const label='<span>'+comp+'</span><span>'+year+'</span>';
