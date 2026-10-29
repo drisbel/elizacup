@@ -9024,9 +9024,9 @@ function renderStatsPage(){
   toggleEl.innerHTML = `
     <button class="round-tab${statsActiveTab==='ownership'?' active':''}" data-tab="ownership">Player Ownership</button>
     <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
+    <button class="round-tab${statsActiveTab==='alternative'?' active':''}" data-tab="alternative">Alternative Fixtures</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
     <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>
-    <button class="round-tab${statsActiveTab==='alternative'?' active':''}" data-tab="alternative">Alternative Fixtures</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
