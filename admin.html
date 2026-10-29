@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-  .wheel-cup-history-row{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:7px;align-items:center;text-align:left;padding:4px 0;border-bottom:1px solid #555;font:600 11px "Barlow",sans-serif}.wheel-cup-history-row span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wheel-cup-history-empty{font:12px "Barlow",sans-serif;opacity:.7} .wheel-bilbbet-stats{display:block;margin-top:12px;max-width:380px;} .wheel-bilbbet-season{font-size:12px;font-weight:800;letter-spacing:.07em;margin-bottom:6px;} .wheel-bilbbet-season-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;} .wheel-bilbbet-cup{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:12px;} .wheel-bilbbet-cup img{width:86px;max-height:38px;object-fit:contain;} .wheel-bilbbet-cup-label{font-size:11px;font-weight:800;text-transform:uppercase;} .wheel-bilbbet-cup-value{font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:800;} .wheel-bilbbet-h2h-value{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:800;margin-top:10px;color:var(--ink);} .wheel-bilbbet-h2h-center{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;} .wheel-bilbbet-h2h-center img{width:78px;max-height:42px;object-fit:contain;} .wheel-bilbbet-h2h-center small{font-size:11px;font-weight:800;text-transform:uppercase;}
+  .wheel-cup-history-row{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;padding:9px 0;border-bottom:1px solid #555;font:600 14px "Barlow",sans-serif}.wheel-cup-history-row .wheel-cup-history-round{font-size:12px;font-weight:800}.wheel-cup-history-opponent{display:flex;align-items:center;gap:9px;min-width:0}.wheel-cup-history-opponent img{width:34px;height:34px;flex:0 0 34px;object-fit:contain}.wheel-cup-history-opponent span{overflow-wrap:anywhere}.wheel-cup-history-row strong{font-size:16px;white-space:nowrap}.wheel-cup-history-empty{font:12px "Barlow",sans-serif;opacity:.7} .wheel-bilbbet-stats{display:block;margin-top:12px;width:min(100%,490px);max-width:490px;} .wheel-bilbbet-season{font-size:12px;font-weight:800;letter-spacing:.07em;margin-bottom:6px;} .wheel-bilbbet-season-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;} .wheel-bilbbet-cup{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:12px;} .wheel-bilbbet-cup img{width:86px;max-height:38px;object-fit:contain;} .wheel-bilbbet-cup-label{font-size:11px;font-weight:800;text-transform:uppercase;} .wheel-bilbbet-cup-value{font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:800;} .wheel-bilbbet-h2h-value{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:800;margin-top:10px;color:var(--ink);} .wheel-bilbbet-h2h-center{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;} .wheel-bilbbet-h2h-center img{width:78px;max-height:42px;object-fit:contain;} .wheel-bilbbet-h2h-center small{font-size:11px;font-weight:800;text-transform:uppercase;}
 
   /* Keep both matchup columns aligned even when one team name wraps. */
   .wheel-matchup-teams{align-items:stretch;}
@@ -3686,7 +3686,7 @@ const WHEEL_BILBBET_FALLBACK = {"rows":{"3DOGS":{"last":["DIVISION 2A - 7TH","38
 let wheelBilbbetData = WHEEL_BILBBET_FALLBACK;
 function wheelBilbbetKey(name){return wheelTeamIdentity(String(name||"")).name.replace(/\s+/g," ").trim().toUpperCase();}
 function wheelBilbbetInfo(name){return wheelBilbbetData.rows[wheelBilbbetKey(name)]||null;}
-function wheelBilbbetCup(name){return wheelBilbbetData.odds[wheelBilbbetKey(name)]||"";}
+function wheelBilbbetCup(name){const key=wheelBilbbetKey(name);return wheelBilbbetData.odds[key]||WHEEL_BILBBET_FALLBACK.odds[key]||"";}
 function wheelBilbbetH2H(a,b){const x=wheelBilbbetInfo(a),y=wheelBilbbetInfo(b);return {a:x?.opponents?.[wheelBilbbetKey(b)]||"",b:y?.opponents?.[wheelBilbbetKey(a)]||""};}
 async function loadWheelBilbbet(){
  loadWheelCurrentSeason();
@@ -3760,7 +3760,7 @@ async function loadWheelCurrentSeason(){
 function wheelRenderPickStats(name){
  const el=$("drawWheelPickStats");if(!el)return;
  const info=wheelBilbbetInfo(name),cup=wheelBilbbetCup(name);
- if(!info&&!cup){el.style.display="none";el.textContent="";return;}
+ // Always show current season and cup history, even if the odds feed has no row.
  const key=wheelBilbbetKey(name);
  const div=getTeamDivision(name);
  const current=div&&wheelStandingsCache[div]?.[key];
@@ -3769,8 +3769,11 @@ function wheelRenderPickStats(name){
  const parts=[["Division",divisionText],["Roddy",roddy]];
  const season='<div class="wheel-bilbbet-season">26/27 SEASON</div><div class="wheel-bilbbet-season-row">'+parts.map(([k,v])=>'<div class="wheel-bilbbet-stat"><small>'+escapeHtml(k)+'</small><strong>'+escapeHtml(String(v))+'</strong></div>').join("")+"</div>";
  const matches=wheelPreviousCupMatches.get(key)||[];
- const previous='<div class="wheel-bilbbet-season" style="margin-top:11px;">PREVIOUS FA CUP ROUNDS</div>'+(matches.length?matches.map(m=>'<div class="wheel-cup-history-row"><span>'+escapeHtml(m.round)+'</span><span>'+escapeHtml(m.opponent)+'</span><strong>'+escapeHtml(m.score)+'</strong></div>').join(''):'<div class="wheel-cup-history-empty">No completed rounds yet</div>');
- const cupHtml=cup?'<div class="wheel-bilbbet-cup"><img src="logo/bilbbet.png" alt=""><div><div class="wheel-bilbbet-cup-label">To win FA Cup</div><div class="wheel-bilbbet-cup-value">'+escapeHtml(String(cup))+"</div></div></div>":"";
+ const previous='<div class="wheel-bilbbet-season" style="margin-top:15px;">PREVIOUS FA CUP ROUNDS</div>'+(matches.length?matches.map(m=>{
+   const opponent=wheelLogoTeamName(m.opponent);
+   return '<div class="wheel-cup-history-row"><span class="wheel-cup-history-round">'+escapeHtml(m.round)+'</span><span class="wheel-cup-history-opponent"><img src="logo/'+teamLogoSlug(opponent)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(opponent)+'"><span>'+escapeHtml(m.opponent)+'</span></span><strong>'+escapeHtml(m.score)+'</strong></div>';
+ }).join(''):'<div class="wheel-cup-history-empty">No completed rounds yet</div>');
+ const cupHtml='<div class="wheel-bilbbet-cup"><img src="logo/bilbbet.png" alt="Bilbbet"><div><div class="wheel-bilbbet-cup-label">To win FA Cup</div><div class="wheel-bilbbet-cup-value">'+(cup?escapeHtml(String(cup)):'—')+'</div></div></div>';
  el.innerHTML=season+previous+cupHtml;
  el.style.display=el.innerHTML?"block":"none";
 }
