@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-  .wheel-cup-history-row{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;padding:9px 0;border-bottom:1px solid #555;font:600 14px "Barlow",sans-serif}.wheel-cup-history-row .wheel-cup-history-round{font-size:12px;font-weight:800}.wheel-cup-history-opponent{display:flex;align-items:center;gap:9px;min-width:0}.wheel-cup-history-opponent img{width:34px;height:34px;flex:0 0 34px;object-fit:contain}.wheel-cup-history-opponent span{overflow-wrap:anywhere}.wheel-cup-history-row strong{font-size:16px;white-space:nowrap}.wheel-cup-history-empty{font:12px "Barlow",sans-serif;opacity:.7} .wheel-bilbbet-stats{display:block;margin-top:12px;width:min(100%,490px);max-width:490px;} .wheel-bilbbet-season{font-size:12px;font-weight:800;letter-spacing:.07em;margin-bottom:6px;} .wheel-bilbbet-season-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;} .wheel-bilbbet-cup{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:12px;} .wheel-bilbbet-cup img{width:86px;max-height:38px;object-fit:contain;} .wheel-bilbbet-cup-label{font-size:11px;font-weight:800;text-transform:uppercase;} .wheel-bilbbet-cup-value{font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:800;} .wheel-bilbbet-h2h-value{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:800;margin-top:10px;color:var(--ink);} .wheel-bilbbet-h2h-center{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;} .wheel-bilbbet-h2h-center img{width:78px;max-height:42px;object-fit:contain;} .wheel-bilbbet-h2h-center small{font-size:11px;font-weight:800;text-transform:uppercase;}
+  .wheel-cup-history-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:7px;align-items:center;text-align:left;padding:9px 0;border-bottom:1px solid #555;font:600 16px "Barlow",sans-serif}.wheel-cup-history-row .wheel-cup-history-round{font-size:12px;font-weight:800}.wheel-cup-history-opponent{display:flex;align-items:center;gap:5px;min-width:0}.wheel-cup-history-opponent img{width:25px;height:25px;flex:0 0 25px;object-fit:contain}.wheel-cup-history-opponent span{overflow-wrap:anywhere}.wheel-cup-history-row strong{font-size:19px;white-space:nowrap}.wheel-cup-history-empty{font:12px "Barlow",sans-serif;opacity:.7} .wheel-bilbbet-stats{display:block;margin-top:12px;width:min(100%,490px);max-width:490px;} .wheel-bilbbet-season{font-size:12px;font-weight:800;letter-spacing:.07em;margin-bottom:6px;} .wheel-bilbbet-season-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;} .wheel-bilbbet-cup{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:12px;} .wheel-bilbbet-cup img{width:86px;max-height:38px;object-fit:contain;} .wheel-bilbbet-cup-label{font-size:11px;font-weight:800;text-transform:uppercase;} .wheel-bilbbet-cup-value{font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:800;} .wheel-bilbbet-h2h-value{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:800;margin-top:10px;color:var(--ink);} .wheel-bilbbet-h2h-center{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;} .wheel-bilbbet-h2h-center img{width:78px;max-height:42px;object-fit:contain;} .wheel-bilbbet-h2h-center small{font-size:11px;font-weight:800;text-transform:uppercase;}
 
   /* Keep both matchup columns aligned even when one team name wraps. */
   .wheel-matchup-teams{align-items:stretch;}
@@ -3715,6 +3715,7 @@ function wheelRefreshBilbbetDisplay(){
 }
 const wheelCurrentRoddy=new Map();
 const wheelPreviousCupMatches=new Map();
+function wheelShortCupRound(round){const x=String(round||'').toUpperCase();if(/ROUND OF\\s*64/.test(x))return 'R64';if(/ROUND OF\\s*32/.test(x))return 'R32';if(/ROUND OF\\s*16/.test(x))return 'R16';if(/QUARTER/.test(x))return 'QF';if(/SEMI/.test(x))return 'SF';if(/PLAYOFF/.test(x))return 'PO';if(/FINAL/.test(x))return 'F';return round;}
 function wheelOrdinal(n){const x=n%100;return n+(x>=11&&x<=13?'TH':n%10===1?'ST':n%10===2?'ND':n%10===3?'RD':'TH');}
 async function loadWheelCurrentSeason(){
   try{
@@ -3771,7 +3772,7 @@ function wheelRenderPickStats(name){
  const matches=wheelPreviousCupMatches.get(key)||[];
  const previous='<div class="wheel-bilbbet-season" style="margin-top:15px;">PREVIOUS FA CUP ROUNDS</div>'+(matches.length?matches.map(m=>{
    const opponent=wheelLogoTeamName(m.opponent);
-   return '<div class="wheel-cup-history-row"><span class="wheel-cup-history-round">'+escapeHtml(m.round)+'</span><span class="wheel-cup-history-opponent"><img src="logo/'+teamLogoSlug(opponent)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(opponent)+'"><span>'+escapeHtml(m.opponent)+'</span></span><strong>'+escapeHtml(m.score)+'</strong></div>';
+   return '<div class="wheel-cup-history-row"><span class="wheel-cup-history-round">'+escapeHtml(wheelShortCupRound(m.round))+'</span><span class="wheel-cup-history-opponent"><img src="logo/'+teamLogoSlug(opponent)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(opponent)+'"><span>'+escapeHtml(m.opponent)+'</span></span><strong>'+escapeHtml(m.score)+'</strong></div>';
  }).join(''):'<div class="wheel-cup-history-empty">No completed rounds yet</div>');
  const cupHtml='<div class="wheel-bilbbet-cup"><img src="logo/bilbbet.png" alt="Bilbbet"><div><div class="wheel-bilbbet-cup-label">To win FA Cup</div><div class="wheel-bilbbet-cup-value">'+(cup?escapeHtml(String(cup)):'—')+'</div></div></div>';
  el.innerHTML=season+previous+cupHtml;
@@ -4119,17 +4120,16 @@ async function loadWheelStandings(divShort){
         if(!team)continue;
         standings.push({
           team,
-          pos:parseInt(wheelCell(rows[r],1),10)||null,
+          pos:standings.length+1,
           pts:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.PTS),10)||0,
           w:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.W),10)||0,
           d:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.D),10)||0,
           l:parseInt(wheelCell(rows[r],WHEEL_STANDINGS_COL.L),10)||0
         });
       }
-      const started=standings.some(t=>t.w+t.d+t.l>0);
       const index={};
       standings.forEach(t=>{
-        index[wheelTeamIdentity(t.team).name.toUpperCase()]={pos:started?t.pos:null,pts:t.pts,w:t.w,d:t.d,l:t.l};
+        index[wheelTeamIdentity(t.team).name.toUpperCase()]={pos:t.pos,pts:t.pts,w:t.w,d:t.d,l:t.l};
       });
       wheelStandingsCache[divShort] = index;
     }catch(err){
