@@ -8574,7 +8574,8 @@ async function loadTeamProfile(teamName){
     Promise.all([
       cachedFetch(h2hOpponentCsvUrlFor()).then(r => r.text()),
       cachedFetch(matchLogCsvUrlFor()).then(r => r.text())
-    ]).then(([opponentText, matchLogText]) => {
+    ]).then(async ([opponentText, matchLogText]) => {
+      await loadPreviousNameMap();
       const opponentRows = Papa.parse(opponentText, {skipEmptyLines:false}).data;
       const matchLogRows = Papa.parse(matchLogText, {skipEmptyLines:false}).data;
       teamVsTeamOpponents = findTeamVsTeamRecords(opponentRows, matchLogRows, teamName);
@@ -10277,29 +10278,39 @@ function matchLogCsvUrlFor(){
 
 function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
   teamVsTeamDebug = { rowsScanned: 0, opponentsFound: 0, matchLogRowCount: Math.max(0, matchLogRows.length - 1) };
-  const upperTeam = (teamName || "").trim().toUpperCase();
+  const normalize = name => String(name||"").trim().replace(/\s+/g," ").toUpperCase();
+  const canonical = name => {
+    let value=normalize(name);
+    const seen=new Set();
+    while(previousNameMap && previousNameMap[value] && !seen.has(value)){
+      seen.add(value);
+      value=normalize(previousNameMap[value]);
+    }
+    return value;
+  };
+  const upperTeam = canonical(teamName);
   const opponents = [];
 
   for(let r=1; r<opponentRows.length; r++){ // row 0 is the header row
     const row = opponentRows[r] || [];
     const t1 = cell(row, H2H_OPP_COL.TEAM);
-    if(!t1 || t1.toUpperCase() !== upperTeam) continue;
+    if(!t1 || canonical(t1) !== upperTeam) continue;
     teamVsTeamDebug.rowsScanned++;
 
     const t2 = cell(row, H2H_OPP_COL.OPPONENT);
-    if(!t2 || t2.toUpperCase() === upperTeam) continue; // self row, shouldn't occur but guard anyway
+    if(!t2 || canonical(t2) === upperTeam) continue; // self row, shouldn't occur but guard anyway
 
-    const upperOpp = t2.toUpperCase();
+    const upperOpp = canonical(t2);
     const matches = [];
     for(let m=1; m<matchLogRows.length; m++){
       const mrow = matchLogRows[m] || [];
-      const mt1 = cell(mrow, MATCH_LOG_COL.TEAM1).toUpperCase();
-      const mt2 = cell(mrow, MATCH_LOG_COL.TEAM2).toUpperCase();
+      const mt1 = canonical(cell(mrow, MATCH_LOG_COL.TEAM1));
+      const mt2 = canonical(cell(mrow, MATCH_LOG_COL.TEAM2));
       const teamIsTeam1 = mt1 === upperTeam && mt2 === upperOpp;
       const teamIsTeam2 = mt2 === upperTeam && mt1 === upperOpp;
       if(!teamIsTeam1 && !teamIsTeam2) continue;
 
-      const winner = cell(mrow, MATCH_LOG_COL.WINNER).toUpperCase();
+      const winner = canonical(cell(mrow, MATCH_LOG_COL.WINNER));
       const result = winner === "DRAW" ? "DRAW" : (winner === upperTeam ? "WIN" : "LOSS");
       matches.push({
         comp: cell(mrow, MATCH_LOG_COL.COMP),
@@ -10341,7 +10352,17 @@ function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
     const divShort = active ? getDivisionShortLabel(roddyMatch.division) : "N/A";
     const divColor = active ? getDivisionColorByLabel(roddyMatch.division) : "#000";
 
+    let streak="";
+    if(matches.length){
+      const latest=matches[matches.length-1].result;
+      if(latest==="WIN"||latest==="LOSS"){
+        let count=0;
+        for(let i=matches.length-1;i>=0&&matches[i].result===latest;i--)count++;
+        if(count>=2)streak=count+(latest==="WIN"?"-match winning streak":"-match losing streak");
+      }
+    }
     opponents.push({
+      streak,
       key: upperOpp,
       display,
       active,
