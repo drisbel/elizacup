@@ -8561,16 +8561,14 @@ async function loadTeamProfile(teamName){
   );
 
   let teamVsTeamOpponents = [];
-  fetches.push(
-    Promise.all([
+  const teamVsTeamPromise = Promise.all([
       cachedFetch(h2hOpponentCsvUrlFor()).then(r => r.text()),
       cachedFetch(matchLogCsvUrlFor()).then(r => r.text())
     ]).then(([opponentText, matchLogText]) => {
       const opponentRows = Papa.parse(opponentText, {skipEmptyLines:false}).data;
       const matchLogRows = Papa.parse(matchLogText, {skipEmptyLines:false}).data;
-      teamVsTeamOpponents = findTeamVsTeamRecords(opponentRows, matchLogRows, teamName);
-    })
-  );
+      return {opponentRows,matchLogRows};
+    });
 
   let clubInfo = null;
   fetches.push(
@@ -8603,6 +8601,10 @@ async function loadTeamProfile(teamName){
   );
 
   await Promise.all([...fetches, squadPromise]);
+  try{
+    const {opponentRows,matchLogRows}=await teamVsTeamPromise;
+    teamVsTeamOpponents=findTeamVsTeamRecords(opponentRows,matchLogRows,teamName);
+  }catch(err){console.error("Head-to-head match history unavailable",err);}
   const trophies = findTeamTrophies(teamName);
   renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad });
 }
@@ -10275,30 +10277,38 @@ function matchLogCsvUrlFor(){
 
 function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
   teamVsTeamDebug = { rowsScanned: 0, opponentsFound: 0, matchLogRowCount: Math.max(0, matchLogRows.length - 1) };
-  const upperTeam = (teamName || "").trim().toUpperCase();
+  const canonical = name => {
+    let value=String(name||'').trim().replace(/\s+/g,' ').toUpperCase();
+    const seen=new Set();
+    while(previousNameMap && previousNameMap[value] && !seen.has(value)){
+      seen.add(value);value=String(previousNameMap[value]).trim().toUpperCase();
+    }
+    return value;
+  };
+  const upperTeam = canonical(teamName);
   const normalizeName = name => String(name||"").trim().replace(/\s+/g," ").toUpperCase();
   const opponents = [];
 
   for(let r=1; r<opponentRows.length; r++){ // row 0 is the header row
     const row = opponentRows[r] || [];
     const t1 = cell(row, H2H_OPP_COL.TEAM);
-    if(!t1 || t1.toUpperCase() !== upperTeam) continue;
+    if(!t1 || canonical(t1) !== upperTeam) continue;
     teamVsTeamDebug.rowsScanned++;
 
     const t2 = cell(row, H2H_OPP_COL.OPPONENT);
-    if(!t2 || t2.toUpperCase() === upperTeam) continue; // self row, shouldn't occur but guard anyway
+    if(!t2 || canonical(t2) === upperTeam) continue; // self row, shouldn't occur but guard anyway
 
-    const upperOpp = t2.toUpperCase();
+    const upperOpp = canonical(t2);
     const matches = [];
     for(let m=1; m<matchLogRows.length; m++){
       const mrow = matchLogRows[m] || [];
-      const mt1 = normalizeName(cell(mrow, MATCH_LOG_COL.TEAM1));
-      const mt2 = normalizeName(cell(mrow, MATCH_LOG_COL.TEAM2));
+      const mt1 = canonical(cell(mrow, MATCH_LOG_COL.TEAM1));
+      const mt2 = canonical(cell(mrow, MATCH_LOG_COL.TEAM2));
       const teamIsTeam1 = mt1 === normalizeName(upperTeam) && mt2 === normalizeName(upperOpp);
       const teamIsTeam2 = mt2 === normalizeName(upperTeam) && mt1 === normalizeName(upperOpp);
       if(!teamIsTeam1 && !teamIsTeam2) continue;
 
-      const winner = cell(mrow, MATCH_LOG_COL.WINNER).toUpperCase();
+      const winner = canonical(cell(mrow, MATCH_LOG_COL.WINNER));
       const result = winner === "DRAW" ? "DRAW" : (winner === upperTeam ? "WIN" : "LOSS");
       matches.push({
         comp: cell(mrow, MATCH_LOG_COL.COMP),
@@ -10358,6 +10368,15 @@ function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
         if(count>=2)streak=count+(latestResult==="WIN"?"-match winning streak":"-match losing streak");
       }
     }
+    let streak="";
+    if(matches.length){
+      const last=matches[matches.length-1].result;
+      if(last==="WIN"||last==="LOSS"){
+        let count=0;
+        for(let n=matches.length-1;n>=0&&matches[n].result===last;n--)count++;
+        if(count>=2)streak=count+(last==="WIN"?" straight wins":" straight losses");
+      }
+    }
     opponents.push({
       key: upperOpp,
       display,
@@ -10369,7 +10388,8 @@ function findTeamVsTeamRecords(opponentRows, matchLogRows, teamName){
       l: cell(row, H2H_OPP_COL.L),
       d: cell(row, H2H_OPP_COL.D),
       streak,
-      matches
+      matches,
+      streak
     });
   }
 
