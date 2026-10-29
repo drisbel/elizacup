@@ -2483,8 +2483,8 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 /* Club profile alternative fixture schedule comparison */
 .club-alt-fixtures{margin-top:32px;max-width:680px;font-family:'Barlow',sans-serif}
 .club-alt-description{font-size:13px;color:#60736a;margin:5px 0 14px}
-.club-alt-fixtures label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
-.club-alt-fixtures select{font:600 14px 'Barlow',sans-serif;max-width:100%;width:min(360px,100%);padding:10px;border:1px solid #cbd5d0;border-radius:6px;background:#fff;color:#19392f}
+.club-alt-controls{display:flex;flex-wrap:wrap;gap:12px}.club-alt-controls label{flex:1 1 200px}.club-alt-fixtures label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+.club-alt-fixtures select{display:block;margin-top:6px;font:600 14px 'Barlow',sans-serif;max-width:100%;width:min(360px,100%);padding:10px;border:1px solid #cbd5d0;border-radius:6px;background:#fff;color:#19392f}
 .club-alt-table-wrap{overflow-x:auto;max-width:680px;margin-top:15px;border:1px solid #dbe3df;border-radius:7px}
 .club-alt-table{width:100%;border-collapse:collapse;font:500 13px 'Barlow',sans-serif}
 .club-alt-table th{background:#f0f4f0;color:#19392f;text-align:left;font-weight:800}
@@ -8441,7 +8441,6 @@ async function loadTeamProfile(teamName){
     currentSquad = parseLiveExport(rows).find(t=>liveKey(t.name)===liveKey(teamName)||liveKey(t.fantasy)===liveKey(teamName)) || null;
   })().catch(err=>console.warn('Club squad unavailable:',err));
   let divisionData = null;
-  let alternativeFixturesData = null;
   let facupSummary = [];
   let eclSummary = null;
   const fetches = [];
@@ -8461,14 +8460,6 @@ async function loadTeamProfile(teamName){
           parseFixtures(rows);
           currentDivision = prevDivision;
 
-          // Snapshot division data before other page loads can alter global standings.
-          alternativeFixturesData = {
-            teams: standings.map(item=>item.team),
-            rounds: Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).map(round=>({
-              round,
-              fixtures: fixturesByRound[round].map(f=>({home:f.home,away:f.away,homeScore:f.homeScore,awayScore:f.awayScore}))
-            }))
-          };
           const standingsRow = standings.find(s => (s.team||"").toUpperCase() === teamName.toUpperCase()) || null;
           const fixtures = [];
           Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).forEach(round=>{
@@ -8613,7 +8604,7 @@ async function loadTeamProfile(teamName){
 
   await Promise.all([...fetches, squadPromise]);
   const trophies = findTeamTrophies(teamName);
-  renderTeamProfile({ teamName, roddyEntry, divisionData, alternativeFixturesData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad });
+  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad });
 }
 
 // ---------- Historical Record (dedicated tab, gid 1444343417) ----------
@@ -9035,6 +9026,7 @@ function renderStatsPage(){
     <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
     <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>
+    <button class="round-tab${statsActiveTab==='alternative'?' active':''}" data-tab="alternative">Alternative Fixtures</button>
   `;
   toggleEl.querySelectorAll('.round-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -9043,6 +9035,12 @@ function renderStatsPage(){
     });
   });
 
+  if(statsActiveTab === "alternative"){
+    document.getElementById('statsHeading').textContent="Alternative Fixtures";
+    document.getElementById('statsSubheading').textContent="Compare team scores across other fixture schedules";
+    loadAlternativeFixturesTab();
+    return;
+  }
   if(statsActiveTab === "ownership"){
     document.getElementById('statsHeading').textContent = "Player Ownership";
     document.getElementById('statsSubheading').textContent = "";
@@ -10903,67 +10901,77 @@ function clubSquadHtml(squad,preRound=false,historical=false){
   return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">${historical?'Last Scored Squad':'Current Squad'}</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
 }
 
-function initClubAlternativeFixtures(data, initialTeam){
-  const select=document.getElementById('clubAltTeamSelect');
-  const tbody=document.getElementById('clubAltTableBody');
-  if(!select || !tbody) return;
-  const teams=data.teams.filter(Boolean);
-  const key=name=>(name||'').trim().toUpperCase();
-  const byKey=new Map(teams.map(t=>[key(t),t]));
-  teams.forEach(team=>{const option=document.createElement('option');option.value=team;option.textContent=team;select.appendChild(option);});
-  select.value=byKey.get(key(initialTeam))||teams[0];
-  const render=()=>{
-    const chosen=select.value;
+
+const altFixtureCache=new Map();
+async function loadAlternativeFixturesTab(){
+  const mount=document.getElementById('statsContainer');
+  mount.innerHTML='<div class="club-alt-fixtures"><p class="club-alt-description">Compare a team’s scores against every fixture schedule in its division. Games against the selected team itself are excluded.</p><div class="club-alt-controls"><label>Division<select id="altDiv"></select></label><label>Team<select id="altTeam"></select></label></div><p id="altStatus" class="sub"></p><div class="club-alt-matchup-title" id="altTitle"></div><div class="club-alt-table-wrap"><table class="club-alt-table"><thead><tr><th>Fixture schedule</th><th>P</th><th>W</th><th>D</th><th>L</th><th>Pts</th></tr></thead><tbody id="altRows"></tbody></table></div><p class="club-alt-description">P = eligible completed matches. Schedules can have different totals because self-matchups are excluded.</p></div>';
+  const divEl=document.getElementById('altDiv'),teamEl=document.getElementById('altTeam'),status=document.getElementById('altStatus');
+  const divs=DIVISIONS.filter(d=>d.type==='division');
+  divs.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.label;divEl.appendChild(o);});
+  const key=t=>String(t||'').trim().toUpperCase();
+  let data=null;
+  function draw(){
+    if(!data)return;
+    const selected=teamEl.value;
+    document.getElementById('altTitle').textContent='If '+selected+' had other teams’ fixtures';
     const scores=new Map();
-    data.rounds.forEach(({round,fixtures})=>fixtures.forEach(f=>{
-      if(f.homeScore===null || f.awayScore===null || !Number.isFinite(Number(f.homeScore)) || !Number.isFinite(Number(f.awayScore)))return;
-      scores.set(round+'|'+key(f.home),Number(f.homeScore));
-      scores.set(round+'|'+key(f.away),Number(f.awayScore));
+    data.rounds.forEach(r=>r.fixtures.forEach(f=>{
+      if(f.homeScore===null||f.awayScore===null)return;
+      scores.set(r.round+'|'+key(f.home),f.homeScore);
+      scores.set(r.round+'|'+key(f.away),f.awayScore);
     }));
-    const rows=teams.map(schedule=>{
+    const records=data.teams.map(schedule=>{
       let w=0,d=0,l=0;
-      data.rounds.forEach(({round,fixtures})=>{
-        const own=scores.get(round+'|'+key(chosen));
+      data.rounds.forEach(r=>{
+        const own=scores.get(r.round+'|'+key(selected));
         if(own===undefined)return;
-        const match=fixtures.find(f=>key(f.home)===key(schedule)||key(f.away)===key(schedule));
-        if(!match || match.homeScore===null || match.awayScore===null)return;
+        const match=r.fixtures.find(f=>key(f.home)===key(schedule)||key(f.away)===key(schedule));
+        if(!match||match.homeScore===null||match.awayScore===null)return;
         const opponent=key(match.home)===key(schedule)?match.away:match.home;
-        // When the chosen team is already the scheduled opponent, swap it with
-        // the schedule owner so we never simulate a team playing itself.
-        const opponentName=key(opponent)===key(chosen)?schedule:opponent;
-        const against=scores.get(round+'|'+key(opponentName));
+        if(key(opponent)===key(selected))return;
+        const against=scores.get(r.round+'|'+key(opponent));
         if(against===undefined)return;
         if(own>against)w++;else if(own<against)l++;else d++;
       });
-      return {schedule,w,d,l,pts:3*w+d};
+      return {schedule,w,d,l,p:w+d+l,pts:w*3+d};
     }).sort((a,b)=>b.pts-a.pts||b.w-a.w||a.schedule.localeCompare(b.schedule));
-    const matchupTitle=document.getElementById('clubAltMatchupTitle');
-    if(matchupTitle)matchupTitle.textContent=initialTeam+' had '+chosen+"'s fixtures";
-    tbody.replaceChildren();
-    rows.forEach(row=>{
+    const tbody=document.getElementById('altRows');tbody.replaceChildren();
+    records.forEach(rec=>{
       const tr=document.createElement('tr');
-      if(key(row.schedule)===key(chosen))tr.className='club-alt-actual';
-      [row.schedule,row.w,row.d,row.l,row.pts].forEach((value,i)=>{
-        const td=document.createElement('td');
-        if(i===0){
-          const wrap=document.createElement('div');wrap.className='club-alt-team';
-          const img=document.createElement('img');
-          img.src='logo/'+teamLogoSlug(row.schedule)+'.png';
-          img.alt='';img.loading='lazy';
-          img.onerror=()=>{img.onerror=null;img.src=teamPlaceholderLogoDataUri(row.schedule);};
-          const label=document.createElement('span');
-          label.textContent=row.schedule+(key(row.schedule)===key(chosen)?' (Actual)':'');
-          wrap.append(img,label);td.appendChild(wrap);
-        }else{td.textContent=value;}
-        tr.appendChild(td);
-      });
+      if(key(rec.schedule)===key(selected))tr.className='club-alt-actual';
+      const td=document.createElement('td'),wrap=document.createElement('div');wrap.className='club-alt-team';
+      const img=document.createElement('img');img.src='logo/'+teamLogoSlug(rec.schedule)+'.png';img.alt='';img.loading='lazy';
+      img.onerror=()=>{img.onerror=null;img.src=teamPlaceholderLogoDataUri(rec.schedule);};
+      const label=document.createElement('span');label.textContent=rec.schedule+(key(rec.schedule)===key(selected)?' (Actual)':'');
+      wrap.append(img,label);td.appendChild(wrap);tr.appendChild(td);
+      [rec.p,rec.w,rec.d,rec.l,rec.pts].forEach(n=>{const cell=document.createElement('td');cell.textContent=n;tr.appendChild(cell);});
       tbody.appendChild(tr);
     });
-  };
-  select.addEventListener('change',render);
-  render();
+  }
+  async function load(){
+    const div=divs.find(d=>d.id===divEl.value);
+    status.textContent='Loading '+div.label+'…';data=null;teamEl.replaceChildren();
+    try{
+      if(!altFixtureCache.has(div.id)){
+        const res=await cachedFetch(csvUrlFor(div));
+        if(!res.ok)throw Error('HTTP '+res.status);
+        const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data;
+        const previous=currentDivision;
+        try{
+          currentDivision=div;parseStandings(rows);parseFixtures(rows);
+          altFixtureCache.set(div.id,{teams:standings.map(t=>t.team).filter(Boolean),rounds:Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).map(round=>({round,fixtures:fixturesByRound[round].map(f=>({home:f.home,away:f.away,homeScore:f.homeScore===null?null:Number(f.homeScore),awayScore:f.awayScore===null?null:Number(f.awayScore)}))}))});
+        }finally{currentDivision=previous;}
+      }
+      if(divEl.value!==div.id)return;
+      data=altFixtureCache.get(div.id);
+      data.teams.forEach(team=>{const o=document.createElement('option');o.value=team;o.textContent=team;teamEl.appendChild(o);});
+      status.textContent='';draw();
+    }catch(err){status.textContent='Unable to load fixtures: '+err.message;}
+  }
+  divEl.addEventListener('change',load);teamEl.addEventListener('change',draw);
+  await load();
 }
-
 function renderTeamProfile(data){
   const container = document.getElementById('teamProfileContainer');
   container.className = "";
@@ -11089,19 +11097,9 @@ function renderTeamProfile(data){
   html += historicalRecordHtml(historicalRecords);
   html += h2hRecordHtml(h2hRecords);
   html += teamVsTeamSectionHtml(teamName, teamVsTeamOpponents);
-  if(alternativeFixturesData && alternativeFixturesData.teams.length){
-    html += `<section class="club-alt-fixtures"><div class="section-head"><h2 style="font-size:18px;">What If? – Alternative Fixtures</h2></div>
-      <p class="club-alt-description">See how a team's scores would have performed against every other team's fixture schedule in this division.</p>
-      <label for="clubAltTeamSelect">Compare scores for</label>
-      <select id="clubAltTeamSelect"></select>
-      <div class="club-alt-matchup-title" id="clubAltMatchupTitle"></div>
-      <div class="club-alt-table-wrap"><table class="club-alt-table"><thead><tr><th>Fixture schedule</th><th>W</th><th>D</th><th>L</th><th>Pts</th></tr></thead><tbody id="clubAltTableBody"></tbody></table></div>
-    </section>`;
-  }
   html += sideLeagueHonoursHtml(sideLeagueHonours);
 
   container.innerHTML = html;
-  if(alternativeFixturesData) initClubAlternativeFixtures(alternativeFixturesData,teamName);
   populateClubHistoryChart(teamName, roddyEntry ? roddyEntry.division : "");
   populateClubOwnershipHistory(teamName,currentSquad);
 
