@@ -2480,6 +2480,21 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 @media(max-width:600px){.ownership-owner-team-logo{width:25px;height:25px;flex-basis:25px}.ownership-owner-name{gap:5px}.ownership-owner-division{font-size:9px;padding:4px 3px}}
 
 
+/* Club profile alternative fixture schedule comparison */
+.club-alt-fixtures{margin-top:32px;font-family:'Barlow',sans-serif}
+.club-alt-description{font-size:13px;color:#60736a;margin:5px 0 14px}
+.club-alt-fixtures label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+.club-alt-fixtures select{font:600 14px 'Barlow',sans-serif;max-width:100%;width:min(360px,100%);padding:10px;border:1px solid #cbd5d0;border-radius:6px;background:#fff;color:#19392f}
+.club-alt-table-wrap{overflow-x:auto;margin-top:15px;border:1px solid #dbe3df;border-radius:7px}
+.club-alt-table{width:100%;border-collapse:collapse;font:500 13px 'Barlow',sans-serif}
+.club-alt-table th{background:#f0f4f0;color:#19392f;text-align:left;font-weight:800}
+.club-alt-table th,.club-alt-table td{padding:10px 12px;border-bottom:1px solid #e6ece8}
+.club-alt-table th:not(:first-child),.club-alt-table td:not(:first-child){text-align:center;white-space:nowrap}
+.club-alt-table td:first-child{font-weight:650}
+.club-alt-table tr:last-child td{border-bottom:0}
+.club-alt-table .club-alt-actual{background:#eaf4ee}
+.club-alt-table td:last-child{font-weight:800}
+@media(max-width:600px){.club-alt-table th,.club-alt-table td{padding:9px 6px;font-size:11px}}
 /* Spooners FC club-profile-only running days counter */
 .spooners-days-counter{display:inline-flex;align-items:center;gap:15px;padding:12px 20px;margin:0 0 16px;border-left:5px solid #1e483b;border-radius:0 9px 9px 0;background:#f0f4f0;color:#19392f;max-width:100%;box-sizing:border-box}
 .spooners-days-counter .spooners-days-number{font:800 clamp(30px,4vw,43px)/1 'Barlow Condensed',sans-serif;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
@@ -8422,6 +8437,7 @@ async function loadTeamProfile(teamName){
     currentSquad = parseLiveExport(rows).find(t=>liveKey(t.name)===liveKey(teamName)||liveKey(t.fantasy)===liveKey(teamName)) || null;
   })().catch(err=>console.warn('Club squad unavailable:',err));
   let divisionData = null;
+  let alternativeFixturesData = null;
   let facupSummary = [];
   let eclSummary = null;
   const fetches = [];
@@ -8441,6 +8457,14 @@ async function loadTeamProfile(teamName){
           parseFixtures(rows);
           currentDivision = prevDivision;
 
+          // Snapshot division data before other page loads can alter global standings.
+          alternativeFixturesData = {
+            teams: standings.map(item=>item.team),
+            rounds: Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).map(round=>({
+              round,
+              fixtures: fixturesByRound[round].map(f=>({home:f.home,away:f.away,homeScore:f.homeScore,awayScore:f.awayScore}))
+            }))
+          };
           const standingsRow = standings.find(s => (s.team||"").toUpperCase() === teamName.toUpperCase()) || null;
           const fixtures = [];
           Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).forEach(round=>{
@@ -8585,7 +8609,7 @@ async function loadTeamProfile(teamName){
 
   await Promise.all([...fetches, squadPromise]);
   const trophies = findTeamTrophies(teamName);
-  renderTeamProfile({ teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad });
+  renderTeamProfile({ teamName, roddyEntry, divisionData, alternativeFixturesData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad });
 }
 
 // ---------- Historical Record (dedicated tab, gid 1444343417) ----------
@@ -10875,10 +10899,60 @@ function clubSquadHtml(squad,preRound=false,historical=false){
   return `<section class="club-squad-section"><div class="section-head"><h2 style="font-size:18px">${historical?'Last Scored Squad':'Current Squad'}</h2><span class="sub">${liveEscape(squad.gameweek?'GW '+squad.gameweek:'15 players')}</span></div><div class="club-squad-pitch">${lines.filter(a=>a.length).map(a=>`<div class="club-squad-line">${a.map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></section>`;
 }
 
+function initClubAlternativeFixtures(data, initialTeam){
+  const select=document.getElementById('clubAltTeamSelect');
+  const tbody=document.getElementById('clubAltTableBody');
+  if(!select || !tbody) return;
+  const teams=data.teams.filter(Boolean);
+  const key=name=>(name||'').trim().toUpperCase();
+  const byKey=new Map(teams.map(t=>[key(t),t]));
+  teams.forEach(team=>{const option=document.createElement('option');option.value=team;option.textContent=team;select.appendChild(option);});
+  select.value=byKey.get(key(initialTeam))||teams[0];
+  const render=()=>{
+    const chosen=select.value;
+    const scores=new Map();
+    data.rounds.forEach(({round,fixtures})=>fixtures.forEach(f=>{
+      if(f.homeScore===null || f.awayScore===null || !Number.isFinite(Number(f.homeScore)) || !Number.isFinite(Number(f.awayScore)))return;
+      scores.set(round+'|'+key(f.home),Number(f.homeScore));
+      scores.set(round+'|'+key(f.away),Number(f.awayScore));
+    }));
+    const rows=teams.map(schedule=>{
+      let w=0,d=0,l=0;
+      data.rounds.forEach(({round,fixtures})=>{
+        const own=scores.get(round+'|'+key(chosen));
+        if(own===undefined)return;
+        const match=fixtures.find(f=>key(f.home)===key(schedule)||key(f.away)===key(schedule));
+        if(!match || match.homeScore===null || match.awayScore===null)return;
+        const opponent=key(match.home)===key(schedule)?match.away:match.home;
+        // When the chosen team is already the scheduled opponent, swap it with
+        // the schedule owner so we never simulate a team playing itself.
+        const opponentName=key(opponent)===key(chosen)?schedule:opponent;
+        const against=scores.get(round+'|'+key(opponentName));
+        if(against===undefined)return;
+        if(own>against)w++;else if(own<against)l++;else d++;
+      });
+      return {schedule,w,d,l,pts:3*w+d};
+    }).sort((a,b)=>b.pts-a.pts||b.w-a.w||a.schedule.localeCompare(b.schedule));
+    tbody.replaceChildren();
+    rows.forEach(row=>{
+      const tr=document.createElement('tr');
+      if(key(row.schedule)===key(chosen))tr.className='club-alt-actual';
+      [row.schedule,row.w,row.d,row.l,row.pts].forEach((value,i)=>{
+        const td=document.createElement('td');td.textContent=value;
+        if(i===0 && key(row.schedule)===key(chosen))td.textContent+=' (Actual)';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  };
+  select.addEventListener('change',render);
+  render();
+}
+
 function renderTeamProfile(data){
   const container = document.getElementById('teamProfileContainer');
   container.className = "";
-  const { teamName, roddyEntry, divisionData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad } = data;
+  const { teamName, roddyEntry, divisionData, alternativeFixturesData, facupSummary, eclSummary, eclMatches, historicalRecords, h2hRecords, teamVsTeamOpponents, clubInfo, trophies, trophyNote, sideLeagueHonours, currentSquad } = data;
 
   const hasAnyData = !!(roddyEntry || divisionData
     || (facupSummary && facupSummary.length)
@@ -11001,8 +11075,18 @@ function renderTeamProfile(data){
   html += h2hRecordHtml(h2hRecords);
   html += teamVsTeamSectionHtml(teamName, teamVsTeamOpponents);
   html += sideLeagueHonoursHtml(sideLeagueHonours);
+  if(alternativeFixturesData && alternativeFixturesData.teams.length){
+    html += `<section class="club-alt-fixtures"><div class="section-head"><h2 style="font-size:18px;">What If? – Alternative Fixtures</h2></div>
+      <p class="club-alt-description">See how a team's scores would have performed against every other team's fixture schedule in this division.</p>
+      <label for="clubAltTeamSelect">Compare scores for</label>
+      <select id="clubAltTeamSelect"></select>
+      <div class="club-alt-table-wrap"><table class="club-alt-table"><thead><tr><th>Fixture schedule</th><th>W</th><th>D</th><th>L</th><th>Pts</th></tr></thead><tbody id="clubAltTableBody"></tbody></table></div>
+    </section>`;
+  }
+
 
   container.innerHTML = html;
+  if(alternativeFixturesData) initClubAlternativeFixtures(alternativeFixturesData,teamName);
   populateClubHistoryChart(teamName, roddyEntry ? roddyEntry.division : "");
   populateClubOwnershipHistory(teamName,currentSquad);
 
