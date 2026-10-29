@@ -3465,6 +3465,7 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3) .team-link{font-size:19px!important}
 .export-image-stage.export-large-division-text .league-standings td.next-opp,
 .export-image-stage.export-large-division-text .league-standings td.next-opp a{font-size:18px!important}
+.rp-first-meeting{display:inline-flex!important;align-items:center;justify-content:center;gap:5px;white-space:nowrap!important}.rp-first-meeting>span{white-space:nowrap!important}
 </style>
 
 <style>
@@ -6308,7 +6309,7 @@ function roundPreviewCurrentRun(s,letter){
  return run;
 }
 function roundPreviewLastMeeting(h,home,away){
- if(!h.last)return '<span>FIRST RECORDED MEETING</span>';
+ if(!h.last)return '<span class="rp-first-meeting"><span>FIRST</span><span>RECORDED</span><span>MEETING</span></span>';
  const g=h.last,comp=roundPreviewEscape(g.comp||'MATCH'),year=roundPreviewEscape(g.season||'');
  const homeName=roundPreviewEscape(home),awayName=roundPreviewEscape(away);
  const label='<span>'+comp+'</span><span>'+year+'</span>';
