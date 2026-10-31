@@ -3465,7 +3465,28 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .export-image-stage.export-large-division-text .league-standings tbody td:nth-child(3) .team-link{font-size:19px!important}
 .export-image-stage.export-large-division-text .league-standings td.next-opp,
 .export-image-stage.export-large-division-text .league-standings td.next-opp a{font-size:18px!important}
-.rp-first-meeting{display:inline-flex!important;align-items:center;justify-content:center;gap:5px;white-space:nowrap!important}.rp-first-meeting>span{white-space:nowrap!important}
+
+/* Roddy mobile: show Total without scrolling and pin through the Team column. */
+@media (max-width:600px){
+  #roddyContainer .table-wrap{max-width:100%;overflow-x:auto;}
+  #roddyContainer table.roddy-table{width:max-content;min-width:0;table-layout:fixed;}
+  #roddyContainer table.roddy-table th,#roddyContainer table.roddy-table td{box-sizing:border-box;}
+  #roddyContainer table.roddy-table th:nth-child(1),#roddyContainer table.roddy-table td:nth-child(1){width:31px;min-width:31px;max-width:31px;padding:5px 2px;}
+  #roddyContainer table.roddy-table th:nth-child(2),#roddyContainer table.roddy-table td:nth-child(2){width:37px;min-width:37px;max-width:37px;padding:5px 1px;}
+  #roddyContainer table.roddy-table th:nth-child(3),#roddyContainer table.roddy-table td:nth-child(3){width:clamp(108px,calc(100vw - 216px),190px);min-width:108px;max-width:190px;padding:5px 3px;}
+  #roddyContainer table.roddy-table th:nth-child(4),#roddyContainer table.roddy-table td:nth-child(4){width:43px;min-width:43px;max-width:43px;padding:5px 1px;}
+  #roddyContainer table.roddy-table th:nth-child(5),#roddyContainer table.roddy-table td:nth-child(5){width:56px;min-width:56px;max-width:56px;padding:5px 2px;}
+  #roddyContainer table.roddy-table td.roddy-team{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:normal;font-size:11.5px;}
+  #roddyContainer table.roddy-table td.roddy-team .team-link{display:inline-block;vertical-align:middle;max-width:calc(100% - 25px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #roddyContainer table.roddy-table td.roddy-team .table-team-logo{width:19px;height:19px;margin-right:4px;vertical-align:middle;}
+  #roddyContainer table.roddy-table th:nth-child(1),#roddyContainer table.roddy-table td:nth-child(1){position:sticky;left:0;z-index:5;}
+  #roddyContainer table.roddy-table th:nth-child(2),#roddyContainer table.roddy-table td:nth-child(2){position:sticky;left:var(--sticky-col1-w,31px);z-index:5;}
+  #roddyContainer table.roddy-table th:nth-child(3),#roddyContainer table.roddy-table td:nth-child(3){position:sticky;left:calc(var(--sticky-col1-w,31px) + var(--roddy-chg-w,37px));z-index:5;}
+  #roddyContainer table.roddy-table thead th:nth-child(-n+3){z-index:8;background:var(--pitch);}
+  #roddyContainer table.roddy-table tbody td:nth-child(-n+3){background-color:inherit;}
+  #roddyContainer table.roddy-table tbody td:nth-child(3){box-shadow:2px 0 0 rgba(0,0,0,.12);}
+  #roddyContainer table.roddy-table td.roddy-total-focus{font-size:16px;}
+}
 </style>
 
 <style>
@@ -3510,46 +3531,6 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .ownership-trades-export-stage .ownership-trades-player img{max-width:25px!important;max-height:25px!important}
 .ownership-trades-week-grid .ownership-ranked-team .ownership-player-link{display:inline-block!important;visibility:visible!important;opacity:1!important;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;max-width:none!important;color:inherit}
 .ownership-award-ownership{display:block;font-size:13px;font-weight:700;white-space:nowrap}
-</style>
-
-<style>
-/* Export readability pass — 2026-10-30. Division standings deliberately excluded. */
-.export-image-stage:not(.export-large-division-text) .export-image-body .fixture-card{font-size:20px!important}
-.export-image-stage:not(.export-large-division-text) .fixture-team-name,
-.export-image-stage:not(.export-large-division-text) .fixture-team-name a{font-size:23px!important;line-height:1.25!important}
-.export-image-stage:not(.export-large-division-text) .fixture-card .fixture-score,
-.export-image-stage:not(.export-large-division-text) .fixture-card .fixture-result,
-.export-image-stage:not(.export-large-division-text) .fixture-card .fixture-vs{font-size:25px!important}
-.export-image-stage:not(.export-large-division-text) .fixture-card small,
-.export-image-stage:not(.export-large-division-text) .fixture-card .fixture-meta,
-.export-image-stage:not(.export-large-division-text) .fixture-card .fixture-round{font-size:17px!important}
-.export-image-stage:not(.export-large-division-text) .export-image-body .section-head h2{font-size:27px!important}
-.export-sideleague .export-image-body table th{font-size:19px!important;padding-top:13px!important;padding-bottom:13px!important}
-.export-sideleague .export-image-body table td{font-size:20px!important;padding-top:12px!important;padding-bottom:12px!important}
-.export-sideleague.export-compact-overall .export-image-body table td:nth-child(2){font-size:22px!important}
-.export-sideleague .side-export-team-name,.export-sideleague .side-export-team-name a{font-size:20px!important;line-height:1.25!important}
-.export-sideleague.export-broadcast-fixtures .fixture-card .fixture-team-name{font-size:27px!important}
-.export-sideleague .export-image-body .section-head h2{font-size:29px!important}
-.round-preview-stage .rp-eyebrow,.round-preview-stage .rp-subtitle{font-size:20px!important}
-.round-preview-stage .rp-team strong{font-size:23px!important;line-height:1.15!important}
-.round-preview-stage .rp-team>span{font-size:19px!important}
-.round-preview-stage .rp-versus>b{font-size:26px!important}
-.round-preview-stage .rp-versus strong{font-size:28px!important}
-.round-preview-stage .rp-versus small{font-size:16px!important}
-.round-preview-stage .rp-form{font-size:17px!important;min-width:28px!important}
-.round-preview-stage .rp-last,.round-preview-stage .rp-last span{font-size:18px!important}
-.round-preview-stage .rp-last b{font-size:16px!important}
-.round-preview-stage .rp-highlight{font-size:20px!important}
-.round-preview-stage .rp-active-streak{font-size:17px!important}
-.round-preview-stage .rp-odds span{font-size:27px!important}
-.live-export-stage .live-match-name{font-size:17px!important}
-.live-export-stage .live-match-score{font-size:25px!important}
-.live-export-stage .live-comp-heading{font-size:20px!important}
-.eliza-mc-export-stage .eliza-mc-export-team{font-size:18px!important}
-.eliza-mc-export-stage .eliza-mc-export-title{font-size:28px!important}
-.streak-new-export-stage .streaks-modern-table th,.streak-new-export-stage .streaks-modern-table td{font-size:19px!important;padding-top:15px!important;padding-bottom:15px!important}
-.ownership-trades-export-stage .ownership-trades-export-team{font-size:23px!important}
-.ownership-trades-export-stage .ownership-trades-export-players{font-size:19px!important}
 </style>
 </head>
 <body>
@@ -6349,7 +6330,7 @@ function roundPreviewCurrentRun(s,letter){
  return run;
 }
 function roundPreviewLastMeeting(h,home,away){
- if(!h.last)return '<span class="rp-first-meeting">FIRST&nbsp; RECORDED&nbsp; MEETING</span>';
+ if(!h.last)return '<span>FIRST RECORDED MEETING</span>';
  const g=h.last,comp=roundPreviewEscape(g.comp||'MATCH'),year=roundPreviewEscape(g.season||'');
  const homeName=roundPreviewEscape(home),awayName=roundPreviewEscape(away);
  const label='<span>'+comp+'</span><span>'+year+'</span>';
@@ -16371,6 +16352,10 @@ function fixStickyCol2Offsets(){
     if(!firstCell) return;
     const w = Math.round(firstCell.getBoundingClientRect().width);
     if(w > 0) table.style.setProperty('--sticky-col1-w', w + 'px');
+    if(table.closest('#roddyContainer')){
+      const chgCell = table.querySelector('thead th:nth-child(2)');
+      if(chgCell) table.style.setProperty('--roddy-chg-w', Math.round(chgCell.getBoundingClientRect().width) + 'px');
+    }
     if(table.classList.contains('league-standings')){
       const chgCell = table.querySelector('thead th:nth-child(2)');
       const chgWidth = chgCell ? chgCell.getBoundingClientRect().width : 0;
