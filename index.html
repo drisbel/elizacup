@@ -4030,7 +4030,19 @@ async function cachedFetch(url, options){
     }catch(e){ /* corrupted entry, or sessionStorage unavailable (private browsing etc.) — fall through to a real fetch */ }
   }
 
-  const res = await fetch(url, options);
+  // Retry transient network failures and Google Sheets throttling, without
+  // retrying permanent 4xx errors or non-GET requests.
+  let res;
+  const method = String(options?.method || 'GET').toUpperCase();
+  for(let attempt = 0; attempt < (method === 'GET' ? 3 : 1); attempt++){
+    try{
+      res = await fetch(url, options);
+      if(res.ok || ![429, 500, 502, 503, 504].includes(res.status) || attempt === 2) break;
+    }catch(err){
+      if(attempt === 2 || method !== 'GET') throw err;
+    }
+    await new Promise(resolve => setTimeout(resolve, 450 * (attempt + 1)));
+  }
   if(res.ok){
     try{
       const text = await res.clone().text();
@@ -9364,7 +9376,15 @@ async function loadPlayerOwnershipTab(){
   await Promise.all([ensureOwnershipHistory(),loadOwnershipFullPlayerStats()]);
   renderPlayerOwnershipTab();
   if(ownershipCategory==="lookup"&&ownershipSelectedPlayer)requestAnimationFrame(()=>document.getElementById("ownershipInlineProfile")?.scrollIntoView({block:"start"}));
- }catch(err){el.className='state-msg error';el.textContent='Unable to load ownership statistics: '+err.message;}
+ }catch(err){
+  if(statsActiveTab !== 'ownership') return;
+  el.className='state-msg error';
+  el.textContent='Unable to load ownership statistics: '+err.message+' ';
+  const retry=document.createElement('button');
+  retry.type='button';retry.className='btn';retry.textContent='Try again';
+  retry.addEventListener('click',()=>loadPlayerOwnershipTab());
+  el.appendChild(retry);
+ }
 }
 function ownershipClubShort(club){
  const key=String(club||'').toLowerCase().replace(/[^a-z0-9]/g,'');
