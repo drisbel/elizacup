@@ -3540,6 +3540,10 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 #ownershipInlineProfile .ownership-profile-round{display:flex;align-items:center;gap:6px;min-width:0}
 #ownershipInlineProfile .ownership-profile-round .ownership-fixture-opponent{gap:3px}
 #ownershipInlineProfile .ownership-profile-round .ownership-club-logo{width:23px!important;height:23px!important;flex-basis:23px!important}
+.ownership-award-team-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px 14px;margin-top:12px}
+.ownership-award-team{display:flex;align-items:center;gap:9px;min-width:0;font-size:16px}
+.ownership-award-team img{width:auto!important;height:auto!important;max-width:30px!important;max-height:30px!important;object-fit:contain;flex:0 0 auto}
+.ownership-award-team strong{min-width:0;overflow-wrap:anywhere}
 /* Trades of the Week: keep original crest aspect ratio and visible team names. */
 .ownership-trades-export-stage .ownership-trades-export-team img,.ownership-trades-export-stage .ownership-trades-player img{width:auto!important;height:auto!important;max-width:38px!important;max-height:38px!important;object-fit:contain!important;flex:0 0 auto!important}
 .ownership-trades-export-stage .ownership-trades-player img{max-width:25px!important;max-height:25px!important}
@@ -9250,7 +9254,12 @@ function ownershipTradesWeekAwards(gw){
   }
  }
  regrets.sort((a,b)=>b.points-a.points||a.player.localeCompare(b.player));
- return {regret:regrets[0]||null,pod:pods[0]||null};
+ // Select the top-scoring player once, then include every eligible team.
+ const topRegret=regrets[0]||null,topPod=pods[0]||null;
+ const distinctTeams=items=>[...new Map(items.map(item=>[liveKey(item.team),item.team])).values()].sort((a,b)=>a.localeCompare(b));
+ const regret=topRegret?{...topRegret,teams:distinctTeams(regrets.filter(r=>liveKey(r.player)===liveKey(topRegret.player)&&r.points===topRegret.points))}:null;
+ const pod=topPod?{...topPod,teams:distinctTeams(pods.filter(r=>liveKey(r.player)===liveKey(topPod.player)&&r.points===topPod.points))}:null;
+ return {regret,pod};
 }
 function ownershipTradesOfWeekHtml(){
  const all=ownershipTradeWeekRows().filter(r=>ownershipDivision==='all'||r.division===ownershipDivision);
@@ -9280,7 +9289,7 @@ async function ownershipExportTradesWeek(){
  const awards=ownershipTradesWeekAwards(gw);
  const player=p=>`<div class="ownership-trades-player">${ownershipClubLogo(p.club)}<span>${liveEscape(p.name)}</span><strong>${p.score}</strong></div>`;
  const section=(title,items)=>`<section class="ownership-trades-export-panel"><h2>${title}</h2>${items.map((r,i)=>`<div class="ownership-trades-export-entry"><div class="ownership-trades-export-team">${ownershipTeamLogo(r.team)}<strong>${liveEscape(r.team)}</strong><span>${r.points>0?'+':''}${r.points} PTS</span></div><div class="ownership-trades-export-players"><div><h4>OUT</h4>${r.outs.map(player).join('')}</div><div><h4>IN</h4>${r.ins.map(player).join('')}</div></div></div>`).join('')||'<p>No qualifying trades.</p>'}</section>`;
- const awardPanel=(title,r)=>`<section class="ownership-trades-export-panel"><h2>${title}</h2>${r?`<div class="ownership-trades-export-entry"><div class="ownership-trades-export-team">${ownershipTeamLogo(r.team)}<strong>${liveEscape(r.team)}</strong><span>${r.points} PTS</span></div><div class="ownership-trades-player">${ownershipClubLogo(r.club)}<span>${liveEscape(r.player)}</span>${title==='POD OF THE WEEK'?`<small class="ownership-award-ownership">Ownership: ${r.ownershipPct.toFixed(1)}%</small>`:''}</div></div>`:'<p>No qualifying player this week.</p>'}</section>`;
+ const awardPanel=(title,r)=>`<section class="ownership-trades-export-panel"><h2>${title}</h2>${r?`<div class="ownership-trades-export-entry"><div class="ownership-trades-export-team"><strong>${liveEscape(r.player)}</strong><span>${r.points} PTS</span></div><div class="ownership-trades-player">${ownershipClubLogo(r.club)}<span>${liveEscape(r.player)}</span>${title==='POD OF THE WEEK'?`<small class="ownership-award-ownership">Ownership: ${r.ownershipPct.toFixed(1)}%</small>`:''}</div><div class="ownership-award-team-list">${(r.teams||[r.team]).map(team=>`<div class="ownership-award-team">${ownershipTeamLogo(team)}<strong>${liveEscape(team)}</strong></div>`).join('')}</div></div>`:'<p>No qualifying player this week.</p>'}</section>`;
  stage.innerHTML=`<header><strong>ELIZA CUP · 2026/27</strong><h1>TRADES OF THE WEEK · GW ${liveEscape(gw)}</h1></header><div class="ownership-trades-export-columns">${section('BEST TRADES',rows.best)}${section('WORST TRADES',rows.worst)}</div><div class="ownership-trades-export-columns">${awardPanel('TRANSFER REGRET',awards.regret)}${awardPanel('POD OF THE WEEK',awards.pod)}</div>`;
  document.body.appendChild(stage);
  try{
