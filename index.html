@@ -3502,6 +3502,7 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .opponent-luck-team-name{display:inline-block;vertical-align:middle;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .opponent-luck-team-name a{display:inline!important;white-space:nowrap;}
 @media(max-width:600px){.opponent-luck-table th,.opponent-luck-table td{padding:7px 3px!important;font-size:11px!important;}.opponent-luck-team-cell .table-team-logo{width:20px!important;height:20px!important;}.opponent-luck-team-name{max-width:calc(100% - 25px);}}
+.opponent-luck-heading{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:800;margin:0 0 10px;}
 </style>
 
 <style>
@@ -9140,7 +9141,7 @@ function renderDivisionOpponentLuck(data){
  window.divisionOpponentLuckRecords=list;
  if(!list.length){el.innerHTML='<p class="state-msg">Opponent Luck will appear once completed division fixtures have scores.</p>';return;}
  const signed=n=>(n>0?'+':'')+n.toFixed(1);
- el.innerHTML='<div class="opponent-luck-layout"><p style="font-size:13px;opacity:.8;margin:0 0 14px">Compares each opponent’s score with the average score in that division during the same round. Positive = easier-than-average opposition (lucky); negative = tougher-than-average opposition (unlucky). Select a luck value for fixture details.</p>'+
+ el.innerHTML='<div class="opponent-luck-layout"><h3 class="opponent-luck-heading">Opponent Luck</h3><p style="font-size:13px;opacity:.8;margin:0 0 14px">Compares each opponent’s score with the average score in that division during the same round. Positive = easier-than-average opposition (lucky); negative = tougher-than-average opposition (unlucky). Select a luck value for fixture details.</p>'+
  '<div class="table-wrap opponent-luck-table-wrap"><table class="standings compact league-standings opponent-luck-table"><thead><tr><th>#</th><th>Team</th><th>Played</th><th>Opp. Avg</th><th>Luck</th></tr></thead><tbody>'+
  list.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="opponent-luck-team-cell" style="text-align:left;white-space:nowrap;"><img src="logo/'+teamLogoSlug(r.team)+'.png" alt="" class="table-team-logo" style="width:28px;height:28px;object-fit:contain;object-position:center;vertical-align:middle;" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=\''+teamPlaceholderLogoDataUri(r.team)+'\';}"><span class="opponent-luck-team-name">'+teamLink(r.team)+'</span></td><td>'+r.played+'</td><td>'+r.oppAvg.toFixed(1)+'</td><td><button type="button" class="ownership-player-link" data-division-luck="'+i+'" style="font-weight:800;color:'+(r.luck>0?'#27834c':r.luck<0?'#b34836':'inherit')+'">'+signed(r.luck)+'</button></td></tr>').join('')+'</tbody></table></div></div>';
 }
@@ -9173,7 +9174,7 @@ function renderStatsPage(){
 
   if(statsActiveTab === "divisionstats"){
     document.getElementById("statsHeading").textContent="Division Statistics";
-    document.getElementById("statsSubheading").textContent="Opponent Luck";
+    document.getElementById("statsSubheading").textContent="";
     loadDivisionStatisticsTab();
     return;
   }
