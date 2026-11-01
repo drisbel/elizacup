@@ -3487,6 +3487,8 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
   #roddyContainer table.roddy-table tbody td:nth-child(3){box-shadow:2px 0 0 rgba(0,0,0,.12);}
   #roddyContainer table.roddy-table td.roddy-total-focus{font-size:16px;}
 }
+@media (min-width: 900px) { .opponent-luck-layout { width: 50%; } }
+.opponent-luck-layout { max-width: 100%; }
 </style>
 
 <style>
@@ -9117,7 +9119,7 @@ function renderDivisionOpponentLuck(data){
    for(const [team,opp,score] of [[f.home,f.away,f.awayScore],[f.away,f.home,f.homeScore]]){
     const key=positionChangeTeamKey(team);
     if(!records.has(key))records.set(key,{team,rows:[]});
-    records.get(key).rows.push({round:Number(round),opp,score,avg,diff:score-avg});
+    records.get(key).rows.push({round:Number(round),opp,score,avg,diff:avg-score});
    }
   }
  }
@@ -9125,9 +9127,9 @@ function renderDivisionOpponentLuck(data){
  window.divisionOpponentLuckRecords=list;
  if(!list.length){el.innerHTML='<p class="state-msg">Opponent Luck will appear once completed division fixtures have scores.</p>';return;}
  const signed=n=>(n>0?'+':'')+n.toFixed(1);
- el.innerHTML='<p style="font-size:13px;opacity:.8;margin:0 0 14px">Compares each opponent’s score with the average score in that division during the same round. Positive = tougher-than-average opposition (unlucky); negative = easier-than-average opposition (lucky). Select a luck value for fixture details.</p>'+
+ el.innerHTML='<div class="opponent-luck-layout"><p style="font-size:13px;opacity:.8;margin:0 0 14px">Compares each opponent’s score with the average score in that division during the same round. Positive = easier-than-average opposition (lucky); negative = tougher-than-average opposition (unlucky). Select a luck value for fixture details.</p>'+
  '<div class="table-wrap"><table class="standings compact league-standings"><thead><tr><th>#</th><th>Team</th><th>Played</th><th>Opp. Avg</th><th>Luck</th></tr></thead><tbody>'+
- list.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+teamLink(r.team)+'</td><td>'+r.played+'</td><td>'+r.oppAvg.toFixed(1)+'</td><td><button type="button" class="ownership-player-link" data-division-luck="'+i+'" style="font-weight:800;color:'+(r.luck>0?'#b34836':r.luck<0?'#27834c':'inherit')+'">'+signed(r.luck)+'</button></td></tr>').join('')+'</tbody></table></div>';
+ list.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="text-align:left;white-space:nowrap;"><img src="logo/'+teamLogoSlug(r.team)+'.png" alt="" class="table-team-logo" style="width:28px;height:28px;object-fit:contain;object-position:center;vertical-align:middle;" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=\''+teamPlaceholderLogoDataUri(r.team)+'\';}">'+teamLink(r.team)+'</td><td>'+r.played+'</td><td>'+r.oppAvg.toFixed(1)+'</td><td><button type="button" class="ownership-player-link" data-division-luck="'+i+'" style="font-weight:800;color:'+(r.luck>0?'#27834c':r.luck<0?'#b34836':'inherit')+'">'+signed(r.luck)+'</button></td></tr>').join('')+'</tbody></table></div></div>';
 }
 function openDivisionLuckDetails(index){
  const r=window.divisionOpponentLuckRecords?.[Number(index)];if(!r)return;
