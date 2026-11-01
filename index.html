@@ -3543,6 +3543,32 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
  .opponent-luck-layout .opponent-luck-team-name{max-width:calc(100% - 25px)!important;}
 }
 
+
+/* Opponent Luck mobile table: remove the loading-state border and fit all columns. */
+#divisionOpponentLuck{border:0!important;border-radius:0!important;padding:0!important;text-align:left!important;min-width:0!important;width:100%!important;box-sizing:border-box!important;}
+#statsContainer{min-width:0;}
+.opponent-luck-layout{min-width:0;box-sizing:border-box;}
+.opponent-luck-table-wrap{overflow-x:hidden!important;min-width:0!important;width:100%!important;}
+.opponent-luck-table{width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;}
+.opponent-luck-table th,.opponent-luck-table td{box-sizing:border-box!important;overflow:hidden;}
+@media(min-width:900px){.opponent-luck-layout{width:50%;}}
+@media(max-width:899px){
+ .opponent-luck-layout{width:100%!important;}
+ .opponent-luck-table th:nth-child(1){width:8%!important;}
+ .opponent-luck-table th:nth-child(2){width:38%!important;}
+ .opponent-luck-table th:nth-child(3){width:20%!important;}
+ .opponent-luck-table th:nth-child(4){width:15%!important;}
+ .opponent-luck-table th:nth-child(5){width:19%!important;}
+ .opponent-luck-table th,.opponent-luck-table td{padding:7px 2px!important;font-size:11px!important;letter-spacing:0!important;}
+ .opponent-luck-team-cell{min-width:0!important;}
+ .opponent-luck-team-cell .table-team-logo{width:19px!important;height:19px!important;margin-right:3px!important;}
+ .opponent-luck-team-name{max-width:calc(100% - 26px)!important;font-size:11px!important;}
+}
+@media(max-width:380px){
+ .opponent-luck-table th,.opponent-luck-table td{font-size:10px!important;padding:6px 1px!important;}
+ .opponent-luck-team-cell .table-team-logo{width:17px!important;height:17px!important;}
+ .opponent-luck-team-name{max-width:calc(100% - 23px)!important;}
+}
 </style>
 
 <style>
@@ -9164,6 +9190,7 @@ async function loadDivisionStatisticsTab(){
 /* Division Statistics — opponent luck, based on completed regular-season fixtures. */
 function renderDivisionOpponentLuck(data){
  const el=document.getElementById('divisionOpponentLuck');if(!el)return;
+ el.classList.remove('state-msg');
  const records=new Map(), rounds=data.rounds.map(r=>String(r.round)).filter(k=>/^\d+$/.test(k)&&Number(k)<24).sort((a,b)=>Number(a)-Number(b));
  for(const round of rounds){
   const games=(data.rounds.find(r=>String(r.round)===round)?.fixtures||[]).filter(f=>Number.isFinite(f.homeScore)&&Number.isFinite(f.awayScore));
