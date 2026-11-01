@@ -3503,6 +3503,10 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .opponent-luck-team-name a{display:inline!important;white-space:nowrap;}
 @media(max-width:600px){.opponent-luck-table th,.opponent-luck-table td{padding:7px 3px!important;font-size:11px!important;}.opponent-luck-team-cell .table-team-logo{width:20px!important;height:20px!important;}.opponent-luck-team-name{max-width:calc(100% - 25px);}}
 .opponent-luck-heading{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:800;margin:0 0 10px;}
+.division-luck-detail-table th:not(:nth-child(2)),.division-luck-detail-table td:not(:nth-child(2)){text-align:center!important;}
+.division-luck-detail-table th:nth-child(2),.division-luck-detail-table td:nth-child(2){text-align:left!important;}
+.division-luck-detail-opponent{display:flex;align-items:center;gap:8px;min-width:0;}
+.division-luck-detail-opponent img{width:26px;height:26px;object-fit:contain;flex:none;}
 </style>
 
 <style>
@@ -9151,7 +9155,7 @@ function openDivisionLuckDetails(index){
  if(!modal){modal=document.createElement('div');modal.id='divisionLuckModal';modal.className='ownership-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');document.body.appendChild(modal);}
  const signed=n=>(n>0?'+':'')+n.toFixed(1);
  modal.hidden=false;
- modal.innerHTML='<div class="ownership-modal-panel" style="max-width:680px;width:calc(100% - 28px);max-height:85vh;overflow:auto"><div class="ownership-modal-header"><div><h3>'+liveEscape(r.team)+'</h3><small>Opponent Luck: '+signed(r.luck)+' per match · '+r.played+' matches</small></div><button type="button" class="ownership-modal-close" data-division-luck-close aria-label="Close">×</button></div><div class="table-wrap"><table class="ownership-table"><thead><tr><th>Round</th><th>Opponent</th><th>Opp. Score</th><th>Round Avg</th><th>Luck</th></tr></thead><tbody>'+r.rows.map(w=>'<tr><td>'+w.round+'</td><td>'+liveEscape(w.opp)+'</td><td>'+w.score+'</td><td>'+w.avg.toFixed(1)+'</td><td><strong>'+signed(w.diff)+'</strong></td></tr>').join('')+'</tbody></table></div></div>';
+ modal.innerHTML='<div class="ownership-modal-panel" style="max-width:680px;width:calc(100% - 28px);max-height:85vh;overflow:auto"><div class="ownership-modal-header"><div><h3>'+liveEscape(r.team)+'</h3><small>Opponent Luck: '+signed(r.luck)+' per match · '+r.played+' matches</small></div><button type="button" class="ownership-modal-close" data-division-luck-close aria-label="Close">×</button></div><div class="table-wrap"><table class="ownership-table division-luck-detail-table"><thead><tr><th>Round</th><th>Opponent</th><th>Opp. Score</th><th>Round Avg</th><th>Luck</th></tr></thead><tbody>'+r.rows.map(w=>'<tr><td>'+w.round+'</td><td><span class="division-luck-detail-opponent"><img src="logo/'+teamLogoSlug(w.opp)+'.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=\''+teamPlaceholderLogoDataUri(w.opp)+'\';}"><span>'+liveEscape(w.opp)+'</span></span></td><td>'+w.score+'</td><td>'+w.avg.toFixed(1)+'</td><td><strong>'+signed(w.diff)+'</strong></td></tr>').join('')+'</tbody></table></div></div>';
  modal.onclick=e=>{if(e.target===modal||e.target.closest('[data-division-luck-close]'))modal.hidden=true;};
 }
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-division-luck]');if(btn)openDivisionLuckDetails(btn.dataset.divisionLuck);});
