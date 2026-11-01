@@ -3703,13 +3703,7 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
     </div>
     <div id="roundTabs" class="round-tabs"></div>
     <div id="fixtureContainer" class="state-msg">Loading fixtures…</div>
-    <section id="divisionStatisticsSection" style="margin-top:40px">
-      <div class="section-head"><h2>Division Statistics</h2></div>
-      <details class="division-stats-panel" open>
-        <summary><strong>Opponent Luck</strong> <span style="opacity:.7;font-size:13px">Season rankings</span></summary>
-        <div id="divisionOpponentLuck" style="padding-top:14px">Loading opponent luck…</div>
-      </details>
-    </section>
+
   </section>
 
   <section id="roddySection" style="display:none;">
@@ -6098,41 +6092,6 @@ function parseFixtures(rows){
   });
 }
 
-/* Division Statistics — opponent luck, based on completed regular-season fixtures. */
-function renderDivisionOpponentLuck(){
- const el=document.getElementById('divisionOpponentLuck');if(!el)return;
- const records=new Map(), rounds=Object.keys(fixturesByRound).filter(k=>/^\\d+$/.test(k)&&Number(k)<24).sort((a,b)=>Number(a)-Number(b));
- for(const round of rounds){
-  const games=(fixturesByRound[round]||[]).filter(f=>Number.isFinite(f.homeScore)&&Number.isFinite(f.awayScore));
-  if(!games.length)continue;
-  const allScores=games.flatMap(f=>[f.homeScore,f.awayScore]);
-  const avg=allScores.reduce((a,b)=>a+b,0)/allScores.length;
-  for(const f of games){
-   for(const [team,opp,score] of [[f.home,f.away,f.awayScore],[f.away,f.home,f.homeScore]]){
-    const key=positionChangeTeamKey(team);
-    if(!records.has(key))records.set(key,{team,rows:[]});
-    records.get(key).rows.push({round:Number(round),opp,score,avg,diff:score-avg});
-   }
-  }
- }
- const list=[...records.values()].map(r=>({...r,played:r.rows.length,oppAvg:r.rows.reduce((a,w)=>a+w.score,0)/r.rows.length,luck:r.rows.reduce((a,w)=>a+w.diff,0)/r.rows.length})).sort((a,b)=>b.luck-a.luck||a.team.localeCompare(b.team));
- window.divisionOpponentLuckRecords=list;
- if(!list.length){el.innerHTML='<p class="state-msg">Opponent Luck will appear once completed division fixtures have scores.</p>';return;}
- const signed=n=>(n>0?'+':'')+n.toFixed(1);
- el.innerHTML='<p style="font-size:13px;opacity:.8;margin:0 0 14px">Compares each opponent’s score with the average score in that division during the same round. Positive = tougher-than-average opposition (unlucky); negative = easier-than-average opposition (lucky). Select a luck value for fixture details.</p>'+
- '<div class="table-wrap"><table class="standings compact league-standings"><thead><tr><th>#</th><th>Team</th><th>Played</th><th>Opp. Avg</th><th>Luck</th></tr></thead><tbody>'+
- list.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+teamLink(r.team)+'</td><td>'+r.played+'</td><td>'+r.oppAvg.toFixed(1)+'</td><td><button type="button" class="ownership-player-link" data-division-luck="'+i+'" style="font-weight:800;color:'+(r.luck>0?'#b34836':r.luck<0?'#27834c':'inherit')+'">'+signed(r.luck)+'</button></td></tr>').join('')+'</tbody></table></div>';
-}
-function openDivisionLuckDetails(index){
- const r=window.divisionOpponentLuckRecords?.[Number(index)];if(!r)return;
- let modal=document.getElementById('divisionLuckModal');
- if(!modal){modal=document.createElement('div');modal.id='divisionLuckModal';modal.className='ownership-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');document.body.appendChild(modal);}
- const signed=n=>(n>0?'+':'')+n.toFixed(1);
- modal.hidden=false;
- modal.innerHTML='<div class="ownership-modal-panel" style="max-width:680px;width:calc(100% - 28px);max-height:85vh;overflow:auto"><div class="ownership-modal-header"><div><h3>'+liveEscape(r.team)+'</h3><small>Opponent Luck: '+signed(r.luck)+' per match · '+r.played+' matches</small></div><button type="button" class="ownership-modal-close" data-division-luck-close aria-label="Close">×</button></div><div class="table-wrap"><table class="ownership-table"><thead><tr><th>Round</th><th>Opponent</th><th>Opp. Score</th><th>Round Avg</th><th>Luck</th></tr></thead><tbody>'+r.rows.map(w=>'<tr><td>'+w.round+'</td><td>'+liveEscape(w.opp)+'</td><td>'+w.score+'</td><td>'+w.avg.toFixed(1)+'</td><td><strong>'+signed(w.diff)+'</strong></td></tr>').join('')+'</tbody></table></div></div>';
- modal.onclick=e=>{if(e.target===modal||e.target.closest('[data-division-luck-close]'))modal.hidden=true;};
-}
-document.addEventListener('click',e=>{const btn=e.target.closest('[data-division-luck]');if(btn)openDivisionLuckDetails(btn.dataset.divisionLuck);});
 function render(){
   // Division 3 conference structure is not final until at least one team
   // appears in the league table. Until then, show a clean holding message.
@@ -6155,7 +6114,7 @@ function render(){
   renderTable();
   renderTicker();
   renderRoundTabs();
-  renderDivisionOpponentLuck();
+
 }
 
 function renderTable(){
@@ -9118,11 +9077,74 @@ function findLosingStreaks(matchLogRows, latestRoundByComp){
 // (#statsContainer) that each tab's loader takes over entirely.
 let statsActiveTab = "ownership"; // default statistics view
 
+async function loadDivisionStatisticsTab(){
+ const mount=document.getElementById('statsContainer');
+ mount.className='';
+ mount.innerHTML='<div class="club-alt-controls"><label>Division <select id="divisionLuckDivision"></select></label></div><div id="divisionOpponentLuck" class="state-msg">Loading opponent luck…</div>';
+ const select=document.getElementById('divisionLuckDivision');
+ const divs=DIVISIONS.filter(d=>d.type==='division');
+ divs.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.label;select.appendChild(o);});
+ let request=0;
+ async function load(){
+  const seq=++request,div=divs.find(d=>d.id===select.value),el=document.getElementById('divisionOpponentLuck');
+  el.innerHTML='Loading '+div.label+'…';
+  try{
+   if(!altFixturesCache.has(div.id)){
+    const res=await cachedFetch(csvUrlFor(div));if(!res.ok)throw Error('HTTP '+res.status);
+    const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data;
+    const previous=currentDivision,oldFixtures=fixturesByRound,oldStandings=standings,oldTeams=knownTeams,oldDebug=fixturesDebug,oldForm=formRoundLabels;
+    try{
+     currentDivision=div;parseStandings(rows);parseFixtures(rows);
+     altFixturesCache.set(div.id,{teams:standings.map(t=>t.team).filter(Boolean),rounds:Object.keys(fixturesByRound).map(Number).sort((a,b)=>a-b).map(round=>({round,fixtures:fixturesByRound[round].map(f=>({home:f.home,away:f.away,homeScore:f.homeScore,awayScore:f.awayScore}))}))});
+    }finally{currentDivision=previous;fixturesByRound=oldFixtures;standings=oldStandings;knownTeams=oldTeams;fixturesDebug=oldDebug;formRoundLabels=oldForm;}
+   }
+   if(seq!==request||statsActiveTab!=='divisionstats')return;
+   renderDivisionOpponentLuck(altFixturesCache.get(div.id));
+  }catch(err){if(seq===request)el.textContent='Unable to load opponent luck: '+err.message;}
+ }
+ select.addEventListener('change',load);load();
+}
+/* Division Statistics — opponent luck, based on completed regular-season fixtures. */
+function renderDivisionOpponentLuck(data){
+ const el=document.getElementById('divisionOpponentLuck');if(!el)return;
+ const records=new Map(), rounds=data.rounds.map(r=>String(r.round)).filter(k=>/^\\d+$/.test(k)&&Number(k)<24).sort((a,b)=>Number(a)-Number(b));
+ for(const round of rounds){
+  const games=(data.rounds.find(r=>String(r.round)===round)?.fixtures||[]).filter(f=>Number.isFinite(f.homeScore)&&Number.isFinite(f.awayScore));
+  if(!games.length)continue;
+  const allScores=games.flatMap(f=>[f.homeScore,f.awayScore]);
+  const avg=allScores.reduce((a,b)=>a+b,0)/allScores.length;
+  for(const f of games){
+   for(const [team,opp,score] of [[f.home,f.away,f.awayScore],[f.away,f.home,f.homeScore]]){
+    const key=positionChangeTeamKey(team);
+    if(!records.has(key))records.set(key,{team,rows:[]});
+    records.get(key).rows.push({round:Number(round),opp,score,avg,diff:score-avg});
+   }
+  }
+ }
+ const list=[...records.values()].map(r=>({...r,played:r.rows.length,oppAvg:r.rows.reduce((a,w)=>a+w.score,0)/r.rows.length,luck:r.rows.reduce((a,w)=>a+w.diff,0)/r.rows.length})).sort((a,b)=>b.luck-a.luck||a.team.localeCompare(b.team));
+ window.divisionOpponentLuckRecords=list;
+ if(!list.length){el.innerHTML='<p class="state-msg">Opponent Luck will appear once completed division fixtures have scores.</p>';return;}
+ const signed=n=>(n>0?'+':'')+n.toFixed(1);
+ el.innerHTML='<p style="font-size:13px;opacity:.8;margin:0 0 14px">Compares each opponent’s score with the average score in that division during the same round. Positive = tougher-than-average opposition (unlucky); negative = easier-than-average opposition (lucky). Select a luck value for fixture details.</p>'+
+ '<div class="table-wrap"><table class="standings compact league-standings"><thead><tr><th>#</th><th>Team</th><th>Played</th><th>Opp. Avg</th><th>Luck</th></tr></thead><tbody>'+
+ list.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+teamLink(r.team)+'</td><td>'+r.played+'</td><td>'+r.oppAvg.toFixed(1)+'</td><td><button type="button" class="ownership-player-link" data-division-luck="'+i+'" style="font-weight:800;color:'+(r.luck>0?'#b34836':r.luck<0?'#27834c':'inherit')+'">'+signed(r.luck)+'</button></td></tr>').join('')+'</tbody></table></div>';
+}
+function openDivisionLuckDetails(index){
+ const r=window.divisionOpponentLuckRecords?.[Number(index)];if(!r)return;
+ let modal=document.getElementById('divisionLuckModal');
+ if(!modal){modal=document.createElement('div');modal.id='divisionLuckModal';modal.className='ownership-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');document.body.appendChild(modal);}
+ const signed=n=>(n>0?'+':'')+n.toFixed(1);
+ modal.hidden=false;
+ modal.innerHTML='<div class="ownership-modal-panel" style="max-width:680px;width:calc(100% - 28px);max-height:85vh;overflow:auto"><div class="ownership-modal-header"><div><h3>'+liveEscape(r.team)+'</h3><small>Opponent Luck: '+signed(r.luck)+' per match · '+r.played+' matches</small></div><button type="button" class="ownership-modal-close" data-division-luck-close aria-label="Close">×</button></div><div class="table-wrap"><table class="ownership-table"><thead><tr><th>Round</th><th>Opponent</th><th>Opp. Score</th><th>Round Avg</th><th>Luck</th></tr></thead><tbody>'+r.rows.map(w=>'<tr><td>'+w.round+'</td><td>'+liveEscape(w.opp)+'</td><td>'+w.score+'</td><td>'+w.avg.toFixed(1)+'</td><td><strong>'+signed(w.diff)+'</strong></td></tr>').join('')+'</tbody></table></div></div>';
+ modal.onclick=e=>{if(e.target===modal||e.target.closest('[data-division-luck-close]'))modal.hidden=true;};
+}
+document.addEventListener('click',e=>{const btn=e.target.closest('[data-division-luck]');if(btn)openDivisionLuckDetails(btn.dataset.divisionLuck);});
 function renderStatsPage(){
   const toggleEl = document.getElementById('statsViewToggle');
   toggleEl.innerHTML = `
     <button class="round-tab${statsActiveTab==='ownership'?' active':''}" data-tab="ownership">Player Ownership</button>
     <button class="round-tab${statsActiveTab==='streaks'?' active':''}" data-tab="streaks">Streaks</button>
+    <button class="round-tab${statsActiveTab==='divisionstats'?' active':''}" data-tab="divisionstats">Division Statistics</button>
     <button class="round-tab${statsActiveTab==='alternative'?' active':''}" data-tab="alternative">Alternative Fixtures</button>
     <button class="round-tab${statsActiveTab==='matchlog'?' active':''}" data-tab="matchlog">Match Log</button>
     <button class="round-tab${statsActiveTab==='records'?' active':''}" data-tab="records">Records</button>
@@ -9134,6 +9156,12 @@ function renderStatsPage(){
     });
   });
 
+  if(statsActiveTab === "divisionstats"){
+    document.getElementById("statsHeading").textContent="Division Statistics";
+    document.getElementById("statsSubheading").textContent="Opponent Luck";
+    loadDivisionStatisticsTab();
+    return;
+  }
   if(statsActiveTab === "alternative"){
     document.getElementById('statsHeading').textContent="Alternative Fixtures";
     document.getElementById('statsSubheading').textContent="Compare team scores across fixture schedules";
