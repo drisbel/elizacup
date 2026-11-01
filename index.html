@@ -5392,10 +5392,11 @@ async function exportLiveCentreImage(){
    // is rendered too thin and too close to the glyphs by the canvas renderer.
    copy.querySelectorAll('.live-match-score .live-match-winner, .live-match-score .live-match-protected').forEach(score=>{
     score.style.setProperty('text-decoration','none','important');
-    score.style.setProperty('border-bottom','2px solid currentColor','important');
-    score.style.setProperty('padding-bottom','3px','important');
-    score.style.setProperty('display','inline-block','important');
-    score.style.setProperty('line-height','1','important');
+    // Draw the underline as an inset shadow, which does not change the score's
+    // line box or baseline in html2canvas (unlike a bottom border + padding).
+    score.style.setProperty('border-bottom','0','important');
+    score.style.setProperty('padding-bottom','0','important');
+    score.style.setProperty('box-shadow','inset 0 -2px 0 currentColor','important');
    });
    grid.appendChild(copy);
    document.body.appendChild(stage);
