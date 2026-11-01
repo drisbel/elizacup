@@ -9107,7 +9107,7 @@ async function loadDivisionStatisticsTab(){
 /* Division Statistics — opponent luck, based on completed regular-season fixtures. */
 function renderDivisionOpponentLuck(data){
  const el=document.getElementById('divisionOpponentLuck');if(!el)return;
- const records=new Map(), rounds=data.rounds.map(r=>String(r.round)).filter(k=>/^\\d+$/.test(k)&&Number(k)<24).sort((a,b)=>Number(a)-Number(b));
+ const records=new Map(), rounds=data.rounds.map(r=>String(r.round)).filter(k=>/^\d+$/.test(k)&&Number(k)<24).sort((a,b)=>Number(a)-Number(b));
  for(const round of rounds){
   const games=(data.rounds.find(r=>String(r.round)===round)?.fixtures||[]).filter(f=>Number.isFinite(f.homeScore)&&Number.isFinite(f.awayScore));
   if(!games.length)continue;
