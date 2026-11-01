@@ -3509,6 +3509,40 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .division-luck-detail-table th:nth-child(2),.division-luck-detail-table td:nth-child(2){text-align:left!important;}
 .division-luck-detail-opponent{display:flex;align-items:center;gap:8px;min-width:0;}
 .division-luck-detail-opponent img{width:26px;height:26px;object-fit:contain;flex:none;}
+/* Opponent Luck: override the generic wide league-table mobile rules. */
+.opponent-luck-layout .opponent-luck-table-wrap{
+  width:100%;max-width:100%;min-width:0;
+  overflow:hidden!important;border:0!important;border-radius:0!important;
+  outline:0!important;box-shadow:none!important;padding:0!important;
+}
+.opponent-luck-layout table.standings.compact.league-standings.opponent-luck-table{
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  table-layout:fixed!important;margin:0!important;
+}
+.opponent-luck-layout .opponent-luck-table th,
+.opponent-luck-layout .opponent-luck-table td{
+  box-sizing:border-box!important;min-width:0!important;max-width:none!important;
+  padding:7px 3px!important;white-space:nowrap!important;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.opponent-luck-layout .opponent-luck-table th:nth-child(1),
+.opponent-luck-layout .opponent-luck-table td:nth-child(1){width:7%!important;}
+.opponent-luck-layout .opponent-luck-table th:nth-child(2),
+.opponent-luck-layout .opponent-luck-table td:nth-child(2){width:40%!important;}
+.opponent-luck-layout .opponent-luck-table th:nth-child(3),
+.opponent-luck-layout .opponent-luck-table td:nth-child(3){width:20%!important;}
+.opponent-luck-layout .opponent-luck-table th:nth-child(4),
+.opponent-luck-layout .opponent-luck-table td:nth-child(4){width:16%!important;}
+.opponent-luck-layout .opponent-luck-table th:nth-child(5),
+.opponent-luck-layout .opponent-luck-table td:nth-child(5){width:17%!important;}
+@media(max-width:600px){
+ .opponent-luck-layout .opponent-luck-table th,
+ .opponent-luck-layout .opponent-luck-table td{font-size:11px!important;padding:7px 2px!important;}
+ .opponent-luck-layout .opponent-luck-table th:nth-child(3){font-size:10px!important;}
+ .opponent-luck-layout .opponent-luck-team-cell .table-team-logo{width:18px!important;height:18px!important;margin-right:3px!important;}
+ .opponent-luck-layout .opponent-luck-team-name{max-width:calc(100% - 25px)!important;}
+}
+
 </style>
 
 <style>
