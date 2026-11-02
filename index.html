@@ -10311,7 +10311,18 @@ async function loadRecordsTab(){
 // Current streaks are rebuilt from the MATCH LOG, not the longest-ever
 // streak start/end IDs (which can point to a much older run).
 let streakIncludeInactive = false;
+// Use the latest division gameweek as the New Streaks cutoff. Cup rounds
+// have their own numbering and must not stay NEW after a later gameweek.
+function latestStreakGameweekStartId(matchLogRows){
+ const divisionRows=matchLogRows.filter(r=>/^(?:ELIZA|DIV(?:ISION)?\\s*[123]|D[123][ABC]?)/i.test(cell(r,MATCH_LOG_COL.COMP).trim()));
+ if(!divisionRows.length)return null;
+ const last=divisionRows[divisionRows.length-1];
+ const season=cell(last,MATCH_LOG_COL.SEASON),round=cell(last,MATCH_LOG_COL.ROUND);
+ const ids=divisionRows.filter(r=>cell(r,MATCH_LOG_COL.SEASON)===season&&cell(r,MATCH_LOG_COL.ROUND)===round).map(r=>Number(cell(r,MATCH_LOG_COL.ID))).filter(Number.isFinite);
+ return ids.length?Math.min(...ids):null;
+}
 function streakCurrentWins(matchLogRows,latestRoundByComp){
+ const newGameweekStartId=latestStreakGameweekStartId(matchLogRows);
  const pairs=new Map();
  matchLogRows.forEach(r=>{
   const a=cell(r,MATCH_LOG_COL.TEAM1).trim(),b=cell(r,MATCH_LOG_COL.TEAM2).trim();
@@ -10338,7 +10349,10 @@ function streakCurrentWins(matchLogRows,latestRoundByComp){
   if(count<3)continue;
   const a=lookupTeamDivInfo(p.team),b=lookupTeamDivInfo(p.opp);
   const last=selected[selected.length-1];
-  result.push({team1:a.display,team2:b.display,team1Active:a.active,team2Active:b.active,team1DivShort:a.divShort,team1DivColor:a.divColor,team2DivShort:b.divShort,team2DivColor:b.divColor,streak:count,matches:selected,stillActive:true,isNew:isLatestRoundMatch(last.comp,last.year,last.round,latestRoundByComp)});
+  const lastMatchRow=rows[rows.length-1];
+  const lastId=Number(cell(lastMatchRow,MATCH_LOG_COL.ID));
+  const isNew=newGameweekStartId===null?isLatestRoundMatch(last.comp,last.year,last.round,latestRoundByComp):Number.isFinite(lastId)&&lastId>=newGameweekStartId;
+  result.push({team1:a.display,team2:b.display,team1Active:a.active,team2Active:b.active,team1DivShort:a.divShort,team1DivColor:a.divColor,team2DivShort:b.divShort,team2DivColor:b.divColor,streak:count,matches:selected,stillActive:true,isNew});
  }
  return result.sort((a,b)=>b.streak-a.streak||a.team1.localeCompare(b.team1));
 }
