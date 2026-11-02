@@ -3569,6 +3569,19 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
  .opponent-luck-team-cell .table-team-logo{width:17px!important;height:17px!important;}
  .opponent-luck-team-name{max-width:calc(100% - 23px)!important;}
 }
+
+/* Division ladder position history */
+.ladder-history-section{margin:16px 0 26px;min-width:0}
+.ladder-history-section h3{font-size:19px;margin:0 0 6px}
+.ladder-history-section p{font-size:13px;opacity:.8;margin:0 0 12px}
+.ladder-history-actions{display:flex;gap:8px;margin-bottom:12px}
+.ladder-history-actions button,.ladder-history-team{font-family:Barlow,sans-serif;cursor:pointer;border:1px solid #9995;border-radius:6px;background:transparent;color:inherit;padding:6px 10px;font-size:12px}
+.ladder-history-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.ladder-history-team{display:inline-flex;align-items:center;gap:6px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ladder-history-team[aria-pressed="false"]{opacity:.4}
+.ladder-history-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.ladder-history-chart{width:100%;overflow-x:auto;overflow-y:hidden;border:1px solid #9994;border-radius:8px;padding:8px 0}
+.ladder-history-chart svg{display:block;max-width:none}
 </style>
 
 <style>
@@ -9163,7 +9176,7 @@ let statsActiveTab = "ownership"; // default statistics view
 async function loadDivisionStatisticsTab(){
  const mount=document.getElementById('statsContainer');
  mount.className='';
- mount.innerHTML='<div class="club-alt-controls"><label>Division <select id="divisionLuckDivision"></select></label></div><div id="divisionOpponentLuck" class="state-msg">Loading opponent luck…</div>';
+ mount.innerHTML='<div class="club-alt-controls"><label>Division <select id="divisionLuckDivision"></select></label></div><div id="divisionLadderHistory" class="state-msg">Loading ladder history…</div><div id="divisionOpponentLuck" class="state-msg">Loading opponent luck…</div>';
  const select=document.getElementById('divisionLuckDivision');
  const divs=DIVISIONS.filter(d=>d.type==='division');
  divs.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.label;select.appendChild(o);});
@@ -9182,10 +9195,55 @@ async function loadDivisionStatisticsTab(){
     }finally{currentDivision=previous;fixturesByRound=oldFixtures;standings=oldStandings;knownTeams=oldTeams;fixturesDebug=oldDebug;formRoundLabels=oldForm;}
    }
    if(seq!==request||statsActiveTab!=='divisionstats')return;
+   renderDivisionLadderHistory(altFixturesCache.get(div.id));
    renderDivisionOpponentLuck(altFixturesCache.get(div.id));
   }catch(err){if(seq===request)el.textContent='Unable to load opponent luck: '+err.message;}
  }
  select.addEventListener('change',load);load();
+}
+/* Division Statistics — historical ladder reconstructed from completed fixtures. */
+function renderDivisionLadderHistory(data){
+ const mount=document.getElementById('divisionLadderHistory');if(!mount)return;
+ const teams=data.teams||[], names=new Map(teams.map(t=>[positionChangeTeamKey(t),t]));
+ const totals=new Map(teams.map(t=>[positionChangeTeamKey(t),{team:t,pts:0,scored:0,against:0,w:0,d:0,l:0}]));
+ const rounds=(data.rounds||[]).filter(r=>Number.isInteger(Number(r.round))&&Number(r.round)>0&&Number(r.round)<24).sort((a,b)=>Number(a.round)-Number(b.round));
+ const history=[],complete=[];
+ for(const round of rounds){
+  const games=round.fixtures.filter(f=>Number.isFinite(f.homeScore)&&Number.isFinite(f.awayScore));
+  if(!games.length)continue;
+  for(const f of games){
+   const h=totals.get(positionChangeTeamKey(f.home)),a=totals.get(positionChangeTeamKey(f.away));
+   if(!h||!a)continue;
+   h.scored+=f.homeScore;h.against+=f.awayScore;a.scored+=f.awayScore;a.against+=f.homeScore;
+   if(f.homeScore>f.awayScore){h.pts+=3;h.w++;a.l++;}
+   else if(f.homeScore<f.awayScore){a.pts+=3;a.w++;h.l++;}
+   else{h.pts++;a.pts++;h.d++;a.d++;}
+  }
+  const ranked=[...totals.values()].sort((a,b)=>b.pts-a.pts||(b.scored-b.against)-(a.scored-a.against)||b.scored-a.scored||a.team.localeCompare(b.team));
+  history.push({round:Number(round.round),positions:new Map(ranked.map((t,i)=>[positionChangeTeamKey(t.team),i+1]))});
+  complete.push(games.length===round.fixtures.length);
+ }
+ if(!history.length){mount.className='state-msg';mount.textContent='Ladder history will appear after the first completed round.';return;}
+ mount.className='';mount.innerHTML='<section class="ladder-history-section"><h3>Ladder Position History</h3><p>Positions recalculated from completed division results after each round. Select teams to highlight their movement.</p><div class="ladder-history-actions"><button type="button" data-history-all>All teams</button><button type="button" data-history-none>Clear</button></div><div class="ladder-history-legend"></div><div class="ladder-history-chart" role="img" aria-label="Ladder positions by round"></div></section>';
+ const chart=mount.querySelector('.ladder-history-chart'),legend=mount.querySelector('.ladder-history-legend');
+ const selected=new Set(teams.map(positionChangeTeamKey));
+ const colors=['#2276ce','#d04e42','#168c6c','#b18a18','#8057bf','#e07526','#21a0ad','#b54887','#64748b','#4f9a38','#aa6542','#4860a7','#c24770','#7d8e22'];
+ const redraw=()=>{
+  const n=teams.length, width=Math.max(540,history.length*66+90),height=Math.max(230,n*20+55),left=39,top=18,right=width-25,bottom=height-32;
+  const x=i=>left+(history.length===1?0:i*(right-left)/(history.length-1));
+  const y=pos=>top+(pos-1)*(bottom-top)/Math.max(1,n-1);
+  const grid=[1,...Array.from({length:Math.floor((n-1)/3)},(_,i)=>(i+1)*3+1),n].filter((v,i,a)=>a.indexOf(v)===i);
+  let svg='<svg viewBox="0 0 '+width+' '+height+'" width="'+width+'" height="'+height+'" xmlns="http://www.w3.org/2000/svg">';
+  grid.forEach(pos=>{svg+='<line x1="'+left+'" y1="'+y(pos)+'" x2="'+right+'" y2="'+y(pos)+'" stroke="currentColor" stroke-opacity=".16" stroke-dasharray="3 4"/><text x="29" y="'+(y(pos)+4)+'" text-anchor="end" font-size="11" fill="currentColor">'+pos+'</text>';});
+  history.forEach((h,i)=>{svg+='<text x="'+x(i)+'" y="'+(height-9)+'" text-anchor="middle" font-size="11" fill="currentColor">R'+h.round+'</text>';});
+  teams.forEach((team,i)=>{const key=positionChangeTeamKey(team);if(!selected.has(key))return;const pts=history.map((h,j)=>x(j)+','+y(h.positions.get(key)||n)).join(' ');const color=colors[i%colors.length];svg+='<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';history.forEach((h,j)=>{svg+='<circle cx="'+x(j)+'" cy="'+y(h.positions.get(key)||n)+'" r="3.5" fill="'+color+'"><title>'+team+' — Round '+h.round+': '+(h.positions.get(key)||n)+'</title></circle>';});});
+  chart.innerHTML=svg+'</svg>';
+  legend.innerHTML='';
+  teams.forEach((team,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='ladder-history-team';btn.setAttribute('aria-pressed',selected.has(positionChangeTeamKey(team))?'true':'false');const dot=document.createElement('span');dot.className='ladder-history-dot';dot.style.background=colors[i%colors.length];btn.append(dot,document.createTextNode(team));btn.addEventListener('click',()=>{const key=positionChangeTeamKey(team);selected.has(key)?selected.delete(key):selected.add(key);redraw();});legend.appendChild(btn);});
+ };
+ mount.querySelector('[data-history-all]').onclick=()=>{teams.forEach(t=>selected.add(positionChangeTeamKey(t)));redraw();};
+ mount.querySelector('[data-history-none]').onclick=()=>{selected.clear();redraw();};
+ redraw();
 }
 /* Division Statistics — opponent luck, based on completed regular-season fixtures. */
 function renderDivisionOpponentLuck(data){
