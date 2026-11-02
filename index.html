@@ -10313,16 +10313,29 @@ async function loadRecordsTab(){
 let streakIncludeInactive = false;
 // Use the latest division gameweek as the New Streaks cutoff. Cup rounds
 // have their own numbering and must not stay NEW after a later gameweek.
-function latestStreakGameweekStartId(matchLogRows){
- const divisionRows=matchLogRows.filter(r=>/^(?:ELIZA|DIV(?:ISION)?\s*[123]|D[123][ABC]?)/i.test(cell(r,MATCH_LOG_COL.COMP).trim()));
- if(!divisionRows.length)return null;
- const last=divisionRows[divisionRows.length-1];
- const season=cell(last,MATCH_LOG_COL.SEASON),round=cell(last,MATCH_LOG_COL.ROUND);
- const ids=divisionRows.filter(r=>cell(r,MATCH_LOG_COL.SEASON)===season&&cell(r,MATCH_LOG_COL.ROUND)===round).map(r=>Number(cell(r,MATCH_LOG_COL.ID))).filter(Number.isFinite);
- return ids.length?Math.min(...ids):null;
+// Each gameweek starts with its first ELIZA match. The match log is entered
+// in gameweek order: ELIZA, 2A, 2B, 3A, 3B, FA Cup, ECL.
+// Use row positions, not cup round numbers or match IDs, to identify NEW streaks.
+function latestStreakGameweekStartIndex(matchLogRows){
+ for(let i=matchLogRows.length-1;i>=0;i--){
+  const comp=cell(matchLogRows[i],MATCH_LOG_COL.COMP).trim().toUpperCase();
+  if(/^(?:ELIZA(?:\\s+CUP)?|DIV(?:ISION)?\\s*1|D1)(?:\\b|$)/.test(comp)){
+   // The first Eliza match of this round begins the gameweek.
+   const season=cell(matchLogRows[i],MATCH_LOG_COL.SEASON);
+   const round=cell(matchLogRows[i],MATCH_LOG_COL.ROUND);
+   let first=i;
+   while(first>0){
+    const prev=matchLogRows[first-1];
+    if(cell(prev,MATCH_LOG_COL.COMP).trim().toUpperCase()!==comp || cell(prev,MATCH_LOG_COL.SEASON)!==season || cell(prev,MATCH_LOG_COL.ROUND)!==round)break;
+    first--;
+   }
+   return first;
+  }
+ }
+ return null;
 }
 function streakCurrentWins(matchLogRows,latestRoundByComp){
- const newGameweekStartId=latestStreakGameweekStartId(matchLogRows);
+ const newGameweekStartIndex=latestStreakGameweekStartIndex(matchLogRows);
  const pairs=new Map();
  matchLogRows.forEach(r=>{
   const a=cell(r,MATCH_LOG_COL.TEAM1).trim(),b=cell(r,MATCH_LOG_COL.TEAM2).trim();
@@ -10350,8 +10363,8 @@ function streakCurrentWins(matchLogRows,latestRoundByComp){
   const a=lookupTeamDivInfo(p.team),b=lookupTeamDivInfo(p.opp);
   const last=selected[selected.length-1];
   const lastMatchRow=rows[rows.length-1];
-  const lastId=Number(cell(lastMatchRow,MATCH_LOG_COL.ID));
-  const isNew=newGameweekStartId===null?isLatestRoundMatch(last.comp,last.year,last.round,latestRoundByComp):Number.isFinite(lastId)&&lastId>=newGameweekStartId;
+  const lastIndex=matchLogRows.lastIndexOf(lastMatchRow);
+  const isNew=newGameweekStartIndex===null?false:lastIndex>=newGameweekStartIndex;
   result.push({team1:a.display,team2:b.display,team1Active:a.active,team2Active:b.active,team1DivShort:a.divShort,team1DivColor:a.divColor,team2DivShort:b.divShort,team2DivColor:b.divColor,streak:count,matches:selected,stillActive:true,isNew});
  }
  return result.sort((a,b)=>b.streak-a.streak||a.team1.localeCompare(b.team1));
