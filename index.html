@@ -10314,7 +10314,7 @@ let streakIncludeInactive = false;
 // Use the latest division gameweek as the New Streaks cutoff. Cup rounds
 // have their own numbering and must not stay NEW after a later gameweek.
 function latestStreakGameweekStartId(matchLogRows){
- const divisionRows=matchLogRows.filter(r=>/^(?:ELIZA|DIV(?:ISION)?\\s*[123]|D[123][ABC]?)/i.test(cell(r,MATCH_LOG_COL.COMP).trim()));
+ const divisionRows=matchLogRows.filter(r=>/^(?:ELIZA|DIV(?:ISION)?\s*[123]|D[123][ABC]?)/i.test(cell(r,MATCH_LOG_COL.COMP).trim()));
  if(!divisionRows.length)return null;
  const last=divisionRows[divisionRows.length-1];
  const season=cell(last,MATCH_LOG_COL.SEASON),round=cell(last,MATCH_LOG_COL.ROUND);
