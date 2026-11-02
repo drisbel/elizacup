@@ -9219,7 +9219,7 @@ function fetchDivisionLadderHistory(){
   // The Google Visualization CSV endpoint can omit leading blank rows/columns,
   // and its range argument is not consistently honoured. Locate the header
   // rather than assuming the requested range begins at the first CSV row.
-  let start=rows.findIndex(row=>row.some(value=>String(value??'').trim().toUpperCase()==='TEAM NAME'));
+  let start=rows.findIndex(row=>row.some(value=>String(value??'').trim().toUpperCase()==='TEAM NAME')&&rows.slice(rows.indexOf(row)+1,rows.indexOf(row)+15).some(next=>next.some(v=>String(v??'').trim().toUpperCase()==='ALASKAN BULL WORMS')));
   if(start<0)throw Error('Ladder history header not found in sheet response');
   const col=rows[start].findIndex(value=>String(value??'').trim().toUpperCase()==='TEAM NAME');
   const result=rows.slice(start,start+67).map(row=>row.slice(col,col+27));
@@ -9236,8 +9236,10 @@ function renderDivisionLadderHistory(data,sourceRows,divisionId){
  const block=sourceRows.slice(bounds[0],bounds[1]+1);
  const teams=block.map(r=>String(r[0]||'').trim()).filter(Boolean);
  const history=[];
- for(let c=1;c<sourceRows[0].length;c++){
-  const round=Number(sourceRows[0][c]);if(!Number.isInteger(round)||round<1)continue;
+ for(let c=1;c<=26;c++){
+  // J = team, K = Round 1, L = Round 2, M = Round 3, etc.
+  // Use the column offset, not the formatted header returned by gviz.
+  const round=c;
   const positions=new Map();
   for(const row of block){const team=String(row[0]||'').trim(),raw=String(row[c]??'').trim();const pos=Number(raw);if(team&&raw&&Number.isInteger(pos)&&pos>=1&&pos<=teams.length)positions.set(positionChangeTeamKey(team),pos);}
   if(positions.size)history.push({round,positions});
