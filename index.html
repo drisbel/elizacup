@@ -9216,8 +9216,15 @@ function fetchDivisionLadderHistory(){
   const response=await cachedFetch(url);
   if(!response.ok)throw Error('Ladder history sheet HTTP '+response.status);
   const rows=Papa.parse(await response.text(),{skipEmptyLines:false}).data;
-  if(rows.length<67||String(rows[0]?.[0]||'').trim().toUpperCase()!=='TEAM NAME')throw Error('Unexpected ladder history sheet layout');
-  return rows;
+  // The Google Visualization CSV endpoint can omit leading blank rows/columns,
+  // and its range argument is not consistently honoured. Locate the header
+  // rather than assuming the requested range begins at the first CSV row.
+  let start=rows.findIndex(row=>row.some(value=>String(value??'').trim().toUpperCase()==='TEAM NAME'));
+  if(start<0)throw Error('Ladder history header not found in sheet response');
+  const col=rows[start].findIndex(value=>String(value??'').trim().toUpperCase()==='TEAM NAME');
+  const result=rows.slice(start,start+67).map(row=>row.slice(col,col+27));
+  if(result.length<67)throw Error('Incomplete ladder history sheet response');
+  return result;
  })().catch(e=>{divisionLadderHistoryPromise=null;throw e;});
  return divisionLadderHistoryPromise;
 }
