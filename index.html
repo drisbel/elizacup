@@ -3580,8 +3580,8 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .ladder-history-team{display:inline-flex;align-items:center;gap:6px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ladder-history-team[aria-pressed="false"]{opacity:.4}
 .ladder-history-dot{width:10px;height:10px;border-radius:50%;flex:none}
-.ladder-history-chart{width:100%;overflow-x:auto;overflow-y:hidden;border:1px solid #9994;border-radius:8px;padding:8px 0}
-.ladder-history-chart svg{display:block;max-width:none}
+.ladder-history-chart{width:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:hidden;border:1px solid #9994;border-radius:8px;padding:8px 0}
+.ladder-history-chart svg{display:block;max-width:100%;height:auto}
 </style>
 
 <style>
