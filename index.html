@@ -9195,36 +9195,48 @@ async function loadDivisionStatisticsTab(){
     }finally{currentDivision=previous;fixturesByRound=oldFixtures;standings=oldStandings;knownTeams=oldTeams;fixturesDebug=oldDebug;formRoundLabels=oldForm;}
    }
    if(seq!==request||statsActiveTab!=='divisionstats')return;
-   renderDivisionLadderHistory(altFixturesCache.get(div.id));
    renderDivisionOpponentLuck(altFixturesCache.get(div.id));
+   const historyEl=document.getElementById('divisionLadderHistory');
+   try{
+    const historyRows=await fetchDivisionLadderHistory();
+    if(seq!==request||statsActiveTab!=='divisionstats')return;
+    renderDivisionLadderHistory(altFixturesCache.get(div.id),historyRows,div.id);
+   }catch(historyError){if(seq===request&&historyEl){historyEl.className='state-msg';historyEl.textContent='Unable to load ladder history: '+historyError.message;}}
   }catch(err){if(seq===request)el.textContent='Unable to load opponent luck: '+err.message;}
  }
  select.addEventListener('change',load);load();
 }
 /* Division Statistics — historical ladder reconstructed from completed fixtures. */
-function renderDivisionLadderHistory(data){
+// Authoritative ladder history from DATA 26/27!J527:AJ593.
+// The blocks are ordered: Eliza (14), 2A (12), 2B (12), 3A (14), 3B (14).
+let divisionLadderHistoryPromise=null;
+function fetchDivisionLadderHistory(){
+ if(!divisionLadderHistoryPromise)divisionLadderHistoryPromise=(async()=>{
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid=91806689&range=J527%3AAJ593&headers=0&v='+Date.now();
+  const response=await cachedFetch(url);
+  if(!response.ok)throw Error('Ladder history sheet HTTP '+response.status);
+  const rows=Papa.parse(await response.text(),{skipEmptyLines:false}).data;
+  if(rows.length<67||String(rows[0]?.[0]||'').trim().toUpperCase()!=='TEAM NAME')throw Error('Unexpected ladder history sheet layout');
+  return rows;
+ })().catch(e=>{divisionLadderHistoryPromise=null;throw e;});
+ return divisionLadderHistoryPromise;
+}
+function renderDivisionLadderHistory(data,sourceRows,divisionId){
  const mount=document.getElementById('divisionLadderHistory');if(!mount)return;
- const teams=data.teams||[], names=new Map(teams.map(t=>[positionChangeTeamKey(t),t]));
- const totals=new Map(teams.map(t=>[positionChangeTeamKey(t),{team:t,pts:0,scored:0,against:0,w:0,d:0,l:0}]));
- const rounds=(data.rounds||[]).filter(r=>Number.isInteger(Number(r.round))&&Number(r.round)>0&&Number(r.round)<24).sort((a,b)=>Number(a.round)-Number(b.round));
- const history=[],complete=[];
- for(const round of rounds){
-  const games=round.fixtures.filter(f=>Number.isFinite(f.homeScore)&&Number.isFinite(f.awayScore));
-  if(!games.length)continue;
-  for(const f of games){
-   const h=totals.get(positionChangeTeamKey(f.home)),a=totals.get(positionChangeTeamKey(f.away));
-   if(!h||!a)continue;
-   h.scored+=f.homeScore;h.against+=f.awayScore;a.scored+=f.awayScore;a.against+=f.homeScore;
-   if(f.homeScore>f.awayScore){h.pts+=3;h.w++;a.l++;}
-   else if(f.homeScore<f.awayScore){a.pts+=3;a.w++;h.l++;}
-   else{h.pts++;a.pts++;h.d++;a.d++;}
-  }
-  const ranked=[...totals.values()].sort((a,b)=>b.pts-a.pts||(b.scored-b.against)-(a.scored-a.against)||b.scored-a.scored||a.team.localeCompare(b.team));
-  history.push({round:Number(round.round),positions:new Map(ranked.map((t,i)=>[positionChangeTeamKey(t.team),i+1]))});
-  complete.push(games.length===round.fixtures.length);
+ const blocks={d1:[1,14],d2a:[15,26],d2b:[27,38],d3a:[39,52],d3b:[53,66]};
+ const bounds=blocks[divisionId];
+ if(!bounds){mount.className='state-msg';mount.textContent='No stored ladder history for this division.';return;}
+ const block=sourceRows.slice(bounds[0],bounds[1]+1);
+ const teams=block.map(r=>String(r[0]||'').trim()).filter(Boolean);
+ const history=[];
+ for(let c=1;c<sourceRows[0].length;c++){
+  const round=Number(sourceRows[0][c]);if(!Number.isInteger(round)||round<1)continue;
+  const positions=new Map();
+  for(const row of block){const team=String(row[0]||'').trim(),raw=String(row[c]??'').trim();const pos=Number(raw);if(team&&raw&&Number.isInteger(pos)&&pos>=1&&pos<=teams.length)positions.set(positionChangeTeamKey(team),pos);}
+  if(positions.size)history.push({round,positions});
  }
  if(!history.length){mount.className='state-msg';mount.textContent='Ladder history will appear after the first completed round.';return;}
- mount.className='';mount.innerHTML='<section class="ladder-history-section"><h3>Ladder Position History</h3><p>Positions recalculated from completed division results after each round. Select teams to highlight their movement.</p><div class="ladder-history-actions"><button type="button" data-history-all>All teams</button><button type="button" data-history-none>Clear</button></div><div class="ladder-history-legend"></div><div class="ladder-history-chart" role="img" aria-label="Ladder positions by round"></div></section>';
+ mount.className='';mount.innerHTML='<section class="ladder-history-section"><h3>Ladder Position History</h3><p>Official ladder positions from DATA 26/27 after each round. Select teams to highlight their movement.</p><div class="ladder-history-actions"><button type="button" data-history-all>All teams</button><button type="button" data-history-none>Clear</button></div><div class="ladder-history-legend"></div><div class="ladder-history-chart" role="img" aria-label="Ladder positions by round"></div></section>';
  const chart=mount.querySelector('.ladder-history-chart'),legend=mount.querySelector('.ladder-history-legend');
  const selected=new Set(teams.map(positionChangeTeamKey));
  const colors=['#2276ce','#d04e42','#168c6c','#b18a18','#8057bf','#e07526','#21a0ad','#b54887','#64748b','#4f9a38','#aa6542','#4860a7','#c24770','#7d8e22'];
