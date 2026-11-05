@@ -2978,6 +2978,11 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .rp-cup-history-line .rp-cup-opponent{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;line-height:1.08}
 .rp-cup-history-line .rp-cup-opponent-name{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;font-weight:800}
 .rp-cup-history-line .rp-cup-opponent-division{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700;margin-top:2px}
+/* Compact FA Cup history: round, coloured opponent and score only. */
+.rp-cup-history-line{grid-template-columns:27px minmax(0,1fr) auto;column-gap:3px;font-size:18px}
+.rp-cup-history-line .rp-cup-round{font-size:13px}
+.rp-cup-history-line .rp-cup-opponent{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;font-weight:800;line-height:1.2}
+.rp-cup-history-line .rp-cup-score{font-size:19px;font-weight:900}
 /* Competition-specific fixture palette; team names and division tags stay white. */
 #facupContainer .competition-h2h-match{border-color:#234ea2}
 #facupContainer .competition-h2h-match>summary,#facupContainer .competition-h2h-match>summary .facup-card{background:#0a2f85!important}
@@ -16536,7 +16541,7 @@ function faCupPreviewCard(f,roundIndex,rows){
   const previous=faCupPreviewHistory(team,roundIndex);
   if(!previous.length)return '<div class="rp-cup-history"><span class="rp-cup-history-empty">FIRST CUP MATCH</span></div>';
   return '<div class="rp-cup-history">'+previous.map(g=>
-   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(faCupPreviewShortRound(g.round))+'</span><img src="logo/'+teamLogoSlug(g.opponent)+'.png" crossorigin="anonymous" data-team-name="'+name(g.opponent)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span class="rp-cup-opponent" title="'+name(g.opponent)+'"'+colour(g.division)+'><span class="rp-cup-opponent-name">'+name(g.opponent)+'</span>'+(g.division?'<span class="rp-cup-opponent-division">'+name(g.division)+'</span>':'')+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
+   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(faCupPreviewShortRound(g.round))+'</span><span class="rp-cup-opponent" title="'+name(g.opponent)+'"'+colour(g.division)+'>'+name(g.opponent)+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
   ).join('')+'</div>';
  };
  const team=(v,division)=>{const div=faCupPreviewDivision(v,division);return '<div class="rp-team"><div class="rp-logo-box"><img src="logo/'+teamLogoSlug(v)+'.png" crossorigin="anonymous" data-team-name="'+name(v)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"></div><strong'+colour(div)+'>'+name(v)+'</strong>'+(div?'<span class="rp-cup-team-division"'+colour(div)+'>'+name(div)+'</span>':'')+history(v)+'</div>';};
