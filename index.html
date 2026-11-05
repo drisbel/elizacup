@@ -2949,6 +2949,16 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 @media(max-width:760px){.competition-h2h-grid{grid-template-columns:minmax(0,1fr)}}
 
 
+/* Shared compact odds and two-line last-meeting layout. */
+.rp-odds{margin:3px 0 0;padding:2px 0;gap:6px;grid-template-columns:minmax(0,1fr) 100px minmax(0,1fr)}
+.rp-odds-brand{flex-direction:row;gap:0}
+.rp-odds-brand img{max-width:100px;max-height:34px}
+.rp-last{flex-direction:column;gap:3px;margin-top:6px;padding:6px 4px 0;flex-wrap:nowrap}
+.rp-last .rp-last-detail{display:block;width:100%;white-space:nowrap;flex-wrap:nowrap;font-size:17px}
+.rp-last .rp-last-detail>span{white-space:nowrap}
+.rp-cup-history-line img{width:12px!important;height:12px!important;max-width:12px!important;max-height:12px!important}
+.rp-cup-history-line{gap:4px}
+.rp-cup-history-line .rp-cup-round{font-size:13px;min-width:30px}
 /* FA Cup previews reuse the division preview cards and typography. */
 .rp-cup-history{display:flex;flex-direction:column;gap:4px;width:100%;margin-top:4px;min-height:54px}
 .rp-cup-history-line{display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Barlow',sans-serif;font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap}
@@ -6629,7 +6639,7 @@ function roundPreviewCard(f,rows,usedStories,index){
  const team=(v,s)=>`<div class="rp-team"><div class="rp-logo-box"><img src="logo/${teamLogoSlug(v)}.png" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}" data-team-name="${name(v)}"></div><strong>${name(v)}</strong><span>${s?(roundPreviewOrdinal(s.pos)+' · '+s.pts+' pts'):'—'}</span><div class="rp-formrow">${roundPreviewForm(s)}</div></div>`;
  const last=roundPreviewLastMeeting(h,f.home,f.away);
  const odds=roundPreviewBilbbetPair(f.home,f.away);
- const oddsHtml=odds.home&&odds.away?`<div class="rp-odds"><span>${name(odds.home)}</span><b class="rp-odds-brand"><img src="logo/bilbbet.png" alt="Bilbbet" crossorigin="anonymous"><small>BILBBET H2H ODDS</small></b><span>${name(odds.away)}</span></div>`:'';
+ const oddsHtml=odds.home&&odds.away?`<div class="rp-odds"><span>${name(odds.home)}</span><b class="rp-odds-brand"><img src="logo/bilbbet.png" alt="Bilbbet" crossorigin="anonymous"></b><span>${name(odds.away)}</span></div>`:'';
  const active=h.run>=3?`<div class="rp-active-streak">🔥 ${name(h.runTeam==='home'?f.home:f.away)} · ${h.run} H2H wins in a row</div>`:'';
  return `<div class="rp-card"><div class="rp-match">${team(f.home,a)}<div class="rp-versus"><b>VS</b><small>H2H</small><strong>${h.hw}–${h.draw}–${h.aw}</strong><small>W · D · W</small></div>${team(f.away,b)}</div>${oddsHtml}<div class="rp-last"><b>LAST MEETING</b><div class="rp-last-detail">${last}</div></div>${active}</div>`;
 }
@@ -16470,6 +16480,16 @@ async function exportFACupQualified(idx){
  }catch(err){console.error('FA Cup qualified teams export failed',err);alert('Unable to export qualified teams.');}finally{stage.remove();}
 }
 
+function faCupPreviewShortRound(round){
+ const value=String(round||'').trim();
+ if(/play\s*off/i.test(value))return 'PO';
+ const n=value.match(/round\s+of\s+(\d+)/i);
+ if(n)return 'R'+n[1];
+ if(/quarter/i.test(value))return 'QF';
+ if(/semi/i.test(value))return 'SF';
+ if(/final/i.test(value))return 'F';
+ return value;
+}
 function faCupPreviewHistory(team,roundIndex){
  const key=roundPreviewNorm(team);
  const entries=[];
@@ -16494,13 +16514,13 @@ function faCupPreviewCard(f,roundIndex,rows){
   const previous=faCupPreviewHistory(team,roundIndex);
   if(!previous.length)return '<div class="rp-cup-history"><span class="rp-cup-history-empty">FIRST CUP MATCH</span></div>';
   return '<div class="rp-cup-history">'+previous.map(g=>
-   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(g.round)+'</span><img src="logo/'+teamLogoSlug(g.opponent)+'.png" crossorigin="anonymous" data-team-name="'+name(g.opponent)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span>'+name(g.opponent)+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
+   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(faCupPreviewShortRound(g.round))+'</span><img src="logo/'+teamLogoSlug(g.opponent)+'.png" crossorigin="anonymous" data-team-name="'+name(g.opponent)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span>'+name(g.opponent)+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
   ).join('')+'</div>';
  };
  const team=(v)=>'<div class="rp-team"><div class="rp-logo-box"><img src="logo/'+teamLogoSlug(v)+'.png" crossorigin="anonymous" data-team-name="'+name(v)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"></div><strong>'+name(v)+'</strong>'+history(v)+'</div>';
  const last=roundPreviewLastMeeting(h,home,away);
  const odds=roundPreviewBilbbetPair(home,away);
- const oddsHtml=odds.home&&odds.away?'<div class="rp-odds"><span>'+name(odds.home)+'</span><b class="rp-odds-brand"><img src="logo/bilbbet.png" alt="Bilbbet" crossorigin="anonymous"><small>BILBBET H2H ODDS</small></b><span>'+name(odds.away)+'</span></div>':'';
+ const oddsHtml=odds.home&&odds.away?'<div class="rp-odds"><span>'+name(odds.home)+'</span><b class="rp-odds-brand"><img src="logo/bilbbet.png" alt="Bilbbet" crossorigin="anonymous"></b><span>'+name(odds.away)+'</span></div>':'';
  const active=h.run>=3?'<div class="rp-active-streak">🔥 '+name(h.runTeam==='home'?home:away)+' · '+h.run+' H2H wins in a row</div>':'';
  return '<div class="rp-card"><div class="rp-match">'+team(home)+'<div class="rp-versus"><b>VS</b><small>H2H</small><strong>'+h.hw+'–'+h.draw+'–'+h.aw+'</strong><small>W · D · W</small></div>'+team(away)+'</div>'+oddsHtml+'<div class="rp-last"><b>LAST MEETING</b><div class="rp-last-detail">'+last+'</div></div>'+active+'</div>';
 }
