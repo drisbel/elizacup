@@ -9421,10 +9421,22 @@ function ownershipTemplateHtml(teams){
  const divLabel=ownershipDivision==='all'?'All Eliza':(OWNERSHIP_DIVISIONS.find(d=>d[0]===ownershipDivision)?.[1]||ownershipDivision);const gws=[...new Set(teams.map(ownershipGw).filter(Boolean))];const gwLabel=ownershipStatsWeek==='all'?'All Gameweeks':`GW ${ownershipStatsWeek}`;
  return `<h2 class="ownership-template-title">${liveEscape(divLabel)} Template Team – ${gwLabel}</h2><p class="ownership-extra-note">Most-owned 15 players (2 GK · 5 DEF · 5 MID · 3 FWD). Values on the pitch are ownership percentages.</p><div class="ownership-template-formation"><div class="club-squad-pitch">${['GK','DEF','MID','FWD'].map(g=>`<div class="club-squad-line">${starting.filter(p=>kind(p)===g).map(player).join('')}</div>`).join('')}</div><div class="club-squad-bench"><strong>Substitutes</strong><div class="club-squad-line">${bench.map(player).join('')}</div></div></div>`;
 }
+function ownershipEffectiveCaptain(t){
+ const players=t?.players||[];
+ const captain=players.find(p=>liveCaptainKey(p)==='C');
+ const captainDnp=!!captain&&(liveMatchStatusInfo(captain).kind==='dnp'||String(captain.status||'').trim().toLowerCase()==='dnp'||liveSubstitutionStatus(captain)==='off');
+ if(captainDnp){
+  const vice=players.find(p=>liveCaptainKey(p)==='VC');
+  if(vice&&liveMatchStatusInfo(vice).kind!=='dnp'&&liveSubstitutionStatus(vice)!=='off')return vice;
+  return null;
+ }
+ return captain&&!liveEffectiveBench(captain)?captain:null;
+}
 function ownershipWeeklyScores(t){
- let captain=0,bench=0;const boost=/^(BB|BENCH\s*BOOST)$/i.test(String(t.chip||'').trim());
- for(const p of t.players||[]){if(liveCaptainKey(p)==='C'&&!liveEffectiveBench(p))captain+=ownershipPoints(p)*2;if(liveEffectiveBench(p)&&liveSubstitutionStatus(p)!=='off'&&!boost)bench+=ownershipPoints(p);}
- return {captain,bench};
+ let bench=0;const boost=/^(BB|BENCH\\s*BOOST)$/i.test(String(t.chip||'').trim());
+ for(const p of t.players||[]){if(liveEffectiveBench(p)&&liveSubstitutionStatus(p)!=='off'&&!boost)bench+=ownershipPoints(p);}
+ const effectiveCaptain=ownershipEffectiveCaptain(t);
+ return {captain:effectiveCaptain?ownershipPoints(effectiveCaptain)*2:0,bench};
 }
 function ownershipTeamLogo(name){return `<img class="ownership-ranking-team-logo" src="logo/${teamLogoSlug(name)}.png" alt="" loading="lazy" data-team-name="${liveEscape(name)}" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}">`;}
 function ownershipCaptainBenchHtml(teams){
