@@ -6462,7 +6462,9 @@ function roundPreviewLastMeeting(h,home,away){
  if(!h.last)return '<span>FIRST RECORDED MEETING</span>';
  const g=h.last,comp=roundPreviewEscape(g.comp||'MATCH'),year=roundPreviewEscape(g.season||'');
  const homeName=roundPreviewEscape(home),awayName=roundPreviewEscape(away);
- const label='<span>'+comp+'</span><span>'+year+'</span>';
+ const round=roundPreviewEscape(g.round||'');
+ const roundLabel=round?( /^R(?:OUND)?\s*\d+/i.test(round)?round:'R'+round ):'';
+ const label='<span>'+[comp,year,roundLabel].filter(Boolean).join(' ')+'</span>';
  const score='<span>'+g.hs+'–'+g.as+'</span>';
  const reverseScore='<span>'+g.as+'–'+g.hs+'</span>';
  if(g.hs>=g.as)return label+'<span>'+homeName+'</span>'+score+'<span>'+awayName+'</span>';
