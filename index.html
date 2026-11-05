@@ -2973,6 +2973,11 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .rp-cup-history-line img{width:9px!important;height:9px!important;max-width:9px!important;max-height:9px!important;object-fit:contain!important}
 .rp-cup-history-line .rp-cup-opponent{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
 .rp-cup-history-line .rp-cup-score{font-size:17px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* FA Cup division labels and coloured team names. */
+.rp-cup-team-division{display:block;font-family:'Barlow',sans-serif;font-size:15px!important;font-weight:800;line-height:1.1}
+.rp-cup-history-line .rp-cup-opponent{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;line-height:1.08}
+.rp-cup-history-line .rp-cup-opponent-name{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;font-weight:800}
+.rp-cup-history-line .rp-cup-opponent-division{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700;margin-top:2px}
 /* Competition-specific fixture palette; team names and division tags stay white. */
 #facupContainer .competition-h2h-match{border-color:#234ea2}
 #facupContainer .competition-h2h-match>summary,#facupContainer .competition-h2h-match>summary .facup-card{background:#0a2f85!important}
@@ -16497,6 +16502,15 @@ function faCupPreviewShortRound(round){
  if(/final/i.test(value))return 'F';
  return value;
 }
+function faCupPreviewDivision(team,preferred){
+ if(preferred)return preferred;
+ const key=roundPreviewNorm(team);
+ for(const round of facupRounds)for(const fixture of round.fixtures){
+  if(roundPreviewNorm(fixture.home?.name)===key&&fixture.home.division)return fixture.home.division;
+  if(roundPreviewNorm(fixture.away?.name)===key&&fixture.away.division)return fixture.away.division;
+ }
+ return '';
+}
 function faCupPreviewHistory(team,roundIndex){
  const key=roundPreviewNorm(team);
  const entries=[];
@@ -16508,7 +16522,7 @@ function faCupPreviewHistory(team,roundIndex){
    if(!home&&!away||f.homeScore===null||f.awayScore===null)continue;
    const opponent=home?f.away.name:f.home.name;
    const own=home?f.homeScore:f.awayScore,other=home?f.awayScore:f.homeScore;
-   entries.push({round:round.name,opponent,own,other});
+   entries.push({round:round.name,opponent,division:faCupPreviewDivision(opponent,home?f.away.division:f.home.division),own,other});
   }
  }
  return entries;
@@ -16517,19 +16531,20 @@ function faCupPreviewCard(f,roundIndex,rows){
  const home=f.home.name,away=f.away.name;
  const h=roundPreviewStats(home,away,rows);
  const name=roundPreviewEscape;
+ const colour=(division)=>division?' style="color:'+getDivisionColorByLabel(division)+'"':'';
  const history=(team)=>{
   const previous=faCupPreviewHistory(team,roundIndex);
   if(!previous.length)return '<div class="rp-cup-history"><span class="rp-cup-history-empty">FIRST CUP MATCH</span></div>';
   return '<div class="rp-cup-history">'+previous.map(g=>
-   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(faCupPreviewShortRound(g.round))+'</span><img src="logo/'+teamLogoSlug(g.opponent)+'.png" crossorigin="anonymous" data-team-name="'+name(g.opponent)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span class="rp-cup-opponent" title="'+name(g.opponent)+'">'+name(g.opponent)+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
+   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(faCupPreviewShortRound(g.round))+'</span><img src="logo/'+teamLogoSlug(g.opponent)+'.png" crossorigin="anonymous" data-team-name="'+name(g.opponent)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span class="rp-cup-opponent" title="'+name(g.opponent)+'"'+colour(g.division)+'><span class="rp-cup-opponent-name">'+name(g.opponent)+'</span>'+(g.division?'<span class="rp-cup-opponent-division">'+name(g.division)+'</span>':'')+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
   ).join('')+'</div>';
  };
- const team=(v)=>'<div class="rp-team"><div class="rp-logo-box"><img src="logo/'+teamLogoSlug(v)+'.png" crossorigin="anonymous" data-team-name="'+name(v)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"></div><strong>'+name(v)+'</strong>'+history(v)+'</div>';
+ const team=(v,division)=>{const div=faCupPreviewDivision(v,division);return '<div class="rp-team"><div class="rp-logo-box"><img src="logo/'+teamLogoSlug(v)+'.png" crossorigin="anonymous" data-team-name="'+name(v)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\\'1\\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"></div><strong'+colour(div)+'>'+name(v)+'</strong>'+(div?'<span class="rp-cup-team-division"'+colour(div)+'>'+name(div)+'</span>':'')+history(v)+'</div>';};
  const last=roundPreviewLastMeeting(h,home,away);
  const odds=roundPreviewBilbbetPair(home,away);
  const oddsHtml=odds.home&&odds.away?'<div class="rp-odds"><span>'+name(odds.home)+'</span><b class="rp-odds-brand"><img src="logo/bilbbet.png" alt="Bilbbet" crossorigin="anonymous"></b><span>'+name(odds.away)+'</span></div>':'';
  const active=h.run>=3?'<div class="rp-active-streak">🔥 '+name(h.runTeam==='home'?home:away)+' · '+h.run+' H2H wins in a row</div>':'';
- return '<div class="rp-card"><div class="rp-match">'+team(home)+'<div class="rp-versus"><b>VS</b><small>H2H</small><strong>'+h.hw+'–'+h.draw+'–'+h.aw+'</strong><small>W · D · W</small></div>'+team(away)+'</div>'+oddsHtml+'<div class="rp-last"><b>LAST MEETING</b><div class="rp-last-detail">'+last+'</div></div>'+active+'</div>';
+ return '<div class="rp-card"><div class="rp-match">'+team(home,f.home.division)+'<div class="rp-versus"><b>VS</b><small>H2H</small><strong>'+h.hw+'–'+h.draw+'–'+h.aw+'</strong><small>W · D · W</small></div>'+team(away,f.away.division)+'</div>'+oddsHtml+'<div class="rp-last"><b>LAST MEETING</b><div class="rp-last-detail">'+last+'</div></div>'+active+'</div>';
 }
 async function exportFACupPreview(idx){
  const round=facupRounds[idx];
