@@ -16593,6 +16593,31 @@ function computeFacupBracketLayoutByName(rounds){
     for(let i=1;i<current.length;i++)current[i].center=Math.max(current[i].center,current[i-1].center+FACUP_MATCH_H+14);
     current.forEach(m=>m.top=m.center-FACUP_MATCH_H/2);
   }
+  // Sparse preliminary/playoff rounds must sit beside their actual destinations,
+  // rather than being anchored at the top of the much larger Round of 64.
+  // Work right-to-left after the main bracket has its final positions.
+  for(let ri=layout.length-2;ri>=0;ri--){
+    const current=layout[ri],next=layout[ri+1];
+    if(!current.length||!next.length||current.length>=next.length)continue;
+    const targets=current.map(m=>{
+      const destinations=next.filter(n=>(n.feeders||[]).includes(m));
+      return destinations.length?destinations.reduce((sum,n)=>sum+n.center,0)/destinations.length:m.center;
+    });
+    // Keep the playoff matches in destination order, with enough room for cards.
+    const ordered=current.map((m,i)=>({m,target:targets[i]})).sort((a,b)=>a.target-b.target);
+    const gap=FACUP_MATCH_H+14;
+    const centers=ordered.map(x=>x.target);
+    for(let i=1;i<centers.length;i++)centers[i]=Math.max(centers[i],centers[i-1]+gap);
+    // Recenter the group to minimize displacement from its linked fixtures.
+    const offset=centers.reduce((sum,v,i)=>sum+v-ordered[i].target,0)/Math.max(1,centers.length);
+    for(let i=0;i<centers.length;i++)centers[i]-=offset;
+    if(centers[0]<FACUP_MATCH_H/2){
+      const shift=FACUP_MATCH_H/2-centers[0];
+      for(let i=0;i<centers.length;i++)centers[i]+=shift;
+    }
+    current.splice(0,current.length,...ordered.map(x=>x.m));
+    current.forEach((m,i)=>{m.center=centers[i];m.top=m.center-FACUP_MATCH_H/2;});
+  }
   return layout;
 }
 
