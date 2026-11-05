@@ -6465,8 +6465,8 @@ function roundPreviewLastMeeting(h,home,away){
  const round=roundPreviewEscape(g.round||'');
  const roundLabel=round?( /^R(?:OUND)?\s*\d+/i.test(round)?round:'R'+round ):'';
  const label='<span>'+[comp,year,roundLabel].filter(Boolean).join(' ')+'</span>';
- const score='<span>'+g.hs+'–'+g.as+'</span>';
- const reverseScore='<span>'+g.as+'–'+g.hs+'</span>';
+ const score='<span>def. '+g.hs+'–'+g.as+'</span>';
+ const reverseScore='<span>def. '+g.as+'–'+g.hs+'</span>';
  if(g.hs>=g.as)return label+'<span>'+homeName+'</span>'+score+'<span>'+awayName+'</span>';
  return label+'<span>'+awayName+'</span>'+reverseScore+'<span>'+homeName+'</span>';
 }
