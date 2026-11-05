@@ -6467,8 +6467,8 @@ function roundPreviewLastMeeting(h,home,away){
  const label='<span>'+[comp,year,roundLabel].filter(Boolean).join(' ')+'</span>';
  const score='<span>def. '+g.hs+'–'+g.as+'</span>';
  const reverseScore='<span>def. '+g.as+'–'+g.hs+'</span>';
- if(g.hs>=g.as)return label+'<span>'+homeName+'</span>'+score+'<span>'+awayName+'</span>';
- return label+'<span>'+awayName+'</span>'+reverseScore+'<span>'+homeName+'</span>';
+ if(g.hs>=g.as)return label+'<span>'+homeName+'</span>'+'<span>'+awayName+'</span>'+score;
+ return label+'<span>'+awayName+'</span>'+'<span>'+homeName+'</span>'+reverseScore;
 }
 /* Round Preview revision: 2026-10-20 — early-season stories, proportional logos, 3+ streak badges and Barlow fonts. */
 /* Round preview editorial rules: scoring is fantasy points, not league points.
