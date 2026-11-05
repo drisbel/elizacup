@@ -481,7 +481,8 @@
      visible whether or not the cell is also in a green leader row. */
   .ucl-fantasy-table td.ucl-top-score{font-weight:700;box-shadow:inset 0 0 0 2px var(--amber);}
   .lms-result{font-weight:700;font-size:11px;padding:3px 0;border-radius:12px;width:64px;text-align:center;box-sizing:border-box;}
-  .facup-bracket-wrap{overflow-x:auto;padding-bottom:14px;}
+  .facup-bracket-viewport{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding-bottom:14px;box-sizing:border-box;}
+  .facup-bracket-wrap{overflow:visible;flex:none;}
   .facup-bracket-round-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#000;text-align:center;}
   .facup-bracket-match{border:1px solid var(--line-light);border-radius:6px;padding:6px 8px;background:#fff;box-sizing:border-box;z-index:2;}
   .facup-bracket-side{
@@ -16549,60 +16550,48 @@ const FACUP_MATCH_H = 76;
 const FACUP_MATCH_GAP0 = 22;
 
 function computeFacupBracketLayoutByName(rounds){
-  const layout=[];
-  rounds.forEach((round,ri)=>{
-    const current=round.fixtures.map(f=>({fixture:f}));
-    const spacing=FACUP_MATCH_H+FACUP_MATCH_GAP0;
-    if(!ri){
-      current.forEach((m,i)=>{m.top=i*spacing;m.center=m.top+FACUP_MATCH_H/2;});
-    }else{
-      const prev=layout[ri-1];
-      const normalize=n=>String(n||'').trim().toUpperCase();
-      const proposals=current.map((m,i)=>{
-        const names=[m.fixture.home.name,m.fixture.away.name].map(normalize).filter(Boolean);
-        const feeders=prev.filter(p=>[p.fixture.home.name,p.fixture.away.name].map(normalize).some(n=>names.includes(n)));
-        m.feeders=feeders;
-        const center=feeders.length?feeders.reduce((sum,p)=>sum+p.center,0)/feeders.length:
-          (prev[Math.min(prev.length-1,2*i)]?.center??(i*spacing+FACUP_MATCH_H/2));
-        return center;
-      });
-      // Preserve match order and reserve at least one full card plus a gap.
-      // Name-based feeder positions alone can collapse multiple cards together.
-      const minimum=FACUP_MATCH_H+14;
-      for(let i=1;i<proposals.length;i++)proposals[i]=Math.max(proposals[i],proposals[i-1]+minimum);
-      current.forEach((m,i)=>{m.center=proposals[i];m.top=m.center-FACUP_MATCH_H/2;});
-    }
-    layout.push(current);
-  });
-  // Align qualifying/playoff matches beside the later-round fixtures they feed.
-  // Earlier rounds may contain fewer matches, so top-alignment makes their
-  // connector lines run unnecessarily far down the bracket.
+  const norm=n=>String(n||'').trim().toUpperCase();
+  const layout=rounds.map(round=>round.fixtures.map((fixture,originalIndex)=>({fixture,originalIndex,feeders:[],center:0,top:0})));
+  if(!layout.length)return layout;
+  // Work backwards: keep each pair of feeder matches adjacent to its destination.
+  // Known advancing teams establish exact links; unresolved slots use bracket order.
   for(let ri=layout.length-2;ri>=0;ri--){
-    const current=layout[ri],next=layout[ri+1];
-    if(!current.length||!next.length)continue;
-    const targets=current.map((match,i)=>{
-      const destinations=next.filter(n=>(n.feeders||[]).includes(match));
-      return {match,i,target:destinations.length?
-        destinations.reduce((sum,n)=>sum+n.center,0)/destinations.length:
-        match.center,linked:destinations.length>0};
+    const current=layout[ri],next=layout[ri+1],assigned=new Set();
+    next.forEach((target,ti)=>{
+      const targetNames=[target.fixture.home?.name,target.fixture.away?.name].map(norm).filter(n=>n&&n!=='TBD'&&n!=='BYE');
+      const linked=current.filter(m=>!assigned.has(m)&&[m.fixture.home?.name,m.fixture.away?.name].some(n=>targetNames.includes(norm(n))));
+      // Do not attach both sides of an unresolved fixture by name if they
+      // cannot both advance; use the known winning side when scores exist.
+      linked.sort((a,b)=>a.originalIndex-b.originalIndex);
+      const slots=Math.max(0,Math.min(2,current.length-assigned.size));
+      const selected=linked.slice(0,slots);
+      selected.forEach(m=>assigned.add(m));
+      target.feeders=selected;
     });
-    if(!targets.some(t=>t.linked))continue;
-    // Preserve original order in the round and keep cards separate even
-    // when two playoff fixtures feed into the same Round-of-64 match.
-    const gap=FACUP_MATCH_H+14;
-    const centers=targets.map(t=>t.target);
-    for(let i=1;i<centers.length;i++)centers[i]=Math.max(centers[i],centers[i-1]+gap);
-    // Move the whole group towards its destinations, rather than pinning
-    // the first card to the top and pushing every subsequent card down.
-    const offsets=centers.map((v,i)=>v-targets[i].target);
-    const shift=Math.max(0,...offsets);
-    if(shift)for(let i=0;i<centers.length;i++)centers[i]-=shift;
-    const minCenter=FACUP_MATCH_H/2;
-    if(centers[0]<minCenter){
-      const delta=minCenter-centers[0];
-      for(let i=0;i<centers.length;i++)centers[i]+=delta;
-    }
-    current.forEach((m,i)=>{m.center=centers[i];m.top=centers[i]-FACUP_MATCH_H/2;});
+    // Populate missing links in destination order using remaining fixtures.
+    const remaining=current.filter(m=>!assigned.has(m));
+    next.forEach(target=>{
+      const desired=Math.min(2,Math.ceil(current.length/Math.max(1,next.length)));
+      while(target.feeders.length<desired&&remaining.length){
+        const m=remaining.shift();assigned.add(m);target.feeders.push(m);
+      }
+    });
+    // Sort the previous column in the same visual order as its destinations.
+    const ordered=next.flatMap(m=>m.feeders);
+    current.splice(0,current.length,...ordered,...current.filter(m=>!assigned.has(m)));
+  }
+  const first=layout[0],step=FACUP_MATCH_H+18;
+  first.forEach((m,i)=>{m.center=i*step+FACUP_MATCH_H/2;m.top=m.center-FACUP_MATCH_H/2;});
+  for(let ri=1;ri<layout.length;ri++){
+    const current=layout[ri],prev=layout[ri-1];
+    current.forEach((m,i)=>{
+      const feederCenters=m.feeders.map(f=>f.center);
+      m.center=feederCenters.length?feederCenters.reduce((a,b)=>a+b,0)/feederCenters.length:
+        (prev[Math.min(prev.length-1,2*i)]?.center??(i*step+FACUP_MATCH_H/2));
+    });
+    // Guarantee no overlapping cards even with byes and uneven early rounds.
+    for(let i=1;i<current.length;i++)current[i].center=Math.max(current[i].center,current[i-1].center+FACUP_MATCH_H+14);
+    current.forEach(m=>m.top=m.center-FACUP_MATCH_H/2);
   }
   return layout;
 }
@@ -16613,7 +16602,7 @@ function renderFACupBracket(){
 
   const LABEL_H = 26; // reserved space at the top for round-name labels
   const layout = computeFacupBracketLayoutByName(facupRounds);
-  const contentHeight = Math.max(...layout.flat().map(m => m.top + FACUP_MATCH_H)) + 10;
+  const contentHeight = Math.max(0,...layout.flat().map(m => m.top + FACUP_MATCH_H)) + 10;
   const totalHeight = contentHeight + LABEL_H;
   const totalWidth = facupRounds.length * FACUP_CARD_W + (facupRounds.length - 1) * FACUP_COL_GAP;
 
@@ -16654,10 +16643,10 @@ function renderFACupBracket(){
     return `<div class="facup-bracket-round-label" style="position:absolute;left:${colX}px;top:0;width:${FACUP_CARD_W}px;">${round.name}</div>${matchesHtml}`;
   }).join("");
 
-  container.innerHTML = `<div class="facup-bracket-wrap" style="position:relative;height:${totalHeight}px;width:${totalWidth}px;">
+  container.innerHTML = `<div class="facup-bracket-viewport"><div class="facup-bracket-wrap" style="position:relative;height:${totalHeight}px;width:${totalWidth}px;">
     <svg style="position:absolute;top:0;left:0;pointer-events:none;" width="${totalWidth}" height="${totalHeight}">${connectorsSvg}</svg>
     ${colsHtml}
-  </div>`;
+  </div></div>`;
 }
 
 function selectFacupBracketTeam(name){
