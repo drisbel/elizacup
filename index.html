@@ -2949,6 +2949,13 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 @media(max-width:760px){.competition-h2h-grid{grid-template-columns:minmax(0,1fr)}}
 
 
+/* FA Cup previews reuse the division preview cards and typography. */
+.rp-cup-history{display:flex;flex-direction:column;gap:4px;width:100%;margin-top:4px;min-height:54px}
+.rp-cup-history-line{display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Barlow',sans-serif;font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap}
+.rp-cup-history-line img{width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important;object-fit:contain!important}
+.rp-cup-history-line .rp-cup-round{color:#54675d;font-size:12px}
+.rp-cup-history-line .rp-cup-score{font-weight:900}
+.rp-cup-history-empty{font-size:14px;color:#54675d;font-weight:700}
 /* Competition-specific fixture palette; team names and division tags stay white. */
 #facupContainer .competition-h2h-match{border-color:#234ea2}
 #facupContainer .competition-h2h-match>summary,#facupContainer .competition-h2h-match>summary .facup-card{background:#0a2f85!important}
@@ -16462,6 +16469,79 @@ async function exportFACupQualified(idx){
   const a=document.createElement('a');a.download='eliza-fa-cup-'+round.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-qualified.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
  }catch(err){console.error('FA Cup qualified teams export failed',err);alert('Unable to export qualified teams.');}finally{stage.remove();}
 }
+
+function faCupPreviewHistory(team,roundIndex){
+ const key=roundPreviewNorm(team);
+ const entries=[];
+ for(let i=0;i<roundIndex;i++){
+  const round=facupRounds[i];
+  for(const f of round.fixtures){
+   if(f.isBye)continue;
+   const home=roundPreviewNorm(f.home?.name)===key,away=roundPreviewNorm(f.away?.name)===key;
+   if(!home&&!away||f.homeScore===null||f.awayScore===null)continue;
+   const opponent=home?f.away.name:f.home.name;
+   const own=home?f.homeScore:f.awayScore,other=home?f.awayScore:f.homeScore;
+   entries.push({round:round.name,opponent,own,other});
+  }
+ }
+ return entries;
+}
+function faCupPreviewCard(f,roundIndex,rows){
+ const home=f.home.name,away=f.away.name;
+ const h=roundPreviewStats(home,away,rows);
+ const name=roundPreviewEscape;
+ const history=(team)=>{
+  const previous=faCupPreviewHistory(team,roundIndex);
+  if(!previous.length)return '<div class="rp-cup-history"><span class="rp-cup-history-empty">FIRST CUP MATCH</span></div>';
+  return '<div class="rp-cup-history">'+previous.map(g=>
+   '<div class="rp-cup-history-line"><span class="rp-cup-round">'+name(g.round)+'</span><img src="logo/'+teamLogoSlug(g.opponent)+'.png" crossorigin="anonymous" data-team-name="'+name(g.opponent)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"><span>'+name(g.opponent)+'</span><span class="rp-cup-score">'+g.own+'–'+g.other+'</span></div>'
+  ).join('')+'</div>';
+ };
+ const team=(v)=>'<div class="rp-team"><div class="rp-logo-box"><img src="logo/'+teamLogoSlug(v)+'.png" crossorigin="anonymous" data-team-name="'+name(v)+'" onerror="if(!this.dataset.fallback){this.dataset.fallback=\'1\';this.src=teamPlaceholderLogoDataUri(this.dataset.teamName)}"></div><strong>'+name(v)+'</strong>'+history(v)+'</div>';
+ const last=roundPreviewLastMeeting(h,home,away);
+ const odds=roundPreviewBilbbetPair(home,away);
+ const oddsHtml=odds.home&&odds.away?'<div class="rp-odds"><span>'+name(odds.home)+'</span><b class="rp-odds-brand"><img src="logo/bilbbet.png" alt="Bilbbet" crossorigin="anonymous"><small>BILBBET H2H ODDS</small></b><span>'+name(odds.away)+'</span></div>':'';
+ const active=h.run>=3?'<div class="rp-active-streak">🔥 '+name(h.runTeam==='home'?home:away)+' · '+h.run+' H2H wins in a row</div>':'';
+ return '<div class="rp-card"><div class="rp-match">'+team(home)+'<div class="rp-versus"><b>VS</b><small>H2H</small><strong>'+h.hw+'–'+h.draw+'–'+h.aw+'</strong><small>W · D · W</small></div>'+team(away)+'</div>'+oddsHtml+'<div class="rp-last"><b>LAST MEETING</b><div class="rp-last-detail">'+last+'</div></div>'+active+'</div>';
+}
+async function exportFACupPreview(idx){
+ const round=facupRounds[idx];
+ if(!round)return;
+ if(typeof html2canvas!=='function'){alert('Image exporter is unavailable.');return;}
+ const matches=round.fixtures.filter(f=>!f.isBye&&f.home?.name&&f.away?.name&&!/^(?:TBD|BYE)$/i.test(f.home.name)&&!/^(?:TBD|BYE)$/i.test(f.away.name)&&f.homeScore===null&&f.awayScore===null);
+ if(!matches.length){alert('No upcoming unscored FA Cup fixtures were found in this round.');return;}
+ let rows;
+ try{rows=await roundPreviewMatchLog();}catch(e){console.error('FA Cup preview match log',e);alert('Could not load historical H2H results.');return;}
+ await roundPreviewLoadBilbbet();
+ const parts=Math.ceil(matches.length/8);
+ for(let part=0;part<parts;part++){
+  const chunk=matches.slice(part*8,(part+1)*8);
+  const stage=document.createElement('div');
+  stage.className='round-preview-stage';
+  stage.style.setProperty('--rp-color','#20447e');
+  stage.innerHTML='<div class="rp-heading"><div class="rp-eyebrow">ELIZA CUP · 2026/27</div><div class="rp-title">FA CUP · '+roundPreviewEscape(round.name)+'</div><div class="rp-subtitle">ROUND PREVIEW · '+chunk.length+' MATCHUPS'+(parts>1?' · PART '+(part+1)+' OF '+parts:'')+'</div></div><div class="rp-grid">'+chunk.map(f=>faCupPreviewCard(f,idx,rows)).join('')+'</div>';
+  document.body.appendChild(stage);
+  try{
+   await Promise.all(Array.from(stage.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,2500)})));
+   if(document.fonts){await Promise.all([document.fonts.load('700 16px Barlow'),document.fonts.load('700 25px Barlow Condensed')]);await document.fonts.ready;}
+   for(const img of stage.querySelectorAll('.rp-logo-box img')){
+    if(img.naturalWidth&&img.naturalHeight){
+     const scale=Math.min(58/img.naturalWidth,58/img.naturalHeight,1);
+     img.style.setProperty('width',Math.round(img.naturalWidth*scale)+'px','important');
+     img.style.setProperty('height',Math.round(img.naturalHeight*scale)+'px','important');
+     img.style.setProperty('max-width','58px','important');
+     img.style.setProperty('max-height','58px','important');
+     img.style.setProperty('object-fit','contain','important');
+    }
+   }
+   const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1600});
+   const link=document.createElement('a');
+   link.download='fa-cup-'+round.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-preview'+(parts>1?'-part-'+(part+1):'')+'.png';
+   link.href=canvas.toDataURL('image/png');link.click();
+  }catch(e){console.error('FA Cup preview export',e);alert('Could not export FA Cup preview part '+(part+1));break;}finally{stage.remove();}
+ }
+}
+
 function renderFACup(){
   const tabsEl = document.getElementById('facupRoundTabs');
   const toggleEl = document.getElementById('facupViewToggle');
@@ -16525,6 +16605,14 @@ function renderFACup(){
     exportBtn.disabled=idx===0;
   };
   exportBtn.addEventListener('click',()=>exportFACupQualified(facupSelectedRoundIndex));
+  const previewBtn=document.createElement('button');
+  previewBtn.type='button';
+  previewBtn.className='social-export-download facup-preview-download';
+  previewBtn.textContent='PREVIEW';
+  previewBtn.title='Download FA Cup round previews (up to 8 matches per PNG)';
+  previewBtn.setAttribute('aria-label','Download FA Cup round preview PNGs');
+  previewBtn.addEventListener('click',()=>exportFACupPreview(facupSelectedRoundIndex));
+  document.getElementById('facupHeadingExport')?.appendChild(previewBtn);
   // Keep the download control beside the Rounds/Bracket switch, not hidden
   // at the far end of the horizontally scrolling round tabs.
   document.getElementById('facupHeadingExport')?.appendChild(exportBtn);
