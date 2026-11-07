@@ -5496,15 +5496,26 @@ async function exportLiveCentreImage(){
     const heading=copy.querySelector('.live-comp-heading');
     if(heading){const suffix=document.createElement('small');suffix.textContent=` · Part ${part+1} of ${parts}`;heading.appendChild(suffix);}
    }
-   // Match the on-site score underline in html2canvas exports. CSS text-decoration
-   // is rendered too thin and too close to the glyphs by the canvas renderer.
-   copy.querySelectorAll('.live-match-score .live-match-winner, .live-match-score .live-match-protected').forEach(score=>{
-    score.style.setProperty('text-decoration','none','important');
-    // Draw the underline as an inset shadow, which does not change the score's
-    // line box or baseline in html2canvas (unlike a bottom border + padding).
-    score.style.setProperty('border-bottom','0','important');
-    score.style.setProperty('padding-bottom','0','important');
-    score.style.setProperty('box-shadow','inset 0 -2px 0 currentColor','important');
+   // Keep every score on the same grid baseline in exported match cards.
+   // A background underline does not affect text metrics or move the score.
+   copy.querySelectorAll('.live-match-score:not(.live-match-versus)').forEach(pair=>{
+    pair.querySelectorAll('span').forEach(score=>{
+     score.style.setProperty('display','block','important');
+     score.style.setProperty('line-height','1.25','important');
+     score.style.setProperty('align-self','center','important');
+     score.style.setProperty('padding','0','important');
+     score.style.setProperty('margin','0','important');
+     score.style.setProperty('border','0','important');
+     score.style.setProperty('vertical-align','baseline','important');
+     score.style.setProperty('text-decoration','none','important');
+     score.style.setProperty('box-shadow','none','important');
+     if(score.classList.contains('live-match-winner')||score.classList.contains('live-match-protected')){
+      score.style.setProperty('background-image','linear-gradient(currentColor,currentColor)','important');
+      score.style.setProperty('background-size','100% 2px','important');
+      score.style.setProperty('background-position','center bottom','important');
+      score.style.setProperty('background-repeat','no-repeat','important');
+     }
+    });
    });
    grid.appendChild(copy);
    document.body.appendChild(stage);
