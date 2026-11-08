@@ -16499,6 +16499,19 @@ async function exportFACupQualified(idx){
   cols.appendChild(col);
  }
  stage.appendChild(cols);
+ // Drawn fixtures in the preceding round require a replay before a winner can qualify.
+ const previousRound=facupRounds[idx-1];
+ const hasDrawnMatch=!!previousRound?.fixtures?.some(f=>
+  !f.isBye && f.homeScore!==null && f.awayScore!==null &&
+  Number.isFinite(Number(f.homeScore)) && Number.isFinite(Number(f.awayScore)) &&
+  Number(f.homeScore)===Number(f.awayScore)
+ );
+ if(hasDrawnMatch){
+  const replayNote=document.createElement('div');
+  replayNote.textContent='DRAWN MATCHES: Both teams must play a replay to determine who qualifies.';
+  replayNote.style.cssText='margin-top:12px;padding:14px 18px;background:#15233b;border-top:3px solid #f8d200;color:#fff;text-align:center;font-size:22px;font-weight:800;line-height:1.3;';
+  stage.appendChild(replayNote);
+ }
  document.body.appendChild(stage);
  try{
   await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,2500);})));
