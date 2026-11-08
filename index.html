@@ -8294,7 +8294,7 @@ const CAL_LATEST_START = [
 
 function calendarLatestStartHtml(){
   const cellHtml = (text, bg, fg) => text
-    ? `<td style="background:${bg};color:${fg};font-weight:600;text-align:center;">${text}</td>`
+    ? `<td style="background:${bg};color:#fff !important;font-weight:600;text-align:center;">${text}</td>`
     : `<td style="background:#e4e2dc;text-align:center;">&nbsp;</td>`;
   return `<div class="section-head" style="margin-top:32px;"><h2 style="font-size:18px;">Latest Possible Start Round</h2></div>
     <p style="font-family:'Barlow',sans-serif;font-size:12.5px;color:#000;margin:0 0 12px;max-width:560px;">The latest round each FA Cup and ECL stage can start. Once that round is reached, any matches still to be played will need to be played on byes and doubles.</p>
