@@ -16501,14 +16501,16 @@ async function exportFACupQualified(idx){
  stage.appendChild(cols);
  // Drawn fixtures in the preceding round require a replay before a winner can qualify.
  const previousRound=facupRounds[idx-1];
- const hasDrawnMatch=!!previousRound?.fixtures?.some(f=>
+ const drawnFixtures=(previousRound?.fixtures||[]).filter(f=>
   !f.isBye && f.homeScore!==null && f.awayScore!==null &&
+  f.homeScore!=='' && f.awayScore!=='' &&
   Number.isFinite(Number(f.homeScore)) && Number.isFinite(Number(f.awayScore)) &&
   Number(f.homeScore)===Number(f.awayScore)
  );
- if(hasDrawnMatch){
+ if(drawnFixtures.length){
   const replayNote=document.createElement('div');
-  replayNote.textContent='DRAWN MATCHES: Both teams must play a replay to determine who qualifies.';
+  const drawnNames=drawnFixtures.map(f=>`${f.home?.name||'Home team'} vs ${f.away?.name||'Away team'}`);
+  replayNote.textContent='DRAWN MATCHES: '+drawnNames.join(' | ')+' — replay required to determine who qualifies.';
   replayNote.style.cssText='margin-top:12px;padding:14px 18px;background:#15233b;border-top:3px solid #f8d200;color:#fff;text-align:center;font-size:22px;font-weight:800;line-height:1.3;';
   stage.appendChild(replayNote);
  }
