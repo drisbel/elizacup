@@ -3617,6 +3617,35 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .ladder-history-dot{width:10px;height:10px;border-radius:50%;flex:none}
 .ladder-history-chart{width:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:hidden;border:1px solid #9994;border-radius:8px;padding:8px 0}
 .ladder-history-chart svg{display:block;max-width:100%;height:auto}
+
+/* ECL pre-start competition guide */
+.ecl-prestart{width:100%;min-width:0;font-family:'Barlow',sans-serif}
+.ecl-pre-hero{background:#111827;color:#fff;padding:26px 24px;border-top:5px solid #ffdd00;margin-bottom:24px}
+.ecl-pre-eyebrow{color:#ffdd00;font-size:12px;letter-spacing:.14em;font-weight:800}
+.ecl-pre-hero h2{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:36px;line-height:1.05;margin:7px 0 8px}
+.ecl-pre-hero p{margin:0;color:#e0e5ee;line-height:1.5}
+.ecl-prestart .section-head{margin-top:24px;margin-bottom:12px}
+.ecl-prestart .section-head h3{font-family:'Barlow Condensed',sans-serif;font-size:24px;text-transform:uppercase;margin:0}
+.ecl-pre-qualified{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.ecl-pre-team{display:flex;align-items:center;gap:12px;min-width:0;padding:11px 13px;background:#fff;border:1px solid #d9dce1}
+.ecl-pre-logo{width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center}
+.ecl-pre-logo img{display:block;width:auto!important;height:auto!important;max-width:44px!important;max-height:44px!important;object-fit:contain!important}
+.ecl-pre-team-copy{min-width:0}
+.ecl-pre-team-name{font-weight:800;font-size:15px;line-height:1.2;overflow-wrap:anywhere}
+.ecl-pre-team-detail{font-size:12px;color:#647084;margin-top:4px}
+.ecl-pre-pots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ecl-pre-pot{background:#eef0f4;border:1px solid #d9dce1;padding:12px;min-width:0}
+.ecl-pre-pot h4{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:23px;text-transform:uppercase}
+.ecl-pre-pot h4 small{font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;text-transform:none;color:#647084;margin-left:8px}
+.ecl-pre-pot .ecl-pre-team{margin-bottom:6px}
+.ecl-pre-panel{padding:18px 20px;background:#fff;border:1px solid #d9dce1;line-height:1.55}
+.ecl-pre-panel p{margin:0 0 12px}.ecl-pre-panel p:last-child{margin-bottom:0}
+.ecl-pre-order{font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:800;background:#f0f2f6;padding:10px 14px;margin:8px 0 14px}
+.ecl-pre-order span{color:#a17a00;margin:0 7px}
+.ecl-pre-schedule{width:100%}.ecl-pre-schedule th:first-child,.ecl-pre-schedule td:first-child{text-align:center;width:125px}
+.ecl-pre-note{font-size:13px;color:#596579;margin:12px 0 20px;line-height:1.5}
+@media(max-width:650px){.ecl-pre-qualified,.ecl-pre-pots{grid-template-columns:minmax(0,1fr)}.ecl-pre-hero{padding:20px 16px}.ecl-pre-hero h2{font-size:30px}.ecl-pre-team{padding:9px}.ecl-pre-order{font-size:20px}.ecl-pre-panel{padding:14px}}
+
 </style>
 
 <style>
@@ -5742,6 +5771,7 @@ async function load(){
       const rows = parsed.data;
 
       parseECL(rows);
+      parseECLPrestart(rows);
       parseECLQualifiers(rows);
       parseECLFixtures(rows);
       parseECLKnockout(rows);
@@ -7830,6 +7860,57 @@ function eclKnockoutHtml(){
   return html;
 }
 
+// ECL pre-start guide: source lists from the existing ECL sheet's CSV export.
+let eclPrestartQualified=[];
+let eclPrestartPots=[];
+function parseECLPrestart(rows){
+  eclPrestartQualified=[];
+  eclPrestartPots=[];
+  // AM6:AM17: "QUALIFICATION METHOD - TEAM NAME" (with occasional notes).
+  for(let r=5;r<=16;r++){
+    const raw=cell(rows[r]||[],38).trim();
+    if(!raw||/^QUALIFIED TEAMS$/i.test(raw))continue;
+    const cleaned=raw.replace(/\s*\([^)]*\)\s*$/,'').trim();
+    const split=cleaned.lastIndexOf(' - ');
+    if(split<0)continue;
+    const team=cleaned.slice(split+3).trim();
+    const method=cleaned.slice(0,split).trim();
+    if(team)eclPrestartQualified.push({team,method});
+  }
+  // D7:M16: pot labels in D/J, names in E and K (merged cells).
+  const pot1=[],pot2=[];
+  for(let r=7;r<=15;r++){
+    const first=mergedCell(rows[r]||[],4,7);
+    const second=mergedCell(rows[r]||[],9,12);
+    if(first&&!/^POT\s*\d/i.test(first))pot1.push(first);
+    if(second&&!/^POT\s*\d/i.test(second))pot2.push(second);
+  }
+  eclPrestartPots=[{title:'POT 1',description:'Non-Division 1 teams',teams:pot1},{title:'POT 2',description:'Division 1 teams',teams:pot2}];
+}
+function eclPrestartHtml(){
+  const esc=v=>liveEscape(String(v||''));
+  const logo=name=>`<span class="ecl-pre-logo"><img src="logo/${teamLogoSlug(name)}.png" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(name)}';}"></span>`;
+  const teamRow=(name,detail)=>`<div class="ecl-pre-team">${logo(name)}<div class="ecl-pre-team-copy"><div class="ecl-pre-team-name">${teamLink(name)}</div>${detail?`<div class="ecl-pre-team-detail">${esc(detail)}</div>`:''}</div></div>`;
+  const qualified=eclPrestartQualified.length
+    ? eclPrestartQualified.map(t=>teamRow(t.team,t.method)).join('')
+    : '<p>Qualified teams will appear when confirmed on the ECL spreadsheet.</p>';
+  const pots=eclPrestartPots.map(p=>`<div class="ecl-pre-pot"><h4>${esc(p.title)} <small>${esc(p.description)}</small></h4>${p.teams.length?p.teams.map(t=>teamRow(t,'')).join(''):'<p>Awaiting pot allocation.</p>'}</div>`).join('');
+  const schedule=[['8','MATCHDAY 1'],['10','MATCHDAY 2'],['13','MATCHDAY 3'],['15','QUARTER-FINALS'],['18','SEMI-FINALS'],['20','FINAL']];
+  return `<div class="ecl-prestart">
+    <div class="ecl-pre-hero"><span class="ecl-pre-eyebrow">ELIZA CHAMPIONS LEAGUE</span><h2>Competition Guide</h2><p>The competition has not yet commenced. Here's how the draw, group stage and knockout rounds will work.</p></div>
+    <div class="section-head"><h3>Qualified Teams</h3><span class="sub">${eclPrestartQualified.length} teams</span></div>
+    <div class="ecl-pre-qualified">${qualified}</div>
+    <div class="section-head"><h3>Pots</h3><span class="sub">Group stage draw</span></div>
+    <div class="ecl-pre-pots">${pots}</div>
+    <div class="section-head"><h3>Group Stage Draw</h3></div>
+    <div class="ecl-pre-panel"><p><strong>Pot 1</strong> teams are drawn until the pot is empty, filling the groups in this order:</p><div class="ecl-pre-order">A4 <span>→</span> B4 <span>→</span> C4 <span>→</span> A3 <span>→</span> …</div><p>This ensures each group contains at least one non-Division 1 team.</p><p><strong>Pot 2</strong> teams are then drawn until the pot is empty, filling the remaining group places in this order:</p><div class="ecl-pre-order">A1 <span>→</span> B1 <span>→</span> C1 <span>→</span> A2 <span>→</span> …</div></div>
+    <div class="section-head"><h3>Groups &amp; Qualification</h3></div>
+    <div class="ecl-pre-panel"><p>The <strong>top two teams from each group</strong> advance to the knockout stage.</p><p>The <strong>two highest-ranked qualified teams</strong> receive byes directly to the semi-finals. The other four qualified teams compete in the quarter-finals.</p></div>
+    <div class="section-head"><h3>Schedule</h3><span class="sub">Planned gameweeks</span></div>
+    <div class="table-wrap"><table class="standings compact ecl-pre-schedule"><thead><tr><th>Gameweek</th><th>Round</th></tr></thead><tbody>${schedule.map(([gw,round])=>`<tr><td class="pts">${gw}</td><td>${round}</td></tr>`).join('')}</tbody></table></div>
+    <p class="ecl-pre-note">Schedule subject to change due to unexpected byes or double gameweeks. See the <a href="#calendar">Calendar</a> for updates.</p>
+  </div>`;
+}
 function renderECL(){
   const container = document.getElementById('eclContainer');
   const eclStarted = eclFixtures.some(f =>
@@ -7838,9 +7919,9 @@ function renderECL(){
     f.home.toUpperCase() !== "TBD" && f.away.toUpperCase() !== "TBD"
   );
   if(!eclStarted){
-    container.className = "state-msg";
-    container.innerHTML = `The Eliza Champions League is yet to commence. Please refer to the <a href="#calendar">Calendar</a> for starting dates.`;
-    document.getElementById('eclUpdated').textContent = "";
+    container.className = "";
+    container.innerHTML = eclPrestartHtml();
+    document.getElementById('eclUpdated').textContent = "Competition guide";
     return;
   }
   container.className = "";
