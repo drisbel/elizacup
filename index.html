@@ -7317,10 +7317,23 @@ function facupFixtureCardHtml(f){
     : "TBD";
   const teamLogo = name => `<span class="facup-team-logo-wrap">${name ? `<img src="logo/${teamLogoSlug(name)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(name)}';}">` : ""}</span>`;
   const replay=f.replay;
-  const replayScore=replay&&replay.homeScore!==null&&replay.awayScore!==null
-    ? replay.homeScore+' – '+replay.awayScore : 'vs';
+  const replayHasScore=!!replay&&replay.homeScore!==null&&replay.awayScore!==null;
+  const replayHomeWin=replayHasScore&&replay.homeScore>replay.awayScore;
+  const replayAwayWin=replayHasScore&&replay.awayScore>replay.homeScore;
+  const replayDraw=replayHasScore&&replay.homeScore===replay.awayScore;
+  const replayClass=won=>replayHasScore?(won?'fx-win':replayDraw?'fx-draw':'fx-lose'):'';
+  const replayScoreHtml=replayHasScore
+    ? `<span class="${replayClass(replayHomeWin)}">${replay.homeScore}</span> – <span class="${replayClass(replayAwayWin)}">${replay.awayScore}</span>`
+    : '<span class="upcoming">vs</span>';
   const replayHtml=replay
-    ? `<div style="padding:8px 12px;background:#172b4a;color:#fff;text-align:center;font:700 13px Barlow,sans-serif;"><span style="color:#ffdd00;">REPLAY</span> · ${liveEscape(replay.home.name)} ${replayScore} ${liveEscape(replay.away.name)}</div>`
+    ? `<div class="facup-replay" style="background:#172b4a;padding:8px 0 10px;">
+       <div style="text-align:center;color:#ffdd00;font:800 13px Barlow,sans-serif;letter-spacing:1px;margin-bottom:6px;">REPLAY</div>
+       <div class="facup-card">
+        <div class="facup-team facup-team-home facup-team-with-logo ${replayClass(replayHomeWin)}">${teamLogo(replay.home.name)}<span class="facup-team-name">${nameWithDiv(replay.home)}</span></div>
+        <div class="fixture-score">${replayScoreHtml}</div>
+        <div class="facup-team facup-team-away facup-team-with-logo ${replayClass(replayAwayWin)}"><span class="facup-team-name">${nameWithDiv(replay.away)}</span>${teamLogo(replay.away.name)}</div>
+       </div>
+      </div>`
     : '';
   return `<div class="facup-card">
     <div class="facup-team facup-team-home facup-team-with-logo ${resultClass(homeWin)}">${teamLogo(f.home.name)}<span class="facup-team-name">${nameWithDiv(f.home)}</span></div>
