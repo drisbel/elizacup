@@ -7864,33 +7864,32 @@ function eclKnockoutHtml(){
 let eclPrestartQualified=[];
 let eclPrestartPots=[];
 function parseECLPrestart(rows){
-  eclPrestartQualified=[];
-  eclPrestartPots=[];
-  // Qualified teams are listed in AM6:AM17. Preserve the qualification method
-  // and split at the final delimiter, not the first one.
-  for(let r=5;r<=16;r++){
-    const raw=mergedCell(rows[r]||[],38,42).trim();
-    if(!raw||/^QUALIFIED TEAMS$/i.test(raw))continue;
-    const cleaned=raw.replace(/\s*\([^)]*\)\s*$/,'').trim();
-    const parts=cleaned.split(/\s+-\s+/);
-    if(parts.length<2)continue;
-    const team=parts.pop().trim();
-    const method=parts.join(' - ').trim();
-    if(team)eclPrestartQualified.push({team,method});
-  }
-  // Exact pot ranges: E8:H10 (three teams) and J8:M16 (nine teams).
-  const pot1=[],pot2=[];
-  for(let r=7;r<=15;r++){
-    if(r<=9){
-      const name=mergedCell(rows[r]||[],4,7).trim();
-      if(name)pot1.push(name);
-    }
-    const name=mergedCell(rows[r]||[],9,12).trim();
-    if(name)pot2.push(name);
-  }
+  // Confirmed 26/27 ECL entrants. The public CSV's early rows do not reliably
+  // preserve the merged AM and pot ranges, so use the verified sheet values
+  // rather than displaying a partial or incorrectly shifted list.
+  eclPrestartQualified=[
+    {team:'SAUCE FC',method:'DECL - WINNER'},
+    {team:'BC UNITED ZEBRAS',method:'ELIZA CUP - WINNER'},
+    {team:'HARVEY FREKES',method:'DIVISION 2A - WINNER'},
+    {team:'JARVIS ZEBRAS',method:'DIVISION 2B - WINNER'},
+    {team:'AFC BIG RED PORT',method:'DIVISION 3A - WINNER'},
+    {team:'FULLY SCICLUNA',method:'DIVISION 3B - WINNER'},
+    {team:'BIG MAC FC',method:'FA CUP - WINNER (Replaces Jarvis Zebras as Next Best Roddy)'},
+    {team:"SILVERMAN'S XI",method:'RODDY'},
+    {team:'NANISTATE',method:'ELIZA CUP - 2ND PLACE'},
+    {team:'ALASKAN BULL WORMS',method:'ELIZA CUP - 3RD PLACE'},
+    {team:'GIVE US WANG',method:'ELIZA CUP - 4TH PLACE'},
+    {team:'VICTORYRULES',method:'ELIZA CUP - 5TH PLACE'}
+  ];
   eclPrestartPots=[
-    {title:'POT 1',description:'Non-Division 1 teams',teams:pot1},
-    {title:'POT 2',description:'Division 1 teams',teams:pot2}
+    {title:'POT 1',description:'Non-Division 1 teams',teams:[
+      'AFC BIG RED PORT',"SILVERMAN'S XI",'FULLY SCICLUNA'
+    ]},
+    {title:'POT 2',description:'Division 1 teams',teams:[
+      'ALASKAN BULL WORMS','BC UNITED ZEBRAS','BIG MAC FC',
+      'GIVE US WANG','HARVEY FREKES','JARVIS ZEBRAS',
+      'NANISTATE','SAUCE FC','VICTORYRULES'
+    ]}
   ];
 }
 function eclPrestartHtml(){
