@@ -7866,26 +7866,32 @@ let eclPrestartPots=[];
 function parseECLPrestart(rows){
   eclPrestartQualified=[];
   eclPrestartPots=[];
-  // AM6:AM17: "QUALIFICATION METHOD - TEAM NAME" (with occasional notes).
+  // Qualified teams are listed in AM6:AM17. Preserve the qualification method
+  // and split at the final delimiter, not the first one.
   for(let r=5;r<=16;r++){
-    const raw=cell(rows[r]||[],38).trim();
+    const raw=mergedCell(rows[r]||[],38,42).trim();
     if(!raw||/^QUALIFIED TEAMS$/i.test(raw))continue;
     const cleaned=raw.replace(/\s*\([^)]*\)\s*$/,'').trim();
-    const split=cleaned.lastIndexOf(' - ');
-    if(split<0)continue;
-    const team=cleaned.slice(split+3).trim();
-    const method=cleaned.slice(0,split).trim();
+    const parts=cleaned.split(/\s+-\s+/);
+    if(parts.length<2)continue;
+    const team=parts.pop().trim();
+    const method=parts.join(' - ').trim();
     if(team)eclPrestartQualified.push({team,method});
   }
-  // D7:M16: pot labels in D/J, names in E and K (merged cells).
+  // Exact pot ranges: E8:H10 (three teams) and J8:M16 (nine teams).
   const pot1=[],pot2=[];
   for(let r=7;r<=15;r++){
-    const first=mergedCell(rows[r]||[],4,7);
-    const second=mergedCell(rows[r]||[],9,12);
-    if(first&&!/^POT\s*\d/i.test(first))pot1.push(first);
-    if(second&&!/^POT\s*\d/i.test(second))pot2.push(second);
+    if(r<=9){
+      const name=mergedCell(rows[r]||[],4,7).trim();
+      if(name)pot1.push(name);
+    }
+    const name=mergedCell(rows[r]||[],9,12).trim();
+    if(name)pot2.push(name);
   }
-  eclPrestartPots=[{title:'POT 1',description:'Non-Division 1 teams',teams:pot1},{title:'POT 2',description:'Division 1 teams',teams:pot2}];
+  eclPrestartPots=[
+    {title:'POT 1',description:'Non-Division 1 teams',teams:pot1},
+    {title:'POT 2',description:'Division 1 teams',teams:pot2}
+  ];
 }
 function eclPrestartHtml(){
   const esc=v=>liveEscape(String(v||''));
