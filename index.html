@@ -10060,9 +10060,10 @@ async function loadWinStreaksTab(){
     }));
     const latestRoundByComp = getLatestRoundByComp(matchLogRowsCache);
     const activeStreaks = streakCurrentWins(matchLogRowsCache, latestRoundByComp);
+    const endedStreaks = streaksEndedThisWeek(matchLogRowsCache);
     const allTimeStreaks = findAllTimeStreaks(rows, matchLogRowsCache, latestRoundByComp);
     const losingStreaks = findLosingStreaks(matchLogRowsCache, latestRoundByComp);
-    renderWinStreaks(activeStreaks, allTimeStreaks, losingStreaks.active, losingStreaks.allTime);
+    renderWinStreaks(activeStreaks, allTimeStreaks, losingStreaks.active, losingStreaks.allTime, endedStreaks);
 
     document.getElementById('debugOut').textContent =
       "Active win streaks debug: " + JSON.stringify(winStreaksDebug, null, 2) + "\n\n" +
@@ -10508,6 +10509,43 @@ function streakCurrentWins(matchLogRows,latestRoundByComp){
  }
  return result.sort((a,b)=>b.streak-a.streak||a.team1.localeCompare(b.team1));
 }
+function streaksEndedThisWeek(matchLogRows){
+ const cutoff=latestStreakGameweekStartIndex(matchLogRows);
+ if(cutoff===null)return [];
+ const pairs=new Map();
+ matchLogRows.forEach((r,i)=>{
+  const a=cell(r,MATCH_LOG_COL.TEAM1).trim(),b=cell(r,MATCH_LOG_COL.TEAM2).trim();
+  if(!a||!b)return;
+  for(const [team,opp] of [[a,b],[b,a]]){
+   const key=team.toUpperCase()+'||'+opp.toUpperCase();
+   if(!pairs.has(key))pairs.set(key,{team,opp,rows:[]});
+   pairs.get(key).rows.push({row:r,index:i});
+  }
+ });
+ const ended=[];
+ for(const p of pairs.values()){
+  const games=p.rows;
+  // Only a completed match in the current gameweek can end a streak.
+  const last=games[games.length-1];
+  if(last.index<cutoff)continue;
+  const lastWinner=cell(last.row,MATCH_LOG_COL.WINNER).trim().toUpperCase();
+  if(!lastWinner||lastWinner===p.team.toUpperCase())continue;
+  let matches=[],count=0,previous=null;
+  for(let j=games.length-2;j>=0;j--){
+   const r=games[j].row;
+   if(cell(r,MATCH_LOG_COL.WINNER).trim().toUpperCase()!==p.team.toUpperCase())break;
+   const isFirst=cell(r,MATCH_LOG_COL.TEAM1).trim().toUpperCase()===p.team.toUpperCase();
+   const entry={comp:cell(r,MATCH_LOG_COL.COMP),year:cell(r,MATCH_LOG_COL.SEASON),round:cell(r,MATCH_LOG_COL.ROUND),result:'WIN',for:cell(r,isFirst?MATCH_LOG_COL.TEAM1_SCORE:MATCH_LOG_COL.TEAM2_SCORE),against:cell(r,isFirst?MATCH_LOG_COL.TEAM2_SCORE:MATCH_LOG_COL.TEAM1_SCORE)};
+   const duplicate=previous&&previous.year===entry.year&&previous.round===entry.round&&previous.for===entry.for&&previous.against===entry.against;
+   if(duplicate){entry.doubleUp=true;previous.doubleUp=true;}else count++;
+   matches.unshift(entry);previous=entry;
+  }
+  if(count<3)continue;
+  const a=lookupTeamDivInfo(p.team),b=lookupTeamDivInfo(p.opp);
+  ended.push({team1:a.display,team2:b.display,team1Active:a.active,team2Active:b.active,streak:count,matches,isNew:false,ended:true,endedBy:lastWinner===p.opp.toUpperCase()?'LOSS':'DRAW'});
+ }
+ return ended.sort((a,b)=>b.streak-a.streak||a.team1.localeCompare(b.team1));
+}
 let streakDivisionUpcoming=[];
 function streakUpcomingFixture(team,opponent){
  const same=(a,b)=>liveKey(parseTeamDiv(String(a?.name||a||'')).name)===liveKey(parseTeamDiv(String(b?.name||b||'')).name);
@@ -10583,7 +10621,8 @@ function wireStreakSectionClicks(container,streaks,groupId){
 }
 async function exportNewStreaksPng(){
  const visible=(streakRenderData?.activeStreaks||[]).filter(s=>s.isNew&&(streakIncludeInactive||(s.team1Active&&s.team2Active)));
- if(!visible.length){alert('There are no new streaks to export with the current filter.');return;}
+ const ended=(streakRenderData?.endedStreaks||[]).filter(s=>streakIncludeInactive||(s.team1Active&&s.team2Active));
+ if(!visible.length&&!ended.length){alert('There are no new or ended streaks to export with the current filter.');return;}
  if(typeof html2canvas!=='function'){alert('The PNG exporter is unavailable. Please try again after refreshing.');return;}
  const stage=document.createElement('div');
  stage.className='streaks-modern streak-new-export-stage';
@@ -10595,6 +10634,17 @@ async function exportNewStreaksPng(){
  wrap.querySelectorAll('.streak-detail-row').forEach(row=>row.remove());
  wrap.querySelectorAll('a').forEach(a=>{const span=document.createElement('span');span.textContent=a.textContent;a.replaceWith(span);});
  stage.appendChild(wrap);
+ if(ended.length){
+  const heading=document.createElement('h2');heading.textContent='STREAKS ENDED THIS WEEK';heading.style.cssText='font-size:27px;margin:24px 0 10px;font-family:Barlow Condensed,Barlow,sans-serif;';stage.appendChild(heading);
+  const endedTemp=document.createElement('div');endedTemp.innerHTML=streakSectionHtml('','',ended,'ended-export');
+  const endedWrap=endedTemp.querySelector('.streak-table-wrap');
+  endedWrap.querySelectorAll('.streak-detail-row').forEach(row=>row.remove());
+  endedWrap.querySelectorAll('a').forEach(a=>{const span=document.createElement('span');span.textContent=a.textContent;a.replaceWith(span);});
+  // An ended streak has no upcoming meeting or active start date in this summary.
+  endedWrap.querySelectorAll('thead th:nth-child(4),thead th:nth-child(5),tbody td:nth-child(4),tbody td:nth-child(5)').forEach(el=>el.remove());
+  endedWrap.querySelectorAll('col:nth-child(4),col:nth-child(5)').forEach(el=>el.remove());
+  stage.appendChild(endedWrap);
+ }
  document.body.appendChild(stage);
  try{
   await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,3500)})));
@@ -10617,8 +10667,8 @@ async function exportNewStreaksPng(){
  finally{stage.remove();}
 }
 let streakRenderData=null;
-function renderWinStreaks(activeStreaks,allTimeStreaks,activeLosingStreaks,allTimeLosingStreaks){
- streakRenderData={activeStreaks,allTimeStreaks,allTimeLosingStreaks};
+function renderWinStreaks(activeStreaks,allTimeStreaks,activeLosingStreaks,allTimeLosingStreaks,endedStreaks=[]){
+ streakRenderData={activeStreaks,allTimeStreaks,allTimeLosingStreaks,endedStreaks};
  const el=document.getElementById('statsContainer');el.className='streaks-modern';
  el.innerHTML=`<div class="streaks-toolbar"><p>Tap any matchup to view the games in that streak.</p><label class="streak-inactive-toggle"><input type="checkbox" id="streakIncludeInactive" ${streakIncludeInactive?'checked':''}> Include inactive teams</label></div>`
  +`<div class="streak-new-title"><h2>New Streaks</h2><button type="button" id="streakNewExport" class="streak-new-export" title="Export New Streaks PNG" aria-label="Export New Streaks PNG"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 17v3h14v-3"/></svg></button></div>`
@@ -10629,7 +10679,7 @@ function renderWinStreaks(activeStreaks,allTimeStreaks,activeLosingStreaks,allTi
  wireStreakSectionClicks(el,activeStreaks.filter(s=>s.isNew),'new');
  el.querySelector('#streakNewExport').addEventListener('click',exportNewStreaksPng);
  wireStreakSectionClicks(el,activeStreaks,'active');wireStreakSectionClicks(el,allTimeStreaks,'alltime');wireStreakSectionClicks(el,allTimeLosingStreaks,'alltimelosing');
- el.querySelector('#streakIncludeInactive').addEventListener('change',e=>{streakIncludeInactive=e.target.checked;renderWinStreaks(...[streakRenderData.activeStreaks,streakRenderData.allTimeStreaks,[],streakRenderData.allTimeLosingStreaks]);});
+ el.querySelector('#streakIncludeInactive').addEventListener('change',e=>{streakIncludeInactive=e.target.checked;renderWinStreaks(...[streakRenderData.activeStreaks,streakRenderData.allTimeStreaks,[],streakRenderData.allTimeLosingStreaks,streakRenderData.endedStreaks]);});
 }
 
 let teamVsTeamDebug = {};
