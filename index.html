@@ -7326,12 +7326,12 @@ function facupFixtureCardHtml(f){
     ? `<span class="${replayClass(replayHomeWin)}">${replay.homeScore}</span> – <span class="${replayClass(replayAwayWin)}">${replay.awayScore}</span>`
     : '<span class="upcoming">vs</span>';
   const replayHtml=replay
-    ? `<div class="facup-replay" style="background:#172b4a;padding:8px 0 10px;">
-       <div style="text-align:center;color:#ffdd00;font:800 13px Barlow,sans-serif;letter-spacing:1px;margin-bottom:6px;">REPLAY</div>
-       <div class="facup-card">
-        <div class="facup-team facup-team-home facup-team-with-logo ${replayClass(replayHomeWin)}">${teamLogo(replay.home.name)}<span class="facup-team-name">${nameWithDiv(replay.home)}</span></div>
-        <div class="fixture-score">${replayScoreHtml}</div>
-        <div class="facup-team facup-team-away facup-team-with-logo ${replayClass(replayAwayWin)}"><span class="facup-team-name">${nameWithDiv(replay.away)}</span>${teamLogo(replay.away.name)}</div>
+    ? `<div class="facup-replay" style="padding:8px 12px 10px;background:#172b4a;color:#fff;text-align:center;font:700 13px Barlow,sans-serif;">
+       <div style="color:#ffdd00;font-weight:800;letter-spacing:1px;margin-bottom:6px;">REPLAY</div>
+       <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+        <span class="${replayClass(replayHomeWin)}" style="flex:1;min-width:0;text-align:right;">${nameWithDiv(replay.home)}</span>
+        <span style="flex:0 0 75px;text-align:center;white-space:nowrap;">${replayScoreHtml}</span>
+        <span class="${replayClass(replayAwayWin)}" style="flex:1;min-width:0;text-align:left;">${nameWithDiv(replay.away)}</span>
        </div>
       </div>`
     : '';
