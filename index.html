@@ -7248,7 +7248,9 @@ function parseFACup(rows){
     const endRow = i+1 < roundMarkers.length ? roundMarkers[i+1].row : rows.length;
     const fixtures = [];
 
+    const replayRows=[];
     for(let r=startRow; r<endRow; r++){
+      const isReplay=/^REPLAY\b/i.test(cell(rows[r]||[],0).trim());
       const homeRaw = cell(rows[r]||[], FACUP_COL.HOME_TEAM);
       const awayRaw = cell(rows[r]||[], FACUP_COL.AWAY_TEAM);
       const homeScoreRaw = cell(rows[r]||[], FACUP_COL.HOME_SCORE);
@@ -7283,9 +7285,18 @@ function parseFACup(rows){
       const homeScore = /^\d+$/.test(homeScoreRaw) ? parseInt(homeScoreRaw,10) : null;
       const awayScore = /^\d+$/.test(awayScoreRaw) ? parseInt(awayScoreRaw,10) : null;
 
-      fixtures.push({ home, away, homeScore, awayScore, isBye, byeSide });
+      const fixture={ home, away, homeScore, awayScore, isBye, byeSide };
+      if(isReplay) replayRows.push(fixture);
+      else fixtures.push(fixture);
     }
 
+    // Replay rows do not consume bracket positions; match either team order.
+    const pairKey=f=>[liveKey(f.home.name),liveKey(f.away.name)].sort().join('||');
+    for(const replay of replayRows){
+      const original=fixtures.find(f=>!f.isBye&&pairKey(f)===pairKey(replay)&&f.homeScore!==null&&f.awayScore!==null&&f.homeScore===f.awayScore);
+      if(original)original.replay=replay;
+      else console.warn('FA Cup replay has no matching drawn fixture in '+marker.name,replay);
+    }
     facupRounds.push({ name: marker.name, fixtures });
   });
 }
@@ -7305,11 +7316,17 @@ function facupFixtureCardHtml(f){
     ? `${teamLink(t.name)}${t.division ? ` <span class="facup-team-div-tag">(${t.division})</span>` : ""}`
     : "TBD";
   const teamLogo = name => `<span class="facup-team-logo-wrap">${name ? `<img src="logo/${teamLogoSlug(name)}.png" alt="" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${teamPlaceholderLogoDataUri(name)}';}">` : ""}</span>`;
+  const replay=f.replay;
+  const replayScore=replay&&replay.homeScore!==null&&replay.awayScore!==null
+    ? replay.homeScore+' – '+replay.awayScore : 'vs';
+  const replayHtml=replay
+    ? `<div style="padding:8px 12px;background:#172b4a;color:#fff;text-align:center;font:700 13px Barlow,sans-serif;"><span style="color:#ffdd00;">REPLAY</span> · ${liveEscape(replay.home.name)} ${replayScore} ${liveEscape(replay.away.name)}</div>`
+    : '';
   return `<div class="facup-card">
     <div class="facup-team facup-team-home facup-team-with-logo ${resultClass(homeWin)}">${teamLogo(f.home.name)}<span class="facup-team-name">${nameWithDiv(f.home)}</span></div>
     <div class="fixture-score">${scoreHtml}</div>
     <div class="facup-team facup-team-away facup-team-with-logo ${resultClass(awayWin)}"><span class="facup-team-name">${nameWithDiv(f.away)}</span>${teamLogo(f.away.name)}</div>
-  </div>`;
+  </div>${replayHtml}`;
 }
 
 function faCupCalendarStartNote(round){
@@ -16506,6 +16523,11 @@ function facupQualifiedTeams(idx){
  for(const f of previous.fixtures){
   let t=null;
   if(f.isBye)t=f.byeSide==='home'?f.away:f.home;
+  else if(f.replay){
+   const replay=f.replay;
+   if(replay.homeScore!==null&&replay.awayScore!==null&&replay.homeScore!==replay.awayScore)
+    t=replay.homeScore>replay.awayScore?replay.home:replay.away;
+  }
   else if(f.homeScore!==null&&f.awayScore!==null&&f.homeScore!==f.awayScore)t=f.homeScore>f.awayScore?f.home:f.away;
   if(valid(t))winners.push(t);
  }
@@ -16553,7 +16575,7 @@ async function exportFACupQualified(idx){
  // Show unresolved drawn fixtures from the round immediately preceding this qualification stage.
  const previousRound=facupRounds[idx-1];
  const drawnFixtures=(previousRound?.fixtures||[]).filter(f=>
-  !f.isBye && f.homeScore!==null && f.awayScore!==null &&
+  !f.isBye && !(f.replay&&f.replay.homeScore!==null&&f.replay.awayScore!==null&&f.replay.homeScore!==f.replay.awayScore) && f.homeScore!==null && f.awayScore!==null &&
   Number.isFinite(Number(f.homeScore)) && Number.isFinite(Number(f.awayScore)) &&
   Number(f.homeScore)===Number(f.awayScore)
  );
