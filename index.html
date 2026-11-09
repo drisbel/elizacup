@@ -10649,16 +10649,17 @@ async function exportNewStreaksPng(){
  try{
   await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,3500)})));
   if(document.fonts){await Promise.all([document.fonts.load('700 16px Barlow'),document.fonts.load('700 19px Barlow Condensed')]);await document.fonts.ready;}
-  // Use the actual intrinsic image ratio, overriding any site-wide logo sizing rules.
-  for(const img of stage.querySelectorAll('.rp-logo-box img')){
+  // Preserve natural proportions for team logos in both streak export tables.
+  for(const img of stage.querySelectorAll('.streak-team-cell img')){
    if(img.naturalWidth&&img.naturalHeight){
-    const scale=Math.min(58/img.naturalWidth,58/img.naturalHeight,1);
-    img.style.setProperty('width',Math.round(img.naturalWidth*scale)+'px','important');
-    img.style.setProperty('height',Math.round(img.naturalHeight*scale)+'px','important');
-    img.style.setProperty('max-width','58px','important');
-    img.style.setProperty('max-height','58px','important');
+    const scale=Math.min(36/img.naturalWidth,36/img.naturalHeight);
+    img.style.setProperty('width',(img.naturalWidth*scale)+'px','important');
+    img.style.setProperty('height',(img.naturalHeight*scale)+'px','important');
+    img.style.setProperty('max-width','36px','important');
+    img.style.setProperty('max-height','36px','important');
     img.style.setProperty('aspect-ratio','auto','important');
     img.style.setProperty('object-fit','contain','important');
+    img.style.setProperty('flex-shrink','0','important');
    }
   }
   const canvas=await html2canvas(stage,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,windowWidth:1200});
