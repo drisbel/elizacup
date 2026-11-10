@@ -9758,16 +9758,15 @@ function ownershipRecordsHtml(teams){
    }
    // Preserve incomplete weeks in the season breakdown instead of silently dropping them.
    // Never substitute zero for missing player scores: that would corrupt season totals.
-   const inPoints=change.ins.map(p=>ownershipFullWeekPoints(p.name,gw));
-   const outPoints=change.outs.map(p=>ownershipFullWeekPoints(p.name,gw));
-   if([...inPoints,...outPoints].some(v=>v===null)){
-    const missing=[...change.ins.filter((p,j)=>inPoints[j]===null),...change.outs.filter((p,j)=>outPoints[j]===null)].map(p=>p.name);
-    weeklyImpact.push({team:after.name,gw,points:null,status:'Missing scores: '+missing.join(', '),ins:change.ins.map((p,j)=>({name:p.name,score:inPoints[j]})),outs:change.outs.map((p,j)=>({name:p.name,score:outPoints[j]}))});
-    continue;
-   }
+   // A player with no recorded score for this round did not play (DNP): count 0.
+   // Keep the DNP marker in the transfer detail while scoring the week normally.
+   const inRaw=change.ins.map(p=>ownershipFullWeekPoints(p.name,gw));
+   const outRaw=change.outs.map(p=>ownershipFullWeekPoints(p.name,gw));
+   const inPoints=inRaw.map(v=>v===null?0:v);
+   const outPoints=outRaw.map(v=>v===null?0:v);
    const gain=inPoints.reduce((a,b)=>a+b,0)-outPoints.reduce((a,b)=>a+b,0);
    totalGain+=gain;
-   weeklyImpact.push({team:after.name,gw,points:gain,transfers:change.ins.length,ins:change.ins.map((p,j)=>({name:p.name,score:inPoints[j]})),outs:change.outs.map((p,j)=>({name:p.name,score:outPoints[j]}))});
+   weeklyImpact.push({team:after.name,gw,points:gain,transfers:change.ins.length,ins:change.ins.map((p,j)=>({name:p.name,score:inPoints[j],dnp:inRaw[j]===null})),outs:change.outs.map((p,j)=>({name:p.name,score:outPoints[j],dnp:outRaw[j]===null}))});
    if(gain<0)transferDisasters.push({team:after.name,gw,points:gain,ins:change.ins.map((p,j)=>({name:p.name,score:inPoints[j]})),outs:change.outs.map((p,j)=>({name:p.name,score:outPoints[j]}))});
    transfers+=change.ins.length;rounds++;
   }
@@ -9775,7 +9774,7 @@ function ownershipRecordsHtml(teams){
   transferImpact.push({team:records[records.length-1].name,points:totalGain,transfers,rounds,weeks:weeklyImpact.filter(r=>liveKey(r.team)===key).sort((a,b)=>a.gw-b.gw)});
  }
  transferImpact.sort((a,b)=>b.points-a.points||b.rounds-a.rounds||a.team.localeCompare(b.team));
- const impactHtml='<div class="ownership-table-wrap"><h3>Transfer Impact — Season</h3><p class="ownership-extra-note">Season totals across all archived gameweeks, regardless of the selected week. Each transfer week is incoming players’ points minus outgoing players’ points; weeks with missing player scores are excluded rather than counted as zero. Teams with no scored transfers appear on 0.</p><table class="ownership-table"><thead><tr><th>#</th><th>Team</th><th>Net Points</th></tr></thead><tbody>'+transferImpact.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="ownership-ranked-team">'+ownershipTeamLogo(r.team)+'<button type="button" class="ownership-player-link" data-owner-team-profile="'+liveEscape(r.team)+'">'+liveEscape(r.team)+'</button></span></td><td><button type="button" class="ownership-player-link" data-transfer-season="'+i+'" title="View week-by-week transfer impact"><strong>'+(r.points>0?'+':'')+r.points+'</strong></button></td></tr>').join('')+'</tbody></table></div>';
+ const impactHtml='<div class="ownership-table-wrap"><h3>Transfer Impact — Season</h3><p class="ownership-extra-note">Season totals across all archived gameweeks, regardless of the selected week. Each transfer week is incoming players’ points minus outgoing players’ points; players without a recorded score in a gameweek are treated as DNP (0 points). Teams with no scored transfers appear on 0.</p><table class="ownership-table"><thead><tr><th>#</th><th>Team</th><th>Net Points</th></tr></thead><tbody>'+transferImpact.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="ownership-ranked-team">'+ownershipTeamLogo(r.team)+'<button type="button" class="ownership-player-link" data-owner-team-profile="'+liveEscape(r.team)+'">'+liveEscape(r.team)+'</button></span></td><td><button type="button" class="ownership-player-link" data-transfer-season="'+i+'" title="View week-by-week transfer impact"><strong>'+(r.points>0?'+':'')+r.points+'</strong></button></td></tr>').join('')+'</tbody></table></div>';
  const teamCell=name=>`<span class="ownership-ranked-team">${ownershipTeamLogo(name)}<button type="button" class="ownership-player-link" data-owner-team-profile="${liveEscape(name)}">${liveEscape(name)}</button></span>`;
  const playerCell=r=>`<span class="ownership-ranked-team">${ownershipClubLogo(r.club)}<span>${liveEscape(r.player)}</span></span>`;
  const section=(title,rows,description)=>`<div class="ownership-table-wrap"><h3>${title}</h3><p class="ownership-extra-note">${description}</p><table class="ownership-table"><thead><tr><th>#</th><th>Manager</th><th>Player</th><th>GW</th><th>Points</th></tr></thead><tbody>${rows.sort((a,b)=>b.points-a.points).slice(0,10).map((r,i)=>`<tr><td>${i+1}</td><td>${teamCell(r.team)}</td><td>${playerCell(r)}</td><td><button type="button" class="ownership-player-link" data-ownership-squad="${liveEscape(r.team)}" data-ownership-gw="${r.gw}" title="View GW ${r.gw} squad">GW ${r.gw}</button></td><td>${r.points}</td></tr>`).join('')||'<tr><td colspan="5">More archived weeks needed.</td></tr>'}</tbody></table></div>`;
