@@ -9747,13 +9747,24 @@ function ownershipRecordsHtml(teams){
   let totalGain=0,transfers=0,rounds=0;
   for(let i=1;i<records.length;i++){
    const before=records[i-1],after=records[i],gw=ownershipGw(after);
-   if(gw!==ownershipGw(before)+1)continue;
+   if(gw!==ownershipGw(before)+1){
+    weeklyImpact.push({team:after.name,gw,points:null,status:'Missing preceding gameweek squad',ins:[],outs:[]});
+    continue;
+   }
    const change=ownershipChange(before,after);
-   if(!change.ins.length&&!change.outs.length)continue;
-   // Require a complete score for each transferred player; never treat missing data as zero.
+   if(!change.ins.length&&!change.outs.length){
+    weeklyImpact.push({team:after.name,gw,points:0,status:'No transfers',ins:[],outs:[]});
+    continue;
+   }
+   // Preserve incomplete weeks in the season breakdown instead of silently dropping them.
+   // Never substitute zero for missing player scores: that would corrupt season totals.
    const inPoints=change.ins.map(p=>ownershipFullWeekPoints(p.name,gw));
    const outPoints=change.outs.map(p=>ownershipFullWeekPoints(p.name,gw));
-   if([...inPoints,...outPoints].some(v=>v===null))continue;
+   if([...inPoints,...outPoints].some(v=>v===null)){
+    const missing=[...change.ins.filter((p,j)=>inPoints[j]===null),...change.outs.filter((p,j)=>outPoints[j]===null)].map(p=>p.name);
+    weeklyImpact.push({team:after.name,gw,points:null,status:'Missing scores: '+missing.join(', '),ins:change.ins.map((p,j)=>({name:p.name,score:inPoints[j]})),outs:change.outs.map((p,j)=>({name:p.name,score:outPoints[j]}))});
+    continue;
+   }
    const gain=inPoints.reduce((a,b)=>a+b,0)-outPoints.reduce((a,b)=>a+b,0);
    totalGain+=gain;
    weeklyImpact.push({team:after.name,gw,points:gain,transfers:change.ins.length,ins:change.ins.map((p,j)=>({name:p.name,score:inPoints[j]})),outs:change.outs.map((p,j)=>({name:p.name,score:outPoints[j]}))});
