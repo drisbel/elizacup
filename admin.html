@@ -1482,7 +1482,7 @@
       </div>
     </div>
 
-    <div class="card" id="wheelEclPots" style="display:none"><h2>ECL Group Stage — 3 Groups of 4</h2><div class="row" style="flex-wrap:wrap"><div class="field" style="min-width:230px;flex:1"><label>Pot 1 — Non-Division 1 teams (6)</label><textarea id="wheelEclPot1" rows="7" placeholder="One team per line"></textarea><div class="hint">A4, B4, C4, A3, B3, C3</div></div><div class="field" style="min-width:230px;flex:1"><label>Pot 2 — Division 1 teams (6)</label><textarea id="wheelEclPot2" rows="7" placeholder="One team per line"></textarea><div class="hint">A1, B1, C1, A2, B2, C2</div></div></div></div>
+    <div class="card" id="wheelEclPots" style="display:none"><h2>ECL Group Stage — 3 Groups of 4</h2><div class="row" style="flex-wrap:wrap"><div class="field" style="min-width:230px;flex:1"><label>Pot 1 — Non-Division 1 teams</label><textarea id="wheelEclPot1" rows="7" placeholder="One team per line"></textarea><div class="hint">Starts at A4, B4, C4, then A3…</div></div><div class="field" style="min-width:230px;flex:1"><label>Pot 2 — Division 1 teams</label><textarea id="wheelEclPot2" rows="7" placeholder="One team per line"></textarea><div class="hint">Starts at A1, B1, C1, then A2… until empty</div></div></div></div>
     <div class="card" id="wheelConferencePreassigned" style="display:none;">
       <h2>Already allocated — Division 3</h2>
       <div class="row" style="flex-wrap:wrap;">
@@ -3313,7 +3313,7 @@ let drawWheelDisplayPot = [];
 let drawPending = null; // a team drawn but waiting to be paired
 let drawFixtures = [];
 let drawSpinning = false;
-let wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]},wheelEclPot2Remaining=[],wheelEclPickNumber=0;
+let wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]},wheelEclPot2Remaining=[],wheelEclPickNumber=0,wheelEclPot1Count=0;
 
 function shuffleArray(arr){
   const a = arr.slice();
@@ -3325,15 +3325,30 @@ function shuffleArray(arr){
 }
 
 function wheelEclMode(){return $("wheelDrawType").value==="ecl"}
-function wheelEclSlots(){return [["A",3],["B",3],["C",3],["A",2],["B",2],["C",2],["A",0],["B",0],["C",0],["A",1],["B",1],["C",1]]}
+function wheelEclSlots(){
+ const groups=["A","B","C"],slots=[];
+ // Pot 1 fills the bottom available positions first, A/B/C in each row.
+ for(let row=3;row>=0;row--)for(const group of groups)slots.push([group,row]);
+ return slots;
+}
+function wheelEclNextSlot(){
+ const groups=["A","B","C"];
+ // Pot 1 fills from row 4 upwards; Pot 2 fills from row 1 downwards.
+ for(let row=wheelEclPickNumber<wheelEclPot1Count?3:0;
+         wheelEclPickNumber<wheelEclPot1Count?row>=0:row<4;
+         row+=wheelEclPickNumber<wheelEclPot1Count?-1:1){
+   for(const group of groups)if(!wheelEclGroups[group][row])return [group,row];
+ }
+ return null;
+}
 function renderWheelEclGroups(){return `<div class="wheel-ecl-grid">${["A","B","C"].map(group=>`<section class="wheel-ecl-group"><h3>GROUP ${group}</h3>${wheelEclGroups[group].map((team,i)=>`<div class="wheel-ecl-slot"><span class="wheel-ecl-position">${group}${i+1}</span>${team?`<img src="logo/${teamLogoSlug(wheelLogoTeamName(team))}.png" alt="" onerror="${teamLogoOnErrorAttr(wheelLogoTeamName(team))}"><span class="wheel-ecl-team">${escapeHtml(team)}</span>`:`<span class="wheel-ecl-empty">Awaiting draw…</span>`}</div>`).join("")}</section>`).join("")}</div>`}
 function drawStart(){
  if(wheelEclMode()){
   const a=wheelConferenceInputTeams("wheelEclPot1"),b=wheelConferenceInputTeams("wheelEclPot2");
-  if(a.length!==6||b.length!==6){alert("ECL requires exactly six teams in each pot.");return}
+  if(a.length+b.length!==12){alert("ECL requires 12 teams total across both pots.");return}
   if(new Set([...a,...b].map(x=>x.toLowerCase().trim())).size!==12){alert("Each ECL team must be unique.");return}
-  wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]};wheelEclPickNumber=0;
-  wheelEclPot2Remaining=shuffleArray(b);drawPot=shuffleArray(a);drawWheelDisplayPot=drawPot.slice();drawPending=null;drawFixtures=[];
+  wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]};wheelEclPickNumber=0;wheelEclPot1Count=a.length;
+  wheelEclPot2Remaining=shuffleArray(b);drawPot=shuffleArray(a.length?a:b);drawWheelDisplayPot=drawPot.slice();drawPending=null;drawFixtures=[];
   $("drawResumeBtn").style.display="inline-block";$("drawSpinBtn").disabled=false;$("drawWheelPick").style.display="none";
   if(wheelFullscreenResultsActive)hideWheelResultsView();
   renderDrawShared();resetWheelMatchupInfo();drawRenderWheel();enterWheelFullscreen();return;
@@ -3678,8 +3693,8 @@ function updateWheelDrawType(){
 }
 function drawRecordPick(picked){
  if(wheelEclMode()){
-  const [group,slot]=wheelEclSlots()[wheelEclPickNumber];wheelEclGroups[group][slot]=picked;wheelEclPickNumber++;
-  if(wheelEclPickNumber===6){drawPot=wheelEclPot2Remaining.slice();drawWheelDisplayPot=drawPot.slice();}
+  const next=wheelEclNextSlot();if(!next)throw Error("No empty ECL group slot");const [group,slot]=next;wheelEclGroups[group][slot]=picked;wheelEclPickNumber++;
+  if(wheelEclPickNumber===wheelEclPot1Count && wheelEclPot1Count>0){drawPot=wheelEclPot2Remaining.slice();drawWheelDisplayPot=drawPot.slice();}
   if(wheelEclPickNumber===12)$("drawSpinBtn").disabled=true;return;
  }
   if(wheelConferenceMode()){
@@ -3901,7 +3916,7 @@ function fitWheelConferenceViewport(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(fitWheelConferenceViewport));
 function renderDrawShared(){
- if(wheelEclMode()){$("drawPotCount").textContent=wheelEclPickNumber===12?"ECL draw complete.":`Pot ${wheelEclPickNumber<6?1:2}: ${drawPot.length} teams remaining`;$("drawFixtureList").innerHTML=renderWheelEclGroups();return;}
+ if(wheelEclMode()){$("drawPotCount").textContent=wheelEclPickNumber===12?"ECL draw complete.":`Pot ${wheelEclPickNumber<wheelEclPot1Count?1:2}: ${drawPot.length} teams remaining`;$("drawFixtureList").innerHTML=renderWheelEclGroups();return;}
   $("drawPotCount").textContent = drawPot.length || drawPending !== null
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
     : (drawFixtures.length ? "Draw complete." : "");
