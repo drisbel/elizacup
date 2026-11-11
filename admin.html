@@ -1013,7 +1013,8 @@
 .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 #wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 
-.wheel-ecl-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;width:100%;font-family:'Barlow',sans-serif}.wheel-ecl-group{min-width:0;background:#000;border:1px solid #354259;border-radius:12px;padding:12px}.wheel-ecl-group h3{text-align:center;font-size:25px;color:#ffdd00;margin:0 0 12px}.wheel-ecl-slot{display:flex;align-items:center;gap:10px;min-height:64px;padding:7px 4px;border-top:1px solid #354259;color:#fff}.wheel-ecl-position{flex:0 0 25px;color:#ffdd00;font-weight:800;font-size:13px}.wheel-ecl-slot img{width:clamp(36px,3.2vw,48px);height:clamp(36px,3.2vw,48px);object-fit:contain;flex-shrink:0}.wheel-ecl-team{font-family:"Barlow Condensed",sans-serif;font-size:clamp(20px,1.8vw,27px);font-weight:800;line-height:1.12;overflow-wrap:anywhere}.wheel-ecl-empty{color:#8d99ac;font-size:12px;font-style:italic}@media(max-width:750px){.wheel-ecl-grid{grid-template-columns:1fr}.wheel-ecl-slot{min-height:48px}.wheel-ecl-slot img{width:34px;height:34px}.wheel-ecl-team{font-size:19px}}
+.wheel-ecl-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;width:100%;font-family:'Barlow',sans-serif}.wheel-ecl-group{min-width:0;background:#000;border:1px solid #354259;border-radius:9px;padding:5px 9px}.wheel-ecl-group h3{text-align:center;font-size:clamp(15px,2vh,20px);color:#ffdd00;margin:0 0 3px}.wheel-ecl-slot{display:flex;align-items:center;gap:8px;min-height:0;padding:2px 4px;border-top:1px solid #354259;color:#fff}.wheel-ecl-position{flex:0 0 25px;color:#ffdd00;font-weight:800;font-size:13px}.wheel-ecl-slot img{width:clamp(23px,3.5vh,37px);height:clamp(23px,3.5vh,37px);object-fit:contain;flex-shrink:0}.wheel-ecl-team{font-family:"Barlow Condensed",sans-serif;font-size:clamp(16px,2.3vh,23px);font-weight:800;line-height:1.12;overflow-wrap:anywhere}.wheel-ecl-empty{color:#8d99ac;font-size:12px;font-style:italic}@media(max-width:750px){.wheel-ecl-grid{grid-template-columns:1fr}.wheel-ecl-slot img{width:clamp(22px,3vh,30px);height:clamp(22px,3vh,30px)}.wheel-ecl-team{font-size:clamp(15px,2vh,19px)}}
+#wheelFullscreenRight:has(.wheel-ecl-grid) #wheelFullscreenFixturesPane{overflow:hidden!important;min-height:0;padding-top:3px;padding-bottom:3px}#wheelFullscreenRight:has(.wheel-ecl-grid) #wheelFullscreenFixtureSlot{min-height:0;overflow:hidden}
 </style>
 </head>
 <body>
@@ -1515,6 +1516,7 @@
     </div>
     <div class="card" id="wheelSharedControlsCard">
       <!-- Shared wheel controls: visible for FA Cup, ECL and conferences -->
+      <div class="field" id="wheelOddsOption" style="margin:12px 0"><label style="display:flex;align-items:center;gap:9px;font-weight:600"><input type="checkbox" id="wheelShowOdds" style="width:auto" checked>Display odds on draw</label><div class="hint" id="wheelOddsHint">FA Cup odds from existing feed.</div></div>
       <div id="drawWheelMode">
         <div class="field">
           <label>Wheel colours</label>
@@ -3687,9 +3689,12 @@ function renderWheelConferenceAllocations(){
       ${b.map(wheelConferenceTeamHtml).join("") || '<p class="wheel-conference-empty">Awaiting first team…</p>'}</section>
   </div>`;
 }
+function wheelOddsEnabled(){return !!$("wheelShowOdds")?.checked && $("wheelDrawType").value==="fixtures"}
 function updateWheelDrawType(){
   const isConference=wheelConferenceMode(),isEcl=wheelEclMode();
   $("wheelEclPots").style.display=isEcl?"block":"none";
+  $("wheelOddsOption").style.display=isConference?"none":"";
+  $("wheelOddsHint").textContent=isEcl?"ECL odds feed not linked yet; odds remain hidden until configured.":"FA Cup odds from existing feed. Turn off to hide odds.";
   $("wheelMainTeamListCard").style.display=isEcl?"none":"";
   $("wheelConferenceHint").style.display=isConference?"block":"none";
   $("wheelConferencePreassigned").style.display=isConference?"block":"none";
@@ -3767,7 +3772,7 @@ function wheelRefreshBilbbetDisplay(){
  const box=$("drawWheelPick");if(box&&box.style.display!=="none"){const name=$("drawWheelPickName")?.textContent;if(name)wheelRenderPickStats(name);}
  renderDrawShared();
  const fixture=drawFixtures[drawFixtures.length-1];
- if(fixture && !wheelSideLeagueMode && !wheelConferenceMode()) renderWheelMatchupInfo(fixture.home,fixture.away);
+ if(fixture && !wheelSideLeagueMode && !wheelConferenceMode() && !wheelEclMode()) renderWheelMatchupInfo(fixture.home,fixture.away);
 }
 const wheelCurrentRoddy=new Map();
 const wheelPreviousCupMatches=new Map();
@@ -3830,11 +3835,12 @@ function wheelRenderPickStats(name){
    const opponent=wheelLogoTeamName(m.opponent);
    return '<div class="wheel-cup-history-row"><span class="wheel-cup-history-round">'+escapeHtml(wheelShortCupRound(m.round))+'</span><span class="wheel-cup-history-opponent"><img src="logo/'+teamLogoSlug(opponent)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(opponent)+'"><span>'+escapeHtml(m.opponent)+'</span></span><strong>'+escapeHtml(m.score)+'</strong></div>';
  }).join(''):'<div class="wheel-cup-history-empty">No completed rounds yet</div>');
- const cupHtml='<div class="wheel-bilbbet-cup"><img src="logo/bilbbet.png" alt="Bilbbet"><div><div class="wheel-bilbbet-cup-label">To win FA Cup</div><div class="wheel-bilbbet-cup-value">'+(cup?escapeHtml(String(cup)):'—')+'</div></div></div>';
+ const cupHtml=wheelOddsEnabled()?'<div class="wheel-bilbbet-cup"><img src="logo/bilbbet.png" alt="Bilbbet"><div><div class="wheel-bilbbet-cup-label">To win FA Cup</div><div class="wheel-bilbbet-cup-value">'+(cup?escapeHtml(String(cup)):'—')+'</div></div></div>':'';
  el.innerHTML=season+previous+cupHtml;
  el.style.display=el.innerHTML?"block":"none";
 }
 function wheelBilbbetFixtureHtml(a,b){
+ if(!wheelOddsEnabled())return "";
  const odds=wheelBilbbetH2H(a,b);if(!odds.a&&!odds.b)return "";
  return '<div class="wheel-fixture-odds-under"><span>'+escapeHtml(odds.a||"—")+'</span><img src="logo/bilbbet.png" alt="Bilbbet"><span>'+escapeHtml(odds.b||"—")+'</span></div>';
 }
@@ -4285,7 +4291,7 @@ function wheelMatchupTeamBlockHtml(team, info, opponent){
         ${info.roddyPos ? wheelStatCardHtml("#"+info.roddyPos, "Roddy Pos", { compact: true }) : ""}
         ${wheelStatCardHtml(info.divisionPos ? "#"+info.divisionPos : "—", `${escapeHtml(info.divisionShort)} Pos`, { compact: true })}
       </div>` : `<div class="wm-division-text">Division not found</div>`}
-      ${opponent ? `<div class="wheel-bilbbet-h2h-value">${escapeHtml(wheelBilbbetH2H(team,opponent).a||"—")}</div>` : ""}
+      ${opponent && wheelOddsEnabled() ? `<div class="wheel-bilbbet-h2h-value">${escapeHtml(wheelBilbbetH2H(team,opponent).a||"—")}</div>` : ""}
     </div>`;
 }
 
@@ -5193,6 +5199,7 @@ $("drawResumeBtn").addEventListener("click", () => {if(drawSpinning)return; ente
 $("wheelDrawType").addEventListener("change", updateWheelDrawType);
 $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
+$("wheelShowOdds").addEventListener("change",()=>{const name=$("drawWheelPickName")?.textContent;if(name)wheelRenderPickStats(name);});
 $("wheelEclSwitchPotBtn").addEventListener("click",wheelEclSwitchPot);
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
   btn.addEventListener("click", () => { setWheelColorMode(btn.getAttribute("data-mode")); saveWheelSettings(); });
