@@ -1013,6 +1013,7 @@
 .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 #wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 
+.wheel-ecl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;font-family:'Barlow',sans-serif}.wheel-ecl-group{min-width:0;background:#161d2b;border:1px solid #354259;border-radius:12px;padding:12px}.wheel-ecl-group h3{text-align:center;font-size:25px;color:#ffdd00;margin:0 0 12px}.wheel-ecl-slot{display:flex;align-items:center;gap:7px;min-height:58px;padding:7px 4px;border-top:1px solid #354259;color:#fff}.wheel-ecl-position{flex:0 0 25px;color:#ffdd00;font-weight:800;font-size:13px}.wheel-ecl-slot img{width:29px;height:29px;object-fit:contain}.wheel-ecl-team{font-size:18px;font-weight:700;overflow-wrap:anywhere}.wheel-ecl-empty{color:#8d99ac;font-size:12px;font-style:italic}@media(max-width:750px){.wheel-ecl-grid{grid-template-columns:1fr}.wheel-ecl-slot{min-height:40px}}
 </style>
 </head>
 <body>
@@ -1468,7 +1469,7 @@
       <div class="field" style="margin-bottom:0;">
         <label for="wheelDrawType">Draw type</label>
         <select id="wheelDrawType">
-          <option value="fixtures">Fixture Draw (existing)</option>
+          <option value="fixtures">FA Cup</option><option value="ecl">ECL — Group Stage</option>
           <option value="conferences">Division 3 Conference Allocation (3A / 3B)</option>
         </select>
         <div class="hint" id="wheelConferenceHint" style="display:none;margin-top:8px;">Enter only the unallocated teams in the main team list. Add teams already allocated to 3A and 3B in the fields below. Each spin assigns the selected team to the conference with fewer teams (3A when tied). Both conferences finish with 14 teams.</div>
@@ -1481,6 +1482,7 @@
       </div>
     </div>
 
+    <div class="card" id="wheelEclPots" style="display:none"><h2>ECL Group Stage — 3 Groups of 4</h2><div class="row" style="flex-wrap:wrap"><div class="field" style="min-width:230px;flex:1"><label>Pot 1 — Non-Division 1 teams (6)</label><textarea id="wheelEclPot1" rows="7" placeholder="One team per line"></textarea><div class="hint">A4, B4, C4, A3, B3, C3</div></div><div class="field" style="min-width:230px;flex:1"><label>Pot 2 — Division 1 teams (6)</label><textarea id="wheelEclPot2" rows="7" placeholder="One team per line"></textarea><div class="hint">A1, B1, C1, A2, B2, C2</div></div></div></div>
     <div class="card" id="wheelConferencePreassigned" style="display:none;">
       <h2>Already allocated — Division 3</h2>
       <div class="row" style="flex-wrap:wrap;">
@@ -1495,7 +1497,7 @@
       </div>
       <div class="hint">These teams are shown on the right before the first spin and are excluded from the wheel. Enter only teams still needing allocation in the main Team list below. Total must be 28, with no duplicates.</div>
     </div>
-    <div class="card">
+    <div class="card" id="wheelMainTeamListCard">
       <h2>Team list</h2>
       <div class="field">
         <label for="drawTeamInput">Teams (one per line)</label>
@@ -3309,6 +3311,7 @@ let drawWheelDisplayPot = [];
 let drawPending = null; // a team drawn but waiting to be paired
 let drawFixtures = [];
 let drawSpinning = false;
+let wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]},wheelEclPot2Remaining=[],wheelEclPickNumber=0;
 
 function shuffleArray(arr){
   const a = arr.slice();
@@ -3319,7 +3322,20 @@ function shuffleArray(arr){
   return a;
 }
 
+function wheelEclMode(){return $("wheelDrawType").value==="ecl"}
+function wheelEclSlots(){return [["A",3],["B",3],["C",3],["A",2],["B",2],["C",2],["A",0],["B",0],["C",0],["A",1],["B",1],["C",1]]}
+function renderWheelEclGroups(){return `<div class="wheel-ecl-grid">${["A","B","C"].map(group=>`<section class="wheel-ecl-group"><h3>GROUP ${group}</h3>${wheelEclGroups[group].map((team,i)=>`<div class="wheel-ecl-slot"><span class="wheel-ecl-position">${group}${i+1}</span>${team?`<img src="logo/${teamLogoSlug(wheelLogoTeamName(team))}.png" alt="" onerror="${teamLogoOnErrorAttr(wheelLogoTeamName(team))}"><span class="wheel-ecl-team">${escapeHtml(team)}</span>`:`<span class="wheel-ecl-empty">Awaiting draw…</span>`}</div>`).join("")}</section>`).join("")}</div>`}
 function drawStart(){
+ if(wheelEclMode()){
+  const a=wheelConferenceInputTeams("wheelEclPot1"),b=wheelConferenceInputTeams("wheelEclPot2");
+  if(a.length!==6||b.length!==6){alert("ECL requires exactly six teams in each pot.");return}
+  if(new Set([...a,...b].map(x=>x.toLowerCase().trim())).size!==12){alert("Each ECL team must be unique.");return}
+  wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]};wheelEclPickNumber=0;
+  wheelEclPot2Remaining=shuffleArray(b);drawPot=shuffleArray(a);drawWheelDisplayPot=drawPot.slice();drawPending=null;drawFixtures=[];
+  $("drawResumeBtn").style.display="inline-block";$("drawSpinBtn").disabled=false;$("drawWheelPick").style.display="none";
+  if(wheelFullscreenResultsActive)hideWheelResultsView();
+  renderDrawShared();resetWheelMatchupInfo();drawRenderWheel();enterWheelFullscreen();return;
+ }
   const teams = $("drawTeamInput").value.split("\n").map(t=>t.trim()).filter(Boolean);
   if(teams.length < 2){
     alert("Enter at least 2 teams (one per line) before starting the draw.");
@@ -3419,7 +3435,7 @@ function resetWheelMatchupInfo(){
 }
 
 function isWheelDrawComplete(){
-  return !drawPot.length && drawPending === null && drawFixtures.length > 0;
+  return wheelEclMode()?wheelEclPickNumber===12:!drawPot.length && drawPending===null && drawFixtures.length>0;
 }
 
 // Shows/hides the "Complete Draw" button (only meaningful — and only
@@ -3550,7 +3566,7 @@ function showWheelResultsView(){
 
   const grid=$("wheelFullscreenResultsGrid");
   const cols=drawFixtures.length>=12?3:drawFixtures.length>=4?2:1;
-  grid.innerHTML=wheelFixtureColumns(drawFixtures,cols);
+  grid.innerHTML=wheelEclMode()?renderWheelEclGroups():wheelFixtureColumns(drawFixtures,cols);
   grid.querySelectorAll('img').forEach(img=>{
     img.addEventListener('load',()=>wheelFitLogoImages(grid),{once:true});
   });
@@ -3591,13 +3607,13 @@ window.addEventListener("resize", () => {
 // without a manual screenshot.
 async function exportWheelResultsImage(){
   const btn=$("wheelExportImageBtn");
-  if(!btn||typeof html2canvas!=="function"||!drawFixtures.length)return;
+  if(!btn||typeof html2canvas!=="function"||(!drawFixtures.length&&!wheelEclMode()))return;
   const original=btn.textContent;btn.disabled=true;btn.textContent="Exporting…";
   const stage=document.createElement("div");
   stage.className="wheel-social-export";
   stage.style.cssText="position:fixed;left:-20000px;top:0;width:1600px;box-sizing:border-box;padding:28px;background:#10151f;color:#fff;z-index:-1";
   const title=$("wheelTitleInput").value.trim()||"FIXTURE DRAW";
-  stage.innerHTML='<div class="wheel-social-heading"><div>ELIZA CUP 2026/27</div><h1>'+escapeHtml(title)+'</h1><div>'+drawFixtures.length+' FIXTURES</div></div>'+wheelFixtureColumns(drawFixtures);
+  stage.innerHTML='<div class="wheel-social-heading"><div>ELIZA CUP 2026/27</div><h1>'+escapeHtml(title)+'</h1><div>'+(wheelEclMode()?'3 GROUPS':drawFixtures.length+' FIXTURES')+'</div></div>'+(wheelEclMode()?renderWheelEclGroups():wheelFixtureColumns(drawFixtures));
   document.body.appendChild(stage);
   try{
     await Promise.all([...stage.querySelectorAll("img")].map(img=>new Promise(resolve=>{
@@ -3640,12 +3656,15 @@ function renderWheelConferenceAllocations(){
   </div>`;
 }
 function updateWheelDrawType(){
-  const isConference=wheelConferenceMode();
+  const isConference=wheelConferenceMode(),isEcl=wheelEclMode();
+  $("wheelEclPots").style.display=isEcl?"block":"none";
+  $("wheelMainTeamListCard").style.display=isEcl?"none":"";
   $("wheelConferenceHint").style.display=isConference?"block":"none";
   $("wheelConferencePreassigned").style.display=isConference?"block":"none";
-  $("drawIncludeAverage").closest(".field").style.display=isConference?"none":"";
-  $("wheelSideLeagueMode").closest(".checkbox-row").style.display=isConference?"none":"";
-  $("wheelPlainMode").closest(".checkbox-row").style.display=isConference?"none":"";
+  $("drawIncludeAverage").closest(".field").style.display=(isConference||isEcl)?"none":"";
+  $("wheelSideLeagueMode").closest(".checkbox-row").style.display=(isConference||isEcl)?"none":"";
+  $("wheelPlainMode").closest(".checkbox-row").style.display=(isConference||isEcl)?"none":"";
+  if(isEcl){$("wheelPlainMode").checked=false;wheelPlainMode=false;$("wheelSideLeagueMode").checked=false;wheelSideLeagueMode=false;if(!$("wheelTitleInput").value.trim())$("wheelTitleInput").value="ECL GROUP STAGE DRAW";}
   if(isConference){
     $("wheelPlainMode").checked=false;wheelPlainMode=false;
     $("wheelSideLeagueMode").checked=false;wheelSideLeagueMode=false;
@@ -3656,6 +3675,11 @@ function updateWheelDrawType(){
   drawReset();
 }
 function drawRecordPick(picked){
+ if(wheelEclMode()){
+  const [group,slot]=wheelEclSlots()[wheelEclPickNumber];wheelEclGroups[group][slot]=picked;wheelEclPickNumber++;
+  if(wheelEclPickNumber===6){drawPot=wheelEclPot2Remaining.slice();drawWheelDisplayPot=drawPot.slice();}
+  if(wheelEclPickNumber===12)$("drawSpinBtn").disabled=true;return;
+ }
   if(wheelConferenceMode()){
     const aCount = wheelConferenceAllocations["3A"].length;
     const bCount = wheelConferenceAllocations["3B"].length;
@@ -3875,6 +3899,7 @@ function fitWheelConferenceViewport(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(fitWheelConferenceViewport));
 function renderDrawShared(){
+ if(wheelEclMode()){$("drawPotCount").textContent=wheelEclPickNumber===12?"ECL draw complete.":`Pot ${wheelEclPickNumber<6?1:2}: ${drawPot.length} teams remaining`;$("drawFixtureList").innerHTML=renderWheelEclGroups();return;}
   $("drawPotCount").textContent = drawPot.length || drawPending !== null
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
     : (drawFixtures.length ? "Draw complete." : "");
@@ -4793,7 +4818,8 @@ async function enterWheelFullscreen(){
   // Side League mode has no matchup info (it's Eliza Cup division/H2H data,
   // which doesn't apply to side-league team names) — hide the box entirely
   // so the fixtures pane below gets the full column instead of empty space.
-  $("wheelMatchupInfo").style.display = (wheelSideLeagueMode || wheelConferenceMode()) ? "none" : "";
+  $("wheelMatchupInfo").style.display = (wheelSideLeagueMode || wheelConferenceMode() || wheelEclMode()) ? "none" : "";
+  $("wheelFullscreenFixturesPane").querySelector("h2").textContent=wheelEclMode()?"ECL GROUPS":wheelConferenceMode()?"CONFERENCES":"FIXTURES";
 
   reparentToFullscreen($("wheelWrap"), left);
   reparentToFullscreen($("drawSpinBtn").parentElement, left);
@@ -5095,7 +5121,7 @@ function drawSpin(){
     // pending, now cleared) — show the full matchup info for that pair.
     // Side League mode skips this entirely — division/H2H stats are Eliza
     // Cup data and don't apply to side-league team names.
-    if(!wheelSideLeagueMode && !wheelConferenceMode()){
+    if(!wheelSideLeagueMode && !wheelConferenceMode() && !wheelEclMode()){
       if(pendingBefore === null && drawPending !== null){
         renderWheelMatchupInfo(picked, null);
       }else if(pendingBefore !== null && drawPending === null){
