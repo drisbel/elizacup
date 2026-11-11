@@ -1013,7 +1013,7 @@
 .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 #wheelFullscreenResultsGrid .wheel-social-fixture{grid-template-columns:32px minmax(0,1fr) 28px 12px 28px minmax(0,1fr) 32px;column-gap:9px}
 
-.wheel-ecl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;font-family:'Barlow',sans-serif}.wheel-ecl-group{min-width:0;background:#161d2b;border:1px solid #354259;border-radius:12px;padding:12px}.wheel-ecl-group h3{text-align:center;font-size:25px;color:#ffdd00;margin:0 0 12px}.wheel-ecl-slot{display:flex;align-items:center;gap:7px;min-height:58px;padding:7px 4px;border-top:1px solid #354259;color:#fff}.wheel-ecl-position{flex:0 0 25px;color:#ffdd00;font-weight:800;font-size:13px}.wheel-ecl-slot img{width:29px;height:29px;object-fit:contain}.wheel-ecl-team{font-size:18px;font-weight:700;overflow-wrap:anywhere}.wheel-ecl-empty{color:#8d99ac;font-size:12px;font-style:italic}@media(max-width:750px){.wheel-ecl-grid{grid-template-columns:1fr}.wheel-ecl-slot{min-height:40px}}
+.wheel-ecl-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;width:100%;font-family:'Barlow',sans-serif}.wheel-ecl-group{min-width:0;background:#000;border:1px solid #354259;border-radius:12px;padding:12px}.wheel-ecl-group h3{text-align:center;font-size:25px;color:#ffdd00;margin:0 0 12px}.wheel-ecl-slot{display:flex;align-items:center;gap:7px;min-height:58px;padding:7px 4px;border-top:1px solid #354259;color:#fff}.wheel-ecl-position{flex:0 0 25px;color:#ffdd00;font-weight:800;font-size:13px}.wheel-ecl-slot img{width:29px;height:29px;object-fit:contain}.wheel-ecl-team{font-size:18px;font-weight:700;overflow-wrap:anywhere}.wheel-ecl-empty{color:#8d99ac;font-size:12px;font-style:italic}@media(max-width:750px){.wheel-ecl-grid{grid-template-columns:1fr}.wheel-ecl-slot{min-height:40px}}
 </style>
 </head>
 <body>
@@ -1619,6 +1619,7 @@
           </div>
           <div style="text-align:center;margin-bottom:10px;">
             <button class="btn btn-primary" id="drawSpinBtn" disabled>Spin the Wheel</button>
+            <button class="btn btn-primary" id="wheelEclSwitchPotBtn" type="button" style="display:none;">Switch Pots — Show Pot 2</button>
             <button class="btn btn-primary" id="wheelCompleteDrawBtn" style="display:none;">✓ Complete Draw</button>
           </div>
           <div class="draw-pick-box wheel-pick-inline wheel-pick-floating" id="drawWheelPick">
@@ -3313,7 +3314,7 @@ let drawWheelDisplayPot = [];
 let drawPending = null; // a team drawn but waiting to be paired
 let drawFixtures = [];
 let drawSpinning = false;
-let wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]},wheelEclPot2Remaining=[],wheelEclPickNumber=0,wheelEclPot1Count=0;
+let wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]},wheelEclPot2Remaining=[],wheelEclPickNumber=0,wheelEclPot1Count=0,wheelEclAwaitingSwitch=false;
 
 function shuffleArray(arr){
   const a = arr.slice();
@@ -3342,12 +3343,25 @@ function wheelEclNextSlot(){
  return null;
 }
 function renderWheelEclGroups(){return `<div class="wheel-ecl-grid">${["A","B","C"].map(group=>`<section class="wheel-ecl-group"><h3>GROUP ${group}</h3>${wheelEclGroups[group].map((team,i)=>`<div class="wheel-ecl-slot"><span class="wheel-ecl-position">${group}${i+1}</span>${team?`<img src="logo/${teamLogoSlug(wheelLogoTeamName(team))}.png" alt="" onerror="${teamLogoOnErrorAttr(wheelLogoTeamName(team))}"><span class="wheel-ecl-team">${escapeHtml(team)}</span>`:`<span class="wheel-ecl-empty">Awaiting draw…</span>`}</div>`).join("")}</section>`).join("")}</div>`}
+function updateWheelEclSwitchButton(){
+ const btn=$("wheelEclSwitchPotBtn");if(!btn)return;
+ btn.style.display=wheelEclMode()&&wheelEclAwaitingSwitch?"inline-block":"none";
+ $("drawSpinBtn").style.display=wheelEclAwaitingSwitch?"none":"inline-block";
+}
+function wheelEclSwitchPot(){
+ if(!wheelEclMode()||!wheelEclAwaitingSwitch||drawSpinning)return;
+ wheelEclAwaitingSwitch=false;drawPot=wheelEclPot2Remaining.slice();drawWheelDisplayPot=drawPot.slice();
+ $("drawWheelCanvas").style.transition="none";$("drawWheelCanvas").style.transform="rotate(0deg)";
+ $("drawWheelPick").style.display="none";
+ updateWheelEclSwitchButton();drawRenderWheel();renderDrawShared();
+ $("drawSpinBtn").disabled=!drawPot.length;
+}
 function drawStart(){
  if(wheelEclMode()){
   const a=wheelConferenceInputTeams("wheelEclPot1"),b=wheelConferenceInputTeams("wheelEclPot2");
   if(a.length+b.length!==12){alert("ECL requires 12 teams total across both pots.");return}
   if(new Set([...a,...b].map(x=>x.toLowerCase().trim())).size!==12){alert("Each ECL team must be unique.");return}
-  wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]};wheelEclPickNumber=0;wheelEclPot1Count=a.length;
+  wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]};wheelEclPickNumber=0;wheelEclPot1Count=a.length;wheelEclAwaitingSwitch=false;updateWheelEclSwitchButton();
   wheelEclPot2Remaining=shuffleArray(b);drawPot=shuffleArray(a.length?a:b);drawWheelDisplayPot=drawPot.slice();drawPending=null;drawFixtures=[];
   $("drawResumeBtn").style.display="inline-block";$("drawSpinBtn").disabled=false;$("drawWheelPick").style.display="none";
   if(wheelFullscreenResultsActive)hideWheelResultsView();
@@ -3426,6 +3440,7 @@ function drawStart(){
 }
 
 function drawReset(){
+  wheelEclGroups={A:[null,null,null,null],B:[null,null,null,null],C:[null,null,null,null]};wheelEclPot2Remaining=[];wheelEclPickNumber=0;wheelEclPot1Count=0;wheelEclAwaitingSwitch=false;updateWheelEclSwitchButton();
   drawPot = [];
   drawWheelDisplayPot = [];
   drawPending = null;
@@ -3694,7 +3709,7 @@ function updateWheelDrawType(){
 function drawRecordPick(picked){
  if(wheelEclMode()){
   const next=wheelEclNextSlot();if(!next)throw Error("No empty ECL group slot");const [group,slot]=next;wheelEclGroups[group][slot]=picked;wheelEclPickNumber++;
-  if(wheelEclPickNumber===wheelEclPot1Count && wheelEclPot1Count>0){drawPot=wheelEclPot2Remaining.slice();drawWheelDisplayPot=drawPot.slice();}
+  if(wheelEclPickNumber===wheelEclPot1Count && wheelEclPot1Count>0 && wheelEclPot2Remaining.length){wheelEclAwaitingSwitch=true;}
   if(wheelEclPickNumber===12)$("drawSpinBtn").disabled=true;return;
  }
   if(wheelConferenceMode()){
@@ -3916,7 +3931,7 @@ function fitWheelConferenceViewport(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(fitWheelConferenceViewport));
 function renderDrawShared(){
- if(wheelEclMode()){$("drawPotCount").textContent=wheelEclPickNumber===12?"ECL draw complete.":`Pot ${wheelEclPickNumber<wheelEclPot1Count?1:2}: ${drawPot.length} teams remaining`;$("drawFixtureList").innerHTML=renderWheelEclGroups();return;}
+ if(wheelEclMode()){$("drawPotCount").textContent=wheelEclPickNumber===12?"ECL draw complete.":wheelEclAwaitingSwitch?"Pot 1 complete — click Switch Pots to reveal Pot 2.":`Pot ${wheelEclPickNumber<wheelEclPot1Count?1:2}: ${drawPot.length} teams remaining`;$("drawFixtureList").innerHTML=renderWheelEclGroups();return;}
   $("drawPotCount").textContent = drawPot.length || drawPending !== null
     ? `${drawPot.length} team${drawPot.length===1?"":"s"} remaining in the pot`
     : (drawFixtures.length ? "Draw complete." : "");
@@ -5155,7 +5170,8 @@ function drawSpin(){
     canvas.style.transform = "rotate(0deg)";
 
     drawSpinning = false;
-    if(drawPot.length) $("drawSpinBtn").disabled = false;
+    updateWheelEclSwitchButton();
+    if(drawPot.length && !wheelEclAwaitingSwitch) $("drawSpinBtn").disabled = false;
     updateWheelCompleteDrawButtonVisibility();
   }, 4000);
 }
@@ -5177,6 +5193,7 @@ $("drawResumeBtn").addEventListener("click", () => {if(drawSpinning)return; ente
 $("wheelDrawType").addEventListener("change", updateWheelDrawType);
 $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
+$("wheelEclSwitchPotBtn").addEventListener("click",wheelEclSwitchPot);
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
   btn.addEventListener("click", () => { setWheelColorMode(btn.getAttribute("data-mode")); saveWheelSettings(); });
 });
