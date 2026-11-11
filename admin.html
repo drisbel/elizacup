@@ -1530,6 +1530,7 @@
     <div class="card" id="wheelSharedControlsCard">
       <!-- Shared wheel controls: visible for FA Cup, ECL and conferences -->
       <div class="field" id="wheelOddsOption" style="margin:12px 0"><label style="display:flex;align-items:center;gap:9px;font-weight:600"><input type="checkbox" id="wheelShowOdds" style="width:auto" checked>Display odds on draw</label><div class="hint" id="wheelOddsHint">FA Cup odds from existing feed.</div></div>
+      <div class="field" id="wheelPreviousCupOption" style="margin:12px 0"><label style="display:flex;align-items:center;gap:9px;font-weight:600"><input type="checkbox" id="wheelShowPreviousCup" style="width:auto" checked>Display previous FA Cup rounds</label></div>
       <div id="drawWheelMode">
         <div class="field">
           <label>Wheel colours</label>
@@ -3707,6 +3708,7 @@ function updateWheelDrawType(){
   const isConference=wheelConferenceMode(),isEcl=wheelEclMode();
   $("wheelEclPots").style.display=isEcl?"block":"none";
   $("wheelOddsOption").style.display=isConference?"none":"";
+  $("wheelPreviousCupOption").style.display=(!isConference&&!isEcl)?"":"none";
   $("wheelOddsHint").textContent=isEcl?"ECL odds feed not linked yet; odds remain hidden until configured.":"FA Cup odds from existing feed. Turn off to hide odds.";
   $("wheelMainTeamListCard").style.display=isEcl?"none":"";
   $("wheelConferenceHint").style.display=isConference?"block":"none";
@@ -3844,10 +3846,10 @@ function wheelRenderPickStats(name){
  const parts=[["Division",divisionText],["Roddy",roddy]];
  const season='<div class="wheel-bilbbet-season">26/27 SEASON</div><div class="wheel-bilbbet-season-row">'+parts.map(([k,v])=>'<div class="wheel-bilbbet-stat"><small>'+escapeHtml(k)+'</small><strong>'+escapeHtml(String(v))+'</strong></div>').join("")+"</div>";
  const matches=wheelPreviousCupMatches.get(key)||[];
- const previous='<div class="wheel-bilbbet-season" style="margin-top:15px;">PREVIOUS FA CUP ROUNDS</div>'+(matches.length?matches.map(m=>{
+ const previous=(!wheelEclMode() && $("wheelDrawType").value==="fixtures" && $("wheelShowPreviousCup").checked)?'<div class="wheel-bilbbet-season" style="margin-top:15px;">PREVIOUS FA CUP ROUNDS</div>'+(matches.length?matches.map(m=>{
    const opponent=wheelLogoTeamName(m.opponent);
    return '<div class="wheel-cup-history-row"><span class="wheel-cup-history-round">'+escapeHtml(wheelShortCupRound(m.round))+'</span><span class="wheel-cup-history-opponent"><img src="logo/'+teamLogoSlug(opponent)+'.png" alt="" onerror="'+teamLogoOnErrorAttr(opponent)+'"><span>'+escapeHtml(m.opponent)+'</span></span><strong>'+escapeHtml(m.score)+'</strong></div>';
- }).join(''):'<div class="wheel-cup-history-empty">No completed rounds yet</div>');
+ }).join(''):'<div class="wheel-cup-history-empty">No completed rounds yet</div>'):' ';
  const cupHtml=wheelOddsEnabled()?'<div class="wheel-bilbbet-cup"><img src="logo/bilbbet.png" alt="Bilbbet"><div><div class="wheel-bilbbet-cup-label">To win FA Cup</div><div class="wheel-bilbbet-cup-value">'+(cup?escapeHtml(String(cup)):'—')+'</div></div></div>':'';
  el.innerHTML=season+previous+cupHtml;
  el.style.display=el.innerHTML?"block":"none";
@@ -5213,6 +5215,7 @@ $("wheelDrawType").addEventListener("change", updateWheelDrawType);
 $("drawResetBtn").addEventListener("click", drawReset);
 $("drawSpinBtn").addEventListener("click", drawSpin);
 $("wheelShowOdds").addEventListener("change",()=>{const name=$("drawWheelPickName")?.textContent;if(name)wheelRenderPickStats(name);});
+$("wheelShowPreviousCup").addEventListener("change",()=>{const name=$("drawWheelPickName")?.textContent;if(name)wheelRenderPickStats(name);});
 $("wheelEclSwitchPotBtn").addEventListener("click",wheelEclSwitchPot);
 document.querySelectorAll("#wheelColorModeToggle button").forEach(btn => {
   btn.addEventListener("click", () => { setWheelColorMode(btn.getAttribute("data-mode")); saveWheelSettings(); });
