@@ -5259,6 +5259,37 @@ function liveSquadLineup(squad,preRound=false){
  if(outgoing.length>incoming.length)bench.push(...outgoing.slice(incoming.length));
  return {starters,bench};
 }
+// Provisional, DISPLAY-ONLY substitutions. Official SOKKAH subbed_on/off
+// flags always take priority; never alter the published H2H score.
+function liveDisplayLineup(squad,preRound=false){
+ const official=liveSquadLineup(squad,preRound);
+ if(preRound||!liveSquadHasCurrentScores(squad))return official;
+ const starters=[...official.starters],bench=[...official.bench];
+ const isKeeper=p=>/^(GK|GKP|GOALKEEPER|KEEPER)$/i.test(String(p?.position||'').trim());
+ const isPlayed=p=>['live','ft'].includes(liveMatchStatusInfo(p).kind);
+ const isOut=p=>['dnp','bye'].includes(liveMatchStatusInfo(p).kind);
+ // Only replace confirmed DNP/BYE starters, not players whose games are pending.
+ const absent=starters.filter(p=>isOut(p)&&liveSubstitutionStatus(p)!=='on');
+ const used=new Set();
+ for(const outgoing of absent){
+  const keeper=isKeeper(outgoing);
+  // Respect bench order. An earlier pending bench player may still play;
+  // don't jump over them and incorrectly promote a later substitute.
+  const eligible=bench.filter(p=>!used.has(p)&&liveSubstitutionStatus(p)===''&&isKeeper(p)===keeper);
+  let incoming=null;
+  for(const p of eligible){
+   if(isPlayed(p)){incoming=p;break;}
+   if(!isOut(p))break;
+  }
+  if(!incoming)continue;
+  used.add(incoming);
+  const startIndex=starters.indexOf(outgoing),benchIndex=bench.indexOf(incoming);
+  if(startIndex<0||benchIndex<0)continue;
+  starters[startIndex]={...incoming,provisionalSub:'on'};
+  bench[benchIndex]={...outgoing,provisionalSub:'off'};
+ }
+ return {starters,bench};
+}
 function liveClubThreeLetter(club){
  const slug=(liveALeagueLogo(club).match(/\/([^/]+)\.png$/)||[])[1]||'';
  const abbreviations={'adelaide':'ADL','auckland':'AKL','brisbane':'BRI','central-coast':'CCM','macarthur':'MAC','melbourne-city':'MCY','melbourne-victory':'MVC','newcastle':'NEW','perth':'PER','sydney':'SYD','wellington':'WEL','western-sydney':'WSW'};
@@ -5310,12 +5341,12 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
  const items=t.players||[];
  // Shared starting players with identical captaincy are muted on both sides.
  // Different captaincy is a meaningful differential, even for the same player.
- const otherStarting=new Set(liveSquadLineup(other,preRound).starters.map(p=>livePlayerIdentity(p,other)));
+ const otherStarting=new Set(liveDisplayLineup(other,preRound).starters.map(p=>livePlayerIdentity(p,other)));
  const group=(players)=>`${players.map(p=>{
   const cap=String(p.captain||'').trim();
   const badge=cap?`<b class="live-captain${liveCaptainKey(p)==='VC'?' vice':''}" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
-  const subBadge=preRound?'':liveSubstitutionBadge(p);
-  const shared=(preRound?!p.bench:!liveEffectiveBench(p))&&otherStarting.has(livePlayerIdentity(p,t));
+  const subBadge=preRound?'':(p.provisionalSub?`<span class="live-sub-badge live-sub-${p.provisionalSub}" title="Provisional substitution — awaiting SOKKAH confirmation" aria-label="Provisional substitution">${p.provisionalSub==='on'?'↑':'↓'}?</span>`:liveSubstitutionBadge(p));
+  const shared=(preRound?!p.bench:(p.provisionalSub?p.provisionalSub==='on':!liveEffectiveBench(p)))&&otherStarting.has(livePlayerIdentity(p,t));
   const crest=liveALeagueLogo(p.club);
   const opponent=liveEscape(livePlayerFixtureOpponent(fixtureGw,p.club));
    const status=livePlayerStatusMarkup(p,t,historical);
@@ -5329,7 +5360,7 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
  // SOKKAH bench-slot order, with outgoing starters replacing incoming players.
  const byClub=players=>[...players].sort((a,b)=>
   liveFixtureClubRank(fixtureGw,a.club)-liveFixtureClubRank(fixtureGw,b.club));
- const {starters,bench}=liveSquadLineup(t,preRound);
+ const {starters,bench}=liveDisplayLineup(t,preRound);
  const unique=starters.filter(p=>!otherStarting.has(livePlayerIdentity(p,t)));
  const common=starters.filter(p=>otherStarting.has(livePlayerIdentity(p,t)));
  return group(title==='bench'?bench:[...byClub(unique),...byClub(common)]);
