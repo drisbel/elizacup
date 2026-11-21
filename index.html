@@ -5345,7 +5345,7 @@ function livePlayerHtml(t,other,rightSide=false,title='starters',preRound=false,
  const group=(players)=>`${players.map(p=>{
   const cap=String(p.captain||'').trim();
   const badge=cap?`<b class="live-captain${liveCaptainKey(p)==='VC'?' vice':''}" title="${liveEscape(cap)}">${liveEscape(liveCaptainKey(p)||cap)}</b>`:'';
-  const subBadge=preRound?'':(p.provisionalSub?`<span class="live-sub-badge live-sub-${p.provisionalSub}" title="Provisional substitution — awaiting SOKKAH confirmation" aria-label="Provisional substitution">${p.provisionalSub==='on'?'↑':'↓'}?</span>`:liveSubstitutionBadge(p));
+  const subBadge=preRound?'':(p.provisionalSub?`<span class="live-sub-badge live-sub-${p.provisionalSub}" title="Provisional substitution — awaiting SOKKAH confirmation" aria-label="Provisional substitution">${p.provisionalSub==='on'?'↑':'↓'}</span>`:liveSubstitutionBadge(p));
   const shared=(preRound?!p.bench:(p.provisionalSub?p.provisionalSub==='on':!liveEffectiveBench(p)))&&otherStarting.has(livePlayerIdentity(p,t));
   const crest=liveALeagueLogo(p.club);
   const opponent=liveEscape(livePlayerFixtureOpponent(fixtureGw,p.club));
