@@ -2147,7 +2147,16 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-sub-score-pending{padding:7px 10px 9px;color:#805a12;background:#fff4d7;border-bottom:1px solid #e6d4a5;font-family:'Barlow',sans-serif}
 .live-sub-pending-heading{text-align:center;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
 .live-sub-pending-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
-.live-sub-pending-side{min-width:0}.live-sub-pending-side .live-player-row{padding:2px 0}.live-sub-pending-side .live-player-row strong{background:#e5edf6;border-radius:999px;padding:3px 8px;color:#17243a;font-weight:800}
+.live-sub-pending-side{min-width:0}
+.live-sub-pending-side .live-player-row,.live-sub-pending-side .live-player-row-right{display:flex;flex-direction:row;align-items:center;gap:5px;min-width:0;min-height:35px;padding:3px 0}
+.live-sub-pending-side .live-player-info{flex:1 1 0;min-width:0;overflow:hidden}
+.live-sub-pending-side .live-player-row-right .live-player-info{text-align:right}
+.live-sub-pending-side .live-player-row-right .live-player-name{justify-content:flex-end}
+.live-sub-pending-side .live-player-club-logo{flex:0 0 24px}
+.live-sub-pending-side .live-player-row strong{flex:0 0 25px;min-width:25px;margin:0;text-align:center;background:#16864d;color:#fff;border-radius:4px;padding:2px 4px;font-weight:800}
+.live-sub-pending-side .live-player-row-right strong{order:0}
+.live-sub-pending-side .live-player-row-right .live-player-club-logo{order:1}
+.live-sub-pending-side .live-player-row-right .live-player-info{order:2}
 .live-sub-pending-columns>div:first-child{text-align:left}
 .live-sub-pending-columns>div:last-child{text-align:right}
 .live-match-score{font-family:'Barlow Condensed',sans-serif;font-size:22px;white-space:nowrap;font-weight:800}
