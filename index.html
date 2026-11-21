@@ -5388,8 +5388,23 @@ function liveHeaderProgressHtml(t){
  return `<span class="live-header-progress"><span class="live-header-captain${played?' is-started':''}" title="${played?'Captain playing or played':'Captain yet to play'}">C</span><span class="live-header-remaining">${playedCount}/11</span></span>`;
 }
 // Only final statuses qualify: a live or unknown unique player keeps the match open.
+// A DNP starter can still be replaced by an unplayed bench player.
+// Treat that potential substitution as unresolved until SOKKAH confirms it.
+function liveHasPendingAutoSub(squad){
+ const {starters,bench}=liveSquadLineup(squad,false);
+ const isKeeper=p=>/^(GK|GKP|GOALKEEPER|KEEPER)$/i.test(String(p?.position||'').trim());
+ const isOut=p=>['dnp','bye'].includes(liveMatchStatusInfo(p).kind);
+ const isFinished=p=>['ft','dnp','bye'].includes(liveMatchStatusInfo(p).kind);
+ return starters.some(outgoing=>{
+  if(!isOut(outgoing)||liveSubstitutionStatus(outgoing)==='on')return false;
+  // The first eligible bench slot of the same position controls the substitution.
+  const candidate=bench.find(p=>liveSubstitutionStatus(p)===''&&isKeeper(p)===isKeeper(outgoing)&&!isOut(p));
+  return !!candidate&&!isFinished(candidate);
+ });
+}
 function liveMatchDecided(a,b){
  if(!liveScoresAvailable()||!liveSquadHasCurrentScores(a)||!liveSquadHasCurrentScores(b))return false;
+ if(liveHasPendingAutoSub(a)||liveHasPendingAutoSub(b))return false;
  const left=liveSquadLineup(a,false).starters,right=liveSquadLineup(b,false).starters;
  if(!left.length||!right.length)return false;
  const leftIds=new Set(left.map(p=>livePlayerIdentity(p,a))),rightIds=new Set(right.map(p=>livePlayerIdentity(p,b)));
@@ -5400,6 +5415,7 @@ function liveProtectedLeader(a,b){
  if(!liveScoresAvailable()||!liveSquadHasCurrentScores(a)||!liveSquadHasCurrentScores(b))return '';
  const sa=Number(a?.score),sb=Number(b?.score);
  if(!Number.isFinite(sa)||!Number.isFinite(sb)||sa===sb)return '';
+ if(liveHasPendingAutoSub(a)||liveHasPendingAutoSub(b))return '';
  const left=liveSquadLineup(a,false).starters,right=liveSquadLineup(b,false).starters;
  if(!left.length||!right.length)return '';
  const leftIds=new Set(left.map(p=>livePlayerIdentity(p,a))),rightIds=new Set(right.map(p=>livePlayerIdentity(p,b)));
