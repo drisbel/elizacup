@@ -9644,9 +9644,14 @@ function ownershipTradeWeekRows(){
    if(!gw||gw!==ownershipGw(before)+1)continue;
    const change=ownershipChange(before,after);
    if(!change.ins.length&&!change.outs.length)continue;
-   const ins=change.ins.map(p=>({name:p.name,club:ownershipFullPlayerStats.get(liveKey(p.name))?.club||p.club,score:ownershipFullWeekPoints(p.name,gw)}));
-   const outs=change.outs.map(p=>({name:p.name,club:ownershipFullPlayerStats.get(liveKey(p.name))?.club||p.club,score:ownershipFullWeekPoints(p.name,gw)}));
-   if([...ins,...outs].some(p=>p.score===null))continue;
+   // Match Fun Stats & Records: a missing weekly player score is DNP (0),
+   // not a reason to exclude the team's entire transfer impact.
+   const tradePlayer=p=>{
+    const raw=ownershipFullWeekPoints(p.name,gw);
+    return {name:p.name,club:ownershipFullPlayerStats.get(liveKey(p.name))?.club||p.club,score:raw===null?0:raw,dnp:raw===null};
+   };
+   const ins=change.ins.map(tradePlayer);
+   const outs=change.outs.map(tradePlayer);
    rows.push({team:after.name,division:after.division,gw,ins,outs,points:ins.reduce((n,p)=>n+p.score,0)-outs.reduce((n,p)=>n+p.score,0)});
   }
  }
@@ -9687,7 +9692,7 @@ function ownershipTradesOfWeekHtml(){
  const worst=rows.filter(r=>r.points<0).sort((a,b)=>a.points-b.points||a.team.localeCompare(b.team)).slice(0,1);
  const table=(title,items)=>`<div class="ownership-table-wrap"><h3>${title}</h3><table class="ownership-table"><thead><tr><th>GW</th><th>Team</th><th>Net Points</th></tr></thead><tbody>${items.map((r,i)=>`<tr><td>${r.gw}</td><td><span class="ownership-ranked-team">${ownershipTeamLogo(r.team)}<button type="button" class="ownership-player-link" data-owner-team-profile="${liveEscape(r.team)}">${liveEscape(r.team)}</button></span></td><td><button type="button" class="ownership-player-link" data-trades-detail="${i}" data-trades-kind="${title==='Best Trades of the Week'?'best':'worst'}">${r.points>0?'+':''}${r.points}</button></td></tr>`).join('')||'<tr><td colspan="3">No qualifying trades with complete scores.</td></tr>'}</tbody></table></div>`;
  window.ownershipTradesWeekDetails={best,worst};
- return `<div class="ownership-trades-week-toolbar"><label>Gameweek <select id="ownershipTradesWeekSelect">${weeks.map(w=>`<option value="${w}"${w===selected?' selected':''}>GW ${w}</option>`).join('')}</select></label><button type="button" class="ownership-full-profile-btn" id="ownershipTradesExport" ${rows.length?'':'disabled'}>Export Trades of the Week PNG ↓</button></div><p class="ownership-extra-note">Incoming player points minus outgoing player points for each team. Only trades with complete player scores are included.</p><div class="ownership-extra-grid ownership-trades-week-grid">${table('Best Trades of the Week',best)}${table('Worst Trades of the Week',worst)}</div>`;
+ return `<div class="ownership-trades-week-toolbar"><label>Gameweek <select id="ownershipTradesWeekSelect">${weeks.map(w=>`<option value="${w}"${w===selected?' selected':''}>GW ${w}</option>`).join('')}</select></label><button type="button" class="ownership-full-profile-btn" id="ownershipTradesExport" ${rows.length?'':'disabled'}>Export Trades of the Week PNG ↓</button></div><p class="ownership-extra-note">Incoming player points minus outgoing player points for each team. Missing player scores count as DNP (0 points), consistent with Fun Stats & Records.</p><div class="ownership-extra-grid ownership-trades-week-grid">${table('Best Trades of the Week',best)}${table('Worst Trades of the Week',worst)}</div>`;
 }
 function ownershipOpenTradeWeekDetail(r){
  if(!r)return;
