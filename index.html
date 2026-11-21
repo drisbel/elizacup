@@ -5091,7 +5091,11 @@ function parseLiveExport(rows){
       matchStatus:String(row[101+i]??'').trim(),
       bench:i>=11
     })).filter(p=>p.name);
-    return {name:name||fantasy,fantasy,gameweek:liveField(row,header,'gameweek'),score:liveField(row,header,'score'),chip:liveField(row,header,'chip'),scoreStatus:liveField(row,header,'score_status'),players};
+    // Match Centre head-to-head uses the score WITHOUT chip boosts (SOKKAH EXPORT column F).
+    // Keep the with-chip score (column E) separately for Roddy/overall scoring.
+    const scoreWithChip=liveField(row,header,'score');
+    const scoreWithoutChip=liveField(row,header,'score_without_chip');
+    return {name:name||fantasy,fantasy,gameweek:liveField(row,header,'gameweek'),score:scoreWithoutChip!==''?scoreWithoutChip:scoreWithChip,scoreWithChip,chip:liveField(row,header,'chip'),scoreStatus:liveField(row,header,'score_status'),players};
   }).filter(Boolean);
 }
 const LIVE_COMPETITIONS=[
