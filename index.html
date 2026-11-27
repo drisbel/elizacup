@@ -15614,18 +15614,20 @@ async function submitAleagueLmsTip(e,data){
   statusEl.style.color = "#000";
   statusEl.textContent = "Submitting…";
   try{
-    await fetch(ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL, {
+    const response = await fetch(ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
+      mode: "cors",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ round, teamName: participant, tip, fixtureId })
     });
+    const result = await response.json();
+    if(!response.ok || !result.ok) throw new Error(result.error || "Submission rejected");
     statusEl.style.color = "#166534";
-    statusEl.textContent = `Tip sent for ${round}: ${tip} — ${selected.home} v ${selected.away}. Check your entry to confirm receipt.`;
+    statusEl.textContent = `Submitted for ${round}: ${tip} — ${selected.home} v ${selected.away}.`;
   }catch(err){
     console.error(err);
     statusEl.style.color = "#991b1b";
-    statusEl.textContent = "Couldn't submit — check your connection and try again.";
+    statusEl.textContent = "Submission not confirmed: " + err.message + ". Check your entry before retrying.";
   }
 }
 
