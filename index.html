@@ -15621,7 +15621,11 @@ async function submitAleagueLmsTip(e,data){
       body: JSON.stringify({ round, teamName: participant, tip, fixtureId })
     });
     const result = await response.json();
-    if(!response.ok || !result.ok) throw new Error(result.error || "Submission rejected");
+    if(!response.ok || result.ok !== true) throw new Error(result.error || "Submission rejected");
+    if(!Number.isInteger(result.row) || result.row < 2){
+      console.error("Unexpected A-League LMS submission response", result);
+      throw new Error("The server did not confirm a saved LMS entry");
+    }
     statusEl.style.color = "#166534";
     statusEl.textContent = `Submitted for ${round}: ${tip} — ${selected.home} v ${selected.away}.`;
   }catch(err){
