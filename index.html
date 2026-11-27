@@ -3149,8 +3149,10 @@ td.next-opp, td.next-opp a, .standings td.next-opp, .standings td.next-opp a{col
 .live-match-status.live-status-live{color:#e9b83e}
 .live-match-status.live-status-ft{color:#31b56e}
 .live-match-status.live-status-dnp{color:#ed6262}
-.live-player-meta .live-dated-line{display:block;white-space:normal;line-height:1.25;overflow-wrap:anywhere}
-.live-player-meta:has(.live-dated-line){white-space:normal;overflow:visible}
+.live-player-meta .live-dated-line{display:block;white-space:nowrap;line-height:1.25;overflow-wrap:normal}
+.live-player-meta:has(.live-dated-line){white-space:nowrap;overflow:hidden}
+.live-match-body .live-player-meta .live-match-status{margin-left:2px;margin-right:2px;padding-left:2px;padding-right:2px}
+@media(max-width:600px){.live-match-body .live-player-meta{font-size:8px;letter-spacing:-.15px}.live-match-body .live-player-meta .live-match-status{font-size:9px;margin-left:1px;margin-right:1px;padding-left:2px;padding-right:2px}.live-match-body .live-player-row,.live-match-body .live-player-row-right{gap:3px}.live-match-body .live-player-row strong{flex-basis:25px;min-width:25px}.live-match-body .live-player-club-logo{flex-basis:22px;width:22px}}
 .live-match-status.live-status-pending.live-split-later{background:#dbeafe;color:#17468b}
 .live-match-status.live-status-pending{color:#151515;background:#f0f1f4;padding:1px 4px;border-radius:3px}
 .live-match-body .live-player-row strong.live-points-ft,.live-formation-side .club-squad-player-points.live-points-ft{background:#16864d;color:#fff;border-radius:4px}
@@ -5272,6 +5274,7 @@ function liveDatedPlayerMeta(p,squad,gw,rightSide,historical,opponent,status){
  const currentWeek=monday(today);
  const weekday=t=>new Intl.DateTimeFormat('en-AU',{weekday:'short',timeZone:'UTC'}).format(new Date(t));
  const time=info.label.match(/\b\d{1,2}:\d{2}\s*(?:am|pm)?/i);
+ if(own.length===1&&!time&&status)return rightSide?opponent+status:status+opponent;
  const lines=own.map(m=>{
   const later=monday(m.date)>currentWeek;
   const opp=liveEscape((same(m.home)?'v ':'@ ')+liveClubThreeLetter(same(m.home)?m.away:m.home));
@@ -5374,6 +5377,7 @@ function liveMatchStatusInfo(p){
  const raw=String(p?.matchStatus||'').trim();
  if(!raw)return {label:'',kind:'unknown'};
  if(/^FT$/i.test(raw))return {label:'FT',kind:'ft'};
+ if(/^LIVE$/i.test(raw))return {label:'Live',kind:'live'};
  if(/^HT$/i.test(raw))return {label:'HT',kind:'live'};
  if(/^DNP$/i.test(raw))return {label:'DNP',kind:'dnp'};
  if(/^BYE$/i.test(raw))return {label:'BYE',kind:'bye'};
