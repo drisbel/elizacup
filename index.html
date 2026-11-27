@@ -15445,7 +15445,7 @@ function aleagueLmsTipsFormHtml(data){
       <label style="display:block;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px;">Team you're tipping</label>
       <select id="aleagueLmsTipsTeam" required style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box;"></select>
 
-      <button type="submit" class="lms-submit-btn">Submit Tip</button>
+      <div id="aleagueLmsFixtureChoice" hidden style="margin-bottom:14px;"><label for="aleagueLmsFixtureId" style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Which match are you tipping?</label><select id="aleagueLmsFixtureId" style="width:100%;padding:9px;border:1px solid var(--line-light);border-radius:6px;"></select></div><button type="submit" class="lms-submit-btn">Submit Tip</button>
       <div id="aleagueLmsTipsSubmitStatus" style="font-family:'Barlow',sans-serif;font-size:13px;margin-top:10px;"></div>
     </form>`;
 }
@@ -15477,6 +15477,19 @@ function aleagueLmsIneligibleTeams(data, participant, targetRoundNum){
   return disabled;
 }
 
+function aleagueLmsSelectedFixtures(data){
+ const round=aleagueLmsRoundNum(document.getElementById('aleagueLmsTipsRound').value);
+ const club=normalizeLmsText(document.getElementById('aleagueLmsTipsTeam').value);
+ return (data.datedFixtures||[]).filter(f=>f.roundNum===round&&(normalizeLmsText(f.home)===club||normalizeLmsText(f.away)===club));
+}
+function renderAleagueLmsFixtureChoice(data){
+ const box=document.getElementById('aleagueLmsFixtureChoice'),sel=document.getElementById('aleagueLmsFixtureId');
+ const matches=aleagueLmsSelectedFixtures(data),club=normalizeLmsText(document.getElementById('aleagueLmsTipsTeam').value);
+ sel.replaceChildren();
+ if(matches.length>1)sel.add(new Option('Select a match…',''));
+ for(const f of matches){const home=normalizeLmsText(f.home)===club;sel.add(new Option(f.date+' — '+(home?'v '+f.away+' (H)':'@ '+f.home+' (A)'),f.id));}
+ box.hidden=matches.length<=1;sel.required=matches.length>1;
+}
 function renderAleagueLmsTipTeamOptions(data){
   const teamSel = document.getElementById('aleagueLmsTipsTeam');
   if(!teamSel) return;
@@ -15488,18 +15501,20 @@ function renderAleagueLmsTipTeamOptions(data){
   const previousValue = teamSel.value;
   teamSel.innerHTML = `<option value="">Select a team…</option>` + data.teamList.map(t => {
     const reason = ineligible[t];
-    const disabled = !!reason;
-    const suffix = reason ? ` (${reason})` : "";
+    const hasFixture=(data.datedFixtures||[]).some(f=>f.roundNum===roundNum&&[f.home,f.away].some(n=>normalizeLmsText(n)===normalizeLmsText(t)));
+    const disabled = !!reason || !hasFixture;
+    const suffix = reason ? ` (${reason})` : !hasFixture ? " (no fixture)" : "";
     return `<option value="${t}"${disabled ? " disabled" : ""}>${t}${suffix}</option>`;
   }).join("");
-  if([...teamSel.options].some(o => o.value === previousValue)) teamSel.value = previousValue;
+  if([...teamSel.options].some(o => o.value === previousValue && !o.disabled)) teamSel.value = previousValue;
+  renderAleagueLmsFixtureChoice(data);
 }
 
 function renderAleagueLmsTipFixtures(data){
   const el = document.getElementById('aleagueLmsTipsFixtureList');
   if(!el) return;
   const roundName = document.getElementById('aleagueLmsTipsRound').value;
-  const block = data.fixtureBlocks.find(b => normalizeLmsText(b.roundName) === normalizeLmsText(roundName));
+  const block = {fixtures:(data.datedFixtures||[]).filter(f=>f.roundNum===aleagueLmsRoundNum(roundName))};
   if(!block || !block.fixtures.length){
     el.innerHTML = "";
     return;
@@ -15562,10 +15577,11 @@ function wireAleagueLmsTipsForm(data){
     renderAleagueLmsTipFixtures(data);
     renderAleagueLmsTipDeadline(data);
   });
-  document.getElementById('aleagueLmsTipsForm').addEventListener('submit', submitAleagueLmsTip);
+  document.getElementById('aleagueLmsTipsTeam').addEventListener('change',()=>renderAleagueLmsFixtureChoice(data));
+  document.getElementById('aleagueLmsTipsForm').addEventListener('submit', e=>submitAleagueLmsTip(e,data));
 }
 
-async function submitAleagueLmsTip(e){
+async function submitAleagueLmsTip(e,data){
   e.preventDefault();
   const statusEl = document.getElementById('aleagueLmsTipsSubmitStatus');
   const participant = document.getElementById('aleagueLmsTipsParticipant').value;
@@ -15582,6 +15598,13 @@ async function submitAleagueLmsTip(e){
     statusEl.textContent = "Select a team before submitting.";
     return;
   }
+  const matches=aleagueLmsSelectedFixtures(data);
+  const fixtureId=document.getElementById('aleagueLmsFixtureId').value;
+  const selected=matches.find(f=>f.id===fixtureId);
+  const deadline=parseLmsDeadline(data.deadlineMap[normalizeLmsText(round)]||'');
+  if(!selected||aleagueLmsIneligibleTeams(data,participant,aleagueLmsRoundNum(round))[tip]||!deadline||Date.now()>=deadline.getTime()){
+    statusEl.style.color="#991b1b";statusEl.textContent="Select an eligible fixture in a round with an open deadline.";return;
+  }
   if(!ALEAGUE_LMS_TIPS_APPS_SCRIPT_URL){
     statusEl.style.color = "#991b1b";
     statusEl.textContent = "Submissions aren't configured yet.";
@@ -15595,10 +15618,10 @@ async function submitAleagueLmsTip(e){
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ round, teamName: participant, tip })
+      body: JSON.stringify({ round, teamName: participant, tip, fixtureId })
     });
     statusEl.style.color = "#166534";
-    statusEl.textContent = `Submitted: ${participant} tipped ${tip} for ${round}.`;
+    statusEl.textContent = `Tip sent for ${round}: ${tip} — ${selected.home} v ${selected.away}. Check your entry to confirm receipt.`;
   }catch(err){
     console.error(err);
     statusEl.style.color = "#991b1b";
@@ -15621,6 +15644,12 @@ async function loadLmsPage(league){
 
     if(league.isALeagueLms){
       const data = parseAleagueLms(rows);
+      try{
+        const res=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent('A-League Fixture NEW')+'&range=A:E&cachebust='+Date.now(),{cache:'no-store'});
+        if(!res.ok)throw Error('Fixture HTTP '+res.status);
+        data.datedFixtures=Papa.parse(await res.text(),{skipEmptyLines:true}).data.filter(r=>Number(r[0])>0&&r[2]&&r[3]&&r[4]).map(r=>({roundNum:Number(r[0]),date:r[1],home:r[2],away:r[3],id:String(r[4]).trim()}));
+      }catch(err){console.warn('LMS fixture choices unavailable',err);data.datedFixtures=[];}
+
       const matchIdx = data.currentRoundLabel
         ? data.rounds.findIndex(rd => normalizeLmsText(rd.name) === normalizeLmsText(data.currentRoundLabel))
         : -1;
