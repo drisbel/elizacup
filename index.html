@@ -3729,6 +3729,18 @@ table.standings.compact.history-table tbody td:nth-child(2){text-align:left!impo
 .ownership-trades-week-grid .ownership-ranked-team .ownership-player-link{display:inline-block!important;visibility:visible!important;opacity:1!important;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;max-width:none!important;color:inherit}
 .ownership-award-ownership{display:block;font-size:13px;font-weight:700;white-space:nowrap}
 </style>
+<style>
+/* Equal row tracks on both independently rendered matchup sides. */
+.live-match-body .live-player-row,.live-match-body .live-player-row-right{box-sizing:border-box;height:36px;min-height:36px;max-height:36px;flex-shrink:0;align-items:center}
+.live-match-body .live-player-name{height:18px;min-height:18px;line-height:18px;flex-shrink:0}
+.live-match-body .live-player-meta{height:12px;min-height:12px;line-height:12px;flex-shrink:0;white-space:nowrap}
+.live-match-body .live-player-meta .live-dated-line{line-height:12px}
+.live-match-body .live-player-meta .live-match-status{line-height:10px;vertical-align:middle}
+.live-match-body .live-player-row strong{box-sizing:border-box;height:19px;min-height:19px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.live-match-body .live-player-row strong.live-points-dnp{font-size:11px}
+.live-match-body:has(.live-dated-line + .live-dated-line) .live-player-row{height:60px;min-height:60px;max-height:60px}
+.live-match-body:has(.live-dated-line + .live-dated-line) .live-player-meta{height:36px;min-height:36px}
+</style>
 </head>
 <body>
 
