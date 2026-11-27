@@ -5259,15 +5259,23 @@ function liveDatedPlayerMeta(p,squad,gw,rightSide,historical,opponent,status){
  const same=t=>(liveALeagueLogo(t)||liveKey(t))===club;
  const own=matches.filter(m=>same(m.home)||same(m.away));
  const split=matches.length>1&&matches[matches.length-1].date-matches[0].date>=7*86400000;
+ if(opponent==='BYE'&&liveMatchStatusInfo(liveStatusPlayer(p,squad,historical)).kind==='bye')return status||opponent;
  if(!own.length||(!split&&own.length===1))return rightSide?opponent+status:status+opponent;
  const info=liveMatchStatusInfo(liveStatusPlayer(p,squad,historical));
  const canStatus=historical||liveRoundNumber(squad?.gameweek)===liveRoundNumber(liveCurrentRound);
  if(own.length===1&&(!canStatus||info.kind!=='pending'))return rightSide?opponent+status:status+opponent;
+ // Calendar weeks start Monday in Melbourne, independent of viewer timezone.
+ const parts=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date());
+ const part=k=>Number(parts.find(x=>x.type===k)?.value);
+ const today=Date.UTC(part('year'),part('month')-1,part('day'));
+ const monday=t=>t-((new Date(t).getUTCDay()+6)%7)*86400000;
+ const currentWeek=monday(today);
+ const weekday=t=>new Intl.DateTimeFormat('en-AU',{weekday:'short',timeZone:'UTC'}).format(new Date(t));
  const time=info.label.match(/\b\d{1,2}:\d{2}\s*(?:am|pm)?/i);
  const lines=own.map(m=>{
-  const later=split&&m.date-matches[0].date>=5*86400000;
+  const later=monday(m.date)>currentWeek;
   const opp=liveEscape((same(m.home)?'v ':'@ ')+liveClubThreeLetter(same(m.home)?m.away:m.home));
-  const label=m.label+(own.length===1&&time?' '+time[0]:'');
+  const label=(later?m.label:weekday(m.date))+(own.length===1&&time?' '+time[0]:'');
   const pill='<span class="live-match-status live-status-pending'+(later?' live-split-later':'')+'">'+liveEscape(label)+'</span>';
   return '<span class="live-dated-line">'+(rightSide?opp+pill:pill+opp)+'</span>';
  });
