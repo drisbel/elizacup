@@ -1070,6 +1070,7 @@
       <button type="button" class="admin-section-btn" data-section="wmd">26/27 Leagues</button>
       <button type="button" class="admin-section-btn" data-section="draw">Fixture Draw</button>
       <button type="button" class="admin-section-btn" data-section="exports">Exports</button>
+<button type="button" class="admin-section-btn" data-section="reports">Reports</button>
     </div>
 
     <div class="admin-section active" id="section-pagevisibility">
@@ -1657,7 +1658,12 @@
 
     </div>
 
-    <div class="admin-section" id="section-exports">
+    <div class="admin-section" id="section-reports">
+<h2>Reports</h2><div class="card"><h2>Trades Used — 2026/27</h2>
+<p class="hint">Archived squad changes from SOKKAH HISTORY. Round 1 is the baseline. Missing or incomplete squads are marked ?; totals count verified changes only. Snapshot comparisons cannot detect trades reversed between snapshots.</p>
+<div class="form-actions"><button class="btn btn-primary" id="tradeReportLoad">Generate / refresh report</button> <button class="btn" id="tradeReportCsv" disabled>Download CSV</button> <button class="btn" id="tradeReportPng" disabled>Download PNG</button></div>
+<p class="hint" id="tradeReportStatus" role="status"></p><div style="overflow:auto"><div id="tradeReportOutput"></div></div></div></div>
+<div class="admin-section" id="section-exports">
       <h2>Exports</h2>
       <p class="hint">Generates a shareable graphic — pulls the sheet data itself and renders its own version for the image, so nothing needs to change on the public site pages. Same html2canvas approach as the wheel's Complete Draw export.</p>
 
@@ -6470,6 +6476,54 @@ document.querySelectorAll(".fmt-btn").forEach(btn => {
     token = saved;
     showPanel();
   }
+})();
+</script>
+
+<script>
+(function(){
+const el=id=>document.getElementById(id);
+const key=v=>String(v||'').replace(/\s*\((?:D(?:IV(?:ISION)?)?\s*)?[123](?:[ABC])?\)\s*$/i,'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+let report=[];
+function build(rows){
+ rows=rows.filter(r=>r.some(v=>String(v||'').trim()));
+ if(!rows.length)throw Error('No history rows');
+ const header=rows[0].map(v=>String(v||'').trim().toLowerCase());
+ const has=header.includes('team_name')&&header.includes('player_0_name');
+ const idx=(name,fallback)=>has?header.indexOf(name):fallback;
+ const teams=new Map();let max=0;
+ for(const r of (has?rows.slice(1):rows)){
+  const name=String(r[0]||r[idx('team_name',1)]||'').trim(), k=key(name);
+  const m=String(r[idx('gameweek',2)]||'').match(/^(?:\s*(?:gw|round)\s*)?(\d+)\s*$/i);
+  if(!k||!m)continue;
+  const gw=Number(m[1]);if(gw<1||gw>100)continue;
+  max=Math.max(max,gw);
+  const squad=new Set(Array.from({length:15},(_,i)=>key(r[idx('player_'+i+'_name',10+i*6)])).filter(Boolean));
+  if(!teams.has(k))teams.set(k,{name,weeks:new Map()});
+  teams.get(k).weeks.set(gw,squad);
+ }
+ if(!teams.size)throw Error('No valid gameweek squads found');
+ const rounds=Array.from({length:max},(_,i)=>i+1);
+ const data=[...teams.values()].map(t=>{
+  const counts=rounds.map(gw=>{const now=t.weeks.get(gw),prev=t.weeks.get(gw-1);if(!now||now.size!==15)return null;if(gw===1)return 0;if(!prev||prev.size!==15)return null;return [...now].filter(p=>!prev.has(p)).length;});
+  return {name:t.name,counts,total:counts.reduce((a,b)=>a+(b??0),0),missing:counts.filter(v=>v===null).length};
+ }).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
+ return [['Team',...rounds.map(g=>'R'+g),'Total verified','Missing rounds'],...data.map(t=>[t.name,...t.counts.map(v=>v===null?'?':v),t.total,t.missing])];
+}
+el('tradeReportLoad').onclick=async()=>{
+ const status=el('tradeReportStatus');status.textContent='Loading history…';el('tradeReportLoad').disabled=true;el('tradeReportCsv').disabled=true;el('tradeReportPng').disabled=true;el('tradeReportOutput').replaceChildren();
+ try{
+ const res=await fetch('https://docs.google.com/spreadsheets/d/1pkSwNM4KpkFJ9MM1Pja2sOPrvZA9TKxI8tZJLigyKsY/gviz/tq?tqx=out:csv&sheet=SOKKAH%20HISTORY&cachebust='+Date.now());
+ if(!res.ok)throw Error('HTTP '+res.status);
+ report=build(Papa.parse(await res.text(),{skipEmptyLines:true}).data);
+ const out=el('tradeReportOutput');const title=document.createElement('h2');title.textContent='ELIZA CUP | TRADES USED';out.append(title);
+ const table=document.createElement('table');table.style.cssText='border-collapse:collapse;width:100%;white-space:nowrap;font-size:15px';
+ report.forEach((r,i)=>{const tr=table.insertRow();r.forEach((v,j)=>{const cell=document.createElement(i?'td':'th');cell.textContent=v;cell.style.cssText='padding:7px 10px;border-bottom:1px solid #7775;text-align:'+(j?'center':'left')+';'+(!i||j===r.length-2?'font-weight:700;':'');tr.append(cell);});});
+ out.append(table);status.textContent=(report.length-1)+' teams · '+(report[0].length-3)+' archived rounds';el('tradeReportCsv').disabled=false;el('tradeReportPng').disabled=false;
+ }catch(e){status.textContent='Report unavailable: '+e.message;}finally{el('tradeReportLoad').disabled=false;}
+};
+function download(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
+el('tradeReportCsv').onclick=()=>{const url=URL.createObjectURL(new Blob([Papa.unparse(report,{escapeFormulae:true})],{type:'text/csv;charset=utf-8'}));download(url,'eliza-trades-used.csv');setTimeout(()=>URL.revokeObjectURL(url),1000);};
+el('tradeReportPng').onclick=async()=>{try{const out=el('tradeReportOutput');const canvas=await html2canvas(out,{scale:2,width:out.scrollWidth,height:out.scrollHeight,backgroundColor:'#ffffff',onclone:doc=>{const copy=doc.getElementById('tradeReportOutput');copy.style.color='#111';copy.style.width=out.scrollWidth+'px';copy.style.background='#fff';}});download(canvas.toDataURL('image/png'),'eliza-trades-used.png');}catch(e){el('tradeReportStatus').textContent='PNG export failed: '+e.message;}};
 })();
 </script>
 </body>
